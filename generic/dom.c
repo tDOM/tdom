@@ -2137,6 +2137,7 @@ domSetAttributeNS (
                 ns = domLookupNamespace (node->ownerDocument, localName, uri);
             } else {
                 ns = domLookupPrefix (node, prefix);
+                if (ns && (strcmp (ns->uri, uri)!=0)) ns = NULL;
             }
             if (!ns) {
                 if (isNSAttr) {
