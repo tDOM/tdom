@@ -1,4 +1,6 @@
 2002-11-03  Rolf Ade  <rolf@pointsman.de>
+
+        * lib/tdom.tcl: tDOM::xmlOpenFile fix for files < 4 Byte size.    
         
         * generic/domxpath.c
         * generic/domxpath.h: Fixed ridiculously long runtime of
