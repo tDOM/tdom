@@ -773,12 +773,14 @@ startElement(
             goto elemNSfound;
         }
     }
-    if (tagPrefix[0] != '\0' && strcmp (tagPrefix, "xml")==0) {
-        node->namespace = info->document->rootNode->firstAttr->namespace;
-    } else {
-        /* Since where here, this means, the element has a
-           up to now not declared namespace prefix. We probably
-           should return this as an error, shouldn't we?*/
+    if (tagPrefix[0] != '\0') {
+        if (strcmp (tagPrefix, "xml")==0) {
+            node->namespace = info->document->rootNode->firstAttr->namespace;
+        } else {
+            /* Since where here, this means, the element has a
+               up to now not declared namespace prefix. We probably
+               should return this as an error, shouldn't we?*/
+        }
     }
  elemNSfound:
 #endif
@@ -824,9 +826,6 @@ startElement(
         } else {
             attrnode->nodeFlags = 0;
         }
-        /* attribute does not get namespace of owner node automatically
-         *     attrnode->namespace   = node->namespace;
-         */
         attrnode->namespace   = 0;
         attrnode->nodeName    = (char *)&(h->key);
         attrnode->parentNode  = node;
@@ -1503,6 +1502,7 @@ domReadDocument (
     if (channel == NULL) {
         if (!XML_Parse(parser, xml, length, 1)) {
             FREE ( (char*) info.activeNS );
+            domFreeDocument (doc, NULL, NULL);
             return NULL;
         }
     } else {
@@ -1510,6 +1510,7 @@ domReadDocument (
         Tcl_DStringInit (&dStr);
         if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
             FREE ( (char*) info.activeNS );
+            domFreeDocument (doc, NULL, NULL);
             return NULL;
         }
         if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
@@ -1521,6 +1522,7 @@ domReadDocument (
                 done = len < sizeof(buf);
                 if (!XML_Parse (parser, buf, len, done)) {
                     FREE ( (char*) info.activeNS );
+                    domFreeDocument (doc, NULL, NULL);
                     return NULL;
                 }
             } while (!done);
@@ -1533,6 +1535,7 @@ domReadDocument (
                 str = Tcl_GetStringFromObj (bufObj, &len);
                 if (!XML_Parse (parser, str, len, done)) {
                     FREE ( (char*) info.activeNS );
+                    domFreeDocument (doc, NULL, NULL);
                     Tcl_DecrRefCount (bufObj);
                     return NULL;
                 }
@@ -1545,6 +1548,7 @@ domReadDocument (
             done = len < sizeof(buf);
             if (!XML_Parse (parser, buf, len, done)) {
                 FREE ( (char*) info.activeNS );
+                domFreeDocument (doc, NULL, NULL);
                 return NULL;
             }
         } while (!done);
@@ -3961,7 +3965,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->userData    = info;
 
         CHandlerSetInstall (interp, objv[1], handlerSet);
-
+        break;
+        
     case m_getdoc:
         info = CHandlerSetGetUserData (interp, objv[1], "tdom");
         if (!info) {
@@ -4040,7 +4045,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
                 info->encoding_8bit = encoding;
             }
         }
-
+        break;
+        
     case m_setStoreLineColumn:
         info = CHandlerSetGetUserData (interp, objv[1], "tdom");
         if (!info) {
@@ -4052,13 +4058,15 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_GetBooleanFromObj (interp, objv[3], &bool);
             info->storeLineColumn = bool;
         }
-
+        break;
+        
     case m_remove:
         result = CHandlerSetRemove (interp, objv[1], "tdom");
         if (result == 2) {
             Tcl_SetResult (interp, "expat parser obj hasn't a C handler set named \"tdom\"", NULL);
             return TCL_ERROR;
         }
+        break;
 
     case m_setExternalEntityResolver:
         if (objc != 4) {
@@ -4072,6 +4080,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         }
         info->document->extResolver = objv[3];
         Tcl_IncrRefCount (objv[3]);
+        break;
 
     case m_keepEmpties:
         if (objc != 4) {
@@ -4087,6 +4096,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         Tcl_SetIntObj (Tcl_GetObjResult (interp), info->ignoreWhiteSpaces);
         Tcl_GetBooleanFromObj (interp, objv[3], &bool);
         info->ignoreWhiteSpaces = bool;
+        break;
     }
 
     return TCL_OK;
