@@ -700,7 +700,7 @@ nodecmd_insertBeforeFromScript (interp, node, cmdObj, refChild)
                                          * node; may be NULL */
 {
     int      ret;
-    domNode *storedLastChild;
+    domNode *storedLastChild, *n;
 
     if (!refChild) {
         return nodecmd_appendFromScript (interp, node, cmdObj);
@@ -710,6 +710,35 @@ nodecmd_insertBeforeFromScript (interp, node, cmdObj, refChild)
         Tcl_SetResult (interp, "NOT_AN_ELEMENT : can't append nodes", NULL);
         return TCL_ERROR;
     }
+
+    /* check, if node is in deed the parent of refChild */
+    if (refChild->parentNode != node) {
+        /* If node is the root node of a document and refChild
+           is in deed a child of this node, then 
+           refChild->parentNode will be NULL. In this case, we
+           loop throu the childs of node, to see, if the refChild
+           is valid. */
+        Tcl_ResetResult (interp);
+        if (node->ownerDocument->rootNode == node) {
+            n = node->firstChild;
+            while (n) {
+                if (n == refChild) {
+                    /* refChild is in deed a child of node */
+                    break;
+                }
+                n = n->nextSibling;
+            }
+            if (!n) {
+                Tcl_SetStringObj(Tcl_GetObjResult(interp), "NOT_FOUND_ERR",
+                                 -1);
+                return TCL_ERROR;
+            }
+        } else {
+            Tcl_SetStringObj(Tcl_GetObjResult(interp), "NOT_FOUND_ERR", -1);
+            return TCL_ERROR;
+        }
+    }
+
     storedLastChild = node->lastChild;
     if (refChild->previousSibling) {
         refChild->previousSibling->nextSibling = NULL;
