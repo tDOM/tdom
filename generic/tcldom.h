@@ -27,22 +27,6 @@
 |   Contributor(s):
 |
 |
-|   $Log$
-|   Revision 1.4  2002/08/06 02:22:27  rolf
-|   Changed the version number to 0.7.5
-|
-|   Revision 1.3  2002/06/02 06:36:24  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
-|
-|   Revision 1.2  2002/02/23 01:13:33  rolf
-|   Some code tweaking for a mostly warning free MS build
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|
 |   written by Jochen Loewer
 |   April, 1999
 |
