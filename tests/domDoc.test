@@ -1226,10 +1226,10 @@ test domDoc-25.8 {selectNodesNamespaces} {
                                          dflt2 rootdefaultNS
                                      } \
                                      default1:root/dflt1:elem1/elem11]} errMsg]
-    lappend result [$node nodeName] [$]
+    lappend result $errMsg
     $doc delete
     set result
-} {{} elem1 elem11 {}}
+} {1 {Prefix doesn't resolve}}
 
 test domDoc-25.9 {selectNodesNamespaces} {
     set doc [dom parse {<root xmlns="rootdefaultNS">
