@@ -24,8 +24,8 @@
 #endif
 #undef USE_TCL_STUB_PROCS
 
-#include "tcl.h"
-#include "tdom.h"
+#include <dom.h>
+#include <tdom.h>
 
 /*
  * Ensure that Tdom_InitStubs is built as an exported symbol.  The other stub

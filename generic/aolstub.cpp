@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#if defined (NS_AOLSERVER)
+#if 0 && defined (NS_AOLSERVER)
 #include <ns.h>
 
 int Ns_ModuleVersion = 1;
@@ -39,8 +39,6 @@ NsTdom_Init (Tcl_Interp *interp, void *context)
     if (ret != TCL_OK) {
         Ns_Log(Warning, "can't load module %s: %s", 
                (char *)context, Tcl_GetStringResult(interp));
-    } else {
-        Ns_Log(Notice, "%s module", (char*)context);
     }
 
     return ret;
@@ -63,9 +61,9 @@ NsTdom_Init (Tcl_Interp *interp, void *context)
  */
 
 int
-Ns_ModuleInit(char *hServer, char *hMod)
+Ns_ModuleInit(char *srv, char *mod)
 {
-    return (Ns_TclInitInterps(hServer, NsTdom_Init, (void*)hMod) == TCL_OK)
+    return (Ns_TclInitInterps(srv, NsTdom_Init, (void*)mod) == TCL_OK)
         ? NS_OK : NS_ERROR; 
 }
 
