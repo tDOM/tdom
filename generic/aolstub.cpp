@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#ifdef NS_AOLSERVER
+#if defined (NS_AOLSERVER) && !defined(TDOM_TDP)
 #include <ns.h>
 
 int Ns_ModuleVersion = 1;
