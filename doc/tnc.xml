@@ -2,7 +2,7 @@
   <namesection>
     <name>tnc</name>
     <desc>tnc is an expat parser object extension, that validates the XML
-stream according the document DTD while parsing.</desc>
+stream against the document DTD while parsing.</desc>
   </namesection>
   
   <synopsis>
@@ -18,8 +18,8 @@ tnc $parser enable</syntax>
     <title>DESCRIPTION</title>
     
     <p><m>tnc</m> adds the C handler set &quot;tnc&quot; to an tcl expat parser
-obj. This handler set is a simple DTD validator. If the validator detects the
-first validation error, it sets the interp result, signals error and stops
+obj. This handler set is a simple DTD validator. If the validator detects a
+validation error, it sets the interp result, signals error and stops
 parsing. There isn't any validation error recovering. As a consequence, only
 valid documents are completely parsed.</p>
 
