@@ -1,3 +1,8 @@
+2004-07-08  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/tdominit.c: Test, if a non-mt tDOM is tried to load
+          into a mt tclsh.
+
 2004-05-26  Rolf Ade  <rolf@pointsman.de>
 
         * doc/dom.*
@@ -52,7 +57,7 @@
 
         * generic/domhtml.c
         * tests/htmlreader.test: Fixed html-2.1 and html-2.2. (This
-          html reader ist crusty stuff...)
+          html reader is crusty stuff...)
 
 2004-03-26  Rolf Ade  <rolf@pointsman.de>
 
