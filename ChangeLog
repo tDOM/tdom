@@ -1,5 +1,10 @@
 2003-09-28  Rolf Ade  <rolf@pointsman.de>
 
+        * tests/xpath.test
+        * generic/domxpath.c: Bug fix: preceding-sibling axes could
+          give wrong results in case the context node is a child of
+          rootNode (e.g the documentElement).
+
         * tests/dom.test
         * generic/tcldom.c
         * generic/dom.c: Bug fix for replaceChild: If the node to
