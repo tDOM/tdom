@@ -1,3 +1,35 @@
+2003-02-22  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c
+        * generic/tdom.decls
+        * generic/tdom.h
+        * generic/tdomDecls.h
+        * generic/tdomStubInit.c: Added tcldom_getNodeFromName(),
+          tcldom_getDocumentFromName() and the dom.h typdefs to the
+          tDOM stubs table. Needed for the new tnc feature (and
+          elsewhere, on the long run).
+
+        * doc/tnc.*  
+        * extensions/tnc/configure
+        * extensions/tnc/configure.in
+        * extensions/tnc/makefile.vc
+        * extensions/tnc/test.tcl
+        * extensions/tnc/tnc.c: Added new tnc method getValidateCmd.
+          Changed to use the same memory allocator/free defines as
+          the tDOM core. Bumped the version to 0.3.
+  
+        * extensions/tnc/tests
+        * extensions/tnc/tests/all.tcl
+        * extensions/tnc/tests/loadtnc.tcl
+          extensions/tnc/tests/tnc.test: Started test suite for the
+          tcl interface of the tnc command and the validator
+          commands. 
+        
+        * generic/tclexpat.c: Better eContents cleanup. Bug fix: of
+          course we have to call the parserResetProcs of the
+          registered C handler sets while reseting the expat parser
+          command.
+
 2003-02-22  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/dom.h: Added (char*) cast to argument of Tcl_Free

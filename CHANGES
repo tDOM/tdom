@@ -1,3 +1,8 @@
+2003-02-22  Rolf Ade  <rolf@pointsman.de>
+
+        Added posteriori (DOM) validation capabilities. See the tnc
+        man page for details.
+
 2003-02-09  Rolf Ade  <rolf@pointsman.de>
 
         Update to expat 1.95.6.    
