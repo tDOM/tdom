@@ -14,7 +14,7 @@
           string, the newNode is inserted at the end of the children
           list of node. Optimization: Average speed was O(n/2) (n:
           number of childs of node) in case the node to insert was out
-          of the tree, and 0((n+m)/1) (m: number of nodes in the
+          of the tree, and 0((n+m)/2) (m: number of nodes in the
           fragments list) in case the node to insert was out of the
           fragments list. Now its O(1). 
 
