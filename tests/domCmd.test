@@ -11,6 +11,7 @@
 #    domCmd-6.*:  parse -useForeignDTD
 #    domCmd-7.*:  external entities
 #    domCmd-8.*:  toXSLTcmd
+#    domCmd-9.*:  asText
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -299,6 +300,19 @@ test domCmd-2.17 {parse method: test reporting of error in external subset} {
     lappend result $errMsg
 } {1 {error "syntax error" in entity "dummysystemID" at line 1 character 20
 "<!ATTLIST root lang # <--Error-- FIXED "en">"}}
+
+test domCmd-2.18 {parse document with nodes before and after the documentElement} {
+    set doc [dom parse {<!-- First comment -->
+<doc>
+  <!-- Front comment -->
+  <inner/>
+  <!-- Back comment -->
+</doc>
+<!-- Last comment -->}]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<!-- First comment --><doc><!-- Front comment --><inner/><!-- Back comment --></doc><!-- Last comment -->}
 
 test domCmd-3.1 {isName} {
     dom isName ":foo"
@@ -999,6 +1013,47 @@ test domCmd-8.6 {toXSLTcmd} {
 
 $doc delete
 
+test domCmd-9.1 {asText - syntax check} {
+    dom parse <root/> doc
+    set result [catch {$doc asText foo}]
+    $doc delete
+    set result
+} {1}
+
+test domCmd-9.2 {asText} {
+    dom parse {<root>pcdata <child>foo bar grill</child></root>} doc
+    set result [$doc asText]
+    $doc delete
+    set result
+} {pcdata foo bar grill}
+
+test domCmd-9.3 {asText} {
+    dom parse {<root>pcdata <![CDATA[<greeting>Hello, world!</greeting>]]>
+        more pcdata</root>} doc
+    set result [$doc asText]
+    $doc delete
+    set result
+} {pcdata <greeting>Hello, world!</greeting>
+        more pcdata}
+
+test domCmd-9.4 {asText} {
+    dom parse {<root>pcdata</root>} doc
+    $doc documentElement root
+    set newCDATAnode \
+        [$doc createCDATASection "<greeting>Hello, world!</greeting>"]
+    $root appendChild $newCDATAnode
+    set result [$doc asText]
+    $doc delete
+    set result
+} {pcdata}
+
+test domCmd-9.5 {asText} {
+    dom parse {<root>encoded chars: &gt; &lt; &amp; &quot; &apos;</root>} doc
+    set result [$doc asText]
+    $doc delete
+    set result
+} {encoded chars: > < & " '}
+# emacs: "
 
 # cleanup
 ::tcltest::cleanupTests

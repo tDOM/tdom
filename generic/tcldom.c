@@ -175,6 +175,7 @@ static char domObj_usage[] =
                 "          createProcessingInstruction target data ?objVar? \n"
                 "          asXML ?-indent <none,0..8>? ?-channel <channelId>? ?-escapeNonASCII?\n" 
                 "          asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
+                "          asTexT                                  \n"
                 "          getDefaultOutputMethod                  \n"
                 "          publicId ?publicId?                     \n"
                 "          systemId ?systemId?                     \n"
@@ -241,6 +242,7 @@ static char node_usage[] =
                 "    asList                      \n"
                 "    asXML ?-indent <none,0..8>? ?-channel <channelId>? ?-escapeNonASCII? \n"
                 "    asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
+                "    asText                      \n"
                 "    appendFromList nestedList   \n"
                 "    appendFromScript script     \n"
                 "    appendXML xmlString         \n"
@@ -2986,7 +2988,7 @@ int tcldom_NodeObjCmd (
         "asHTML",          "prefix",         "getBaseURI",      "appendFromScript",
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
-        "disableOutputEscaping",             "precedes",
+        "disableOutputEscaping",             "precedes",         "asText",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -3007,7 +3009,7 @@ int tcldom_NodeObjCmd (
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
-        m_disableOutputEscaping,             m_precedes
+        m_disableOutputEscaping,             m_precedes,        m_asText
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3866,17 +3868,24 @@ int tcldom_NodeObjCmd (
             }
             SetBooleanResult (domPrecedes (node, refNode));
             break;
+
+        case m_asText:
+            CheckArgs (2,2,2, "");
+            str = xpathGetStringValue (node, &length);
+            Tcl_SetStringObj (Tcl_GetObjResult (interp), str, length);
+            FREE (str);
+            return TCL_OK;
             
         TDomThreaded(
         case m_writelock:
             CheckArgs(3,3,2,"script");
-            return tcldom_EvalLocked(interp, (Tcl_Obj**)objv, node->ownerDocument,
-                                     LOCK_WRITE);
+            return tcldom_EvalLocked(interp, (Tcl_Obj**)objv,
+                                     node->ownerDocument, LOCK_WRITE);
 
         case m_readlock:
             CheckArgs(3,3,2,"script");
-            return tcldom_EvalLocked(interp, (Tcl_Obj**)objv, node->ownerDocument,
-                                     LOCK_READ);
+            return tcldom_EvalLocked(interp, (Tcl_Obj**)objv,
+                                     node->ownerDocument, LOCK_READ);
         )
     }
     return TCL_OK;
@@ -3912,7 +3921,7 @@ int tcldom_DocObjCmd (
         "createElementNS", "getDefaultOutputMethod",     "asXML",
         "asHTML",          "getElementsByTagNameNS",     "xslt", 
         "publicId",        "systemId",                   "internalSubset",
-        "toXSLTcmd",
+        "toXSLTcmd",       "asText",
 #ifdef TCL_THREADS
         "readlock",        "writelock",                  "renumber",
 #endif
@@ -3925,7 +3934,7 @@ int tcldom_DocObjCmd (
         m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
         m_asHTML,           m_getElementsByTagNameNS,     m_xslt,
         m_publicId,         m_systemId,                   m_internalSubset,
-        m_toXSLTcmd
+        m_toXSLTcmd,        m_asText
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock,                  m_renumber
 #endif
@@ -4179,6 +4188,13 @@ int tcldom_DocObjCmd (
                 doc->doctype->internalSubset =
                     tdomstrdup (Tcl_GetStringFromObj (objv[2], NULL));
             }
+            return TCL_OK;
+            
+        case m_asText:
+            CheckArgs (2,2,2,"");
+            data = xpathGetStringValue (doc->rootNode, &data_length);
+            Tcl_SetStringObj (Tcl_GetObjResult (interp), data, data_length);
+            FREE (data);
             return TCL_OK;
             
         TDomThreaded(

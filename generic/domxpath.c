@@ -2306,10 +2306,10 @@ double xpathFuncNumber (
 
 
 /*----------------------------------------------------------------------------
-|   xpathGetTextValue
+|   xpathGetStringValue
 |
 \---------------------------------------------------------------------------*/
-char * xpathGetTextValueForElement (
+char * xpathGetStringValueForElement (
     domNode *node,
     int     *len
 )
@@ -2323,7 +2323,7 @@ char * xpathGetTextValueForElement (
         pc = MALLOC(1); *pc = '\0'; *len = 0;
         child = node->firstChild;
         while (child) {
-            t = xpathGetTextValueForElement(child, &l);
+            t = xpathGetStringValueForElement(child, &l);
             pc = (char*)REALLOC(pc, 1 + *len + l);
             memmove(pc + *len, t, l );
             *len += l;
@@ -2346,7 +2346,7 @@ char * xpathGetTextValueForElement (
     return pc;
 }
 
-char * xpathGetTextValue (
+char * xpathGetStringValue (
     domNode *node,
     int     *len
 )
@@ -2361,7 +2361,7 @@ char * xpathGetTextValue (
         pc = MALLOC(1); *pc = '\0'; *len = 0;
         child = node->firstChild;
         while (child) {
-            t = xpathGetTextValueForElement(child, &l);
+            t = xpathGetStringValueForElement(child, &l);
             pc = (char*)REALLOC(pc, 1 + *len + l);
             memmove(pc + *len, t, l );
             *len += l;
@@ -2453,7 +2453,7 @@ char * xpathFuncString (
             if (rs->nr_nodes == 0) {
                 pc = tdomstrdup ("");
             } else {
-                pc = xpathGetTextValue (rs->nodes[0], &len);
+                pc = xpathGetStringValue (rs->nodes[0], &len);
             }
             return pc;
 
@@ -2472,7 +2472,7 @@ char * xpathFuncStringForNode (
 {
     int          len;
 
-    return xpathGetTextValue (node, &len);
+    return xpathGetStringValue (node, &len);
 }
 
 /*----------------------------------------------------------------------------
@@ -2489,7 +2489,7 @@ double xpathFuncNumberForNode (
     double       d;
 
     *NaN = 0;
-    pc = xpathGetTextValue (node, &len);
+    pc = xpathGetStringValue (node, &len);
     rc = sscanf (pc,"%lf", &d);
     if (rc != 1) *NaN = 2;
     FREE(pc);

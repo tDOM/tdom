@@ -2188,7 +2188,7 @@ static int xsltXPathFuncs (
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                         baseURI = findBaseURI (((domAttrNode*)argv[0]->nodes[i])->parentNode);
                     } else {
-                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
+                        str = xpathGetStringValue (argv[0]->nodes[i], &len);
                         freeStr = 1;
                         baseURI = findBaseURI (argv[0]->nodes[i]);
                     }
@@ -2257,7 +2257,7 @@ static int xsltXPathFuncs (
                     if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                     } else {
-                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
+                        str = xpathGetStringValue (argv[0]->nodes[i], &len);
                         freeStr = 1;
                     }
                     if (*str == '\0') {
@@ -4133,7 +4133,7 @@ static int ExecAction (
                 FREE(str2);
                 return rc;
             }
-            pc = xpathGetTextValue (xs->lastNode, &len);
+            pc = xpathGetStringValue (xs->lastNode, &len);
             DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, nsStr);)
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
                                nsStr, 1);
@@ -4304,7 +4304,7 @@ static int ExecAction (
                 }
                 child = child->nextSibling;
             }
-            str = xpathGetTextValue (fragmentNode, &len);
+            str = xpathGetStringValue (fragmentNode, &len);
             pc = str;
             i = 0;
             while (i < len) {
@@ -4668,7 +4668,7 @@ static int ExecAction (
             xsltPopVarFrame (xs);
             CHECK_RC;
 
-            str2 = xpathGetTextValue(fragmentNode, &len);
+            str2 = xpathGetStringValue(fragmentNode, &len);
             xs->xsltMsgCB (xs->xsltMsgClientData, str2, len, terminate);
             FREE(str2);
             xs->lastNode = savedLastNode;
@@ -4736,7 +4736,7 @@ static int ExecAction (
                                         str, &str2, errMsg);
                 CHECK_RC;
                 /* TODO: no processing of content template? */
-                pc = xpathGetTextValue (actionNode, &len);
+                pc = xpathGetStringValue (actionNode, &len);
                 n = (domNode*)domNewProcessingInstructionNode(
                                  xs->resultDoc, str2, strlen(str), pc, len);
                 domAppendChild(xs->lastNode, n);
@@ -4759,7 +4759,7 @@ static int ExecAction (
             if (str) {
                 if (strcmp (str, "yes")==0) disableEsc = 1;
             }
-            pc = xpathGetTextValue (actionNode, &len);
+            pc = xpathGetStringValue (actionNode, &len);
             DBG(fprintf(stderr, "text: pc='%s'%d \n", pc, len);)
             domAppendNewTextNode(xs->lastNode, pc, len, TEXT_NODE, disableEsc);
             FREE(pc);
