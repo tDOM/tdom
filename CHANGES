@@ -1,3 +1,42 @@
+2004-07-27  Rolf Ade  <rolf@pointsman.pointsman.de>
+
+        New method createDocumentNode.
+
+        Added methods nodeType, getElementById, firstChild, lastChild,
+        appendChild, removeChild, hasChildNodes, childNodes,
+        ownerDocument, insertBefore, replaceChild, appendFromList,
+        appendXML, selectNodes, baseURI, appendFromScript and
+        insertBeforeFromScript to dom docs. Beside other things, this
+        allows much easier handling of top level nodes. The result
+        tree may not be an XML document, but a general parsed entity.
+
+        New (experimental) method setObjectCommands.
+
+2004-05-26  Rolf Ade  <rolf@pointsman.de>
+ 
+        Added isPIName, isComment, isCDATA and isPIValue method to the
+        dom command. Created new global (thread wide) flags for name
+        and value checks (Names and FQ Names (element, attribute and
+        processing instruction names), text nodes, comments, CDATA
+        sections and processing instruction values). New methods
+        setNameCheck and setTextCheck to control this flags.
+
+2003-12-17  Rolf Ade  <rolf@pointsman.de>
+
+        Added baseURI method, which returns the current base URI and
+        has an optional argument to set the base URI. (The getBaseURI
+        is deprecated.)
+
+2003-12-11  Rolf Ade  <rolf@pointsman.de>
+
+        Bug fix: Don't quash white space of non white space only
+        content in trim mode.
+
+2003-11-24  Rolf Ade  <rolf@pointsman.de>
+
+        Added domDoc methods omit-xml-declaration, indent, standalone,
+        encoding and mediaType.
+
 2003-10-23  Rolf Ade  <rolf@pointsman.de>
 
         Update to expat 1.95.7.
@@ -18,7 +57,7 @@
 
         Enhanced insertBefore method: If the refNode argument of that
         method is the empty string, the newNode argument will be
-        inserted at the of the list of children of the node.
+        inserted at the end of the list of children of the node.
     
 2003-09-17  Rolf Ade  <rolf@pointsman.de>
 
