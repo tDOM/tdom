@@ -1,4 +1,3 @@
-
 /*----------------------------------------------------------------------------
 |   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
@@ -29,51 +28,6 @@
 |   Jochen Loewer. All Rights Reserved.
 |
 |   Contributor(s):
-|
-|
-|   $Log$
-|   Revision 1.10  2002/07/05 12:18:56  rolf
-|   Changed handling of nan/inf/-inf. Should now work on a wide(r) range
-|   of plattforms and (hopefully) not any more a build problem.
-|
-|   Revision 1.9  2002/07/03 10:12:51  zoran
-|   Fixed conditional for Sun compilation; now properly checks both __sun__
-|   and __sun to satisfy both GCC and Sun's own compiler.
-|
-|   Revision 1.8  2002/06/02 06:36:24  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
-|
-|   Revision 1.7  2002/05/11 16:57:29  rolf
-|   Made variable/parameter namespace aware.
-|
-|   Revision 1.6  2002/05/10 20:29:31  rolf
-|   Made key names namespace aware.
-|
-|   Revision 1.5  2002/05/04 01:30:10  rolf
-|   Inlined xpathRSInit (for speed).
-|
-|   Revision 1.4  2002/05/01 00:55:41  rolf
-|   Introduced AxisDescendantLit and AxisDescendantOrSelfLit (a bit of a,
-|   aehm, let't call it workaround). With that, wie can distinguish
-|   between // and descencant or descendant-or-self. And reinsert the
-|   handling of the predicate filter with respect to the child axes for //
-|   in xpathEvalStepAndPredicates().
-|
-|   Revision 1.3  2002/04/28 22:20:30  rolf
-|   Added full qualified and namespace wildcard attribute queries. Fixed
-|   a Bug with following axis expression starting from an attribute. Added
-|   handling of UnaryExpr to xpathEvalStep(). Improved xpathGetPrio().
-|
-|   Revision 1.2  2002/03/21 01:47:22  rolf
-|   Collected the various nodeSet Result types into "nodeSetResult" (there
-|   still exists a seperate emptyResult type). Reworked
-|   xpathEvalStep. Fixed memory leak in xpathMatches, added
-|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
-|   already in the nodeSet.
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
