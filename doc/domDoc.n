@@ -281,6 +281,12 @@ document, if there is one, otherwise the empty string. If there is a value
 given to the method, the system identifier of the document is set to this
 value.
 .TP
+\&\fB\fBinternalSubset \fI?internalSubset?\fB\fP         Returns the internal subset of the doctype declaration of the document, if there is one, otherwise the empty string. If there is a value given to the method, the internal subset of the document is set to this value. Note, that none of the parsing methods preserve the internal subset of a document; a freshly parsed document will always have an empty internal subset. Also note, that the method doesen't do any syntactical check on a given internal subset.
+\&\fR
+.TP
+\&\fB\fBcdataSectionElements (?URI:?localname|*) ?<boolean>?\fP          This method allows to control, for which element nodes the text node childs will be serialized as CDATA sections (this affects only serialization with the asXML method, no text node is altered in any way by this method). IF the method is called with an element name as first argument and a boolean with value true as second argument, every text node child of every element node in the document with the same name as the first argument will be serialized as CDATA section. If the second argument is a boolean with value false, all text nodes of all elements with the same name as the first argument will be serialized as usual. Namespaced element names have to given in the form namespace_URI:localname, not in the otherwise usual prefix:localname form. With two arguments called, the method returns the used boolean value. If the method is called with only an element name, it will return a boolean value, indicating, if the text nodes childs of all elements with that name in the document will be serialized as CDATA section elements (return value 1) or not (return value 0). If the method is called with only one argument and that argument is an asterisk ('*'), then the method returns an unordered list of all element names of the document, for which the text node childs will be serialized as CDATA section nodes.
+\&\fR
+.TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the whole document of the node
 object using the XSLT \fIstylesheet\fR (given as domDoc). Returns a document
