@@ -1,3 +1,12 @@
+2002-11-09  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: HTML serializer: No content escaping for
+          the HTML tags script and style, according to XSLT rec
+          16.2. Fixed a memory problem during interp deletion.
+
+        * generic/dom.c
+        * generic/domxpath.c: Minor changes.
+
 2002-11-03  Rolf Ade  <rolf@pointsman.de>
 
         * lib/tdom.tcl: tDOM::xmlOpenFile fix for files < 4 Byte size.    
