@@ -337,6 +337,45 @@ test domCmd-2.19 {parse document - rename docCmd} {
     set result
 } {<root>foo<child/></root>}
 
+test domCmd-2.20 {parse - doc with internal subset parsed with -keepEmpties} {
+    set doc [dom parse -keepEmpties {
+        <!DOCTYPE root [
+           <!ELEMENT root EMPTY>
+           <!-- Comment inside the DTD -->
+           <?aPI Inside the DTD?>
+           <!ATTLIST root lang CDATA #FIXED "en">
+          ]>
+        <root/>}]
+    $doc documentElement root
+    set result ""
+    foreach node [$root selectNodes /node()] {
+        switch [$node nodeType] {
+            TEXT_NODE {
+                lappend result TEXT_NODE
+                lappend result [string length [$node value]]
+            }
+            COMMENT_NODE {
+                lappend result COMMENT_NODE
+                lappend result [string length [$node value]]
+            }
+            PROCESSING_INSTRUCTION_NODE {
+                lappend result PROCESSING_INSTRUCTION_NODE
+                lappend result [$node target]
+                lappend result [$node data]
+            }
+            ELEMENT_NODE {
+                lappend result ELEMENT_NODE
+                lappend result [$node nodeName]
+            }
+            default {
+                lappend result [$node nodeType]
+            }
+        }
+    }
+    $doc delete
+    set result
+} {ELEMENT_NODE root}
+
 test domCmd-3.1 {isName} {
     dom isName ":foo"
 } {1}
@@ -913,7 +952,7 @@ test domCmd-6.5 {-useForeignDTD 1 does not overwrite a given external subset} {n
 test domCmd-6.6 {-useForeignDTD with nonboolean arg} {need_uri} {
     set result [catch {set doc [dom parse -useForeignDTD foo <root/>]} errMsg]
     lappend result $errMsg
-} {1 {-useForeignDTD must have a boolean arg}}
+} {1 {expected boolean value but got "foo"}}
 
 test domCmd-7.1 {document with external subset} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
