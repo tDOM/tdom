@@ -3524,8 +3524,9 @@ static int ExecAction (
                 CHECK_RC;
             } else {
                 domSplitQName (str2, prefix, &localName);
-                if (((prefix[0] != '\0') &&  !domIsNCNAME (prefix))
-                    || !domIsNCNAME (localName)) {
+                if ((prefix[0] == '\0' && !domIsNCNAME (str2))
+                    || ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
+                        || !domIsNCNAME (localName))) {
                     reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
                     return -1;
                 }
