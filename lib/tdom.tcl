@@ -29,6 +29,9 @@
 #
 #
 #   $Log$
+#   Revision 1.6  2002/08/20 23:41:16  rolf
+#   Editorial/typo fixes.
+#
 #   Revision 1.5  2002/07/28 17:28:23  rolf
 #   Updated the [package provide tdom <version>] to the patch level given
 #   by the configure.
@@ -519,7 +522,7 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
                                             nodeListType nodeList args} {
 
     if {[llength $args] != 2} {
-        error "function-available(); wrong # of args!"
+        error "function-available(): wrong # of args!"
     }
     foreach { arg1Typ arg1Value } $args break
     set str [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value ]
@@ -581,7 +584,7 @@ proc ::dom::xpathFunc::element-avaliable { ctxNode pos
                                             nodeListType nodeList args} {
 
     if {[llength $args] != 2} {
-        error "element-avaliable(); wrong # of args!"
+        error "element-avaliable(): wrong # of args!"
     }
     foreach { arg1Typ arg1Value } $args break
     set str [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value ]
@@ -764,7 +767,7 @@ proc tDOM::IANAEncoding2TclEncoding {IANAName} {
 }
 
 #----------------------------------------------------------------------------
-#   IANAEncoding2TclEncoding
+#   xmlOpenFile
 #
 #----------------------------------------------------------------------------
 proc tDOM::xmlOpenFile {filename {encodingString {}}} {
@@ -859,7 +862,7 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
 }
 
 #----------------------------------------------------------------------------
-#   readFile
+#   xmlReadFile
 #
 #----------------------------------------------------------------------------
 proc tDOM::xmlReadFile {filename {encodingString {}}} {
