@@ -3960,7 +3960,9 @@ static int xpathEvalStep (
                     rsAddNode(result,ctxNode->parentNode);
                 }
             } else {
-                if (xpathNodeTest (ctxNode->ownerDocument->rootNode, step)) {
+                if (ctxNode->ownerDocument->rootNode != ctxNode
+                    && xpathNodeTest (ctxNode->ownerDocument->rootNode, 
+                                      step)) {
                     rsAddNode (result, ctxNode->ownerDocument->rootNode);
                 }
             }
@@ -3994,13 +3996,16 @@ static int xpathEvalStep (
             if (xpathNodeTest(ctxNode, step))
                 rsAddNodeFast(&tResult, ctxNode);
         }
+        startingNode = ctxNode;
         while (ctxNode->parentNode) {
             ctxNode = ctxNode->parentNode;
             if (xpathNodeTest(ctxNode, step))
                 rsAddNodeFast(&tResult, ctxNode);
         }
-        if (xpathNodeTest (ctxNode->ownerDocument->rootNode, step)) {
-            rsAddNodeFast (&tResult, ctxNode->ownerDocument->rootNode);
+        if (startingNode != ctxNode->ownerDocument->rootNode) {
+            if (xpathNodeTest (ctxNode->ownerDocument->rootNode, step)) {
+                rsAddNodeFast (&tResult, ctxNode->ownerDocument->rootNode);
+            }
         }
         for (i = tResult.nr_nodes - 1; i >= 0;  i--) {
             checkRsAddNode (result, tResult.nodes[i]);
