@@ -412,7 +412,6 @@ void tcldom_nodeCmdDeleteProc (
 )
 {
     domDeleteInfo *dinfo = (domDeleteInfo *)clientData;
-    domNode       *node  = dinfo->node;
     char          *var   = dinfo->traceVarName;
 
     DBG(fprintf (stderr, "--> tcldom_nodeCmdDeleteProc node %p\n", node));
@@ -914,7 +913,6 @@ domNode * tcldom_getNodeFromName (
 {
     Tcl_CmdInfo  cmdInfo;
     domNode     *node = NULL;
-    int          result;
 
     if (strncmp(nodeName, "domNode", 7)) {
         *errMsg = "parameter not a domNode!";
