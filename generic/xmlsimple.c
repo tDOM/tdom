@@ -878,20 +878,24 @@ XML_SimpleParse (
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
                     *(attrnode->nodeValue + nArgVal) = 0;
                     if (ampersandSeen) {
-                        TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
+                        TranslateEntityRefs(attrnode->nodeValue,
+                                            &(attrnode->valueLength) );
                     }
                     
                     if (xmlns[5] == ':') {
                         if (domIsNamespaceInScope (activeNS, activeNSpos,
-                                                   &(xmlns[6]), (char*)attrnode->nodeValue) )
+                                                   &(xmlns[6]),
+                                                   (char*)attrnode->nodeValue))
                         {
                             ns = domLookupPrefix (node, &(xmlns[6]));
                             newNS = 0;
                         } else {
-                            ns = domNewNamespace(doc, &(xmlns[6]), (char*)attrnode->nodeValue);
+                            ns = domNewNamespace(doc, &(xmlns[6]),
+                                                 (char*)attrnode->nodeValue);
                         }
                     } else {
-                        ns = domNewNamespace(doc, "", (char*)attrnode->nodeValue);
+                        ns = domNewNamespace(doc, "", 
+                                             (char*)attrnode->nodeValue);
                     }
                     attrnode->namespace   = ns->index;
                     if (newNS) {
@@ -1077,6 +1081,10 @@ XML_SimpleParseDocument (
     Tcl_HashEntry *h;
     domNode       *rootNode;
     domDocument   *doc = domCreateEmptyDoc();
+
+#ifndef TCL_THREADS
+    domUniqueNodeNr = 0;
+#endif
 
     if (extResolver) {
         doc->extResolver = extResolver;
