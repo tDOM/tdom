@@ -36,6 +36,20 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.14  2002/04/09 01:14:54  rolf
+|   Allowed reseting of variable in successive for-each loops (of course
+|   not in one loop) and inside template bodys of xsl elements. xt, xalan
+|   (and gnomexslt, for what is's worth) do, saxon don't - and the spec
+|   isn't really clear about this (I would say, it's right now). Anyway,
+|   there are only two clear ways, to handle this: allow it, or
+|   don't. tDOM does, but variable declarations inside the for-each (or
+|   other template bodies of xslt elements) polluted the var context
+|   outside the for-each or template bodies, which is clearly wrong
+|   (example: xalan tests: variable20, local: varscope). Unfortunately,
+|   the XSLT 2.0 WD is a bit clearer about this and does it the saxon way
+|   (no wonder, since Kay is the editor of that spec ;-)). But then XSLT
+|   2.0 is another story, where currently definitely not in.
+|
 |   Revision 1.13  2002/04/08 03:43:04  rolf
 |   Optimation: re-initialize current var frame in ApplyTemplates() loop
 |   only if necessary (i.e. if the applied template has "populated" it).
@@ -2096,8 +2110,10 @@ static int xsltSetVar (
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
             /* process the children as well */
+            xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, node, currentPos, actionNodeChild, 
                              errMsg);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             xpathRSInit(&rs);
             rsAddNode(&rs, fragmentNode);
@@ -3133,8 +3149,10 @@ static int ExecAction (
             savedLastNode = xs->lastNode;
             xs->lastNode  = domNewElementNode (xs->resultDoc,  
                                                "container", ELEMENT_NODE);
+            xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             pc = xpathGetTextValue (xs->lastNode, &len);
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc, ns);
@@ -3206,9 +3224,11 @@ static int ExecAction (
                             if (b) {
                                 TRACE("test is true!\n");
                                 /* process the children as well */
+                                xsltPushVarFrame (xs);
                                 rc = ExecActions(xs, context,
                                                  currentNode, currentPos,
                                                  child->firstChild, errMsg);
+                                xsltPopVarFrame (xs);
                                 CHECK_RC;
                                 return 0;
                             }                            
@@ -3220,8 +3240,10 @@ static int ExecAction (
                         
                     case otherwise:
                         /* process the children as well */
+                        xsltPushVarFrame (xs);
                         rc = ExecActions(xs, context, currentNode, currentPos,
                                          child->firstChild, errMsg);
+                        xsltPopVarFrame (xs);
                         CHECK_RC;
                         return 0;
                         
@@ -3240,8 +3262,10 @@ static int ExecAction (
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
+            xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             child = fragmentNode->firstChild;
             while (child) {
@@ -3341,8 +3365,10 @@ static int ExecAction (
 
             /* process the children only for root and element nodes */
             if (currentNode->nodeType == ELEMENT_NODE) {
+                xsltPushVarFrame (xs);
                 rc = ExecActions(xs, context, currentNode, currentPos,
                                  actionNode->firstChild, errMsg);
+                xsltPopVarFrame (xs);
                 CHECK_RC;
             }
             break;
@@ -3438,8 +3464,10 @@ static int ExecAction (
             }
             /* process the children as well */
             if (actionNode->firstChild) {
+                xsltPushVarFrame (xs);
                 rc = ExecActions(xs, context, currentNode, currentPos,
                                  actionNode->firstChild, errMsg);
+                xsltPopVarFrame (xs);
             }
             xs->lastNode = savedLastNode;
             CHECK_RC;
@@ -3484,12 +3512,18 @@ static int ExecAction (
                 DBG(rsPrint(&rs));
                 currentTplRule = xs->currentTplRule;
                 xs->currentTplRule = NULL;
+                xsltPushVarFrame (xs);
                 for (i=0; i<rs.nr_nodes; i++) {
                     /* process the children as well */
                     rc = ExecActions(xs, &rs, rs.nodes[i], i,
                                      actionNode->firstChild, errMsg);
                     CHECK_RC;
+                    if (xs->varFrames->polluted) {
+                        xsltPopVarFrame (xs);
+                        xsltPushVarFrame (xs);
+                    }
                 }
+                xsltPopVarFrame (xs);
                 xs->currentTplRule = currentTplRule;
             } else {
                 if (rs.type != EmptyResult) {
@@ -3513,8 +3547,10 @@ static int ExecAction (
                 xpathRSFree( &rs ); 
                 if (b) {
                     /* process the children as well */
+                    xsltPushVarFrame (xs);
                     rc = ExecActions(xs, context, currentNode, currentPos,
                                      actionNode->firstChild, errMsg);
+                    xsltPopVarFrame (xs);
                     CHECK_RC;
                 }
             } else {
@@ -3534,8 +3570,10 @@ static int ExecAction (
             fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)", ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
+            xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
+            xsltPushVarFrame (xs);
             CHECK_RC;
             
             str2 = xpathGetTextValue(fragmentNode, &len);
@@ -3601,6 +3639,7 @@ static int ExecAction (
             if (str) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         str, &str2, errMsg);
+                /* TODO: no processing of content template? */
                 pc = xpathGetTextValue (actionNode, &len);
                 n = (domNode*)domNewProcessingInstructionNode(
                                  xs->resultDoc, str2, strlen(str), pc, len);
@@ -3666,6 +3705,12 @@ static int ExecAction (
         case variable:
             str = getAttr(actionNode, "name", a_name);
             if (str) {
+                if (xsltVarExists (xs, str)) {
+                    reportError (actionNode, 
+                                 "Variable is already declared in this template", 
+                                 errMsg);
+                    return -1;
+                }
                 select = getAttr(actionNode, "select", a_select);
                 if (select) {
                     TRACE1("variable select='%s'\n", select);
