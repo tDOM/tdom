@@ -4372,8 +4372,8 @@ int xpathMatches (
                 break;
                 
             case IsAttr:
-                if (nodeToMatch->nodeType != ATTRIBUTE_NODE
-                    || (nodeToMatch->nodeFlags | IS_NS_NODE)) {
+                if ((nodeToMatch->nodeType != ATTRIBUTE_NODE)
+                    || (nodeToMatch->nodeFlags & IS_NS_NODE)) {
                     xpathRSFree (&nodeList); return 0;
                 }
                 if (!((steps->strvalue[0] == '*') && (steps->strvalue[1] == '\0')))  {
