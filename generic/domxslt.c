@@ -147,7 +147,8 @@ typedef struct xsltTemplate {
     double    prio;
     domNode * content;
     double    precedence;
-
+    ast       freeAst;
+    
     struct xsltTemplate *next;
 
 } xsltTemplate;
@@ -353,8 +354,8 @@ typedef struct xsltNSAlias
 typedef struct {
 
     xsltTemplate      * templates;
-    xsltTemplate      * lastTemplate;
-    Tcl_HashTable       templateNames;
+    Tcl_HashTable       namedTemplates;
+    Tcl_HashTable       isElementTpls;
     xsltWSInfo          stripInfo;
     xsltWSInfo          preserveInfo;
     domNode           * xmlRootNode;
@@ -2444,8 +2445,128 @@ static int xsltGetVar (
     return XPATH_EVAL_ERR;
 }
 
+/*----------------------------------------------------------------------------
+|   addMatch
+|
+\---------------------------------------------------------------------------*/
+static int addMatch (
+    xsltState     *xs,
+    domNode       *node,
+    xsltTemplate  *tpl,
+    char          *prioStr,
+    ast            a,
+    char         **errMsg
+    )
+{
+    xsltTemplate  *t, *prevTpl;
+    int            rc, hnew;
+    ast            ast1;
+    Tcl_DString    dStr;
+    Tcl_HashEntry *h;
+    domNS         *ns;
+    
+    if (a->type == CombinePath) {
+        t = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
+        t->freeAst    = NULL;
+        t->name       = NULL;
+        t->nameURI    = NULL;
+        t->mode       = tpl->mode;
+        t->modeURI    = tpl->modeURI;
+        t->content    = tpl->content;
+        t->precedence = tpl->precedence;
+        t->next       = NULL;
+        if (prioStr) {
+            t->prio   = tpl->prio;
+        }
+        rc = addMatch (xs, node, t, prioStr, a->child->child, errMsg);
+        CHECK_RC1(t);
+        tpl->ast = a->child->next->child;
+    } else {
+        tpl->ast = a;
+    }
 
+    if (!prioStr) {
+        tpl->prio = xpathGetPrio(tpl->ast);
+        TRACE1("prio = %f for \n", tpl->prio);
+        DBG(printAst( 0, tpl->ast);)
+        TRACE("\n");
+    }   
+ 
+    if ((tpl->ast->type == IsElement && tpl->ast->strvalue[0] != '*')
+        || tpl->ast->type == IsFQElement) {
+        Tcl_DStringInit (&dStr);
+        if (tpl->ast->type == IsFQElement) {
+            ns = domLookupPrefix (node, tpl->ast->strvalue);
+            if (!ns) {
+                reportError (node, "Not declared prefix in match expr", errMsg);
+                return -1;
+            }
+            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+        }
+        if (tpl->mode) {
+            if (tpl->modeURI) {
+                Tcl_DStringAppend (&dStr, tpl->modeURI, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+            }
+            Tcl_DStringAppend (&dStr, tpl->mode, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+        }
+        if (tpl->ast->type == IsFQElement) {
+            Tcl_DStringAppend (&dStr, tpl->ast->child->strvalue, -1);
+        } else {
+            Tcl_DStringAppend (&dStr, tpl->ast->strvalue, -1);
+        }
+        h = Tcl_CreateHashEntry (&(xs->isElementTpls),
+                                 Tcl_DStringValue (&dStr), &hnew);
+        Tcl_DStringFree (&dStr);
 
+        if (hnew) {
+            tpl->next = NULL;
+            Tcl_SetHashValue (h, tpl);
+        } else {
+            t = (xsltTemplate *) Tcl_GetHashValue (h);
+            prevTpl = NULL;
+            while (   t 
+                      && t->precedence >= tpl->precedence
+                      && t->prio > tpl->prio) {
+                prevTpl = t;
+                t = t->next;
+            }
+            if (prevTpl) {
+                tpl->next = t;
+                prevTpl->next = tpl;
+            } else {
+                tpl->next = Tcl_GetHashValue (h);
+                Tcl_SetHashValue (h, tpl);
+            }
+        }
+    } else {
+        if (xs->templates == NULL) {
+            xs->templates = tpl;
+        } else {
+            t = xs->templates;
+            prevTpl = NULL;
+            while (   t
+                      && t->precedence >= tpl->precedence
+                      && t->prio > tpl->prio) {
+                prevTpl = t;
+                t = t->next;
+            }
+            if (prevTpl) {
+                tpl->next = t;
+                prevTpl->next = tpl;
+            } else {
+                tpl->next = xs->templates;
+                xs->templates = tpl;
+            }
+        }
+    }
+    TRACE5("AddTemplate '%s' '%s' '%s' '%s' '%2.2f' \n\n",
+            tpl->match, tpl->name, tpl->mode, tpl->modeURI, tpl->prio);
+    return 0;
+}
+    
 /*----------------------------------------------------------------------------
 |   xsltAddTemplate
 |
@@ -2457,12 +2578,12 @@ static int xsltAddTemplate (
     char     **errMsg
 )
 {
-    xsltTemplate *tpl, *t;
-    char         *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
-    int           rc, hnew;
-    domNS        *ns;
+    xsltTemplate  *tpl, *t, *prevTpl;
+    char          *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
+    int            rc, hnew;
+    domNS         *ns;
     Tcl_HashEntry *h;
-    Tcl_DString  dStr;
+    Tcl_DString    dStr;
 
     tpl = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
 
@@ -2476,6 +2597,7 @@ static int xsltAddTemplate (
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
                 reportError (node, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                FREE (tpl);
                 return -1;
             }
             tpl->nameURI = ns->uri;
@@ -2483,32 +2605,41 @@ static int xsltAddTemplate (
             Tcl_DStringAppend (&dStr, ns->uri, -1);
             Tcl_DStringAppend (&dStr, ":", 1);
             Tcl_DStringAppend (&dStr, localName, -1);
-            h = Tcl_CreateHashEntry (&(xs->templateNames), 
+            h = Tcl_CreateHashEntry (&(xs->namedTemplates), 
                                      Tcl_DStringValue (&dStr), &hnew);
             Tcl_DStringFree (&dStr);
         } else {
-            h = Tcl_CreateHashEntry (&(xs->templateNames), localName, &hnew);
+            h = Tcl_CreateHashEntry (&(xs->namedTemplates), localName, &hnew);
         }
         tpl->name   = localName;
         if (!hnew) {
             t = (xsltTemplate *) Tcl_GetHashValue (h);
             if (t->precedence == precedence) {
                 reportError (node, "There is already a template with the same name and precedence.", errMsg);
+                FREE (tpl);
                 return -1;
             }
         }
         Tcl_SetHashValue (h, tpl);
+        TRACE3("Added named Template '%s' '%2.2f' '%2.2f' \n\n",
+            tpl->name, tpl->precedence, tpl->prio);
     }
     tpl->ast        = NULL;
     tpl->mode       = NULL;
     tpl->modeURI    = NULL;
     str = getAttr (node, "mode", a_mode);
     if (str) {
+        if (!tpl->match) {
+            reportError (node, "A template without a \"match\" attribute must not have a \"mode\" attribute.", errMsg);
+            FREE (tpl);
+            return -1;
+        }
         domSplitQName (str, prefix, &localName);
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
                 reportError (node, "The prefix of the \"mode\" attribute value isn't bound to a namespace.", errMsg);
+                FREE (tpl);
                 return -1;
             }
             tpl->modeURI = ns->uri;
@@ -2523,32 +2654,16 @@ static int xsltAddTemplate (
     prioStr = getAttr(node,"priority", a_prio);
     if (prioStr) {
         tpl->prio = (double)atof(prioStr);
-    }
+    } 
 
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        rc = xpathParse(tpl->match, errMsg, &(tpl->ast), 1);
-        CHECK_RC;
-        if (!prioStr) {
-            tpl->prio = xpathGetPrio(tpl->ast);
-            TRACE1("prio = %f for \n", tpl->prio);
-            DBG(printAst( 0, tpl->ast);)
-            TRACE("\n");
-        } else {
-            DBG(printAst( 0, tpl->ast);)
-        }
+        rc = xpathParse(tpl->match, errMsg, &(tpl->freeAst), 1);
+        CHECK_RC1(tpl);
+        rc = addMatch (xs, node, tpl, prioStr, tpl->freeAst, errMsg);
+        CHECK_RC1(tpl);
     }
-    TRACE5("AddTemplate '%s' '%s' '%s' '%s' '%2.2f' \n\n",
-            tpl->match, tpl->name, tpl->mode, tpl->modeURI, tpl->prio);
 
-    /* append new template at the end of the template list */
-    if (xs->lastTemplate == NULL) {
-        xs->templates = tpl;
-        xs->lastTemplate = tpl;
-    } else {
-        xs->lastTemplate->next = tpl;
-        xs->lastTemplate = tpl;
-    }
     return 0;
 }
 
@@ -3236,6 +3351,57 @@ static int ExecAction (
             currentPrec = 0.0;
             mode = xs->currentTplRule->mode;
             modeURI = xs->currentTplRule->modeURI;
+            
+            if (currentNode->nodeType == ELEMENT_NODE) {
+                Tcl_DStringInit (&dStr);
+                if (currentNode->namespace) {
+                    domSplitQName (currentNode->nodeName, prefix, &localName);
+                    ns = domLookupPrefix (currentNode, prefix);
+                    Tcl_DStringAppend (&dStr, ns->uri, -1);
+                    Tcl_DStringAppend (&dStr, ":", 1);
+                }
+                if (mode) {
+                    if (modeURI) {
+                        Tcl_DStringAppend (&dStr, modeURI, -1);
+                        Tcl_DStringAppend (&dStr, ":", 1);
+                    }
+                    Tcl_DStringAppend (&dStr, mode, -1);
+                    Tcl_DStringAppend (&dStr, ":", 1);
+                }
+                if (currentNode->namespace) {
+                    Tcl_DStringAppend (&dStr, localName, -1);
+                } else {
+                    Tcl_DStringAppend (&dStr, currentNode->nodeName, -1);
+                }
+                h = Tcl_FindHashEntry (&xs->isElementTpls, 
+                                       Tcl_DStringValue (&dStr));
+                Tcl_DStringFree (&dStr);
+
+                if (h) {
+                    for (tpl = (xsltTemplate *) Tcl_GetHashValue (h);
+                         tpl != NULL;
+                         tpl = tpl->next) {
+                        if (tpl->precedence > xs->currentTplRule->precedence
+                            || tpl == xs->currentTplRule) continue;
+                        TRACE3("find element tpl match='%s' mode='%s' name='%s'\n",
+                               tpl->match, tpl->mode, tpl->name);
+                        TRACE4("tpl has prio='%f' precedence='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
+                        rc = xpathMatches ( tpl->ast, actionNode, currentNode,
+                                            &(xs->cbs), errMsg);
+                        if (rc < 0) {
+                            TRACE1("xpathMatches had errors '%s' \n", *errMsg);
+                            return rc;
+                        }
+                        if (rc == 0) continue;
+                        TRACE3("matching '%s': %f > %f ? \n", tpl->match, tpl->prio , currentPrio);
+                        tplChoosen = tpl;
+                        currentPrio = tpl->prio;
+                        currentPrec = tpl->precedence;
+                        break;
+                    }
+                }
+            }
+
             TRACE2("apply-imports: current template precedence='%f' mode='%s'\n", xs->currentTplRule->precedence, xs->currentTplRule->mode);
             for (tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
                 TRACE4("find tpl match='%s' mode='%s' modeURI='%s' name='%s'\n",
@@ -3270,6 +3436,7 @@ static int ExecAction (
                     }
                 }
             }
+
             if (tplChoosen == NULL) {
 
                 TRACE("nothing matches -> execute built-in template \n");
@@ -3424,8 +3591,7 @@ static int ExecAction (
                             Tcl_DStringAppend (&dStr, ns->prefix, -1);
                             Tcl_DStringAppend (&dStr, ":", 1);
                         } else {
-                            sprintf (prefix, "ns%d", xs->nsUniqeNr);
-                            xs->nsUniqeNr++;
+                            sprintf (prefix, "ns%d", xs->nsUniqeNr++);
                             Tcl_DStringAppend (&dStr, prefix, -1);
                             Tcl_DStringAppend (&dStr, ":", 1);
                         }
@@ -3493,11 +3659,11 @@ static int ExecAction (
                 Tcl_DStringAppend (&dStr, uri, -1);
                 Tcl_DStringAppend (&dStr, ":", 1);
                 Tcl_DStringAppend (&dStr, localName, -1);
-                h = Tcl_FindHashEntry (&(xs->templateNames),
+                h = Tcl_FindHashEntry (&(xs->namedTemplates),
                                        Tcl_DStringValue (&dStr));
                 Tcl_DStringFree (&dStr);
             } else {
-                h = Tcl_FindHashEntry (&(xs->templateNames), localName);
+                h = Tcl_FindHashEntry (&(xs->namedTemplates), localName);
             }
             if (!h) {
                 reportError (actionNode,
@@ -3510,8 +3676,8 @@ static int ExecAction (
             SETPARAMDEF;
             TRACE3("call template %s match='%s' name='%s' \n", str, tplChoosen->match, tplChoosen->name);
             DBG(printXML(xs->lastNode, 0, 2);)
-                rc = setParamVars (xs, context, currentNode, currentPos,
-                                   actionNode, errMsg);
+            rc = setParamVars (xs, context, currentNode, currentPos,
+                               actionNode, errMsg);
             if (rc < 0) {
                 xsltPopVarFrame (xs);
                 return rc;
@@ -4164,8 +4330,7 @@ static int ExecAction (
                 }
                 domAddNSToNode (xs->lastNode, ns);
                 ns->uri = uri;
-            }
-            else {
+            } else {
                 ns = domLookupPrefix (xs->lastNode, "");
                 if (ns && (strcmp (ns->uri, "")!=0)) {
                     domSetAttributeNS (xs->lastNode, "xmlns", "", NULL, 0);
@@ -4268,13 +4433,16 @@ int ApplyTemplate (
     char          ** errMsg
 )
 {
-    xsltTemplate   * tpl;
-    xsltTemplate   * tplChoosen, *currentTplRule;
-    domNode        * child;
-    xpathResultSet   rs;
-    int              rc;
-    double           currentPrio, currentPrec;
-
+    xsltTemplate   *tpl;
+    xsltTemplate   *tplChoosen, *currentTplRule;
+    domNode        *child;
+    xpathResultSet  rs;
+    int             rc, hnew;
+    double          currentPrio, currentPrec;
+    char           *str, *localName, prefix[MAX_PREFIX_LEN];
+    Tcl_HashEntry  *h;
+    Tcl_DString     dStr;
+    domNS          *ns;
 
     TRACE2("\n\nApplyTemplate mode='%s' currentPos=%d \n", mode, currentPos);
     DBG(printXML (currentNode, 0, 1);)
@@ -4286,6 +4454,53 @@ int ApplyTemplate (
     currentPrio = -100000.0;
     currentPrec = 0.0;
 
+
+    if (currentNode->nodeType == ELEMENT_NODE) {
+        Tcl_DStringInit (&dStr);
+        if (currentNode->namespace) {
+            domSplitQName (currentNode->nodeName, prefix, &localName);
+            ns = domLookupPrefix (currentNode, prefix);
+            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+        }
+        if (mode) {
+            if (modeURI) {
+                Tcl_DStringAppend (&dStr, modeURI, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+            }
+            Tcl_DStringAppend (&dStr, mode, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+        }
+        if (currentNode->namespace) {
+            Tcl_DStringAppend (&dStr, localName, -1);
+        } else {
+            Tcl_DStringAppend (&dStr, currentNode->nodeName, -1);
+        }
+        h = Tcl_FindHashEntry (&xs->isElementTpls, Tcl_DStringValue (&dStr));
+        Tcl_DStringFree (&dStr);
+
+        if (h) {
+            for (tpl = (xsltTemplate *) Tcl_GetHashValue (h);
+                 tpl != NULL;
+                 tpl = tpl->next) {
+                TRACE3("find element tpl match='%s' mode='%s' name='%s'\n",
+                       tpl->match, tpl->mode, tpl->name);
+                TRACE4("tpl has prio='%f' precedence='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
+                rc = xpathMatches ( tpl->ast, exprContext, currentNode,
+                                    &(xs->cbs), errMsg);
+                if (rc < 0) {
+                    TRACE1("xpathMatches had errors '%s' \n", *errMsg);
+                    return rc;
+                }
+                if (rc == 0) continue;
+                TRACE3("matching '%s': %f > %f ? \n", tpl->match, tpl->prio , currentPrio);
+                tplChoosen = tpl;
+                currentPrio = tpl->prio;
+                currentPrec = tpl->precedence;
+                break;
+            }
+        }
+    }
 
     for( tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
 
@@ -4304,48 +4519,25 @@ int ApplyTemplate (
             continue; /* doesn't match mode */
         }
         TRACE4("tpl has prio='%f' precedence='%f', currentPrio='%f', currentPrec='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
-        /* According to xslt rec 5.5: First trest precedence */
-        if (tpl->match &&  tpl->precedence >= currentPrec) {
-            /* Higher precedence wins always. If precedences are equal,
-               use priority for decision. */
-            if (tpl->precedence > currentPrec ||  tpl->prio >= currentPrio) {
-
-                TRACE2("testing XLocPath '%s' for node %d \n", tpl->match, currentNode->nodeNumber);
-                /* Short cut for simple common cases */
-                switch (tpl->ast->type) {
-                case IsElement:
-                    if (currentNode->nodeType == ELEMENT_NODE) {
-                        if (tpl->ast->strvalue[0] != '*'
-                            && strcmp (tpl->ast->strvalue, currentNode->nodeName)!=0)
-                            continue;
-                    } else continue;
-                    break;
-                case IsText:
-                    if (currentNode->nodeType != TEXT_NODE)
-                        continue;
-                    break;
-                case IsAttr:
-                    if (currentNode->nodeType != ATTRIBUTE_NODE)
-                        continue;
-                    break;
-                default:
-                    /* to pacify gcc -Wall */
-                    ;
-                }
-                rc = xpathMatches ( tpl->ast, exprContext, currentNode, &(xs->cbs), errMsg);
-                TRACE1("xpathMatches = %d \n", rc);
-                if (rc < 0) {
-                    TRACE1("xpathMatches had errors '%s' \n", *errMsg);
-                    return rc;
-                }
-                if (rc == 0) continue;
-                TRACE3("matching '%s': %f > %f ? \n", tpl->match, tpl->prio , currentPrio);
-                currentPrio = tpl->prio;
-                currentPrec = tpl->precedence;
-                tplChoosen = tpl;
-                TRACE1("TAKING '%s' \n", tpl->match);
-            }
+        /* According to xslt rec 5.5: First test precedence */
+        if (tpl->precedence < currentPrec) break;
+        if (tpl->precedence == currentPrec) {
+            if (tpl->prio < currentPrio) break;
+            if (tpl->prio == currentPrio
+                && tpl->content->nodeNumber <= tplChoosen->content->nodeNumber)
+                break;
         }
+        rc = xpathMatches ( tpl->ast, exprContext, currentNode, &(xs->cbs), errMsg);
+        TRACE1("xpathMatches = %d \n", rc);
+        if (rc < 0) {
+            TRACE1("xpathMatches had errors '%s' \n", *errMsg);
+            return rc;
+        }
+        if (rc == 0) continue;
+        TRACE3("matching '%s': %f > %f ? \n", tpl->match, tpl->prio , currentPrio);
+        tplChoosen = tpl;
+        TRACE1("TAKING '%s' \n", tpl->match);
+        break;
     }
 
     if (tplChoosen == NULL) {
@@ -4374,7 +4566,7 @@ int ApplyTemplate (
                                   TEXT_NODE, 0);
             return 0;
         } else {
-            return 0; /* for all other node we don't have to recurse deeper */
+            return 0; /* for all other nodes we don't have to recurse deeper */
         }
         xpathRSInit( &rs );
         while (child) {
@@ -5475,7 +5667,24 @@ xsltFreeState (
     Tcl_HashTable     *htable;
     double            *f;
 
-    Tcl_DeleteHashTable (&xs->templateNames);
+    for (entryPtr = Tcl_FirstHashEntry (&xs->namedTemplates, &search);
+         entryPtr != (Tcl_HashEntry*) NULL;
+         entryPtr = Tcl_NextHashEntry (&search)) {
+        tpl = (xsltTemplate *) Tcl_GetHashValue (entryPtr);
+        if (!tpl->match) {
+            FREE((char*)tpl);
+        }
+    }
+    Tcl_DeleteHashTable (&xs->namedTemplates);
+
+    for (entryPtr = Tcl_FirstHashEntry (&xs->isElementTpls, &search);
+         entryPtr != (Tcl_HashEntry*) NULL;
+         entryPtr = Tcl_NextHashEntry (&search)) {
+        tpl = (xsltTemplate *) Tcl_GetHashValue (entryPtr);
+        if (tpl->freeAst) xpathFreeAst (tpl->freeAst);        
+        FREE((char*)tpl);
+    }
+    Tcl_DeleteHashTable (&xs->isElementTpls);
 
     for (entryPtr = Tcl_FirstHashEntry(&xs->xpaths, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
@@ -5597,7 +5806,7 @@ xsltFreeState (
     tpl = xs->templates;
     while (tpl) {
        tplsave = tpl;
-       if (tpl->ast) xpathFreeAst (tpl->ast);
+       if (tpl->freeAst) xpathFreeAst (tpl->freeAst);
        tpl = tpl->next;
        FREE((char*)tplsave);
     }
@@ -5684,7 +5893,8 @@ int xsltProcess (
     xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
     DBG(printXML(xmlNode, 0, 1);)
 
-    Tcl_InitHashTable ( &(xs.templateNames), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs.namedTemplates), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs.isElementTpls), TCL_STRING_KEYS);
     xs.cbs.varCB           = xsltGetVar;
     xs.cbs.varClientData   = (void*)&xs;
     xs.cbs.funcCB          = xsltXPathFuncs;
@@ -5698,7 +5908,6 @@ int xsltProcess (
     xs.varStackPtr         = -1;
     xs.varStackLen         = 8;
     xs.templates           = NULL;
-    xs.lastTemplate        = NULL;
     xs.resultDoc           = domCreateDoc();
     xs.xmlRootNode         = xmlNode;
     xs.lastNode            = xs.resultDoc->rootNode;
