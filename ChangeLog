@@ -1,9 +1,19 @@
+2003-09-28  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/dom.test
+        * generic/tcldom.c
+        * generic/dom.c: Bug fix for replaceChild: If the node to
+          replace was wrong, the doc got mangled. Bug fix for
+          appendChild, replaceChild: the new node could not be a
+          sibling or child of node. Speed improvment in some cases for
+          removeChild, replaceChild, appendChild.
+
 2003-09-22  Rolf Ade  <rolf@pointsman.de>
 
         * tests/dom.test
-          doc/domNode.*
-          generic/tcldom.c
-          generic/dom.c: Reworked insertBefore: Bug fix: If the
+        * doc/domNode.*
+        * generic/tcldom.c
+        * generic/dom.c: Reworked insertBefore: Bug fix: If the
           refNode was invalid, the involved documents got mangled. Bug
           fix: Dead loop, if the node to insert was the node
           itself. Bug fix: the rootNode of node's document could be
@@ -25,8 +35,8 @@
 2003-09-17  Rolf Ade  <rolf@pointsman.de>
 
         * tests/cdata,test
-          tests/element.test
-          tests/parser.test: Added a few tests related to the new
+        * tests/element.test
+        * tests/parser.test: Added a few tests related to the new
           flexibility of the -elementstartcommand, -elementendcommand
           and -characterdatacommand scripts.
           
@@ -35,7 +45,7 @@
           -paramentityparsing option.
   
         * generic/tclexpat.c
-          generic/tclexpat.h: Enhanced the new cget method of
+        * generic/tclexpat.h: Enhanced the new cget method of
           parserObjs to also report the state of -noexpand,
           -useForeignDTD, -paramentityparsing (those by doing the
           bookkeeping with an enhanced TclGenExpatInfo struct, because
