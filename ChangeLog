@@ -1,3 +1,18 @@
+2003-10-12  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * generic/domxslt.c: Removed not used vars.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domhtml.c
+        * generic/tcldom.c
+        * generic/tclexpat.c
+        * generic/tclexpat.h
+        * generic/xmlsimple.c: Merged domCreateEmptyDoc() and
+          domCreateDoc(), now there is only one API proc:
+          domCreateDoc().
+
 2003-10-10  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in
