@@ -147,12 +147,17 @@ typedef struct xpathCBs {               /* all xpath callbacks + clientData */
 
 } xpathCBs;
 
+/* XPath expr/pattern types */
+typedef enum {
+    XPATH_EXPR, XPATH_FORMAT_PATTERN, XPATH_TEMPMATCH_PATTERN, 
+    XPATH_KEY_USE_EXPR, XPATH_KEY_MATCH_PATTERN
+} xpathExprType;
 
 /*----------------------------------------------------------------------------
 |   Prototypes
 |
 \---------------------------------------------------------------------------*/
-int    xpathParse   (char *xpath, char **errMsg, ast *t, int asPattern);
+int    xpathParse   (char *xpath, char **errMsg, ast *t, xpathExprType type);
 void   xpathFreeAst (ast t);
 double xpathGetPrio (ast t);
 int    xpathEval    (domNode *node, domNode *exprContext, char *xpath, xpathCBs *cbs,
