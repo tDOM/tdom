@@ -24,37 +24,6 @@
 |   Contributor(s):
 |       July00  Zoran Vasiljevic  Added this file.
 |
-|   $Log$
-|   Revision 1.7  2002/07/28 08:27:51  zoran
-|   Moved to new memory allocation macros.
-|
-|   Revision 1.6  2002/07/10 03:19:21  zoran
-|   Reset interp result in nodecmd_appendFromScript to leave the clean object
-|   rep because tcldom.c SetResult and friends macros fail to check the
-|   object found in interp result for being shared (or not)
-|
-|   Revision 1.5  2002/07/02 19:25:07  zoran
-|   Fixed references to CONS'ified Tcl API (8.4 and later)
-|   Also, fixed (disappeared) NODE_NO references which broke the
-|   threaded build (mainly in the dom.c)
-|
-|   Revision 1.4  2002/06/21 10:38:24  zoran
-|   Fixed node numbering to use document-private node-counter when compiled
-|   with -DTCL_THREADS. Node Tcl-command names are still defined in the
-|   usual fashion, by using the (unsigned int)(domNode*) in order to get
-|   unique command names within the process and accross thread/interp combi.
-|
-|   Revision 1.3  2002/06/20 13:15:09  loewerj
-|
-|   fixed compile warnings
-|
-|   Revision 1.2  2002/06/02 06:36:24  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
 |
 |   written by Zoran Vasiljevic
 |   July 12, 2000
@@ -229,7 +198,7 @@ NodeObjCmd (arg, interp, objc, objv)
     int             objc;               /* Number of arguments. */
     Tcl_Obj *CONST  objv[];             /* Argument objects. */
 {
-    int len, dlen, i, ret;
+    int len, dlen, i, ret, disableOutputEscaping = 0, index = 1;
     char *tag, *p, *tval, *aval;
     domNode *parent, *newNode;
     domDocument *doc;
@@ -262,11 +231,27 @@ NodeObjCmd (arg, interp, objc, objv)
     case COMMENT_NODE:       /* FALL-THRU */
     case TEXT_NODE:
         if (objc != 2) {
-            Tcl_WrongNumArgs(interp, 1, objv, "text");
-            return TCL_ERROR;
+            if ((int)arg == TEXT_NODE) {
+                if (objc != 3 ||
+                    strcmp ("-disableOutputEscaping",
+                            Tcl_GetStringFromObj (objv[1], &len))!=0) {
+                    Tcl_WrongNumArgs(interp, 1, objv,
+                                     "?-disableOutputEscaping? text");
+                    return TCL_ERROR;
+                } else {
+                    disableOutputEscaping = 1;
+                    index = 2;
+                }
+            } else {
+                Tcl_WrongNumArgs(interp, 1, objv, "text");
+                return TCL_ERROR;
+            }
         }
-        tval = Tcl_GetStringFromObj(objv[1], &len);
+        tval = Tcl_GetStringFromObj(objv[index], &len);
         newNode = (domNode*)domNewTextNode(doc, tval, len, (int)arg);
+        if (disableOutputEscaping) {
+            newNode->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
+        }
         domAppendChild1(parent, newNode);
         break;
 
@@ -455,7 +440,9 @@ nodecmd_appendFromScript (interp, node, cmdObj)
     StackPush((void *)node);
     Tcl_AllowExceptions(interp);
     ret = Tcl_EvalObj(interp, cmdObj);
-    Tcl_ResetResult(interp);
+    if (ret != TCL_ERROR) {
+        Tcl_ResetResult(interp);
+    }
     StackPop();
 
     return (ret == TCL_BREAK) ? TCL_OK : ret;
