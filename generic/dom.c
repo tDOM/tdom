@@ -883,7 +883,7 @@ startElement(
                 DBG(fprintf(stderr, "%s\n", Tcl_GetStringResult (info->interp));)
                 /* FIXME: We simply ignore script errors in the
                    feedbackCmd, for now. One fine day, expat may provide
-                   a way to cancle a already started parse run from
+                   a way to cancel an already started parse run from
                    inside a handler. Then we should revisit this. */
                 /* exit(1) */    
             }
@@ -1760,10 +1760,6 @@ domReadDocument (
     char          *str;
 #endif
     domDocument   *doc = domCreateEmptyDoc();
-
-    if (!domModuleIsInitialized) {
-        domModuleInitialize();
-    }
 
     doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
     if (extResolver) {
