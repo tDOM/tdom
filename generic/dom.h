@@ -29,6 +29,13 @@
 |
 |
 |   $Log$
+|   Revision 1.7  2002/04/22 00:54:15  rolf
+|   Improved handling of literal result elements: now namespaces in scope
+|   are also copied to the result tree, if needed. exclude-result-prefixes
+|   and extension-element-prefixes of xsl:stylesheet elements are
+|   respected. (Still to do: xsl:extension-element-prefixes and
+|   xsl:exclude-result-prefixes attributes of literal elements.)
+|
 |   Revision 1.6  2002/04/19 18:55:37  rolf
 |   Changed / enhanced namespace handling and namespace information
 |   storage. The namespace field of the domNode and domAttributeNode
@@ -645,7 +652,8 @@ domNode *      domCloneNode (domNode *node, int deep);
 
 domTextNode *  domAppendNewTextNode (domNode *parent, char *value, int length, domNodeType nodeType, int disableOutputEscaping);
 domNode *      domAppendNewElementNode (domNode *parent, char *tagName, char *uri);
-
+domNode *      domAppendLiteralNode (domNode *parent, domNode *node);
+void           domAddNSToNode (domNode *node, domNS *nsToAdd);
 char *         domNamespacePrefix (domNode *node);
 char *         domNamespaceURI    (domNode *node);
 char *         domGetLocalName    (char *nodeName);

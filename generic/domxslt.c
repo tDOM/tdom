@@ -36,6 +36,13 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.18  2002/04/22 00:54:16  rolf
+|   Improved handling of literal result elements: now namespaces in scope
+|   are also copied to the result tree, if needed. exclude-result-prefixes
+|   and extension-element-prefixes of xsl:stylesheet elements are
+|   respected. (Still to do: xsl:extension-element-prefixes and
+|   xsl:exclude-result-prefixes attributes of literal elements.)
+|
 |   Revision 1.17  2002/04/19 18:55:41  rolf
 |   Changed / enhanced namespace handling and namespace information
 |   storage. The namespace field of the domNode and domAttributeNode
@@ -248,7 +255,8 @@ typedef enum {
     a_terminate, a_test, a_use, a_useAttributeSets, a_value, 
     a_groupingSeparator, a_groupingSize,    
     a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent, 
-    a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version
+    a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version,
+    a_excludeResultPrefixes, a_extensionElementPrefixes
 
 } xsltAttr;
 
@@ -349,7 +357,21 @@ typedef struct xsltVarFrame {
     int                   polluted;
     int                   nrOfVars;
     int                   varStartIndex;
+
 } xsltVarFrame;
+
+
+/*--------------------------------------------------------------------------
+|   xsltExcludeNS
+|
+\-------------------------------------------------------------------------*/
+typedef struct xsltExcludeNS
+{
+    char                 * uri;
+
+    struct xsltExcludeNS * next;
+
+} xsltExcludeNS;
 
 
 /*--------------------------------------------------------------------------
@@ -361,6 +383,7 @@ typedef struct xsltSubDoc
     domDocument        * doc;
     char               * baseURI;
     Tcl_HashTable        keyData;
+    xsltExcludeNS      * excludeNS;
 
     struct xsltSubDoc  * next;
 
@@ -380,10 +403,18 @@ typedef struct xsltTopLevelVar
 
 } xsltTopLevelVar;
 
+
+/*--------------------------------------------------------------------------
+|   xsltVarInProcess
+|
+\-------------------------------------------------------------------------*/
 typedef struct xsltVarInProcess
+
 {
     char                    *name;
+
     struct xsltVarInProcess *next;
+
 } xsltVarInProcess;
 
 
@@ -407,13 +438,20 @@ typedef struct xsltDecimalFormat
     
 } xsltDecimalFormat;
 
+
+/*--------------------------------------------------------------------------
+|   xsltWSInfo
+|
+\-------------------------------------------------------------------------*/
 typedef struct xsltWSInfo
 {
+
     int            hasData;
     double         wildcardPrec;
     Tcl_HashTable  NCNames;
     Tcl_HashTable  FQNames;
     Tcl_HashTable  NSWildcards;
+
 } xsltWSInfo;
 
 
@@ -471,23 +509,28 @@ typedef enum {
 |
 \-------------------------------------------------------------------------*/
 typedef struct {
+
     xsltNumberingType  type;
     int                minlength;
     char              *sepStart;
     int                sepLen;
+
 } xsltNumberFormatToken;
+
 
 /*--------------------------------------------------------------------------
 |   xsltNumberFormat
 |
 \-------------------------------------------------------------------------*/
 typedef struct {
+
     char                  *formatStr;
     int                    prologLen;
     xsltNumberFormatToken *tokens;
     int                    maxtokens;
     char                  *epilogStart;
     int                    epilogLen;
+
 } xsltNumberFormat;
 
 
@@ -612,6 +655,7 @@ reportError (
 
         Tcl_DStringAppend (&dStr, buffer, -1);
     } else {
+        Tcl_DStringAppend (&dStr, ": ", 2);
         Tcl_DStringAppend (&dStr, str, -1);
     }
     *errMsg = strdup (Tcl_DStringValue (&dStr));
@@ -1379,6 +1423,8 @@ static int buildKeyInfoForDoc (
     return 0;
 }
 
+
+/*  #define GETNUMBERNODE(x) (x)->nodeType == ATTRIBUTE_NODE ? ((domAttrNode * (x))->parentNode : (x) */
 /*----------------------------------------------------------------------------
 |   sortNodeSetByNodeNumber
 |
@@ -1391,7 +1437,7 @@ static void sortNodeSetByNodeNumber(
     domNode *tmp;
     int i, j, ln, rn;
 
-    /* TODO_RDE: ATTRIBUTE_NODE? TEXT_NODE? */
+    /* TODO: ATTRIBUTE_NODE? */
     while (n > 1) {
         tmp = nodes[0]; nodes[0] = nodes[n/2]; nodes[n/2] = tmp;
         for (i = 0, j = n; ; ) {
@@ -2991,6 +3037,8 @@ static int ExecAction (
     domAttrNode    *attr;
     domTextNode    *tnode;
     domNS          *NS;
+    xsltSubDoc     *sDoc;
+    xsltExcludeNS  *excludeNS;
     Tcl_DString     dStr;
     domProcessingInstructionNode *pi;      
     xpathResultSet  rs, nodeList;
@@ -3785,16 +3833,66 @@ static int ExecAction (
             savedLastNode = xs->lastNode;
             DBG(fprintf(stderr,
                         "append new tag '%s' uri='%s' \n", actionNode->nodeName,
-                        domNamespaceURI(actionNode) );)
-                                                                
-            xs->lastNode  = domAppendNewElementNode(xs->lastNode,
-                                                    actionNode->nodeName,
-                                                    domNamespaceURI(actionNode) );
+                        domNamespaceURI(actionNode) ););
+            xs->lastNode = domAppendLiteralNode (xs->lastNode, actionNode);
+            n = actionNode;
+            sDoc = xs->subDocs;
+            while (sDoc) {
+                if (sDoc->doc == actionNode->ownerDocument) break;
+                sDoc = sDoc->next;
+            }
+            if (!sDoc) {
+                *errMsg = strdup ("Internal Error");
+                return -1;
+            }
+            while (n) {
+                attr = n->firstAttr;
+                while (attr && (attr->nodeFlags & IS_NS_NODE)) {
+                    /* xslt namespace isn't copied */
+                    if (strcmp (attr->nodeValue, XSLT_NAMESPACE)==0){
+                        attr = attr->nextSibling;
+                        continue;
+                    }
+                    NS = actionNode->ownerDocument->namespaces[attr->namespace-1];
+                    excludeNS = sDoc->excludeNS;
+                    while (excludeNS) {
+                        if (excludeNS->uri) {
+                            if (strcmp (excludeNS->uri, NS->uri)==0) break;
+                        } else {
+                            if (NS->prefix[0] == '\0') break;
+                        }
+                        excludeNS = excludeNS->next;
+                    }
+                    if (excludeNS) {
+                        attr = attr->nextSibling;
+                        continue;
+                    }
+                    domAddNSToNode (xs->lastNode, NS);
+                    attr = attr->nextSibling;
+                }
+                n = n->parentNode;
+            }
+            /* It's not clear, what to do, if the literal result
+               element has a namespace, that should be excluded. We
+               follow saxon and xalan, which both add the namespace of
+               the literal result element always to the result tree,
+               to ensure, that the result tree is conform to the XML
+               recommendation. See the more detailed discussion in the
+               file discretionary-behavior */
+            if (actionNode->namespace) {
+                domAddNSToNode (xs->lastNode, actionNode->ownerDocument->namespaces[actionNode->namespace-1]);
+            }
+
             n = xs->lastNode;
-            
             /* process the attributes */
             attr = actionNode->firstAttr;
-            while (attr != NULL) {
+            while (attr) {
+                if (attr->nodeFlags & IS_NS_NODE) {
+                    attr = attr->nextSibling;
+                    continue;
+                }
+                /* TODO: xsl:exclude-result-prefixes attribute on literal
+                         elements on the ancestor-or-self axis */
                 uri = domNamespaceURI((domNode*)attr);
                 if (uri && strcmp(uri, XSLT_NAMESPACE)==0) {
                     domSplitQName((char*)attr->nodeName, prefix, &localName);
@@ -4192,6 +4290,83 @@ void StripSpace (
 
 
 /*----------------------------------------------------------------------------
+|   addExcludeNS
+|
+\---------------------------------------------------------------------------*/
+static int
+parseList (
+    xsltSubDoc  *docData,
+    domNode     *xsltRoot,
+    char        *str,
+    char       **errMsg
+    )
+{
+    xsltExcludeNS *excludeNS;
+    char          *pc, *start, save;
+    domNS         *ns;
+
+    if (str) {
+        pc = str;
+        while (*pc) {
+            while (*pc == ' ') pc++;
+            if (*pc == '\0') break;
+            start = pc;
+            while (*pc && (*pc != ' ')) pc++;
+            save = *pc;
+            *pc = '\0';
+            excludeNS = (xsltExcludeNS *) Tcl_Alloc (sizeof (xsltExcludeNS));
+            if (!docData->excludeNS) {
+                excludeNS->next = NULL;
+            } else {
+                excludeNS->next = docData->excludeNS;
+            }
+            docData->excludeNS = excludeNS;
+            if (strcmp (start, "#default")==0) {
+                fprintf (stderr, "exclude default namespace\n");
+                ns = domLookupPrefix (xsltRoot, "");
+                if (!ns) {
+                    *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    return -1;
+                }
+                excludeNS->uri = NULL;
+            } else {
+                ns = domLookupPrefix (xsltRoot, start);
+                if (!ns) {
+                    fprintf (stderr, "not defined prefix %s\n", start);
+                    *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    return -1;
+                }
+                excludeNS->uri = strdup (ns->uri);
+            }
+            *pc = save;
+        }
+    }
+    return 1;
+}
+
+static int
+addExcludeNS (
+    xsltSubDoc  *docData,
+    domNode     *xsltRoot,
+    char       **errMsg
+    )
+{
+    char *str;
+    int   rc;
+
+    str = getAttr (xsltRoot, "exclude-result-prefixes", 
+                   a_excludeResultPrefixes);
+    rc = parseList (docData, xsltRoot, str, errMsg);
+    CHECK_RC;
+    
+    str = getAttr (xsltRoot, "extension-element-prefixes", 
+                   a_extensionElementPrefixes);
+    rc = parseList (docData, xsltRoot, str, errMsg);
+    CHECK_RC;
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
 |   getExternalDocument
 |
 \---------------------------------------------------------------------------*/
@@ -4314,6 +4489,10 @@ getExternalDocument (
     sdoc->doc = doc;
     sdoc->baseURI = strdup (extbase);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
+    sdoc->excludeNS = NULL;
+    if (addExcludeNS (sdoc, doc->documentElement, errMsg) < 0) {
+        return NULL;
+    }
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
     
@@ -4324,7 +4503,10 @@ getExternalDocument (
     return NULL;
 }
 
-
+/*----------------------------------------------------------------------------
+|   processTopLevelVars
+|
+\---------------------------------------------------------------------------*/
 static int processTopLevelVars (
     domNode       * xmlNode,
     xsltState     * xs,
@@ -4424,6 +4606,10 @@ static int processTopLevelVars (
     return 0;
 }
 
+/*----------------------------------------------------------------------------
+|   processTopLevel
+|
+\---------------------------------------------------------------------------*/
 static int processTopLevel (
     Tcl_Interp    * interp,
     domNode       * xsltDocumentElement,
@@ -4441,10 +4627,10 @@ static int processTopLevel (
     char           *str, *name, *match, *use, *baseURI, *href;
     xsltAttrSet    *attrSet;
     xsltKeyInfo    *keyInfo;
-    xpathResultSet  nodeList;
+    xpathResultSet     nodeList;
     xsltDecimalFormat *df;
-    xsltTopLevelVar *topLevelVar;
-    Tcl_HashEntry  *h;
+    xsltTopLevelVar   *topLevelVar;
+    Tcl_HashEntry     *h;
 
     xpathRSInit( &nodeList );
     rsAddNode( &nodeList, xmlNode); 
@@ -4734,12 +4920,12 @@ static int processTopLevel (
 }
 
 
-
 /*----------------------------------------------------------------------------
 |   xsltFreeStats
 |
 \---------------------------------------------------------------------------*/
-void xsltFreeState (
+static void 
+xsltFreeState (
     xsltState      * xs
 ) {
     xsltDecimalFormat *df,  *dfsave;
@@ -4752,6 +4938,7 @@ void xsltFreeState (
     xsltNumberFormat  *nf;
     ast                t;
     xsltTopLevelVar   *tlv;
+    xsltExcludeNS     *excludeNS, *excludeNSsave;
     Tcl_HashEntry     *entryPtr, *entryPtr1;
     Tcl_HashSearch     search, search1;        
     Tcl_HashTable     *htable;
@@ -4830,7 +5017,14 @@ void xsltFreeState (
             Tcl_DeleteHashTable (htable);
             Tcl_Free ((char*)htable);
         }
-        Tcl_Free((void*)sdsave);
+        excludeNS = sdsave->excludeNS;
+        while (excludeNS) {
+            if (excludeNS->uri) free (excludeNS->uri);
+            excludeNSsave = excludeNS;
+            excludeNS = excludeNS->next;
+            Tcl_Free ((char *)excludeNSsave);
+        }
+        Tcl_Free((char*)sdsave);
     }
     
     /*--- free decimal formats ---*/
@@ -5007,6 +5201,7 @@ int xsltProcess (
     sdoc->doc = xmlNode->ownerDocument;
     sdoc->baseURI = findBaseURI (xmlNode);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
+    sdoc->excludeNS = NULL;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
@@ -5015,6 +5210,7 @@ int xsltProcess (
     sdoc->doc = xsltDoc;
     sdoc->baseURI = findBaseURI (xsltDoc->documentElement);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
+    sdoc->excludeNS = NULL;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
@@ -5037,6 +5233,11 @@ int xsltProcess (
         if (!str) {
             reportError (node, "missing mandatory attribute \"version\".", errMsg);
             return -1;
+        }
+        rc = addExcludeNS (sdoc, node, errMsg);
+        if (rc < 0) {
+            xsltFreeState (&xs);
+            return rc;
         }
     }
     

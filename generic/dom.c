@@ -36,6 +36,13 @@
 |
 |
 |   $Log$
+|   Revision 1.10  2002/04/22 00:54:14  rolf
+|   Improved handling of literal result elements: now namespaces in scope
+|   are also copied to the result tree, if needed. exclude-result-prefixes
+|   and extension-element-prefixes of xsl:stylesheet elements are
+|   respected. (Still to do: xsl:extension-element-prefixes and
+|   xsl:exclude-result-prefixes attributes of literal elements.)
+|
 |   Revision 1.9  2002/04/19 18:55:36  rolf
 |   Changed / enhanced namespace handling and namespace information
 |   storage. The namespace field of the domNode and domAttributeNode
@@ -131,6 +138,7 @@
 \--------------------------------------------------------------------------*/
 #define DBG(x)   
 #define TDOM_NS
+#define XSLT_NAMESPACE  "http://www.w3.org/1999/XSL/Transform"
 
 #define MutationEvent()
 #define MutationEvent2(type,node)  
@@ -552,7 +560,11 @@ static domNS* domNewNamespace (
     } else {
         ns->prefix = strdup(prefix);
     }
-    ns->uri   = strdup(namespaceURI);
+    if (namespaceURI == NULL) {
+        ns->uri = strdup("");
+    } else {
+        ns->uri   = strdup(namespaceURI);
+    }
     ns->index = doc->nsptr + 1;
 
     return ns;
@@ -1802,9 +1814,9 @@ domCreateDocument (
     if (uri) {
         ns = domNewNamespace (doc, prefix, uri);
         node->namespace   = ns->index;
-        /* It's unclear (at least to me), if the DOM spec expects, that
+        /* It's unclear, if the DOM spec expects, that
            also the according namespace declaration attribute is created.
-           According to what DOM 2 1.1.5 says, I'm afraid, not.
+           According to what DOM 2 1.1.7 says, I'm afraid, not.
            But this is all a real mess.
            Setting the node->namespace to a namespace index, without
            creating the according namespace attribute isn't exactly
@@ -2095,8 +2107,6 @@ domSetAttribute (
         h = Tcl_CreateHashEntry( &TSDPTR(attrNames), attributeName, &hnew);
         attr->nodeType    = ATTRIBUTE_NODE;     
         attr->nodeFlags   = 0;
-/*          attr->namespace   = node->namespace; */
-/* attribute does not get namespace of owner node automatically */
         attr->namespace   = 0;
         attr->nodeName    = (char *)&(h->key);     
         attr->parentNode  = node;        
@@ -3024,70 +3034,119 @@ domAppendNewElementNode(
     return node;
 }
 
+/*---------------------------------------------------------------------------
+|   domAddNSToNode
+|
+\--------------------------------------------------------------------------*/
+void
+domAddNSToNode (
+    domNode *node,
+    domNS   *nsToAdd
+    )
+{
+    domAttrNode   *attr, *lastNSAttr;
+    domNS         *ns;
+    Tcl_HashEntry *h;
+    int            hnew;
+    Tcl_DString    dStr;
 
-/*  domNode *  */
-/*  domAppendNewElementNodeLiteral( */
-/*      domNode     *parent, */
-/*      domNode     *literalNode */
-/*  ) */
-/*  { */
-/*      Tcl_HashEntry *h; */
-/*      domNode       *node; */
-/*      domNS         *ns, *nsp, *nsl; */
-/*      int            i, j, hnew;    */
-/*      char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN]; */
-/*      Tcl_DString    dStr; */
-/*      domNSContext  *currentNSContext, *newNSContext; */
-/*      domNSContext  *mergedNSContext[256]; */
-/*      GetTDomTSD(); */
+    DBG(fprintf (stderr, "domAddNSToNode: prefix: %s, uri: %s\n", nsToAdd->prefix, nsToAdd->uri);)
+    ns = domLookupPrefix (node, nsToAdd->prefix);
+    if (ns) {
+        if (strcmp (ns->uri, nsToAdd->uri)==0) {
+            /* namespace already in scope, we're done. */
+            return;
+        }
+    }
+    ns = domNewNamespace (node->ownerDocument, nsToAdd->prefix, nsToAdd->uri);
+    Tcl_DStringInit (&dStr);
+    if (nsToAdd->prefix[0] == '\0') {
+        Tcl_DStringAppend (&dStr, "xmlns", 5);
+    } else {
+        Tcl_DStringAppend (&dStr, "xmlns:", 6);
+        Tcl_DStringAppend (&dStr, nsToAdd->prefix, -1);
+    }
+    /* Add new namespace attribute */
+    attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+    memset(attr, 0, sizeof(domAttrNode));       
+    h = Tcl_CreateHashEntry( &TSDPTR(attrNames), Tcl_DStringValue(&dStr), &hnew);
+    attr->nodeType    = ATTRIBUTE_NODE;     
+    attr->nodeFlags   = IS_NS_NODE;
+    attr->namespace   = ns->index;
+    attr->nodeName    = (char *)&(h->key);     
+    attr->parentNode  = node;        
+    attr->valueLength = strlen(nsToAdd->uri);
+    attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+    strcpy(attr->nodeValue, nsToAdd->uri);
+    
+    lastNSAttr = NULL;
+    if (node->firstAttr && (node->firstAttr->nodeFlags & IS_NS_NODE)) {
+        lastNSAttr = node->firstAttr;
+        while (lastNSAttr->nextSibling
+               && (lastNSAttr->nextSibling->nodeFlags & IS_NS_NODE)) {
+            lastNSAttr = lastNSAttr->nextSibling;
+        }
+    }
+    if (lastNSAttr) {
+        attr->nextSibling = lastNSAttr->nextSibling;
+        lastNSAttr->nextSibling = attr;
+    } else {
+        attr->nextSibling = node->firstAttr;
+        node->firstAttr = attr;
+    }
+    Tcl_DStringFree (&dStr);
+}
 
-/*      if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; } */
+/*---------------------------------------------------------------------------
+|   domAppendLiteralNode
+|
+\--------------------------------------------------------------------------*/
+domNode * 
+domAppendLiteralNode(
+    domNode     *parent,
+    domNode     *literalNode
+)
+{
+    Tcl_HashEntry *h;
+    domNode       *node;
+    domNS         *ns;
+    int            hnew;   
+    GetTDomTSD();
+
+    if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
         
-/*      domSplitQName (literalNode->nodeName, prefix, &localName); */
+    h = Tcl_CreateHashEntry( &TSDPTR(tagNames), literalNode->nodeName, &hnew); 
+    node = (domNode*) domAlloc(sizeof(domNode));
+    memset(node, 0, sizeof(domNode));
+    node->nodeType      = ELEMENT_NODE;
+    node->nodeFlags     = 0;
+    node->namespace     = 0;
+    node->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+    node->ownerDocument = parent->ownerDocument;
+    node->nodeName      = (char *)&(h->key);
+    
+    if (parent->lastChild) {
+        parent->lastChild->nextSibling = node;
+        node->previousSibling          = parent->lastChild;
+    } else {
+        parent->firstChild    = node;
+        node->previousSibling = NULL;
+    }
+    parent->lastChild = node;
+    node->nextSibling = NULL;
+    node->parentNode  = parent;
 
-/*      node = (domNode*) domAlloc(sizeof(domNode)); */
-/*      memset(node, 0, sizeof(domNode)); */
-/*      node->nodeType      = ELEMENT_NODE; */
-/*      if (literalNode->namespace) { */
-/*          nsl = domGetNamespaceByIndex (literalNode->ownerDocument,  */
-/*                                        literalNode->namespace); */
-/*          nsp = domLookupPrefix (parent, nsl->prefix); */
-/*          if (!nsp || (strcmp (nsl->uri, nsp->uri)!=0)) { */
-/*              ns = domNewNamespace (parent->ownerDocument, nsl->prefix, */
-/*                                    nsl->uri); */
-/*          } else { */
-/*              ns = nsp; */
-/*          } */
+/*      domAddNSToNode (node, literalNode->ownerDocument->namespaces[literalNode->namespace]); */
+/*      ns = domLookupPrefix (node, literalNode->ownerDocument->namespaces[literalNode->namespace]->prefix); */
+/*      if (ns) { */
+/*          fprintf (stderr, "domAppendLiteralNode: adding namespace %s \n", ns->uri); */
 /*          node->namespace = ns->index; */
-/*      } else { */
-/*          node->namespace     = 0; */
 /*      } */
-/*      node->nodeName      = literalNode->nodeName; */
-/*      node->nodeNumber    = ++TSDPTR(domUniqueNodeNr); */
-/*      node->ownerDocument = parent->ownerDocument; */
-    
-/*      parentNSContext = domCurrentNSContext (parent); */
-/*      literalNSContext = domCurrentNSContext (literalNode); */
-/*      nrOfNS = 0; */
-/*      newNS = 0; */
-/*      for (i = 0; i < currentNSContext->nrOfNS; i++) { */
-        
-        
-/*      if (parent->lastChild) { */
-/*          parent->lastChild->nextSibling = node; */
-/*          node->previousSibling          = parent->lastChild; */
-/*      } else { */
-/*          parent->firstChild    = node; */
-/*          node->previousSibling = NULL; */
-/*      } */
-/*      parent->lastChild = node; */
-/*      node->nextSibling = NULL; */
-/*      node->parentNode  = parent; */
 
-/*      MutationEvent(); */
+    MutationEvent();
     
-/*      return node; */
-/*  } */
+    return node;
+}
 
 
 /*---------------------------------------------------------------------------
