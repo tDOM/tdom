@@ -7260,6 +7260,12 @@ int xsltProcess (
             }
             if (node->nodeType == ELEMENT_NODE) {
                 if (STRCASECMP(node->nodeName, "html")==0) {
+                    if (!xs->resultDoc->doctype) {
+                        xs->resultDoc->doctype = 
+                            (domDocInfo*)MALLOC (sizeof (domDocInfo));
+                        memset (xs->resultDoc->doctype, 0, 
+                                (sizeof (domDocInfo)));
+                    }
                     xs->resultDoc->doctype->method = tdomstrdup ("html");
                 }
                 break;
