@@ -1,5 +1,10 @@
 2002-11-01  Rolf Ade  <rolf@pointsman.de>
 
+        * lib/tdom.tcl: Updated function-available, corrected
+          ridiculous typo by my (element-avaliable ->
+          element-available). Somewhat fixed and updated
+          element-available.
+
         * generic/domxpath.c
         * test/xpath.c: Full qualified XPath function names now are
           accepted as syntactical correct expr. The function call is
