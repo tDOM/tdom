@@ -62,8 +62,8 @@ NODEBUG = 1
 
 NAMEPREFIX = libtdom
 STUBPREFIX = $(NAMEPREFIX)stub
-DOTVERSION = 0.7.5
-VERSION = 075
+DOTVERSION = 0.7.6
+VERSION = 076
 
 BINROOT         = .
 !IF "$(NODEBUG)" == "1"
@@ -147,7 +147,7 @@ cdebug = -Z7 -Od
 !ENDIF
 
 # declarations common to all compiler options
-cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DHAVE_MEMMOVE -DXML_DTD -DXML_NS -DTDOM_NO_UNKNOWN_CMD -DUSE_TCL_STUBS
+cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DHAVE_MEMMOVE -DXML_DTD -DXML_NS -DTDOM_NO_UNKNOWN_CMD -DUSE_TCL_STUBS -DVERSION="\"$(DOTVERSION)\""
 cvarsdll = -MD$(DBGX)
 
 TCL_CFLAGS     = $(cdebug) $(cflags) $(cvarsdll) $(include32) \
