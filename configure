@@ -3757,6 +3757,137 @@ EOF
     fi
 
 
+
+echo $ac_n "checking whether byte ordering is bigendian""... $ac_c" 1>&6
+echo "configure:3763: checking whether byte ordering is bigendian" >&5
+if eval "test \"`echo '$''{'ac_cv_c_bigendian'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  ac_cv_c_bigendian=unknown
+# See if sys/param.h defines the BYTE_ORDER macro.
+cat > conftest.$ac_ext <<EOF
+#line 3770 "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+#include <sys/param.h>
+int main() {
+
+#if !BYTE_ORDER || !BIG_ENDIAN || !LITTLE_ENDIAN
+ bogus endian macros
+#endif
+; return 0; }
+EOF
+if { (eval echo configure:3781: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+  rm -rf conftest*
+  # It does; now see whether it defined to BIG_ENDIAN or not.
+cat > conftest.$ac_ext <<EOF
+#line 3785 "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+#include <sys/param.h>
+int main() {
+
+#if BYTE_ORDER != BIG_ENDIAN
+ not big endian
+#endif
+; return 0; }
+EOF
+if { (eval echo configure:3796: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+  rm -rf conftest*
+  ac_cv_c_bigendian=yes
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  ac_cv_c_bigendian=no
+fi
+rm -f conftest*
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+fi
+rm -f conftest*
+if test $ac_cv_c_bigendian = unknown; then
+if test "$cross_compiling" = yes; then
+   echo $ac_n "cross-compiling... " 2>&6 
+else
+  cat > conftest.$ac_ext <<EOF
+#line 3816 "configure"
+#include "confdefs.h"
+main () {
+  /* Are we little or big endian?  From Harbison&Steele.  */
+  union
+  {
+    long l;
+    char c[sizeof (long)];
+  } u;
+  u.l = 1;
+  exit (u.c[sizeof (long) - 1] == 1);
+}
+EOF
+if { (eval echo configure:3829: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+then
+  ac_cv_c_bigendian=no
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -fr conftest*
+  ac_cv_c_bigendian=yes
+fi
+rm -fr conftest*
+fi
+
+fi
+fi
+
+echo "$ac_t""$ac_cv_c_bigendian" 1>&6
+if test $ac_cv_c_bigendian = unknown; then
+echo $ac_n "checking to probe for byte ordering""... $ac_c" 1>&6
+echo "configure:3847: checking to probe for byte ordering" >&5
+
+cat >conftest.c <<EOF
+short ascii_mm[] = { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
+short ascii_ii[] = { 0x694C, 0x5454, 0x656C, 0x6E45, 0x6944, 0x6E61, 0 };
+void _ascii() { char* s = (char*) ascii_mm; s = (char*) ascii_ii; }
+short ebcdic_ii[] = { 0x89D3, 0xE3E3, 0x8593, 0x95C5, 0x89C4, 0x9581, 0 };
+short ebcdic_mm[] = { 0xC2C9, 0xC785, 0x95C4, 0x8981, 0x95E2, 0xA8E2, 0 };
+void _ebcdic() { char* s = (char*) ebcdic_mm; s = (char*) ebcdic_ii; }
+int main() { _ascii (); _ebcdic (); return 0; }
+EOF
+ if test -f conftest.c ; then
+     if ${CC-cc} -c conftest.c -o conftest.o && test -f conftest.o ; then
+        if test `grep -l BIGenDianSyS conftest.o` ; then
+           echo $ac_n ' big endian probe OK, ' 1>&6
+           ac_cv_c_bigendian=yes
+        fi
+        if test `grep -l LiTTleEnDian conftest.o` ; then
+           echo $ac_n ' little endian probe OK, ' 1>&6
+           if test $ac_cv_c_bigendian = yes ; then
+            ac_cv_c_bigendian=unknown;
+           else
+            ac_cv_c_bigendian=no
+           fi
+        fi
+        echo $ac_n 'guessing bigendian ...  ' >&6
+     fi
+  fi
+echo "$ac_t""$ac_cv_c_bigendian" 1>&6
+fi
+if test $ac_cv_c_bigendian = yes; then
+  cat >> confdefs.h <<\EOF
+#define WORDS_BIGENDIAN 1
+EOF
+
+  BYTEORDER=4321
+else
+  BYTEORDER=1234
+fi
+if test $ac_cv_c_bigendian = unknown; then
+  { echo "configure: error: unknown endianess - sorry" 1>&2; exit 1; }
+fi
+
+
+
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the Makefile.
 # You may alternatively have a special pkgIndex.tcl.in or other files
@@ -3973,6 +4104,7 @@ s%@TCLSH_PROG@%$TCLSH_PROG%g
 s%@TDOM_INCLUDES@%$TDOM_INCLUDES%g
 s%@AOL_DIR@%$AOL_DIR%g
 s%@AOL_INCLUDES@%$AOL_INCLUDES%g
+s%@BYTEORDER@%$BYTEORDER%g
 
 CEOF
 EOF

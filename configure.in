@@ -276,6 +276,9 @@ TDOM_ENABLE_DTD
 TDOM_ENABLE_NS
 TDOM_ENABLE_UNKNOWN
 TDOM_ENABLE_TDOMALLOC
+sinclude(tclconfig/ac_c_bigendian_cross.m4)
+AC_C_BIGENDIAN_CROSS
+AC_SUBST(BYTEORDER)
 
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the Makefile.
