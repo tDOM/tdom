@@ -10,6 +10,7 @@
 #    domCmd-5.*:  publicId, systemId
 #    domCmd-6.*:  parse -useForeignDTD
 #    domCmd-7.*:  external entities
+#    domCmd-8.*:  toXSLTcmd
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -132,6 +133,172 @@ test domCmd-2.3 {parse doc with default NS declaration} {
     <p:b/>
 </a>
 }
+
+test domCmd-2.4 {parse method: syntax check} {
+    set doc [dom parse -keepEmpties {<root>
+  text
+    </root>}]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root>
+  text
+    </root>}
+
+test domCmd-2.5 {parse method: syntax check} {
+    set doc [dom parse -useForeignDTD 0 -keepEmpties {<root>
+  text
+    </root>}]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root>
+  text
+    </root>}
+
+test domCmd-2.6 {parse method: syntax check} {
+    set xmlFile [makeFile {<root>    </root>} domCmd.xml]
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -keepEmpties]
+    close $fd
+    set root [$doc documentElement]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root>    </root>}
+
+test domCmd-2.7 {parse method: syntax check} {
+    catch {unset -keepEmpties}
+    set xmlFile [makeFile {<root>    </root>} domCmd.xml]
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -keepEmpties]
+    close $fd
+    $doc delete
+    info exists -keepEmpties
+} {0}
+
+test domCmd-2.8 {parse method: bogus option} {
+    set result [catch {set doc [dom parse -bogusOption foo <root/>]} errMsg]
+    lappend result $errMsg
+} {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+
+test domCmd-2.9 {parse method: bogus option} {
+    catch {unset -keepEmpties}
+    set xmlFile [makeFile {<root>    </root>} domCmd.xml]
+    set fd [open $xmlFile]
+    set result [catch {set doc [dom parse -channel $fd -bogusOption]} errMsg]
+    close $fd
+    lappend result $errMsg
+} {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+
+set domCmd_dtd "
+    <!ELEMENT root EMPTY>
+    <!ATTLIST root lang CDATA #FIXED \"en\">"
+
+proc extRefResolver {base systemId publicId} {
+    global domCmd_dtd
+
+    if {$publicId == "DOMCMDTEST"} {
+        return [list string $base $domCmd_dtd]
+    } else {
+        return [::tDOM::extRefHandler $base $systemId $publicId]
+    }
+}
+
+test domCmd-2.10 {parse method: -paramentityparsing default is 'always'} {
+    set doc [dom parse -externalentitycommand extRefResolver {
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [$root @lang]
+    $doc delete
+    set result
+} {en}
+
+test domCmd-2.11 {parse method: explicit -paramentityparsing always} {
+    set doc [dom parse -externalentitycommand extRefResolver \
+                       -paramentityparsing always {
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [$root @lang]
+    $doc delete
+    set result
+} {en}
+
+test domCmd-2.12 {parse method: -paramentityparsing never} {
+    set doc [dom parse -externalentitycommand extRefResolver \
+                       -paramentityparsing never {
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [catch {set result [$root @lang]} errMsg]
+    $doc delete
+    lappend result $errMsg
+    set result
+} {1 {Attribute "lang" not found!}}
+
+test domCmd-2.13 {parse method: -paramentityparsing notstandalone} {
+    set doc [dom parse -externalentitycommand extRefResolver \
+                       -paramentityparsing notstandalone {
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [$root @lang]
+    $doc delete
+    set result
+} {en}
+
+test domCmd-2.14 {parse method: -paramentityparsing notstandalone} {
+    set doc [dom parse -externalentitycommand extRefResolver \
+                       -paramentityparsing notstandalone \
+                       {<?xml version="1.0" standalone="yes"?>
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [catch {set result [$root @lang]} errMsg]
+    $doc delete
+    lappend result $errMsg
+    set result
+} {1 {Attribute "lang" not found!}}
+
+test domCmd-2.15 {parse method: -paramentityparsing notstandalone} {
+    set doc [dom parse -externalentitycommand extRefResolver \
+                       -paramentityparsing notstandalone \
+                       {<?xml version="1.0" standalone="no"?>
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]
+    set root [$doc documentElement]
+    set result [$root @lang]
+    $doc delete
+    set result
+} {en}
+
+test domCmd-2.16 {parse method: wrong value arg for -paramentityparsing} {
+    set result [catch {set doc [dom parse -paramentityparsing wrong {
+        <root/>}]} errMsg]
+    lappend result $errMsg
+} {1 {bad value "wrong": must be always, never, or notstandalone}}
+
+# The following is syntactically wrong. It's used, to test the
+# error reporting in external DTDs
+set domCmd_dtd "<!ATTLIST root lang #FIXED \"en\">"
+
+test domCmd-2.17 {parse method: test reporting of error in external subset} {
+    set result [catch {set doc [dom parse \
+            -externalentitycommand extRefResolver {
+        <!DOCTYPE root PUBLIC "DOMCMDTEST" "dummysystemID">
+        <root/>
+    }]} errMsg]
+    lappend result $errMsg
+} {1 {error "syntax error" in entity "dummysystemID" at line 1 character 20
+"<!ATTLIST root lang # <--Error-- FIXED "en">"}}
 
 test domCmd-3.1 {isName} {
     dom isName ":foo"
@@ -407,13 +574,20 @@ test domCmd-3.23 {isQName} {
 test domCmd-3.24 {isQName} {
     catch {dom isQName foo bar}
 } {1}
+
+test domCmd-3.25 {isQName} {
+    dom isQName "foo bar"
+} {0}
     
+test domCmd-3.26 {isQName} {
+    dom isQName "woozbiz:"
+} {0}
 
 set XMLChars {
     0x9 0xA 0xD {0x20 0xD7FF} {0xE000 0xFFFD} {0x10000 0x10FFFF}
 }
 
-test domCmd-3.25 {isCharData} {longRunning && need_i18n} {
+test domCmd-3.27 {isCharData} {longRunning && need_i18n} {
     set ind 0
     set nr 1
     while {$nr < 65536} {
@@ -717,7 +891,115 @@ test domCmd-7.1 {document with external subset} {
     set result
 } {toThat}
 
+
+set doc [dom parse <root/>]
+
+set xslt1 {
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+    <xsl:param name="param1" select="'param1Default'"/>
+    <xsl:param name="param2" select="'param2Default'"/>
+    <xsl:param name="param3" select="'param3Default'"/>
+    <xsl:template match="/">
+        <xsl:value-of select="$param1"/>
+        <xsl:text> </xsl:text>
+        <xsl:value-of select="$param2"/>
+        <xsl:text> </xsl:text>
+        <xsl:value-of select="$param3"/>
+        <xsl:text> </xsl:text>
+    </xsl:template>
+</xsl:stylesheet>}
+
+test domCmd-8.1 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+    
+    $xsltCmd -parameters {param2 newValue param3 "this Value"} $doc resultDoc
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xsltCmd -parameters {param1 "that Value"} $doc resultDoc
+    append result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xsltCmd -parameters {param3 "another" param1 "and this"} $doc resultDoc
+    append result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    rename $xsltCmd {}
+    set result
+} {param1Default newValue this Value that Value param2Default param3Default and this param2Default another }
+
+set xslt2 {
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+    <xsl:template match="/">
+        <xsl:text>dummy result</xsl:text>
+        <xsl:message>This is from xsl:message</xsl:message>
+    </xsl:template>
+</xsl:stylesheet>}
+
+proc msgCmd1 {msg terminate} {
+    global result
+    append result "msgCmd1: $msg "
+}
+
+proc msgCmd2 {msg terminate} {
+    global result
+    append result "msgCmd2: $msg"
+}
+
+test domCmd-8.2 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt2]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result ""
+    $xsltCmd -xsltmessagecmd msgCmd1 $doc resultDoc
+    $resultDoc delete
+    $xsltCmd -xsltmessagecmd msgCmd2 $doc resultDoc
+    $resultDoc delete
+    rename $xsltCmd {}
+    set result
+} {msgCmd1: This is from xsl:message msgCmd2: This is from xsl:message}
+
+test domCmd-8.3 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd -bogusOption foo $doc resultDoc} errMsg]
+    lappend result $errMsg
+    lappend result [catch {$xsltCmd $doc resultDoc}]
+    lappend result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    rename $xsltCmd {}
+    set result
+} {1 {bad option "-bogusOption": must be -parameters, -ignoreUndeclaredParameters, or -xsltmessagecmd} 0 {param1Default param2Default param3Default }}
+
+test domCmd-8.4 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd -xsltmessagecmd msgCmd1} errMsg]
+    rename $xsltCmd {}
+    lappend result $errMsg
+} {1 {wrong # args: should be "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?"}}
+
+test domCmd-8.5 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd $doc resultDoc bogus} errMsg]
+    rename $xsltCmd {}
+    lappend result $errMsg
+} {1 {wrong # args: should be "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?"}}
+
+test domCmd-8.6 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd -parameters {param1 foo} -parameters {param2 foo} $doc resultDoc} errMsg]
+    rename $xsltCmd {}
+    lappend result $errMsg
+} {1 {only one -parameters option allowed}}
+
+$doc delete
+
+
 # cleanup
 ::tcltest::cleanupTests
 return
-
