@@ -49,7 +49,6 @@
 #include <tcl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <dom.h>
 #include <utf8conv.h>
 #include <domalloc.h>
@@ -454,8 +453,7 @@ domNS* domNewNamespace (
     domNS *ns = NULL;
 
     DBG(fprintf(stderr, "domNewNamespace '%s' --> '%s' \n", prefix, namespaceURI);)
-    ns = domLookupNamespace (doc, prefix, namespaceURI);
-    if (ns != NULL) return ns;
+
     doc->nsptr++;
     if (doc->nsptr > 254) {
         fprintf (stderr, "maximum number of namespaces exceeded!!!\n");
@@ -643,8 +641,8 @@ startElement(
     node->nodeFlags     = 0;
     node->namespace     = 0;
     node->nodeName      = (char *)&(h->key);
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = info->document;
-    node->nodeNumber    = NODE_NO(info->document);
 
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
@@ -956,8 +954,7 @@ characterDataHandler (
         node->nodeType    = TEXT_NODE;
         node->nodeFlags   = 0;
         node->namespace   = 0;
-        node->ownerDocument = info->document;
-        node->nodeNumber  = NODE_NO(info->document);
+        node->nodeNumber  = NODE_NO(node);
         if (info->baseURI != XML_GetBase (info->parser)) {
             info->baseURI  = XML_GetBase (info->parser);
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -970,6 +967,7 @@ characterDataHandler (
         node->nodeValue   = (char*)Tcl_Alloc(len);
         memmove(node->nodeValue, s, len);
 
+        node->ownerDocument = info->document;
         node->parentNode = parentNode;
         if (parentNode->nodeType == ELEMENT_NODE) {
             if (parentNode->firstChild)  {
@@ -1028,8 +1026,7 @@ commentHandler (
     node->nodeType    = COMMENT_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->ownerDocument = info->document;
-    node->nodeNumber  = NODE_NO(info->document);
+    node->nodeNumber  = NODE_NO(node);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1043,6 +1040,7 @@ commentHandler (
     node->nodeValue   = (char*)Tcl_Alloc(len);
     memmove(node->nodeValue, s, len);
 
+    node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
         if (info->document->documentElement) {
@@ -1105,8 +1103,7 @@ processingInstructionHandler(
     node->nodeType    = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->ownerDocument = info->document;
-    node->nodeNumber  = NODE_NO(info->document);
+    node->nodeNumber  = NODE_NO(node);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1132,6 +1129,7 @@ processingInstructionHandler(
     node->dataValue  = (char*)Tcl_Alloc(len);
     memmove(node->dataValue, data, len);
 
+    node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
         if (info->document->documentElement) {
@@ -1464,8 +1462,8 @@ domReadDocument (
     }
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
+    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
-    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
     if (storeLineColumn) {
@@ -1625,7 +1623,10 @@ domCreateXMLNamespaceNode (
     memset (attr, 0, sizeof (domAttrNode));
     h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,attrNames),
                             "xmlns:xml", &hnew);
-    ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
+    ns = domLookupNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
+    if (!ns) {
+        ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
+    }
     attr->nodeType      = ATTRIBUTE_NODE;
     attr->nodeFlags     = IS_NS_NODE;
     attr->namespace     = ns->index;
@@ -1684,8 +1685,8 @@ domCreateDoc ( )
     rootNode->nodeFlags     = 0;
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
+    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
-    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
     rootNode->firstChild    = rootNode->lastChild = NULL;
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
@@ -1750,8 +1751,8 @@ domCreateDocument (
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
     node->nodeFlags       = 0;
+    node->nodeNumber      = NODE_NO(node);
     node->ownerDocument   = doc;
-    node->nodeNumber      = NODE_NO(doc);
     node->nodeName        = (char *)&(h->key);
     doc->documentElement  = node;
     if (uri) {
@@ -2516,7 +2517,7 @@ domAppendChild (
                 childToAppend->ownerDocument->fragments = childToAppend->nextSibling;
             }
             if (childToAppend->nextSibling) {
-                childToAppend->nextSibling->previousSibling = NULL;
+                childToAppend->nextSibling->previousSibling = childToAppend->previousSibling;
             }
             break;
         }
@@ -2603,7 +2604,7 @@ domInsertBefore (
                 childToInsert->ownerDocument->fragments = childToInsert->nextSibling;
             }
             if (childToInsert->nextSibling) {
-                childToInsert->nextSibling->previousSibling = NULL;
+                childToInsert->nextSibling->previousSibling = childToInsert->previousSibling;
             }
             break;
         }
@@ -2700,7 +2701,7 @@ domReplaceChild (
                 newChild->ownerDocument->fragments = newChild->nextSibling;
             }
             if (newChild->nextSibling) {
-                newChild->nextSibling->previousSibling = NULL;
+                newChild->nextSibling->previousSibling = newChild->previousSibling;
             }
             break;
         }
@@ -2786,8 +2787,8 @@ domNewTextNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
-    node->nodeNumber    = NODE_NO(doc);
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
     memmove(node->nodeValue, value, length);
@@ -2941,8 +2942,8 @@ domAppendNewTextNode(
         node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
     }
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
-    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
     memmove(node->nodeValue, value, length);
@@ -2989,8 +2990,8 @@ domAppendNewElementNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = parent->namespace;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
-    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->nodeName      = (char *)&(h->key);
 
     if (parent->lastChild) {
@@ -3123,8 +3124,8 @@ domAppendLiteralNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
-    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->nodeName      = (char *)&(h->key);
 
     if (parent->lastChild) {
@@ -3163,8 +3164,8 @@ domNewProcessingInstructionNode(
     node->nodeType      = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
-    node->nodeNumber    = NODE_NO(doc);
     node->targetLength  = targetLength;
     node->targetValue   = (char*)Tcl_Alloc(targetLength);
     memmove(node->targetValue, targetValue, targetLength);
@@ -3207,8 +3208,8 @@ domNewElementNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
-    node->nodeNumber    = NODE_NO(doc);
     node->nodeName      = (char *)&(h->key);
 
     if (doc->fragments) {
@@ -3247,12 +3248,15 @@ domNewElementNodeNS (
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
+    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
-    node->nodeNumber    = NODE_NO(doc);
     node->nodeName      = (char *)&(h->key);
 
     domSplitQName (tagName, prefix, &localname);
-    ns = domNewNamespace(doc, prefix, uri);
+    ns = domLookupNamespace (doc, prefix, uri);
+    if (ns == NULL) {
+        ns = domNewNamespace(doc, prefix, uri);
+    }
     node->namespace = ns->index;
 
     if (doc->fragments) {
@@ -3410,7 +3414,12 @@ domCopyTo (
             }
             nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
             nattr->nodeFlags = attr->nodeFlags;
-            ns1 = domNewNamespace (n->ownerDocument, ns->prefix, ns->uri);
+            ns1 = domLookupNamespace (n->ownerDocument,
+                                      ns->prefix, ns->uri);
+            if (!ns1) {
+                ns1 = domNewNamespace (n->ownerDocument,
+                                       ns->prefix, ns->uri);
+            }
             nattr->namespace = ns1->index;
         } else {
             nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
@@ -3950,8 +3959,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         rootNode->nodeFlags     = 0;
         rootNode->namespace     = 0;
         rootNode->nodeName      = (char *)&(h->key);
+        rootNode->nodeNumber    = NODE_NO(rootNode);
         rootNode->ownerDocument = info->document;
-        rootNode->nodeNumber    = NODE_NO(info->document);
         rootNode->parentNode    = NULL;
         if (info->storeLineColumn) {
             lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
