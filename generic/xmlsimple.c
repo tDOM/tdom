@@ -190,7 +190,11 @@ static Er er_sequences[] = {
     { "gt",        ">",        0 },
     { "apos",      "'",        0 },
     { "quot",      "\"",       0 },
-    { "nbsp",      " ",        0 },
+#if TclOnly8Bits
+    { "nbsp",      "\240",     0 },
+#else
+    { "nbsp",      "\xC2\xA0",    0 },
+#endif
 };
 
 
@@ -297,8 +301,22 @@ static void TranslateEntityRefs (
                     /* error */
                 }
                 from = i+1;
+#if TclOnly8Bits
                 z[to++] = value;
-
+#else 
+                if (value < 0x80) {
+                    z[to++] = value;
+                } else if (value <= 0x7FF) {
+                    z[to++] = (char) ((value >> 6) | 0xC0);
+                    z[to++] = (char) ((value | 0x80) & 0xBF);
+                } else if (value <= 0xFFFF) {
+                    z[to++] = (char) ((value >> 12) | 0xE0);
+                    z[to++] = (char) (((value >> 6) | 0x80) & 0xBF);
+                    z[to++] = (char) ((value | 0x80) & 0xBF);
+                } else {
+                    /* error */
+                }
+#endif
             } else {
                 while (z[i] && isalpha(z[i])) {
                    i++;
@@ -384,7 +402,7 @@ XML_SimpleParse (
     register int   c;          /* Next character of the input file */
     register char *pn;
     register char *x, *start, *piSep;
-    int            saved, rootNodeNr;
+    int            saved;
     int            hasContent;
     domNode       *node, *toplevel, *rootNode;
     domNode       *parent_node = NULL;
@@ -392,9 +410,9 @@ XML_SimpleParse (
     domAttrNode   *attrnode, *lastAttr, *attrList;
     int            ampersandSeen = 0;
     int            only_whites   = 0;
+    domProcessingInstructionNode *pinode;
     int            hnew;
     Tcl_HashEntry *h;
-    domProcessingInstructionNode *pinode;
 
 #ifdef TDOM_NS    
     int            nspos, newNS;
@@ -409,7 +427,6 @@ XML_SimpleParse (
     domAttrNode   *lastNSAttr, *NSattrList;
 #endif
 
-    rootNodeNr = NODE_NO(doc);
     x = &(xml[*pos]);
 
     while ( (c=*x)!=0 ) {
@@ -495,23 +512,7 @@ XML_SimpleParse (
                 /* we return to main node and so finished parsing
                    create the root node now
                  */
-                h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
-                rootNode = (domNode*) domAlloc(sizeof(domNode));
-                memset(rootNode, 0, sizeof(domNode));
-                rootNode->nodeType      = ELEMENT_NODE;
-                rootNode->nodeFlags     = 0;
-                rootNode->namespace     = 0;
-                rootNode->nodeName      = (char *)&(h->key);
-                rootNode->ownerDocument = doc;
-                rootNode->nodeNumber    = rootNodeNr;
-                rootNode->parentNode    = NULL;
-                if (baseURI) {
-                    h = Tcl_CreateHashEntry (&doc->baseURIs, 
-                                             (char*)rootNode->nodeNumber,
-                                             &hnew);
-                    Tcl_SetHashValue (h, strdup (baseURI));
-                    rootNode->nodeFlags |= HAS_BASEURI;
-                }
+                rootNode = doc->rootNode;
                 rootNode->firstChild = doc->documentElement;
                 while (rootNode->firstChild->previousSibling) {
                     rootNode->firstChild = rootNode->firstChild->previousSibling;
@@ -1014,6 +1015,18 @@ XML_SimpleParse (
                 }
             }
             if (x[1] == 0) {
+
+                rootNode = doc->rootNode;
+                rootNode->firstChild = doc->documentElement;
+                while (rootNode->firstChild->previousSibling) {
+                    rootNode->firstChild = rootNode->firstChild->previousSibling;
+                }
+                rootNode->lastChild = doc->documentElement;
+                while (rootNode->lastChild->nextSibling) {
+                    rootNode->lastChild = rootNode->lastChild->nextSibling;
+                }
+                doc->rootNode = rootNode;
+
                 return TCL_OK;
             }
             if (*x=='>') {
@@ -1050,13 +1063,35 @@ XML_SimpleParseDocument (
     int     *pos,
     char   **errStr
 ) {
-    domDocument *doc = domCreateEmptyDoc();
+    int            hnew;
+    Tcl_HashEntry *h;
+    domNode       *rootNode;
+    domDocument   *doc = domCreateEmptyDoc();
 
     if (extResolver) {
         doc->extResolver = extResolver;
         Tcl_IncrRefCount(extResolver);
     }
-
+    
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
+    rootNode = (domNode*) domAlloc(sizeof(domNode));
+    memset(rootNode, 0, sizeof(domNode));
+    rootNode->nodeType      = ELEMENT_NODE;
+    rootNode->nodeFlags     = 0;
+    rootNode->namespace     = 0;
+    rootNode->nodeName      = (char *)&(h->key);
+    rootNode->ownerDocument = doc;
+    rootNode->nodeNumber    = NODE_NO(doc);
+    rootNode->parentNode    = NULL;
+    if (baseURI) {
+        h = Tcl_CreateHashEntry (&doc->baseURIs, 
+                                 (char*)rootNode->nodeNumber,
+                                 &hnew);
+        Tcl_SetHashValue (h, strdup (baseURI));
+                    rootNode->nodeFlags |= HAS_BASEURI;
+    }
+    doc->rootNode = rootNode;
+    
     *pos = 0;
     XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, baseURI, errStr);
 
