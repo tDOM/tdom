@@ -36,8 +36,8 @@
 |                               over the place.
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |   Revision 1.5  2002/02/04 22:10:59  jolo
 |   rolf 04022002

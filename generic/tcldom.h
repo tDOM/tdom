@@ -28,8 +28,8 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:34  rolf
-|   Initial revision
+|   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
