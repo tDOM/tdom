@@ -2,7 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   Functions, which (try) to convert UTF-8 encoded Unicode strings back 
@@ -29,6 +29,9 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2004/08/14 14:42:27  rolf
+|   Use 'Id' cvs keyword (instead of 'Header') in the file heads.
+|
 |   Revision 1.2  2002/07/04 15:06:49  zoran
 |   fixed reference to unsigned* to char since Sun compiler barfs at it.
 |

@@ -2,7 +2,7 @@
 |   Copyright (c) 2000 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   A (partial) XSLT implementation for tDOM, according to the W3C
@@ -30,6 +30,9 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2004/08/14 14:42:27  rolf
+|   Use 'Id' cvs keyword (instead of 'Header') in the file heads.
+|
 |   Revision 1.5  2003/01/11 00:19:02  rolf
 |   Added conversion of XSLT stylesheet DOM trees to 'cached' xslt cmds
 |   (new domDoc method toXSLTcmd). Works for non threaded tcl; needs

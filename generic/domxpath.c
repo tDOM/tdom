@@ -2,7 +2,7 @@
 |   Copyright (c) 1999-2001 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   A XPath implementation (lexer/parser/evaluator) for tDOM,
