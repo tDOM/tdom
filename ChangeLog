@@ -1,6 +1,5 @@
 2003-02-09  Rolf Ade  <rolf@pointsman.de>
 
-
         * generic/dom.c
         * generic/dom.h
         * generic/domxslt.c
