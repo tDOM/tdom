@@ -3631,6 +3631,7 @@ domAppendNewElementNode(
     Tcl_HashEntry *h;
     domNode       *node;
     domNS         *ns;
+    domAttrNode   *NSattr;
     int           hnew;
     char         *localname, prefix[MAX_PREFIX_LEN];
     Tcl_DString   dStr;
@@ -3672,13 +3673,13 @@ domAppendNewElementNode(
         if (!ns || (strcmp (uri, ns->uri)!=0)) {
             ns = domNewNamespace(node->ownerDocument, prefix, uri);
             if (prefix[0] == '\0') {
-                domSetAttributeNS (node, "xmlns", uri, NULL, 0);
+                domSetAttributeNS (node, "xmlns", uri, NULL, 1);
             } else {
                 Tcl_DStringInit (&dStr);
                 Tcl_DStringAppend (&dStr, "xmlns:", 6);
                 Tcl_DStringAppend (&dStr, prefix, -1);
                 domSetAttributeNS (node, Tcl_DStringValue (&dStr), uri, NULL,
-                                   0);
+                                   1);
             }
         }
         node->namespace = ns->index;
@@ -3686,7 +3687,12 @@ domAppendNewElementNode(
         ns = domLookupPrefix (node, "");
         if (ns) {
             if (strcmp (ns->uri, "")!=0) {
-                domSetAttributeNS (node, "xmlns", "", NULL, 0);
+                NSattr = domSetAttributeNS (node, "xmlns", "", NULL, 1);
+                if (NSattr) {
+                    node->namespace = NSattr->namespace;
+                }
+            } else {
+                node->namespace = ns->index;
             }
         }
     }
