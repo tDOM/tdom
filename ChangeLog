@@ -1,3 +1,8 @@
+2002-12-23  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c Reworked the white space stripping for XML
+          sources a bit. Better white space handling in token lists.
+
 2002-12-21  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c: Fixed the changes by me in rev. 1.60 in
