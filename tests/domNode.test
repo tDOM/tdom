@@ -1518,6 +1518,19 @@ test domNode-13.25 {Invalid processing instruction} {
     set result
 } [list 1 "Invalid processing instruction value 'data ?>'"]
 
+test domNode-13.26 {appendFromScript with default namespace in scope} {
+    set doc [dom parse {<doc xmlns="http://www.stock.org/stock"/>}]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            e1
+        }
+    }
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<doc xmlns="http://www.stock.org/stock"><e1 xmlns=""/></doc>}
+
 test domNode-14.1 {appendFromList} {
     set doc [dom createDocument root]
     set root [$doc documentElement]

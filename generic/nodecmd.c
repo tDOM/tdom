@@ -79,6 +79,17 @@ typedef struct CurrentStack {
     StackSlot *currentSlot;
 } CurrentStack;
 
+/*----------------------------------------------------------------------------
+|   Structure used as clientData of the created commands.
+|   The structure stores, which type of node the command has
+|   to create and, in case of elementNodes and if given, the
+|   namespace of the node.
+\---------------------------------------------------------------------------*/
+typedef struct NodeInfo {
+    int   type;
+    char *namespace;
+} NodeInfo;
+
 #ifndef TCL_THREADS
   static CurrentStack dataKey;
 # define TSDPTR(a) a
@@ -240,6 +251,23 @@ namespaceTail (nameObj)
 }
 
 /*----------------------------------------------------------------------------
+|   NodeObjCmdDeleteProc
+|
+\---------------------------------------------------------------------------*/
+static void
+NodeObjCmdDeleteProc (
+    ClientData clientData
+    )
+{
+    NodeInfo *nodeInfo = (NodeInfo *) clientData;
+    
+    if (nodeInfo->namespace) {
+        FREE (nodeInfo->namespace);
+    }
+    FREE (nodeInfo);
+}
+
+/*----------------------------------------------------------------------------
 |   NodeObjCmd
 |
 \---------------------------------------------------------------------------*/
@@ -256,6 +284,7 @@ NodeObjCmd (arg, interp, objc, objv)
     domNode *parent, *newNode = NULL;
     domDocument *doc;
     Tcl_Obj *cmdObj, **opts;
+    NodeInfo *nodeInfo = (NodeInfo*) arg;
 
     /*------------------------------------------------------------------------
     |   Need parent node to get the owner document and to append new 
@@ -278,7 +307,7 @@ NodeObjCmd (arg, interp, objc, objv)
     \-----------------------------------------------------------------------*/
 
     ret  = TCL_OK;
-    type = (int)(arg);
+    type = nodeInfo->type;
 
     switch (abs(type)) {
     case CDATA_SECTION_NODE:     
@@ -319,7 +348,7 @@ NodeObjCmd (arg, interp, objc, objv)
             createType = CDATA_SECTION_NODE;
             break;
         default:
-            createType = (int)arg;
+            createType = nodeInfo->type;
             break;
         }
         newNode = (domNode*)domNewTextNode(doc, tval, len, createType);
@@ -375,8 +404,7 @@ NodeObjCmd (arg, interp, objc, objv)
             }
         }
 
-        newNode = (domNode *)domNewElementNode(doc, tag, ELEMENT_NODE);
-        domAppendChild(parent, newNode);
+        newNode = domAppendNewElementNode (parent, tag, NULL);
         
         /*
          * Allow for following syntax:
@@ -486,6 +514,7 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
     int ix, index, ret, type, nodecmd = 0;
     char *nsName, buf[64];
     Tcl_DString cmdName;
+    NodeInfo *nodeInfo;
 
     /*
      * Syntax:  
@@ -493,11 +522,11 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
      *     dom createNodeCmd ?-returnNodeCmd? nodeType commandName
      */
 
-    enum {
+    enum subCmd {
         ELM_NODE, TXT_NODE, CDS_NODE, CMT_NODE, PIC_NODE, PRS_NODE
     };
 
-    static CONST84 char *subcmd[] = {
+    static CONST84 char *subcmds[] = {
         "elementNode", "textNode", "cdataNode", "commentNode", "piNode",
         "parserNode", NULL
     };
@@ -515,7 +544,7 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
         nodecmd = 0;
         ix = 1;
     }
-    ret = Tcl_GetIndexFromObj(interp, objv[ix], subcmd, "option", 0, &index);
+    ret = Tcl_GetIndexFromObj(interp, objv[ix], subcmds, "option", 0, &index);
     if (ret != TCL_OK) {
         return ret;
     }
@@ -537,10 +566,13 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
     }
     Tcl_DStringAppend(&cmdName, Tcl_GetString(objv[ix+1]), -1);
 
+    nodeInfo = (NodeInfo *) MALLOC (sizeof (NodeInfo));
+    nodeInfo->namespace = NULL;
     Tcl_ResetResult (interp);
-    switch (index) {
+    switch ((enum subCmd)index) {
     case ELM_NODE: 
         if (!tcldom_nameCheck(interp, namespaceTail(objv[ix+1]), "tag", 0)) {
+            FREE (nodeInfo);
             return TCL_ERROR;
         }
         if (checkName && checkCharData) {
@@ -590,20 +622,20 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
         break;
     }
     
+    nodeInfo->type = type;
     if (nodecmd) {
-        type *= -1; /* Signal this fact */
+        nodeInfo->type *= -1; /* Signal this fact */
     }
     Tcl_CreateObjCommand(interp, Tcl_DStringValue(&cmdName), NodeObjCmd,
-                         (ClientData)type, NULL);
+                         (ClientData)nodeInfo, NodeObjCmdDeleteProc);
     Tcl_DStringResult(interp, &cmdName);
     Tcl_DStringFree(&cmdName);
 
     return TCL_OK;
 
  usage:
-    Tcl_AppendResult(interp, 
-                     "dom createNodeCmd ?-returnNodeCmd? nodeType cmdName",
-                     NULL);
+    Tcl_AppendResult(interp, "dom createNodeCmd ?-returnNodeCmd?"
+                     " nodeType cmdName", NULL);
     return TCL_ERROR;
 }
 
