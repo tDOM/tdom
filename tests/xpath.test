@@ -9,6 +9,7 @@
 #    xpath-4.*: Tcl coded XPath functions and additional Tcl coded
 #               XPath functions
 #    xpath-5.*: erroneous XPath exprs
+#    xpath-6.*: Doc order after modifying tree
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -177,7 +178,7 @@ test xpath-3.35 {Infinity minus -Infinity} {
 
 $doc delete
 
-set doc [dom parse {<root>Foo</root>}]
+set doc [dom parse {<root xmlns:myNS="myNS">Foo</root>}]
 set root [$doc documentElement]
 
 test xpath-4.1 {function-available} {
@@ -228,7 +229,7 @@ proc ::dom::xpathFunc::wrongreturn {ctxNode pos nodeListNode nodeList args} {
 test xpath-4.7 {tcl coded additional XPath function - unknown return type} {
     catch {$root selectNodes {wrongreturn('foo')}} errMsg
     set errMsg
-} {Unkown type of return value "footype" from tcl coded XPath function "wrongreturn"!}
+} {Unknown type of return value "footype" from tcl coded XPath function "wrongreturn"!}
 
 proc ::dom::xpathFunc::returnnumber {ctxNode pos nodeListNode nodeList args} {
     return [list number "42"]
@@ -237,6 +238,49 @@ proc ::dom::xpathFunc::returnnumber {ctxNode pos nodeListNode nodeList args} {
 test xpath-4.8 {tcl coded additional XPath function - return number} {
     $root selectNodes {returnnumber()}
 } {42}
+
+test xpath-4.9 {tcl coded XPath function - erroneous function name} {
+    catch {$root selectNodes {thisFunctiondoesNotExists('foo',.)}} errMsg
+    set errMsg
+} {Unknown XPath function: "thisFunctiondoesNotExists"!}
+
+test xpath-4.10 {full qualified tcl coded XPath function - erroneous prefix} {
+    catch {$root selectNodes notdefinedprefix:mycontains()} errMsg
+    set errMsg
+} {There isn't a namespace bound to the prefix.}
+
+namespace eval ::dom::xpathFunc::myNS {
+    proc mycontains {ctxNode pos nodeListNode nodeList args} {
+        if {[llength $args] != 4} {
+            error "myNS::mycontains(): wrong # of args!"
+        }
+        foreach {arg1Typ arg1Value arg2Typ arg2Value} $args break
+        set text [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value]
+        set str  [::dom::xpathFuncHelper::coerce2string $arg2Typ $arg2Value]
+
+        if {[string first [string tolower $str] [string tolower $text]] != -1} {
+            return [list bool true]
+        } else {
+            return [list bool false]
+        }
+    }
+}
+
+test xpath-4.11 {full qualified tcl coded XPath function} {
+    $root selectNodes {myNS:mycontains(., 'fo')}
+} {1}
+
+test xpath-4.12 {full qualified tcl coded XPath function} {
+    $root selectNodes {myNS:mycontains(., 'bo')}
+} {0}
+
+test xpath-4.13 {error in arg expr of tcl coded XPath function} {
+    catch {$root selectNodes {mycontains(foo::bar, 'bo')}}
+} {1}
+
+test xpath-4.13 {error in arg expr of full qual. tcl coded XPath function} {
+    catch {$root selectNodes {myNS:mycontains(foo::bar, 'bo')}}
+} {1}
 
 proc ::dom::xpathFunc::buggyproc {ctxNode pos nodeListNode nodeList args} {
     if {[llength $args] != 2} {
@@ -254,7 +298,7 @@ proc ::dom::xpathFunc::buggyproc {ctxNode pos nodeListNode nodeList args} {
     return [list string $result]
 }
 
-test xpath-4.9 {tcl coded additional XPath function - tcl error in XPath func} {
+test xpath-4.13 {tcl coded XPath function - tcl error in XPath func} {
     catch {$root selectNodes {buggyproc('bambo')}}
 } {1}
 
@@ -344,6 +388,29 @@ Parsed symbols:
      0 WCARDNAME        0    0.000     2  foo
 -->  1 LITERAL          0    0.000     4  
      2 WCARDNAME        0    0.000     7  bar}
+
+$doc delete
+
+set doc [dom parse {
+<root>
+  <asub>asub2</asub>
+  <asub>asub3</asub>
+  <asub>asub4</asub>
+  <bsub>bsub1</bsub>
+  <bsub>bsub2</bsub>
+</root>}]
+set root [$doc documentElement]
+
+test xpath-6.1 {document order in modified DOM tree} {
+    set newAsub [$doc createElement asub]
+    $newAsub appendChild [$doc createTextNode "asub1"]
+    $root insertBefore $newAsub [$root firstChild]
+    set result ""
+    foreach node [$root selectNodes {bsub|asub}] {
+        append result "[$node text] "
+    }
+    set result
+} {asub1 asub2 asub3 asub4 bsub1 bsub2 }
 
 $doc delete
 
