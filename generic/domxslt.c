@@ -7326,6 +7326,7 @@ int xsltProcess (
         node->parentNode = NULL;
         if (node->nodeType == ELEMENT_NODE) {
             xs->resultDoc->documentElement = node;
+            break;
         }
         node = node->nextSibling;
     }
