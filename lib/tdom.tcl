@@ -747,9 +747,9 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
         "fffe" {
             # feff: UTF-16, big-endian BOM
             # ffef: UTF-16, little-endian BOM
-            # channel already configured to binary
             seek $fd 0 start
-            set encString UTF-16
+            set encString UTF-16            
+            fconfigure $fd -encoding identity
             return $fd
         }
     }
@@ -803,7 +803,7 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
             # UTF-16, big-endian, no BOM
             # UTF-16, little-endian, no BOM
             seek $fd 0 start
-            set encoding binary
+            set encoding identity
             set encString UTF-16
         }
         "4c6fa794" {
@@ -813,7 +813,7 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
         default {
             # UTF-8 without an encoding declaration
             seek $fd 0 start
-            set encoding utf-8
+            set encoding identity
             set encString "UTF-8"
         }
     }
