@@ -552,7 +552,7 @@ reportError (
     char   ** errMsg)
 {
     Tcl_DString dStr;
-    char *v, *baseURI, buffer[1024];
+    char *baseURI, buffer[1024];
     int  line, column;
 
     Tcl_DStringInit (&dStr);
@@ -5661,7 +5661,8 @@ getExternalDocument (
        a good idea?) */
     Tcl_ResetResult (interp);
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
-                           chan, extbase, xsltDoc->extResolver, 0, interp);
+                           chan, extbase, xsltDoc->extResolver, 0, 
+                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp);
 
     if (doc == NULL) {
         DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
@@ -5723,7 +5724,7 @@ getExternalDocument (
     return doc;
 
  wrongScriptResult:
-    *errMsg = tdomstrdup(Tcl_GetStringFromObj(Tcl_GetObjResult(interp), NULL));
+    *errMsg = tdomstrdup(Tcl_GetStringResult(interp));
     Tcl_DecrRefCount (resultObj);
     return NULL;
 }
