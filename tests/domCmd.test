@@ -7,6 +7,7 @@
 #    domCmd-2.*:  parse
 #    domCmd-3.*:  isName, isNCName, isCharData
 #    domCmd-4.*:  asXML, asHTML
+#    domCmd-5.*:  publicId, systemId
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -466,6 +467,167 @@ test domCmd-4.3 {asHTML -escapeNonASCII -htmlEntities} {need_i18n} {
     set result
 } {<html><body>&auml;&uuml;&bdquo;&#8223;&dagger;</body></html>}
 
+
+set doc [dom parse <root/>]
+
+test domCmd-4.4 {asXML -doctypeDeclaration} {
+    $doc asXML -doctypeDeclaration 1
+} {<!DOCTYPE root>
+<root/>
+}
+
+test domCmd-4.5 {asXML -doctypeDeclaration without boolean value (error)} {
+    set errMsg ""
+    catch {$doc asXML -doctypeDeclaration} errMsg
+    set errMsg
+} {-doctypeDeclaration must have a boolean value as argument}
+
+test domCmd-4.6 {asXML -doctypeDeclaration 0} {
+    $doc asXML -doctypeDeclaration 0
+} {<root/>
+}
+
+$doc delete
+
+test domCmd-4.7 {asXML -doctypeDeclaration} {
+    set doc [dom parse {<!DOCTYPE root PUBLIC "-//foo//DTD bar x.y//EN" 
+                                       "file:///boo.baz"><root/>}]
+    set result [$doc asXML -doctypeDeclaration 1]
+    $doc delete
+    set result
+} {<!DOCTYPE root PUBLIC "-//foo//DTD bar x.y//EN" "file:///boo.baz">
+<root/>
+}
+
+test domCmd-4.8 {asXML -doctypeDeclaration} {
+    set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+    set result [$doc asXML -doctypeDeclaration 1]
+    $doc delete
+    set result
+} {<!DOCTYPE root SYSTEM "file:///boo.baz">
+<root/>
+}   
+
+test domCmd-4.9 {asXML -doctypeDeclaration} {
+    set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+    set result [$doc asXML -doctypeDeclaration true]
+    $doc delete
+    set result
+} {<!DOCTYPE root SYSTEM "file:///boo.baz">
+<root/>
+}   
+
+test domCmd-4.10 {asXML - unknown option} {
+    set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+    set errMsg ""
+    catch {$doc asXML -fooOption 1} errMsg
+    $doc delete
+    set errMsg
+} {bad option "-fooOption": must be -indent, -channel, -escapeNonASCII, or -doctypeDeclaration}
+
+test domCmd-4.11 {asXML - non boolean value to -doctypeDeclaration} {
+    set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+    set errMsg ""
+    catch {$doc asXML -doctypeDeclaration foo} errMsg
+    $doc delete
+    set errMsg
+} {expected boolean value but got "foo"}
+
+test domCmd-4.12 {asXML - shortened option} {
+    set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+    set result [$doc asXML -doctype 1]
+    $doc delete
+    set result
+} {<!DOCTYPE root SYSTEM "file:///boo.baz">
+<root/>
+}   
+
+test domCmd-4.13 {asHTML -doctypeDeclaration} {
+    set doc [dom createDocument HTML]
+    set result [$doc asHTML -doctypeDeclaration 1]
+    $doc delete
+    set result
+} {<!DOCTYPE HTML>
+<html></html>}
+
+test domCmd-4.14 {asHTML -doctypeDeclaration} {
+    set doc [dom parse {<!DOCTYPE HTML 
+    PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+    "http://www.w3.org/TR/REC-html40/loose.dtd">
+    <html><body><p>boo</p></body></html>}]
+    set result [$doc asHTML -doctypeDeclaration 1]
+    $doc delete
+    set result
+} {<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html><body><p>boo</p></body></html>}
+
+set doc [dom parse <root/>]
+
+test domCmd-5.1 {publicId - no publicId there} {
+    $doc publicId
+} {}
+
+test domCmd-5.2 {systemId - no systemId there} {
+    $doc systemId
+} {}
+
+$doc delete
+set doc [dom parse {<!DOCTYPE root PUBLIC "-//foo//DTD bar x.y//EN" "file:///boo.baz"><root/>}]
+
+test domCmd-5.3 {publicId from parsed document} {
+    $doc publicId
+} {-//foo//DTD bar x.y//EN}
+
+test domCmd-5.4 {systemId from parsed document} {
+    $doc systemId
+} {file:///boo.baz}
+
+$doc delete
+set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
+
+test domCmd-5.5 {publicId but document has only SYSTEM} {
+    $doc publicId
+} {}
+
+test domCmd-5.6 {systemId, document has only SYSTEM} {
+    $doc systemId
+} {file:///boo.baz}
+
+test domCmd-5.7 {publicId - set public identifier} {
+    set result [$doc publicId "file:///woo.hoo"]
+    append result " [$doc publicId]"
+} { file:///woo.hoo} 
+
+test domCmd-5.8 {publicId - set public identifier} {
+    $doc publicId "http://www.tdom.org"
+    $doc asXML -indent no -doctypeDeclaration 1
+} {<!DOCTYPE root PUBLIC "http://www.tdom.org" "file:///boo.baz">
+<root/>}
+
+test domCmd-5.9 {systemId - set system identifier} {
+    set result [$doc systemId "file:///woo.hoo"]
+    append result " [$doc systemId]"
+} {file:///boo.baz file:///woo.hoo}
+
+test domCmd-5.10 {systemId - set system identifier} {
+    $doc systemId "file:///whooze.moo"
+    $doc asXML -indent no -doctypeDeclaration 1
+} {<!DOCTYPE root PUBLIC "http://www.tdom.org" "file:///whooze.moo">
+<root/>}
+
+test domCmd-5.11 {publicId - set to empty string} {
+    $doc publicId ""
+    $doc asXML -indent no -doctypeDeclaration 1
+} {<!DOCTYPE root SYSTEM "file:///whooze.moo">
+<root/>}
+
+test domCmd-5.12 {systemId - set to empty string} {
+    $doc systemId ""
+    $doc asXML -indent no -doctypeDeclaration 1
+} {<!DOCTYPE root>
+<root/>}
+
+$doc delete
 
 # cleanup
 ::tcltest::cleanupTests

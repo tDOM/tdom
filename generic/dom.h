@@ -440,10 +440,25 @@ typedef enum {
 
 } domException;
 
-
+/*--------------------------------------------------------------------------
+|   domDoctype
+|
+\-------------------------------------------------------------------------*/
+typedef struct domDoctype {
+    
+    /* 'name' is always the name of the documentElement, no struct element
+       needed for this */
+    domString        publicId;
+    domString        systemId;
+    domString        internalSubset;
+    /* Currently missing, according to DOM 2: 'entities' and 'notations'.
+       Additional, this would be a good place to store additional 
+       informations about the document according xslt rec section 16. */
+    
+} domDoctype;
 
 /*--------------------------------------------------------------------------
-|   DOM_Document
+|   domDocument
 |
 \-------------------------------------------------------------------------*/
 typedef struct domDocument {
@@ -468,6 +483,7 @@ typedef struct domDocument {
     Tcl_HashTable     unparsedEntities;
     Tcl_HashTable     baseURIs;
     Tcl_Obj          *extResolver;
+    domDoctype       *doctype;
     TDomThreaded (
         Tcl_HashTable tagNames;        /* Names of tags found in doc */
         Tcl_HashTable attrNames;       /* Names of tag attributes */
