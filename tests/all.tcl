@@ -6,28 +6,14 @@
 #
 # Copyright (c) 1998-1999 by Scriptics Corporation.
 # All rights reserved.
+#
+# RCS: @(#) $Id$
 # 
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
-#  if {[lsearch [namespace children] ::tcltest] == -1} {
-#      package require tcltest
-#      namespace import ::tcltest::*
-#  }
-
 set ::tcltest::testSingleFile false
 set ::tcltest::testsDirectory [file dir [info script]]
-
-#  set tdomVersion 0.7.5 
-#  set tdombin "libtdom[set tdomVersion][info sharedlibextension]"
-
-#  source [file join [file dir [info script]] ../lib tdom.tcl]
-#  if {[catch [load [file join [file dir [info script]] ../unix $tdombin]]]} {
-#      if {[catch [load [file join [file dir [info script]] ../win $tdombin]]]} {
-#          # Just propagate the error, therefor no catch
-#          package require tdom $tdomVersion
-#      }
-#  }
 
 puts stdout "Tcl $tcl_patchLevel tests running in interp:  [info nameofexecutable]"
 puts stdout "Tests running in working dir:  $::tcltest::testsDirectory"
