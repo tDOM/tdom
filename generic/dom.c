@@ -4191,7 +4191,7 @@ domCopyTo (
 
     if (node->namespace) {
         ns = node->ownerDocument->namespaces[node->namespace-1];
-        ns1 = domLookupPrefix (n, ns->prefix);
+        ns1 = domAddNSToNode (n, ns);
         if (ns1) {
             n->namespace = ns1->index;
         }
