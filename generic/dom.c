@@ -1594,7 +1594,7 @@ processingInstructionHandler(
 
     if (info->baseURIstack[info->baseURIstackPos].baseURI 
         != XML_GetBase (info->parser)) {
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+        h = Tcl_CreateHashEntry (info->document->baseURIs,
                                  (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
