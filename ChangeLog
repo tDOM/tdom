@@ -1,9 +1,25 @@
 2003-03-22  Rolf Ade  <rolf@pointsman.de>
+x
         * README
         * README.AOL
         * configure.in
         * configure
-        * configure-tcl8.0.5: Updated to new version number 0.7.6.
+        * configure-tcl8.0.5
+        * mac/tDOM.r
+        * mac/tDOM_OSX.prj.xml
+        * mac/tnc.r
+        * extensions/tnc/makefile.vc: Updated to new version number 0.7.6.
+        
+        * mac/tDOM/*: Added dir/files, to have a version number
+          independed output dir for the mac build.
+
+        * mac/tDOM.0.7.5/*
+        * mac/tDOM.0.7.5: Removed in favor of a version-less tDOM
+          output directory.
+
+        * configure
+        * configure.in: tdomstub_BUILD_SPEC must point to the
+          plattform specific build dir.
 
         * generic/tcldom.h: Removed hard coded version number, uses
           now VERSION define.
