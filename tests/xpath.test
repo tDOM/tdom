@@ -471,6 +471,15 @@ test xpath-5.6 {erroneous XPath expr} {
 
 $doc delete
 
+test xpath-5.7 {using 'xslt variable' in expr} {
+    set doc [dom parse {<root><elem id="foo"/></root>}]
+    set root [$doc documentElement]
+    set result [catch {$root selectNodes {elem[@id='$var']}} errMsg]
+    $doc delete
+    lappend result $errMsg
+} {0 {}}
+
+
 set doc [dom parse {
 <root>
   <asub>asub2</asub>
