@@ -20,17 +20,11 @@
          and therefore subject to change.
 */
 
-#if defined(__GNUC__) && !defined(sun)
-/* regparm() generates warnings on Solaris boxes.   See SF bug #692878.
+#if 1 /* Fuck above defs. Do not work cross-platforms */
 
-   Instability reported with egcs on a RedHat Linux 7.3.
-   Let's comment it out:
-   #define FASTCALL __attribute__((stdcall, regparm(3)))
-   and let's try this:
-*/
-#define FASTCALL __attribute__((regparm(3)))
+#define FASTCALL
 #define PTRCALL
-#define PTRFASTCALL __attribute__((regparm(3)))
+#define PTRFASTCALL
 
 #elif defined(WIN32)
 /* Using __fastcall seems to have an unexpected negative effect under
