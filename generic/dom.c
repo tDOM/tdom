@@ -49,6 +49,7 @@
 #include <tcl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <dom.h>
 #include <utf8conv.h>
 #include <domalloc.h>

@@ -28,6 +28,9 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2002/06/20 13:14:01  loewerj
+|   fixed compile warnings
+|
 |   Revision 1.5  2002/06/02 06:36:24  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -85,7 +88,9 @@ int
 Tdom_Init (interp)
      Tcl_Interp *interp; /* Interpreter to initialize. */
 {
+#ifdef TCL_THREADS
     char *bool = NULL;
+#endif /* TCL_THREADS */
 
 #ifdef USE_TCL_STUBS
     Tcl_InitStubs(interp, "8", 0);

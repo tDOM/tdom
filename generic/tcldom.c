@@ -258,12 +258,13 @@ static char * tcldom_docTrace (ClientData clientData,
                                char       *name2,
                                int        flags);
 
+#ifdef TCL_THREADS
+
 static int tcldom_EvalLocked (Tcl_Interp*  interp,
                               Tcl_Obj**    objv,
                               domDocument* doc,
                               int          flag);
 
-#ifdef TCL_THREADS
 
 /*----------------------------------------------------------------------------
 |   tcldom_finalize
@@ -943,7 +944,6 @@ static domDocument * tcldom_getDocumentFromName (
 |   tcldom_appendXML
 |
 \---------------------------------------------------------------------------*/
-
 int tcldom_appendXML (
     Tcl_Interp *interp,
     domNode    *node,
@@ -3629,7 +3629,6 @@ int tcldom_domCmd (
 |   tcldom_EvalLocked
 |
 \---------------------------------------------------------------------------*/
-
 static
 int tcldom_EvalLocked (
     Tcl_Interp*  interp,
