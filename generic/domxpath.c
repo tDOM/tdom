@@ -693,11 +693,8 @@ static XPathTokens xpathLexer (
                                    xpath[i--] = save;
                                }
                            } else {
-                               save = xpath[i];
-                               xpath[i] = '\0';
-                               tokens[l].strvalue = (char*)strdup(ps);
-                               xpath[i--] = save;
                                token = ATTRIBUTE;
+                               i--;
                            }
                        } else if (xpath[i]=='*') {
                            tokens[l].strvalue = (char*)strdup("*");
@@ -3043,6 +3040,7 @@ xpathEvalFunction (
                rsSetString (result, "");
            }
            free (leftStr);
+           xpathRSFree (&leftResult);
            break;
 
     case f_localName:
@@ -3218,7 +3216,8 @@ xpathEvalFunction (
                                    argc, args, result, errMsg);
                argc = 0;
                while ( args[argc] != NULL) {
-                   xpathRSFree( args[argc++] );
+                   xpathRSFree( args[argc] );
+                   free (args[argc++]);
                }
                free(args);
                return rc;
@@ -4389,7 +4388,11 @@ int xpathEvalSteps (
                                                  nodeList->nodes[i], exprContext, i,
                                                  docOrder, cbs,
                                                  result, errMsg);
-                CHECK_RC;
+                if (rc) {
+                    xpathRSFree (result);
+                    xpathRSFree (nodeList);
+                    return rc;
+                }
             }
             xpathRSFree (nodeList);
         }
