@@ -2960,6 +2960,10 @@ int tcldom_NodeObjCmd (
     node = (domNode*) clientData;
     TSD(dontCreateObjCommands) = 0;
     if (node == NULL) {
+        if (objc < 3) {
+            SetResult (node_usage);
+            return TCL_ERROR;
+        }
         TSD(dontCreateObjCommands) = 1;
         nodeName = Tcl_GetStringFromObj (objv[1], NULL);
         node = tcldom_getNodeFromName (interp, nodeName, &errMsg);
