@@ -234,7 +234,7 @@ static void ErInit (void)
 |          output =   "AT&T > MCI"
 |
 \---------------------------------------------------------------------------*/
-static void TranslateEntityRefs (
+static int TranslateEntityRefs (
     char *z,
     int  *newLen
 )
@@ -273,7 +273,7 @@ static void TranslateEntityRefs (
                 value = 0;
                 if (z[++i] == 'x') {
                     i++;
-                    while ((c=z[i]) && (c!=';')) {
+                    while (z[i] && (c=z[i]) && (c!=';')) {
                         value = value * 16;
                         if ((c>='0') && (c<='9')) {
                             value += c-'0';
@@ -285,21 +285,24 @@ static void TranslateEntityRefs (
                             value += c-'a' + 10;
                         } else {
                             /* error */
+                            return 0;
                         }
                         i++;
                     }
                 } else {
-                    while ((c=z[i]) && (c!=';')) {
+                    while (z[i] && (c=z[i]) && (c!=';')) {
                         value = value * 10;
                         if ((c>='0') && (c<='9')) {
                             value += c-'0';
                         } else {
                             /* error */
+                            return 0;
                         }
                         i++;
                     }
                 }
-                if (z[i]!=';') {
+                if (!z[i] || (z[i]!=';')) {
+                    return 0;
                     /* error */
                 }
                 from = i+1;
@@ -317,11 +320,15 @@ static void TranslateEntityRefs (
                     z[to++] = (char) ((value | 0x80) & 0xBF);
                 } else {
                     /* error */
+                    return 0;
                 }
 #endif
             } else {
                 while (z[i] && isalpha(z[i])) {
                    i++;
+                }
+                if (!z[i] || (z[i]!=';')) {
+                    return 0;
                 }
                 c = z[i];
                 z[i] = 0;
@@ -348,6 +355,7 @@ static void TranslateEntityRefs (
     }
     z[to] = 0;
     *newLen = to;
+    return 1;
 }
 /*----------------------------------------------------------------------------
 |   End Of Character Entity Translator
@@ -468,7 +476,10 @@ XML_SimpleParse (
                 memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
                 if (ampersandSeen) {
-                    TranslateEntityRefs(tnode->nodeValue, &(tnode->valueLength) );
+                    if (!TranslateEntityRefs(tnode->nodeValue, 
+                                             &(tnode->valueLength) )) {
+                        RetError("Entity parsing error", (x - xml));
+                    }
                 }
                 tnode->parentNode = parent_node;
                 if (parent_node->firstChild)  {
@@ -485,6 +496,9 @@ XML_SimpleParse (
             |   read and check closing tag
             \-----------------------------------------------------------*/
             node = parent_node;
+            if (!parent_node) {
+                RetError("Syntax error",(x - xml));
+            }
             parent_node = node->parentNode;
             pn = (char*)node->nodeName;
 
@@ -878,8 +892,10 @@ XML_SimpleParse (
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
                     *(attrnode->nodeValue + nArgVal) = 0;
                     if (ampersandSeen) {
-                        TranslateEntityRefs(attrnode->nodeValue,
-                                            &(attrnode->valueLength) );
+                        if (!TranslateEntityRefs(attrnode->nodeValue,
+                                                 &(attrnode->valueLength) )) {
+                            RetError("Entity parsing error",(start-xml));
+                        }
                     }
                     
                     if (xmlns[5] == ':') {
@@ -937,7 +953,10 @@ XML_SimpleParse (
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
                     *(attrnode->nodeValue + nArgVal) = 0;
                     if (ampersandSeen) {
-                        TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
+                        if (!TranslateEntityRefs(attrnode->nodeValue,
+                                                 &(attrnode->valueLength) )) {
+                            RetError("Entity parsing error", (start - xml));
+                        }
                     }
                     if (attrList) {
                         lastAttr->nextSibling = attrnode;
