@@ -325,7 +325,7 @@ domRenumberTree (
 )
 {
     while (node) {
-        node->nodeNumber = NODE_NO(node->document);
+        node->nodeNumber = NODE_NO(node->ownerDocument);
         if (node->nodeType == ELEMENT_NODE) {
             domRenumberTree (node->firstChild);
         }
