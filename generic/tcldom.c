@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2002/03/10 01:17:21  rolf
+|   Added method createDocumentNS to the dom command.
+|
 |   Revision 1.5  2002/03/07 22:12:10  rolf
 |   Freeze of actual state, befor feeding stuff to Jochen.
 |
@@ -526,7 +529,7 @@ int tcldom_returnDocumentObj (
                                       (ClientData)        dinfo, 
                                       (Tcl_CmdDeleteProc*)tcldom_docCmdDeleteProc );
     } else {
-        /* reuse old information */
+        /* reuse old informaion */
         dinfo = (TcldomDocDeleteInfo*)cmd_info.objClientData;
     }
     if (setVariable) {
@@ -2991,7 +2994,41 @@ int tcldom_createDocument (
         newObjName = objv[2];
         setVariable = 1;
     }
-    doc = domCreateDocument ( interp, Tcl_GetStringFromObj (objv[1], NULL) );
+    doc = domCreateDocument ( interp, Tcl_GetStringFromObj (objv[1], NULL),
+                              NULL);
+    if (!doc) return TCL_ERROR;
+    return tcldom_returnDocumentObj( 
+                 interp, doc, setVariable, newObjName
+    );
+}
+
+
+
+/*----------------------------------------------------------------------------
+|   tcldom_createDocumentNS
+|
+\---------------------------------------------------------------------------*/
+static 
+int tcldom_createDocumentNS (
+    ClientData  clientData,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    * const objv[]
+) 
+{
+    int          setVariable = 0;
+    domDocument *doc;
+    Tcl_Obj     *newObjName = NULL;    
+    
+    
+    CheckArgs (3,4,1,"docElemName uri ?newObjVar?");
+    
+    if (objc == 4) {    
+        newObjName = objv[3];
+        setVariable = 1;
+    }
+    doc = domCreateDocument ( interp, Tcl_GetStringFromObj (objv[1], NULL), 
+                              Tcl_GetStringFromObj (objv[2], NULL) );
     if (!doc) return TCL_ERROR;
     return tcldom_returnDocumentObj( 
                  interp, doc, setVariable, newObjName
@@ -3297,13 +3334,13 @@ int tcldom_domCmd (
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
         
     static char *domMethods[] = {
-        "createDocument",    "createNodeCmd",     "parse", 
-        "setResultEncoding", "setStoreLineColumn",
+        "createDocument",  "createDocumentNS",  "createNodeCmd",
+        "parse",           "setResultEncoding", "setStoreLineColumn",
         NULL
     };
     enum domMethod {
-        m_createDocument,    m_createNodeCmd,     m_parse, 
-        m_setResultEncoding, m_setStoreLineColumn
+        m_createDocument,    m_createDocumentNS,  m_createNodeCmd,
+        m_parse,             m_setResultEncoding, m_setStoreLineColumn
     };
    
 
@@ -3348,6 +3385,10 @@ int tcldom_domCmd (
        
         case m_createDocument:
             return tcldom_createDocument (clientData, interp, --objc, objv+1 );
+
+        case m_createDocumentNS:
+            return tcldom_createDocumentNS (clientData, interp, --objc,
+                                            objv+1);
 
         case m_createNodeCmd:
             return nodecmd_createNodeCmd (clientData, interp, --objc, objv+1 );
