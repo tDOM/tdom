@@ -1,3 +1,11 @@
+2004-07-19  Rolf Ade  <rolf@pointsman.pointsman.de>
+
+        * generic/domxslt.c: Better error msg in case of XML parsing
+          errors in external entities.
+
+        * generic/nodecmd.c: Bug fix: Check, if refnode given to
+          insertBeforeFromScript is valid.   
+    
 2004-07-13  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Ensure, that the first element node of
