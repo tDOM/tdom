@@ -10,6 +10,10 @@
 	* Makefile.in: removed traces of tdomhtml.tcl file since it
 	  now lives in its own extension
 
+ 	* configure.in:
+	* configure: added TDOM_LD_SEARCH_FLAGS processing to help
+	  runtime linker locate eventual custom shared libraries
+
 2002-11-01  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Fixed 'missing separator' problem (using tab
