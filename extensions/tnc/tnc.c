@@ -1784,11 +1784,26 @@ TncElementStartCommand (userData, name, atts)
     const char **atPtr;
     TNC_ElemAttInfo *elemAttInfo;
     TNC_Content *model;
-    int result, nrOfreq;
+    int result, nrOfreq, acceptNoDoctype = 0;
 
 #ifdef TNC_DEBUG
     printf ("TncElementStartCommand name: %s\n", name);
 #endif
+
+    /* If the document doesn't have a doctype declaration, but the
+       user have used the -useForeignDTD 1 feature, the collected
+       data out of the provided DTD isn't postprocessed by 
+       TncElementStartCommand. We do this now.
+       NOTE: Since there wasn't a doctype declaration, there is no
+       information avaliable which element is expected to be the
+       document element. Eventually it would be desirable, to set
+       this somehow. For now, this means, that every valid subtree
+       of the given DTD information is accepted.  */
+    if (!tncdata->contentStackPtr && !tncdata->elemContentsRewriten) {
+        TncEndDoctypeDeclHandler (userData);
+        acceptNoDoctype = 1;
+    }
+
     entryPtr = Tcl_FindHashEntry (tncdata->tagNames, name);
     if (!entryPtr) {
         signalNotValid (userData, TNC_ERROR_UNKNOWN_ELEMENT);
@@ -1852,12 +1867,15 @@ TncElementStartCommand (userData, name, atts)
         /* This is only in case of the root element */
         if (atts) {
             if (!tncdata->doctypeName) {
-                signalNotValid (userData, TNC_ERROR_NO_DOCTYPE_DECL);
-                return;
-            }
-            if (strcmp (tncdata->doctypeName, name) != 0) {
-                signalNotValid (userData, TNC_ERROR_WRONG_ROOT_ELEMENT);
-                return;
+                if (!acceptNoDoctype) {
+                    signalNotValid (userData, TNC_ERROR_NO_DOCTYPE_DECL);
+                    return;
+                }
+            } else {
+                if (strcmp (tncdata->doctypeName, name) != 0) {
+                    signalNotValid (userData, TNC_ERROR_WRONG_ROOT_ELEMENT);
+                    return;
+                }
             }
         }
         (&(tncdata->contentStack)[0])->model = model;
