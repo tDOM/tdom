@@ -4,7 +4,7 @@
                     (Version 0.7.5 / November 18, 2002)
 
 		    Jochen Loewer (loewerj@hotmail.com)
-                         Rolf Ade (rolf@pointsman.de)
+                       Rolf Ade (rolf@pointsman.de)
 
                        with some contributions by:
 
@@ -58,7 +58,8 @@ COMPILING/USING tDOM
         make test
         make install
 
-    NOTE: do not invoke the configure script from top-level directory.
+    NOTE: Do not invoke the configure script from top-level directory.
+    NOTE: Be sure to have the CC=gcc defined if you're using GCC.
 
     You might also want to do "../configure --help" to get list of all
     supported options of the configure script.
