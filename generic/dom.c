@@ -73,6 +73,8 @@
                      exit(1); \
                  }
 
+#define INITIAL_BASEURISTACK_SIZE 4;
+
 /*---------------------------------------------------------------------------
 |   Globals
 |   In threading environment, some are located in domDocument structure
@@ -126,27 +128,40 @@ typedef struct _domActiveNS {
 } domActiveNS;
 
 /*---------------------------------------------------------------------------
+|   type domBaseURIstackElem
+|
+\--------------------------------------------------------------------------*/
+typedef struct _domActiveBaseURI {
+
+    int   depth;
+    const char *baseURI;
+
+} domActiveBaseURI;
+
+/*---------------------------------------------------------------------------
 |   type domReadInfo
 |
 \--------------------------------------------------------------------------*/
 typedef struct _domReadInfo {
 
-    XML_Parser     parser;
-    domDocument   *document;
-    domNode       *currentNode;
-    int            depth;
-    int            ignoreWhiteSpaces;
-    Tcl_DString   *cdata;
-    TEncoding     *encoding_8bit;
-    int            storeLineColumn;
-    int            feedbackAfter;
-    int            lastFeedbackPosition;
-    Tcl_Interp    *interp;
-    int            activeNSsize;
-    int            activeNSpos;
-    domActiveNS   *activeNS;
-    int            baseURIHasChanged;
-    int            insideDTD;
+    XML_Parser        parser;
+    domDocument      *document;
+    domNode          *currentNode;
+    int               depth;
+    int               ignoreWhiteSpaces;
+    Tcl_DString      *cdata;
+    TEncoding        *encoding_8bit;
+    int               storeLineColumn;
+    int               feedbackAfter;
+    int               lastFeedbackPosition;
+    Tcl_Interp       *interp;
+    int               activeNSsize;
+    int               activeNSpos;
+    domActiveNS      *activeNS;
+    int               baseURIstackSize;
+    int               baseURIstackPos;
+    domActiveBaseURI *baseURIstack;
+    int               insideDTD;
 
 } domReadInfo;
 
@@ -511,6 +526,11 @@ domPrecedes (
     }
     
     if (node->ownerDocument != other->ownerDocument) {
+        /* For mt tdom, this does not, what it should:
+           whatever relative order two nodes out of different
+           documents ever have (that is not determined by the rec) it
+           must return always the same order (that is required by the 
+           rec). */
         return (node->ownerDocument->documentNumber < 
                 other->ownerDocument->documentNumber);
     }
@@ -975,7 +995,8 @@ startElement(
         ) {
             sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
             if (Tcl_Eval(info->interp, feedbackCmd) != TCL_OK) {
-                DBG(fprintf(stderr, "%s\n", Tcl_GetStringResult (info->interp));)
+                DBG(fprintf(stderr, "%s\n", 
+                            Tcl_GetStringResult (info->interp));)
                 /* FIXME: We simply ignore script errors in the
                    feedbackCmd, for now. One fine day, expat may provide
                    a way to cancel an already started parse run from
@@ -1003,15 +1024,24 @@ startElement(
     node->nodeNumber    = NODE_NO(info->document);
     node->ownerDocument = info->document;
 
-    if (info->baseURIHasChanged) {
-        if (XML_GetBase (info->parser)) {
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
+    if (info->baseURIstack[info->baseURIstackPos].baseURI 
+        != XML_GetBase (info->parser)) {
+        h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                  (char*) node,
                                  &hnew);
-            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
-            node->nodeFlags |= HAS_BASEURI;
+        Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+        node->nodeFlags |= HAS_BASEURI;
+        info->baseURIstackPos++;
+        if (info->baseURIstackPos >= info->baseURIstackSize) {
+            info->baseURIstack = (domActiveBaseURI*) REALLOC(
+                (char*)info->baseURIstack,
+                sizeof(domActiveBaseURI) * 2 * info->baseURIstackSize);
+            info->baseURIstackSize = 2 * info->baseURIstackSize;
         }
-        info->baseURIHasChanged = 0;
+        info->baseURIstack[info->baseURIstackPos].baseURI
+            = XML_GetBase (info->parser);
+        info->baseURIstack[info->baseURIstackPos].depth 
+            = info->depth;
     }
 
     if (info->depth == 0) {
@@ -1270,6 +1300,12 @@ endElement (
     } else {
         info->currentNode = NULL;
     }
+
+    if (info->depth) {
+        if (info->baseURIstack[info->baseURIstackPos].depth == info->depth) {
+            info->baseURIstackPos--;
+        }
+    }
 }
 
 /*---------------------------------------------------------------------------
@@ -1358,16 +1394,6 @@ DispatchPCDATA (
         node->nodeFlags   = 0;
         node->namespace   = 0;
         node->nodeNumber  = NODE_NO(info->document);
-        if (info->baseURIHasChanged) {
-            if (XML_GetBase (info->parser)) {
-                h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                         (char*) node, &hnew);
-                Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
-                node->nodeFlags |= HAS_BASEURI;
-            }
-            info->baseURIHasChanged  = 0;
-        }
-
         node->valueLength = len;
         node->nodeValue   = (char*)MALLOC(len);
         memmove(node->nodeValue, s, len);
@@ -1384,6 +1410,16 @@ DispatchPCDATA (
                     (domNode*)node;
             }
         }
+
+        if (info->baseURIstack[info->baseURIstackPos].baseURI 
+            != XML_GetBase (info->parser)) {
+            h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                     (char*) node,
+                                     &hnew);
+            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+            node->nodeFlags |= HAS_BASEURI;
+        }
+
         if (info->storeLineColumn) {
             lc = (domLineColumn*) ( ((char*)node) + sizeof(domTextNode) );
             node->nodeFlags |= HAS_LINE_COLUMN;
@@ -1436,17 +1472,6 @@ commentHandler (
     node->nodeFlags   = 0;
     node->namespace   = 0;
     node->nodeNumber  = NODE_NO(info->document);
-    if (info->baseURIHasChanged) {
-        if (XML_GetBase (info->parser)) {
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*) node,
-                                     &hnew);
-            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
-            node->nodeFlags |= HAS_BASEURI;
-        }
-        info->baseURIHasChanged  = 0;
-    }
-
     node->valueLength = len;
     node->nodeValue   = (char*)MALLOC(len);
     memmove(node->nodeValue, s, len);
@@ -1473,6 +1498,16 @@ commentHandler (
             parentNode->firstChild = parentNode->lastChild = (domNode*)node;
         }
     }
+
+    if (info->baseURIstack[info->baseURIstackPos].baseURI 
+        != XML_GetBase (info->parser)) {
+        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                 (char*) node,
+                                 &hnew);
+        Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+        node->nodeFlags |= HAS_BASEURI;
+    }
+
     if (info->storeLineColumn) {
         lc = (domLineColumn*) ( ((char*)node) + sizeof(domTextNode) );
         node->nodeFlags |= HAS_LINE_COLUMN;
@@ -1523,15 +1558,14 @@ processingInstructionHandler(
     node->nodeFlags   = 0;
     node->namespace   = 0;
     node->nodeNumber  = NODE_NO(info->document);
-    if (info->baseURIHasChanged) {
-        if (XML_GetBase (info->parser)) {
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*) node,
-                                     &hnew);
-            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
-            node->nodeFlags |= HAS_BASEURI;
-        }
-        info->baseURIHasChanged  = 0;
+
+    if (info->baseURIstack[info->baseURIstackPos].baseURI 
+        != XML_GetBase (info->parser)) {
+        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                 (char*) node,
+                                 &hnew);
+        Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+        node->nodeFlags |= HAS_BASEURI;
     }
 
     len = strlen(target);
@@ -1632,13 +1666,14 @@ externalEntityRefHandler (
     char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
 
-
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
                           systemId, "\": No -externalentitycommand given",
                           (char *) NULL);
         return 0;
     }
+
+    DispatchPCDATA (info);
 
     /*
      * Take a copy of the callback script so that arguments may be appended.
@@ -1754,7 +1789,6 @@ externalEntityRefHandler (
     oldparser = info->parser;
     info->parser = extparser;
     XML_SetBase (extparser, extbase);
-    info->baseURIHasChanged = 1;
 
     if (chan == NULL) {
         if (!XML_Parse(extparser, xmlstring, strlen (xmlstring), 1)) {
@@ -1812,9 +1846,10 @@ externalEntityRefHandler (
         } while (!done);
     }
 
+    DispatchPCDATA (info);
+
     XML_ParserFree (extparser);
     info->parser = oldparser;
-    info->baseURIHasChanged = 1;
 
     Tcl_DecrRefCount (resultObj);
     Tcl_ResetResult (info->interp);
@@ -1926,12 +1961,20 @@ domReadDocument (
     info.interp               = interp;
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
-    info.activeNS             = (domActiveNS*) MALLOC (sizeof(domActiveNS) * info.activeNSsize);
-    info.baseURIHasChanged    = 1;
+    info.activeNS             = (domActiveNS*) MALLOC (sizeof(domActiveNS) 
+                                                       * info.activeNSsize);
+    info.baseURIstackPos      = 0;
+    info.baseURIstackSize     = INITIAL_BASEURISTACK_SIZE;
+    info.baseURIstack         = (domActiveBaseURI*) 
+        MALLOC (sizeof(domActiveBaseURI) * info.baseURIstackSize);
     info.insideDTD            = 0;
 
     XML_SetUserData(parser, &info);
     XML_SetBase (parser, baseurl);
+    /* We must use XML_GetBase(), because XML_SetBase copies the baseURI,
+       and we want to compare the pointers */
+    info.baseURIstack[0].baseURI = XML_GetBase (parser);
+    info.baseURIstack[0].depth = 0;
     XML_UseForeignDTD (parser, useForeignDTD);
     XML_SetElementHandler(parser, startElement, endElement);
     XML_SetCharacterDataHandler(parser, characterDataHandler);
@@ -1949,6 +1992,7 @@ domReadDocument (
     if (channel == NULL) {
         if (!XML_Parse(parser, xml, length, 1)) {
             FREE ( info.activeNS );
+            FREE ( info.baseURIstack );
             Tcl_DStringFree (info.cdata);
             FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
@@ -1959,6 +2003,7 @@ domReadDocument (
         Tcl_DStringInit (&dStr);
         if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
             FREE ( (char*) info.activeNS );
+            FREE ( info.baseURIstack );
             Tcl_DStringFree (info.cdata);
             FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
@@ -1972,7 +2017,8 @@ domReadDocument (
                 len = Tcl_Read (channel, buf, sizeof(buf));
                 done = len < sizeof(buf);
                 if (!XML_Parse (parser, buf, len, done)) {
-                    FREE ( (char*) info.activeNS );
+                    FREE ( info.activeNS );
+                    FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
                     FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
@@ -1987,7 +2033,8 @@ domReadDocument (
                 done = (len < 1024);
                 str = Tcl_GetStringFromObj(bufObj, &len);
                 if (!XML_Parse (parser, str, len, done)) {
-                    FREE ( (char*) info.activeNS );
+                    FREE ( info.activeNS );
+                    FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
                     FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
@@ -2002,7 +2049,8 @@ domReadDocument (
             len = Tcl_Read (channel, buf, sizeof(buf));
             done = len < sizeof(buf);
             if (!XML_Parse (parser, buf, len, done)) {
-                FREE ( (char*) info.activeNS );
+                FREE ( info.activeNS );
+                FREE ( info.baseURIstack );
                 domFreeDocument (doc, NULL, NULL);
                 Tcl_DStringFree (info.cdata);
                 FREE ( info.cdata);
@@ -2011,7 +2059,8 @@ domReadDocument (
         } while (!done);
 #endif
     }
-    FREE ( (char*) info.activeNS );
+    FREE ( info.activeNS );
+    FREE ( info.baseURIstack );
     Tcl_DStringFree (info.cdata);
     FREE ( info.cdata);
 
@@ -2992,11 +3041,19 @@ domSetDocument (
     domNS   *ns, *origNS;
     domDocument *origDoc;
     domAttrNode *attr;
+    Tcl_HashEntry *h;
     TDomThreaded (
-        Tcl_HashEntry *h;
         int hnew;
     )
     
+    if (node->nodeFlags & HAS_BASEURI) {
+        h = Tcl_FindHashEntry (&node->ownerDocument->baseURIs, (char*)node);
+        if (h) {
+            FREE ((char *) Tcl_GetHashValue (h));
+            Tcl_DeleteHashEntry (h);
+        }
+        node->nodeFlags &= ~HAS_BASEURI;
+    }
     if (node->nodeType == ELEMENT_NODE) {
         origDoc = node->ownerDocument;
         node->ownerDocument = doc;
@@ -3092,8 +3149,6 @@ domSetNodeValue (
  *
  *      NOT_FOUND_ERR: Raised if the node child is not a child of node.
  *
- *      NOT_SUPPORTED_ERR: Raised if node is the rootNode.
- *
  *      OK: otherwise
  *
  * Side effects:
@@ -3108,24 +3163,41 @@ domRemoveChild (
     domNode *child
 )
 {
+    domNode *n;
 
-    if (node == node->ownerDocument->rootNode) {
-        return NOT_SUPPORTED_ERR;
-    }
-    
+    /* check, if node is in deed the parent of child */
     if (child->parentNode != node) {
-        return NOT_FOUND_ERR;
+        /* If node is the root node of a document and child
+           is in deed a child of this node, then 
+           child->parentNode will be NULL. In this case, we
+           loop throu the childs of node, to see, if the child
+           is valid. */
+        if (node->ownerDocument->rootNode == node) {
+            n = node->firstChild;
+            while (n) {
+                if (n == child) {
+                    /* child is in deed a child of node */
+                    break;
+                }
+                n = n->nextSibling;
+            }
+            if (!n) {
+                return NOT_FOUND_ERR;
+            }
+        } else {
+            return NOT_FOUND_ERR;
+        }
     }
 
     if (child->previousSibling) {
         child->previousSibling->nextSibling =  child->nextSibling;
     } else {
-        child->parentNode->firstChild = child->nextSibling;
+        node->firstChild = child->nextSibling;
     }
     if (child->nextSibling) {
         child->nextSibling->previousSibling =  child->previousSibling;
     } else {
-        child->parentNode->lastChild = child->previousSibling;
+        node->lastChild = child->previousSibling;
     }
 
     /* link child into the fragments list */
@@ -3259,7 +3331,8 @@ domAppendChild (
     }
 
     if ((node->ownerDocument != childToAppend->ownerDocument)
-        || node->ownerDocument->nsptr) {
+        || node->ownerDocument->nsptr
+        || childToAppend->ownerDocument->baseURIs.numEntries) {
         domSetDocument (childToAppend, node->ownerDocument);
     }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
@@ -3317,8 +3390,29 @@ domInsertBefore (
     }
 
     /* check, if node is in deed the parent of referenceChild */
-    if (referenceChild && (referenceChild->parentNode != node)) {
-        return NOT_FOUND_ERR;
+    if (referenceChild) {
+        if (referenceChild->parentNode != node) {
+            /* If node is the root node of a document and referenceChild
+               is in deed a child of this node, then 
+               referenceChild->parentNode will be NULL. In this case, we
+               loop throu the childs of node, to see, if the referenceChild
+               is valid. */
+            if (node->ownerDocument->rootNode == node) {
+                n = node->firstChild;
+                while (n) {
+                    if (n == referenceChild) {
+                        /* referenceChild is in deed a child of node */
+                        break;
+                    }
+                    n = n->nextSibling;
+                }
+                if (!n) {
+                    return NOT_FOUND_ERR;
+                }
+            } else {
+                return NOT_FOUND_ERR;
+            }
+        }
     }
     
     if (childToInsert == referenceChild) {
@@ -3417,7 +3511,8 @@ domInsertBefore (
         childToInsert->parentNode = node;
     }
     if (node->ownerDocument != childToInsert->ownerDocument
-        || node->ownerDocument->nsptr) {
+        || node->ownerDocument->nsptr
+        || childToInsert->ownerDocument->baseURIs.numEntries) {
         domSetDocument (childToInsert, node->ownerDocument);
     }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
@@ -3474,7 +3569,26 @@ domReplaceChild (
 
     /* check, if node is in deed the parent of oldChild */
     if (oldChild->parentNode != node) {
-        return NOT_FOUND_ERR;
+        /* If node is the root node of a document and oldChild
+           is in deed a child of this node, then 
+           oldChild->parentNode will be NULL. In this case, we
+           loop throu the childs of node, to see, if the oldChild
+           is valid. */
+        if (node->ownerDocument->rootNode == node) {
+            n = node->firstChild;
+            while (n) {
+                if (n == oldChild) {
+                    /* oldChild is in deed a child of node */
+                    break;
+                }
+                n = n->nextSibling;
+            }
+            if (!n) {
+                return NOT_FOUND_ERR;
+            }
+        } else {
+            return NOT_FOUND_ERR;
+        }
     }
     
     if (oldChild == newChild) {
@@ -3543,16 +3657,17 @@ domReplaceChild (
     if (oldChild->previousSibling) {
         oldChild->previousSibling->nextSibling = newChild;
     } else {
-        oldChild->parentNode->firstChild = newChild;
+        node->firstChild = newChild;
     }
     if (oldChild->nextSibling) {
         oldChild->nextSibling->previousSibling = newChild;
     } else {
-        oldChild->parentNode->lastChild = newChild;
+        node->lastChild = newChild;
     }
 
     if (node->ownerDocument != newChild->ownerDocument
-        || node->ownerDocument->nsptr) {
+        || node->ownerDocument->nsptr
+        || newChild->ownerDocument->baseURIs.numEntries) {
         domSetDocument (newChild, node->ownerDocument);
     }
 
@@ -4750,25 +4865,27 @@ domXPointerAncestor (
 \--------------------------------------------------------------------------*/
 typedef struct _tdomCmdReadInfo {
 
-    XML_Parser     parser;
-    domDocument   *document;
-    domNode       *currentNode;
-    int            depth;
-    int            ignoreWhiteSpaces;
-    Tcl_DString   *cdata;
-    TEncoding     *encoding_8bit;
-    int            storeLineColumn;
-    int            feedbackAfter;
-    int            lastFeedbackPosition;
-    Tcl_Interp    *interp;
-    int            activeNSsize;
-    int            activeNSpos;
-    domActiveNS   *activeNS;
-    int            baseURIHasChanged;
-    int            insideDTD;
+    XML_Parser        parser;
+    domDocument      *document;
+    domNode          *currentNode;
+    int               depth;
+    int               ignoreWhiteSpaces;
+    Tcl_DString      *cdata;
+    TEncoding        *encoding_8bit;
+    int               storeLineColumn;
+    int               feedbackAfter;
+    int               lastFeedbackPosition;
+    Tcl_Interp       *interp;
+    int               activeNSsize;
+    int               activeNSpos;
+    domActiveNS      *activeNS;
+    int               baseURIstackSize;
+    int               baseURIstackPos;
+    domActiveBaseURI *baseURIstack;
+    int               insideDTD;
     /* Now the tdom cmd specific elements */
-    int            tdomStatus;
-    Tcl_Obj       *extResolver;
+    int               tdomStatus;
+    Tcl_Obj          *extResolver;
 
 } tdomCmdReadInfo;
 
@@ -4789,6 +4906,10 @@ tdom_freeProc (
     if (info->activeNS) {
         FREE (info->activeNS);
     }
+    if (info->baseURIstack) {
+        FREE (info->baseURIstack);
+    }
+        
     Tcl_DStringFree (info->cdata);
     FREE (info->cdata);
     if (info->extResolver) {
@@ -4806,7 +4927,6 @@ tdom_parserResetProc (
     tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
 
     info->parser = parser;
-    info->baseURIHasChanged = 1;
 }
 
 void
@@ -4831,8 +4951,8 @@ tdom_resetProc (
     info->lastFeedbackPosition = 0;
     info->interp            = interp;
     info->activeNSpos       = -1;
-    info->baseURIHasChanged = 1;
     info->insideDTD         = 0;
+    info->baseURIstackPos   = 0;
     info->tdomStatus        = 0;
 
 }
@@ -4851,8 +4971,24 @@ tdom_initParseProc (
         info->document->extResolver = info->extResolver;
         Tcl_IncrRefCount (info->document->extResolver);
     }
+    info->baseURIstack[0].baseURI = XML_GetBase (info->parser);
+    info->baseURIstack[0].depth = 0;
     info->tdomStatus = 2;
     
+}
+
+static void
+tdom_charDataHandler (
+    void        *userData,
+    const char  *s,
+    int          len
+)
+{
+    domReadInfo   *info = userData;
+
+    Tcl_DStringAppend (info->cdata, s, len);
+    DispatchPCDATA (info);
+    return;
 }
 
 int
@@ -4918,7 +5054,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->initParseProc           = tdom_initParseProc;
         handlerSet->elementstartcommand     = startElement;
         handlerSet->elementendcommand       = endElement;
-        handlerSet->datacommand             = characterDataHandler;
+        handlerSet->datacommand             = tdom_charDataHandler;
+/*         handlerSet->datacommand             = characterDataHandler; */
         handlerSet->commentCommand          = commentHandler;
         handlerSet->picommand               = processingInstructionHandler;
         handlerSet->entityDeclCommand       = entityDeclHandler;
@@ -4944,7 +5081,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->activeNSsize      = 8;
         info->activeNS          = 
             (domActiveNS*) MALLOC(sizeof(domActiveNS) * info->activeNSsize);
-        info->baseURIHasChanged = 1;
+        info->baseURIstackPos   = 0;
+        info->baseURIstackSize  = INITIAL_BASEURISTACK_SIZE;
+        info->baseURIstack      = (domActiveBaseURI*) 
+            MALLOC (sizeof(domActiveBaseURI) * info->baseURIstackSize);
         info->insideDTD         = 0;
         info->tdomStatus        = 0;
         info->extResolver       = NULL;
