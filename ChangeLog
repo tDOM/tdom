@@ -1,3 +1,25 @@
+2003-09-17  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/cdata,test
+          tests/element.test
+          tests/parser.test: Added a few tests related to the new
+          flexibility of the -elementstartcommand, -elementendcommand
+          and -characterdatacommand scripts.
+          
+        * doc/expat.*: Added documentation for the now implemented
+          cget method. Added information about the default for the
+          -paramentityparsing option.
+  
+        * generic/tclexpat.c
+          generic/tclexpat.h: Enhanced the new cget method of
+          parserObjs to also report the state of -noexpand,
+          -useForeignDTD, -paramentityparsing (those by doing the
+          bookkeeping with an enhanced TclGenExpatInfo struct, because
+          the expat parser do not proived an API to request this
+          settings) and -namespace. Improved argument check of the
+          parser obj method calls. Optimization for calling handler
+          scripts.
+
 2003-09-16  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* Makefile.in: added SHLIB_CFLAGS to set of compiler
