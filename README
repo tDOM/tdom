@@ -1,13 +1,14 @@
 
-		tDOM - a XML/DOM/XPath implementation for Tcl
-		(Version 0.7.5 / October 31, 2002)
 
-		Jochen Loewer	 (loewerj@hotmail.com)
-                Rolf Ade         (rolf@pointsman.de)
-        
-                    with some contributions by:
+              tDOM - a XML/DOM/XPath/XSLT implementation for Tcl
+                    (Version 0.7.5 / November 18, 2002)
 
-                Zoran Vasiljevic (zoran@archiware.com)
+		    Jochen Loewer (loewerj@hotmail.com)
+                         Rolf Ade (rolf@pointsman.de)
+
+                       with some contributions by:
+
+                 Zoran Vasiljevic (zoran@archiware.com)
                 
 
 This directory contains a freely distributable (under the Mozilla Public 
@@ -57,13 +58,35 @@ COMPILING/USING tDOM
         make test
         make install
 
+    NOTE: do not invoke the configure script from top-level directory.
+
+    You might also want to do "../configure --help" to get list of all
+    supported options of the configure script.
+
     tDOM is TEA-compatible so you should be able to build the package
     using the MinGW build environment for Windows. There is also the
     MSVC nmake file so you can compile the package with Microsoft tools.
 
+    The compile process wil build the tDOM shared library suitable for
+    loading into the Tcl shell using standard "package require" mechanism.
+    In addition, the make process will also generate the "tcldomsh" 
+    executable shell with tDOM functionality built-in. You can use this
+    shell as any other Tcl shell.
+
+
+    Note for Tcl 8.0.5 users:
+    -------------------------
+
+    This release of tDOM links against Tcl stubs library. In order to
+    compile on Tcl8.0.5 please edit the "configure.in" file in this 
+    directory, comment-out the AC_DEFINE(USE_TCL_STUBS) directive
+    and run autoconf to recreate the "configure" script. Please be 
+    sure to use autoconf with version 2.13, since TEA build is still
+    not fixed to run with the newest autoconf versions.
+
 
 PLATFORMS
-    HP-UX-10.20  with Tcl8.0.5   (both ansi cc and gcc)
+    HP-UX-10.20                  (both ansi cc and gcc)
     HP-UX-9.x
     Linux 2.2.5                  (egcs 2.91.66, Suse 6.1)
     Solaris 2.5.1+               (both gcc and SunWorks compilers)
