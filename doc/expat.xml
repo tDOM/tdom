@@ -491,7 +491,7 @@ subset.  It is called with no additional arguments.</p></desc>
 
           <desc><p>&quot;never&quot; disables expansion of parameter entities,
 &quot;always&quot; expands always and &quot;notstandalone&quot; only, if the
-document isn't &quot;standalone='no'&quot;.</p></desc>
+document isn't &quot;standalone='no'&quot;. The default ist &quot;never&quot;</p></desc>
         </optdef>
         
         <optdef>
@@ -575,6 +575,16 @@ enddoctypedeclcommand scripts, if set, are not called.</desc>
 
           <desc><p>Sets configuration options for the parser. Every command
 option, except <m>-namespace</m> can be set or modified with this method.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>parser</cmd> <method>cget <m>?-handlerset name? option</m></method></command>
+
+          <desc><p>Return the current configuration value option for the
+parser.</p> 
+          <p>If the -handlerset option is used, the configuration for the
+named handler set is returned.</p>
+          </desc>
         </commanddef>
 
         <commanddef>
