@@ -243,6 +243,39 @@ domIsNAME (
     return 1;
 }
 
+/*---------------------------------------------------------------------------
+|   domIsQNAME
+|
+\--------------------------------------------------------------------------*/
+int
+domIsQNAME (
+    char *name
+    )
+{
+    char *p;
+    
+    p = name;
+    if (!isNCNameStart(p)) return 0;
+    p += UTF8_CHAR_LEN(*p);
+    while (*p) {
+        if (isNCNameChar(p))
+            p += UTF8_CHAR_LEN(*p);
+        else {
+            if (*p == ':') {
+                p += 1;
+                if (!*p) return 0;
+                break;
+            }
+            else return 0;
+        }
+    }
+    while (*p) {
+        if (isNCNameChar(p))
+            p += UTF8_CHAR_LEN(*p);
+        else return 0;
+    }
+    return 1;
+}
 
 /*---------------------------------------------------------------------------
 |   domIsNCNAME
@@ -1097,12 +1130,12 @@ characterDataHandler (
                 parentNode->firstChild = parentNode->lastChild = (domNode*)node;
             }
         }
-    }
-    if (info->storeLineColumn) {
-        lc = (domLineColumn*) ( ((char*)node) + sizeof(domTextNode) );
-        node->nodeFlags |= HAS_LINE_COLUMN;
-        lc->line         = XML_GetCurrentLineNumber(info->parser);
-        lc->column       = XML_GetCurrentColumnNumber(info->parser);
+        if (info->storeLineColumn) {
+            lc = (domLineColumn*) ( ((char*)node) + sizeof(domTextNode) );
+            node->nodeFlags |= HAS_LINE_COLUMN;
+            lc->line         = XML_GetCurrentLineNumber(info->parser);
+            lc->column       = XML_GetCurrentColumnNumber(info->parser);
+        }
     }
 }
 
