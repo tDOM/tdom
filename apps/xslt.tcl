@@ -28,8 +28,11 @@
 #
 #
 #   $Log$
-#   Revision 1.1  2002/02/22 01:05:34  rolf
-#   Initial revision
+#   Revision 1.2  2002/02/26 14:05:02  rolf
+#   Updated the [load ...] to the new version number 0.7
+#
+#   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
+#   tDOM0.7test with Jochens first set of patches
 #
 #
 #
@@ -38,8 +41,14 @@
 #
 #----------------------------------------------------------------------------
 
-load   [file dirname [info script]]/../unix/tdom0.6.so
-source [file dirname [info script]]/../lib/tdom.tcl
+if {[catch {package require tdom} errMsg]} {
+    if {[catch {
+        load   [file dirname [info script]]/../unix/tdom0.7.so
+        source [file dirname [info script]]/../lib/tdom.tcl
+    }]} {
+        puts $errMsg
+    }
+}
 
 
 #----------------------------------------------------------------------------
@@ -47,11 +56,6 @@ source [file dirname [info script]]/../lib/tdom.tcl
 #
 #----------------------------------------------------------------------------
 proc externalEntityRefHandler { base systemId publicId } {
-
-    # puts stderr "externalEntityRefHandler:"
-    # puts stderr "\tbase $base"
-    # puts stderr "\tsystemId $systemId"
-    # puts stderr "\tpublicId $publicId"
 
     if {[regexp {^[a-zA-Z]+:/} $systemId]}  {
         # Seems to be not relative to the base
