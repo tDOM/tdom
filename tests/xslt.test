@@ -287,7 +287,9 @@ test xslt-2.11 {xslt top level parameter: set with 'strange' value} {
     $xslt delete
     $resultDoc delete
     set result
-} {foo&quot;'&lt;&gt;bar}
+} {foo"'&lt;&gt;bar}
+
+# emacs: "
 
 test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
     set xml [dom parse {<root/>}]
