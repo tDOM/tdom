@@ -892,7 +892,21 @@ test dom-5.1 {document with external subset} {need_uri} {
     set result
 } {toThat}
 
+proc dom-5.2 {myparm base systemId publicId} {
+    set ::dom-5_2 $myparm
+    return [list string dummy ""]
+}
 
+test dom-5.2 {-externalentitycommand} {
+    set ::dom-5_2 ""
+    set doc [dom parse \
+                 -baseurl "dummy" \
+                 -externalentitycommand [list dom-5.2 thisDoc] {
+                     <!DOCTYPE root SYSTEM "">
+                     <root/>}]
+    $doc delete
+    set ::dom-5_2
+} {thisDoc}
 
 test dom-6.1 {use in slave interpreter} {
     set slave [interp create]

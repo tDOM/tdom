@@ -1092,7 +1092,7 @@ XML_SimpleParseDocument (
     char    *xml,              /* Complete text of the file being parsed  */
     int      ignoreWhiteSpaces,
     char    *baseURI,
-    Tcl_Obj *extResolver,
+    char    *extResolver,
     int     *pos,
     char   **errStr
 ) {
@@ -1100,7 +1100,6 @@ XML_SimpleParseDocument (
 
     if (extResolver) {
         doc->extResolver = extResolver;
-        Tcl_IncrRefCount(extResolver);
     }
     
     *pos = 0;
