@@ -35,139 +35,6 @@
 |                               plenty of fixes and enhancements all
 |                               over the place.
 |
-|   $Log$
-|   Revision 1.18  2002/04/22 00:54:16  rolf
-|   Improved handling of literal result elements: now namespaces in scope
-|   are also copied to the result tree, if needed. exclude-result-prefixes
-|   and extension-element-prefixes of xsl:stylesheet elements are
-|   respected. (Still to do: xsl:extension-element-prefixes and
-|   xsl:exclude-result-prefixes attributes of literal elements.)
-|
-|   Revision 1.17  2002/04/19 18:55:41  rolf
-|   Changed / enhanced namespace handling and namespace information
-|   storage. The namespace field of the domNode and domAttributeNode
-|   structurs is still set. But other than up to now, namespace attributes
-|   are now stored in the DOM tree as other, 'normal' attributes also,
-|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
-|   every 'namespace attribute' is stored befor any 'normal' attribute
-|   node, in the list of the attributes of an element. The still saved
-|   namespace index in the namespace field is used for fast access to the
-|   namespace information. To speed up the look up of the namespace info,
-|   an element or attributes contains to, the namespace index is now the
-|   index number (plus offset 1) of the corresponding namespace info in
-|   the domDoc->namespaces array. All xpath expressions with the exception
-|   of the namespace axes (still not implemented) have to ignore this
-|   'namespace attributes'. With this enhanced storage of namespace
-|   declarations, it is now possible, to find all "namespaces in scope" of
-|   an element by going up the ancestor-or-self axis and inspecting all
-|   namespace declarations. (That may be a bit expensive, for documents
-|   with lot of namespace declarations all over the place or deep
-|   documents. Something like
-|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
-|   English for that url) describes, may be an idea, if this new mechanism
-|   should not scale good enough.)
-|
-|   Changes at script level: special attributes used for declaring XML
-|   namespaces are now exposed and can be manipulated just like any other
-|   attribute. (That is now according to the DOM2 rec.) It isn't
-|   guaranteed (as it was), that the necessary namespace declarations are
-|   created during serializing. (That's also DOM2 compliant, if I read it
-|   right, even if this seems to be a bit a messy idea.) Because the old
-|   behavior have some advantages, from the viepoint of a programmer, it
-|   eventually should restored (as default or as 'asXML' option?).
-|
-|   Revision 1.16  2002/04/10 02:48:35  rolf
-|   Optimization: Now handles xsltVarFrames and xsltVariables as stacks,
-|   instead of constantly malloc/free it. On the way removed
-|   xsltVariable->select (because it isn't used anywhere) and renamed
-|   xsltVariable->value to xsltVariable->node (because that's, to what
-|   this structur member points).
-|
-|   Revision 1.15  2002/04/09 01:17:26  rolf
-|   Corrected the check in log for the least check in...
-|
-|   Revision 1.14  2002/04/09 01:14:54  rolf
-|   Allowed reseting of variable in successive for-each loops (of course
-|   not in one loop) and inside template bodys of xsl elements. xt, xalan
-|   (and gnomexslt, for what is's worth) do, saxon don't - and the spec
-|   isn't really clear about this (I would say, it's right now). Anyway,
-|   there are only two clear ways, to handle this: allow it, or
-|   don't. tDOM did, but variable declarations inside the for-each (or
-|   other template bodies of xslt elements) polluted the var context
-|   outside the for-each or template bodies, which is clearly wrong
-|   (example: xalan tests: variable20, local: varscope). No it does it the
-|   right way. Unfortunately, the XSLT 2.0 WD is a bit clearer about this
-|   and does it the saxon way (no wonder, since Kay is the editor of that
-|   spec ;-)). But then XSLT 2.0 is another story, where currently
-|   definitely not in.
-|
-|   Revision 1.13  2002/04/08 03:43:04  rolf
-|   Optimation: re-initialize current var frame in ApplyTemplates() loop
-|   only if necessary (i.e. if the applied template has "populated" it).
-|
-|   Revision 1.12  2002/04/08 02:01:56  rolf
-|   Added optional -parameters option to domNode xslt method, to enable
-|   setting of top level parameters from tcl level.
-|   BugFix: Don't use direct calles to ApplyTemplate(), always go throw
-|   ApplyTemplates(), to get var context right (example: xalan tests
-|   variable35).
-|
-|   Revision 1.11  2002/04/06 18:05:14  rolf
-|   Bug fix for attribute value templates: "A right curly brace inside a
-|   Literal in an expression is not recognized as terminating the
-|   expression." (xslt rec 7.6.2)
-|
-|   Revision 1.10  2002/04/05 16:47:13  rolf
-|   Bug fix for attribute value templates. Should now handle cases
-|   like attr="}}" and attr="{{" right.
-|
-|   Revision 1.9  2002/03/31 03:22:19  rolf
-|   Closed a memory leak in xsltFreeStats(). Changed xsl:element handling
-|   (work in progress).
-|
-|   Revision 1.8  2002/03/25 01:28:35  rolf
-|   Closed a cuple of memory leaks. A bit Code cleanup.
-|
-|   Revision 1.7  2002/03/21 01:47:22  rolf
-|   Collected the various nodeSet Result types into "nodeSetResult" (there
-|   still exists a seperate emptyResult type). Reworked
-|   xpathEvalStep. Fixed memory leak in xpathMatches, added
-|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
-|   already in the nodeSet.
-|
-|   Revision 1.6  2002/03/16 13:06:06  rolf
-|   Optimised xsl:sort: the string or numeric value of the nodes to sort
-|   are computed only once and cached for further comparisons in the sort
-|   process.
-|
-|   Revision 1.5  2002/03/03 20:08:25  rolf
-|   Improved detection of improper stylesheets: now triggers error if any
-|   mandatory attribute of a xsl element is missing. The mandatory
-|   attributes are: xsl:stylesheet: version; xsl:transform: version;
-|   xsl:include: href; xsl:import: href; xsl:strip-space: elements;
-|   xsl:preserve-space: elements; xsl:call-template: name;
-|   xsl:namespace-alias: stylesheet-prefix result-prefix; xsl:element:
-|   name; xsl:attribute: name; xsl:attribute-set: name;
-|   xsl:processing-instruction: name; xsl:value-of: select; xsl:for-each:
-|   select; xsl:if: test; xsl:when: test; xsl:variable: name; xsl:param:
-|   name; xsl:copy-of: select; xsl:with-param: name; xsl:key: name match
-|   use
-|
-|   Revision 1.4  2002/03/01 04:06:59  rolf
-|   Improved detection of improper stylesheets: xsl:include xsl:import
-|   xsl:strip-space xsl:preserve-space xsl:apply-imports
-|   xsl:namespace-alias xsl:value-of xsl:number xsl:sort xsl:copy-of
-|   xsl:key xsl:decimal-format and xsl:output must be emtpy.
-|
-|   Revision 1.3  2002/02/24 02:31:27  rolf
-|   Fixed UTF-8 char byte length determination
-|
-|   Revision 1.2  2002/02/23 01:13:33  rolf
-|   Some code tweaking for a mostly warning free MS build
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
 |
 |   written by Jochen Loewer
 |   June, 2000
@@ -256,7 +123,8 @@ typedef enum {
     a_groupingSeparator, a_groupingSize,    
     a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent, 
     a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version,
-    a_excludeResultPrefixes, a_extensionElementPrefixes
+    a_excludeResultPrefixes, a_extensionElementPrefixes,
+    a_stylesheetPrefix, a_resultPrefix
 
 } xsltAttr;
 
@@ -455,6 +323,18 @@ typedef struct xsltWSInfo
 } xsltWSInfo;
 
 
+typedef struct xsltNSAlias
+{
+    
+    char    *fromUri;
+    char    *toUri;
+    double   precedence;
+    
+    struct xsltNSAlias *next;
+    
+} xsltNSAlias;
+
+
 /*--------------------------------------------------------------------------
 |   xsltState
 |
@@ -481,6 +361,7 @@ typedef struct {
     Tcl_HashTable       formats;
     Tcl_HashTable       topLevelVars;
     Tcl_HashTable       keyInfos;
+    xsltNSAlias       * nsAliases;
     xsltVarInProcess  * varsInProcess;
     char              * outputMethod;
     char              * outputEncoding;
@@ -3036,14 +2917,15 @@ static int ExecAction (
     xsltTemplate   *tpl, *currentTplRule, *tplChoosen;
     domAttrNode    *attr;
     domTextNode    *tnode;
-    domNS          *NS;
+    domNS          *ns;
     xsltSubDoc     *sDoc;
     xsltExcludeNS  *excludeNS;
+    xsltNSAlias    *nsAlias;
     Tcl_DString     dStr;
     domProcessingInstructionNode *pi;      
     xpathResultSet  rs, nodeList;
     char           *str, *str2, *mode, *select, *pc;
-    char           *nsAT, *ns;
+    char           *nsAT, *nsStr;
     char           *uri, *localName, prefix[MAX_PREFIX_LEN];
     int             rc, b, i, len, disableEsc = 0;
     double          currentPrio, currentPrec;
@@ -3213,15 +3095,15 @@ static int ExecAction (
             rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                     str, &str2, errMsg);
             CHECK_RC;
-            ns = NULL;
+            nsStr = NULL;
             Tcl_DStringInit (&dStr);
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        nsAT, &ns, errMsg);
+                                        nsAT, &nsStr, errMsg);
                 CHECK_RC;
-                NS = domLookupURI (actionNode, ns);
-                if (NS) {
-                    Tcl_DStringAppend (&dStr, NS->prefix, -1);
+                ns = domLookupURI (actionNode, nsStr);
+                if (ns) {
+                    Tcl_DStringAppend (&dStr, ns->prefix, -1);
                     Tcl_DStringAppend (&dStr, ":", 1);
                     Tcl_DStringAppend (&dStr, str2, -1);
                 } else goto ignoreAttribute;
@@ -3229,8 +3111,8 @@ static int ExecAction (
                 domSplitQName (str2, prefix, &localName);
                 if (prefix[0] != '\0') {
                     if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
-                    NS = domLookupPrefix (actionNode, prefix);
-                    if (NS) ns = NS->uri;
+                    ns = domLookupPrefix (actionNode, prefix);
+                    if (ns) nsStr = ns->uri;
                     else goto ignoreAttribute;
                 } else {
                     if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
@@ -3248,7 +3130,7 @@ static int ExecAction (
             CHECK_RC;
             pc = xpathGetTextValue (xs->lastNode, &len);
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
-                               ns, 1);
+                               nsStr, 1);
             free(pc);
             Tcl_DStringFree (&dStr);
             domDeleteNode (xs->lastNode, NULL, NULL);
@@ -3529,16 +3411,16 @@ static int ExecAction (
                                     str, &str2, errMsg);
             CHECK_RC;
                 
-            ns = NULL;
+            nsStr = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        nsAT, &ns, errMsg);
+                                        nsAT, &nsStr, errMsg);
                 CHECK_RC;
             } else {
                 domSplitQName (str2, prefix, &localName);
                 if (prefix[0] != '\0') {
-                    NS = domLookupPrefix (actionNode, prefix);
-                    if (NS) ns = NS->uri;
+                    ns = domLookupPrefix (actionNode, prefix);
+                    if (ns) nsStr = ns->uri;
                     else {
                         reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
                         return -1;
@@ -3546,7 +3428,7 @@ static int ExecAction (
                 }
             }
             savedLastNode = xs->lastNode;
-            xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, ns);
+            xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, nsStr);
             free(str2);
             str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
             if (str) {
@@ -3853,21 +3735,29 @@ static int ExecAction (
                         attr = attr->nextSibling;
                         continue;
                     }
-                    NS = actionNode->ownerDocument->namespaces[attr->namespace-1];
+                    ns = actionNode->ownerDocument->namespaces[attr->namespace-1];
+                    uri = ns->uri;
+                    nsAlias = xs->nsAliases;
+                    while (nsAlias) {
+                        if (strcmp (nsAlias->fromUri, ns->uri)==0) {
+                            ns->uri = nsAlias->toUri;
+                            break;
+                        }
+                        nsAlias = nsAlias->next;
+                    }
                     excludeNS = sDoc->excludeNS;
                     while (excludeNS) {
                         if (excludeNS->uri) {
-                            if (strcmp (excludeNS->uri, NS->uri)==0) break;
+                            if (strcmp (excludeNS->uri, ns->uri)==0) break;
                         } else {
-                            if (NS->prefix[0] == '\0') break;
+                            if (ns->prefix[0] == '\0') break;
                         }
                         excludeNS = excludeNS->next;
                     }
-                    if (excludeNS) {
-                        attr = attr->nextSibling;
-                        continue;
+                    if (!excludeNS) {
+                        domAddNSToNode (xs->lastNode, ns);
                     }
-                    domAddNSToNode (xs->lastNode, NS);
+                    ns->uri = uri;
                     attr = attr->nextSibling;
                 }
                 n = n->parentNode;
@@ -3877,10 +3767,21 @@ static int ExecAction (
                follow saxon and xalan, which both add the namespace of
                the literal result element always to the result tree,
                to ensure, that the result tree is conform to the XML
-               recommendation. See the more detailed discussion in the
-               file discretionary-behavior */
+               namespace recommendation. See the more detailed
+               discussion in the file discretionary-behavior */
             if (actionNode->namespace) {
-                domAddNSToNode (xs->lastNode, actionNode->ownerDocument->namespaces[actionNode->namespace-1]);
+                ns = actionNode->ownerDocument->namespaces[actionNode->namespace-1];
+                uri = ns->uri;
+                nsAlias = xs->nsAliases;
+                while (nsAlias) {
+                    if (strcmp (nsAlias->fromUri, ns->uri)==0) {
+                        ns->uri = nsAlias->toUri;
+                        break;
+                    }
+                    nsAlias = nsAlias->next;
+                }
+                domAddNSToNode (xs->lastNode, ns);
+                ns->uri = uri;
             }
 
             n = xs->lastNode;
@@ -3907,6 +3808,16 @@ static int ExecAction (
                                             currentPos, attr->nodeValue, &str,
                                             errMsg);
                     CHECK_RC;
+                    if (uri) {
+                        nsAlias = xs->nsAliases;
+                        while (nsAlias) {
+                            if (strcmp (nsAlias->fromUri, uri)==0) {
+                                uri = nsAlias->toUri;
+                                break;
+                            }
+                            nsAlias = nsAlias->next;
+                        }
+                    }
                     domSetAttributeNS (n, attr->nodeName, str, uri, 1);
                     free(str);
                 }
@@ -4620,16 +4531,18 @@ static int processTopLevel (
     char         ** errMsg
 )
 { 
-    domNode        *node;
-    domDocument    *extStyleSheet;
-    int             rc, hnew;
-    double          childPrecedence, childLowBound;
-    char           *str, *name, *match, *use, *baseURI, *href;
-    xsltAttrSet    *attrSet;
-    xsltKeyInfo    *keyInfo;
+    domNode           *node;
+    domDocument       *extStyleSheet;
+    int                rc, hnew;
+    double             childPrecedence, childLowBound;
+    char              *str, *name, *match, *use, *baseURI, *href;
+    xsltAttrSet       *attrSet;
+    xsltKeyInfo       *keyInfo;
     xpathResultSet     nodeList;
     xsltDecimalFormat *df;
     xsltTopLevelVar   *topLevelVar;
+    xsltNSAlias       *nsAlias;
+    domNS             *nsFrom, *nsTo;
     Tcl_HashEntry     *h;
 
     xpathRSInit( &nodeList );
@@ -4830,6 +4743,59 @@ static int processTopLevel (
                                  errMsg);
                     return -1;
                 }
+                
+                str = getAttr (node, "stylesheet-prefix", a_stylesheetPrefix);
+                if (!str) {
+                    reportError (node, "xsl:namespace-alias: missing mandatory attribute \"stylesheet-prefix\".", errMsg);
+                    return -1 ;
+                }
+                if (strcmp (str, "#default")==0) {
+                    str = NULL;
+                    nsFrom = domLookupPrefix (node, "");
+                } else {
+                    nsFrom = domLookupPrefix (node, str);
+                }
+                if (!nsFrom) {
+                    reportError (node, "xsl:namespace-alias: no namespace bound to the \"stylesheet-prefix\".", errMsg);
+                    return -1;
+                }
+
+                str = getAttr (node, "result-prefix", a_resultPrefix);
+                if (!str) {
+                    reportError (node, "xsl:namespace-alias: missing mandatory attribute \"result-prefix\".", errMsg);
+                    return -1;
+                }
+                if (strcmp (str, "#default")==0) {
+                    nsTo = domLookupPrefix (node, "");
+                } else {
+                    nsTo = domLookupPrefix (node, str);
+                }
+                if (!nsTo) {
+                    reportError (node, "xsl:namespace-alias: no namespace bound to the \"result-prefix\".", errMsg);
+                    return -1;
+                }
+
+                nsAlias = xs->nsAliases;
+                while (nsAlias) {
+                    if (strcmp (nsAlias->fromUri, nsFrom->uri)==0) {
+                        if (nsAlias->precedence > precedence) {
+                            return 0;
+                        }
+                        break;
+                    }
+                    nsAlias = nsAlias->next;
+                }
+                if (nsAlias) {
+                    free (nsAlias->toUri);
+                } else {
+                    nsAlias = (xsltNSAlias *) Tcl_Alloc (sizeof (xsltNSAlias));
+                    nsAlias->fromUri = strdup (nsFrom->uri);
+                    if (xs->nsAliases) nsAlias->next = xs->nsAliases;
+                    else nsAlias->next = NULL;
+                    xs->nsAliases = nsAlias;
+                }
+                nsAlias->toUri = strdup (nsTo->uri);
+                
                 /* mandatory attributes: stylesheet-prefix result-prefix */
                 break;
                 
@@ -4938,6 +4904,7 @@ xsltFreeState (
     xsltNumberFormat  *nf;
     ast                t;
     xsltTopLevelVar   *tlv;
+    xsltNSAlias       *nsAlias, *nsAliasSave;
     xsltExcludeNS     *excludeNS, *excludeNSsave;
     Tcl_HashEntry     *entryPtr, *entryPtr1;
     Tcl_HashSearch     search, search1;        
@@ -5027,6 +4994,15 @@ xsltFreeState (
         Tcl_Free((char*)sdsave);
     }
     
+    nsAlias = xs->nsAliases;
+    while (nsAlias) {
+        nsAliasSave = nsAlias;
+        nsAlias = nsAlias->next;
+        if (nsAliasSave->fromUri) free(nsAliasSave->fromUri);
+        if (nsAliasSave->toUri) free(nsAliasSave->toUri);
+        Tcl_Free ((char *) nsAliasSave);
+    }
+        
     /*--- free decimal formats ---*/
     df = xs->decimalFormats;
     while (df) {
@@ -5165,6 +5141,7 @@ int xsltProcess (
     xs.currentXSLTNode     = NULL;
     xs.xsltDoc             = xsltDoc;
     xs.varsInProcess       = NULL;
+    xs.nsAliases           = NULL;
     Tcl_InitHashTable ( &(xs.stripInfo.NCNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.FQNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.NSWildcards), TCL_STRING_KEYS);

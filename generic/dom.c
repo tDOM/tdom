@@ -35,82 +35,6 @@
 |                                 entities, tdom command
 |
 |
-|   $Log$
-|   Revision 1.10  2002/04/22 00:54:14  rolf
-|   Improved handling of literal result elements: now namespaces in scope
-|   are also copied to the result tree, if needed. exclude-result-prefixes
-|   and extension-element-prefixes of xsl:stylesheet elements are
-|   respected. (Still to do: xsl:extension-element-prefixes and
-|   xsl:exclude-result-prefixes attributes of literal elements.)
-|
-|   Revision 1.9  2002/04/19 18:55:36  rolf
-|   Changed / enhanced namespace handling and namespace information
-|   storage. The namespace field of the domNode and domAttributeNode
-|   structurs is still set. But other than up to now, namespace attributes
-|   are now stored in the DOM tree as other, 'normal' attributes also,
-|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
-|   every 'namespace attribute' is stored befor any 'normal' attribute
-|   node, in the list of the attributes of an element. The still saved
-|   namespace index in the namespace field is used for fast access to the
-|   namespace information. To speed up the look up of the namespace info,
-|   an element or attributes contains to, the namespace index is now the
-|   index number (plus offset 1) of the corresponding namespace info in
-|   the domDoc->namespaces array. All xpath expressions with the exception
-|   of the namespace axes (still not implemented) have to ignore this
-|   'namespace attributes'. With this enhanced storage of namespace
-|   declarations, it is now possible, to find all "namespaces in scope" of
-|   an element by going up the ancestor-or-self axis and inspecting all
-|   namespace declarations. (That may be a bit expensive, for documents
-|   with lot of namespace declarations all over the place or deep
-|   documents. Something like
-|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
-|   English for that url) describes, may be an idea, if this new mechanism
-|   should not scale good enough.)
-|
-|   Changes at script level: special attributes used for declaring XML
-|   namespaces are now exposed and can be manipulated just like any other
-|   attribute. (That is now according to the DOM2 rec.) It isn't
-|   guaranteed (as it was), that the necessary namespace declarations are
-|   created during serializing. (That's also DOM2 compliant, if I read it
-|   right, even if this seems to be a bit a messy idea.) Because the old
-|   behavior have some advantages, from the viepoint of a programmer, it
-|   eventually should restored (as default or as 'asXML' option?).
-|
-|   Revision 1.8  2002/04/09 17:20:47  rolf
-|   Actual HEAD does not compile (!! arg). With this (intermediate) state
-|   it should. Some of the changes will be undo and replaced by others.
-|
-|   Revision 1.7  2002/03/21 01:47:22  rolf
-|   Collected the various nodeSet Result types into "nodeSetResult" (there
-|   still exists a seperate emptyResult type). Reworked
-|   xpathEvalStep. Fixed memory leak in xpathMatches, added
-|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
-|   already in the nodeSet.
-|
-|   Revision 1.6  2002/03/10 01:16:12  rolf
-|   Added support for [dom createDocumentNS]. Added tests for correctness
-|   of document Element tag name.
-|
-|   Revision 1.5  2002/03/07 22:11:32  rolf
-|   Freeze of actual state, befor feeding stuff to Jochen.
-|
-|   Revision 1.4  2002/03/01 01:30:20  rolf
-|   No real code changes. Only to log additional change in 1.3:
-|   Fixed namespace overflow throu repeated (identical in prefix and uri)
-|   namespace declarations.
-|
-|   Revision 1.3  2002/03/01 01:18:22  rolf
-|   Changed parsing. [dom parse ..] now uses Tcl_GetStringFromObj(),
-|   dom parse -channel now respects the encoding of the channel.
-|
-|   Revision 1.2  2002/02/23 01:13:33  rolf
-|   Some code tweaking for a mostly warning free MS build
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|
 |   written by Jochen Loewer
 |   April 5, 1999
 |
@@ -3109,7 +3033,6 @@ domAppendLiteralNode(
 {
     Tcl_HashEntry *h;
     domNode       *node;
-    domNS         *ns;
     int            hnew;   
     GetTDomTSD();
 
@@ -3135,13 +3058,6 @@ domAppendLiteralNode(
     parent->lastChild = node;
     node->nextSibling = NULL;
     node->parentNode  = parent;
-
-/*      domAddNSToNode (node, literalNode->ownerDocument->namespaces[literalNode->namespace]); */
-/*      ns = domLookupPrefix (node, literalNode->ownerDocument->namespaces[literalNode->namespace]->prefix); */
-/*      if (ns) { */
-/*          fprintf (stderr, "domAppendLiteralNode: adding namespace %s \n", ns->uri); */
-/*          node->namespace = ns->index; */
-/*      } */
 
     MutationEvent();
     
