@@ -130,8 +130,8 @@
 # define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd0x%x", (doc)->documentNumber)
 #endif /* TCL_THREADS */
 
-#define DOC_CMD(s,doc)      sprintf((s), "domDoc0x%x", (unsigned int)(doc))
-#define NODE_CMD(s,node)    sprintf((s), "domNode0x%x", (unsigned int)(node))
+#define DOC_CMD(s,doc)      sprintf((s), "domDoc%p", (doc))
+#define NODE_CMD(s,node)    sprintf((s), "domNode%p", (node))
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
 #define XMLNS_NAMESPACE "http://www.w3.org/2000/xmlns"
