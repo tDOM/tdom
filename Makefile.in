@@ -74,7 +74,7 @@ tdomstub_LIB_FILE	= @tdomstub_LIB_FILE@
 # this package that need to be installed, if any.
 #========================================================================
 
-RUNTIME_SOURCES = tdom.tcl tdomhtml.tcl
+RUNTIME_SOURCES = tdom.tcl
 
 #========================================================================
 # This is a list of header files to be installed
@@ -357,8 +357,7 @@ pkgIndex.tcl:
 pkgIndex.tcl-hand:
 	@(echo 'package ifneeded $(PACKAGE) $(VERSION)\
 	"load [file join $$dir $($(PACKAGE)_LIB_FILE)];\
-         source [file join $$dir tdom.tcl];\
-         source [file join $$dir tdomhtml.tcl]"'\
+         source [file join $$dir tdom.tcl]"'\
 	) > pkgIndex.tcl
 
 #========================================================================
