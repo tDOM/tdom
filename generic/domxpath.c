@@ -38,6 +38,9 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.5  2002/03/22 00:14:22  rolf
+|   Removed some overseen debugging code.
+|
 |   Revision 1.4  2002/03/21 01:47:22  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -4313,15 +4316,6 @@ int xpathMatches (
                 if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) {
                     xpathRSFree (&nodeList); return 0;
                 }
-/*                  if (strcmp (nodeToMatch->nodeName, "row")==0) { */
-/*                      if (dbonerow == 432) { */
-/*                          fprintf (stderr, "foohoo\n"); */
-/*                          dbonerow++; */
-/*                          return 1; */
-/*                      } */
-/*                      dbonerow++; */
-/*                      return 0; */
-/*                  } */
                 if ((steps->strvalue[0] != '*') ||
                     (steps->strvalue[1] != '\0')) 
                 {
