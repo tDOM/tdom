@@ -1,15 +1,16 @@
+--- Release 0.8.0, 11. Aug. 2004 --- See ChangeLog for details ---
+
 2004-07-27  Rolf Ade  <rolf@pointsman.pointsman.de>
 
         New method createDocumentNode.
 
-        Added methods nodeType, getElementById,
-        firstChild, lastChild, appendChild, removeChild,
-        hasChildNodes, childNodes, ownerDocument, insertBefore,
-        replaceChild, appendFromList, appendXML, selectNodes,
-        baseURI, appendFromScript and insertBeforeFromScript to dom
-        docs. Beside other things, this allows much easier handling
-        of top level nodes. The result tree may not be an XML
-        document, but a general parsed entity.
+        Added methods nodeType, getElementById, firstChild, lastChild,
+        appendChild, removeChild, hasChildNodes, childNodes,
+        ownerDocument, insertBefore, replaceChild, appendFromList,
+        appendXML, selectNodes, baseURI, appendFromScript and
+        insertBeforeFromScript to dom docs. Beside other things, this
+        allows much easier handling of top level nodes. The result
+        tree may not be an XML document, but a general parsed entity.
 
         New (experimental) method setObjectCommands.
 
