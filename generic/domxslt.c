@@ -36,6 +36,11 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.6  2002/03/16 13:06:06  rolf
+|   Optimised xsl:sort: the string or numeric value of the nodes to sort
+|   are computed only once and cached for further comparisons in the sort
+|   process.
+|
 |   Revision 1.5  2002/03/03 20:08:25  rolf
 |   Improved detection of improper stylesheets: now triggers error if any
 |   mandatory attribute of a xsl element is missing. The mandatory
@@ -1886,6 +1891,92 @@ DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
     return 0;
 }
 
+static int myNodeGreater (
+    int         typeText,
+    int         asc,
+    int         upperFirst,
+    char      * strA,
+    char      * strB,
+    double      realA,
+    double      realB,
+    int       * greater
+)
+{
+    int             rc;
+#if TclOnly8Bits == 0
+    char           *strAptr, *strBptr;
+    int             lenA, lenB, len;
+    Tcl_UniChar     unicharA, unicharB;
+#endif
+
+    *greater = 0;
+
+    if (typeText) {
+
+#if TclOnly8Bits
+        /* TODO: this only works for 7 bit ASCII */
+        rc = STRCASECMP(strA, strB);
+        if (rc == 0) {
+            rc = strcmp (strA, strB);
+            if (!upperFirst) {
+                rc *= -1;
+            }
+        }
+DBG(   fprintf(stderr, "nodeGreater %d <-- strA='%s' strB='%s'\n", rc, strA, strB);)
+#else    
+        lenA = Tcl_NumUtfChars (strA, -1);
+        lenB = Tcl_NumUtfChars (strB, -1);
+        len = (lenA < lenB ? lenA : lenB);
+        rc = Tcl_UtfNcasecmp (strA, strB, len);
+        if (rc == 0) {
+            if (lenA > lenB) {
+                rc = 1;
+            } else if (lenA < lenB) {
+                rc = -1;
+            }
+        }
+        if (rc == 0) {
+            strAptr = strA;
+            strBptr = strB;
+            while (len-- > 0) {
+                strAptr += Tcl_UtfToUniChar(strAptr, &unicharA);
+                strBptr += Tcl_UtfToUniChar(strBptr, &unicharB);
+                if (unicharA != unicharB) {
+                    rc = unicharA - unicharB;
+                    break;
+                }
+            }
+            if (!upperFirst) {
+                rc *= -1;
+            }
+        }
+#endif
+        if (asc) *greater = (rc > 0);
+            else *greater = (rc < 0);
+
+    } else {
+DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
+        if (isnan (realA) || isnan (realB)) {
+            if (asc) {
+                if (isnan (realA) && !isnan (realB)) {
+                    *greater = 0;
+                } else {
+                    if (isnan (realB) && !isnan (realA)) *greater = 1;
+                }
+            } else {
+                if (isnan (realA) && !isnan(realB)) {
+                    *greater = 1;
+                } else {
+                    if (isnan (realB) && !isnan(realA)) *greater = 0;
+                }
+            }
+        } else {
+            if (asc) *greater = (realA > realB); 
+            else *greater = (realA < realB);        
+        } 
+    }
+    return 0;
+}
 
 /*----------------------------------------------------------------------------
 |   sortNodeSetFastMerge  -   use FastMergeSort of fast sorting
@@ -2006,6 +2097,147 @@ static int sortNodeSetFastMerge(
     return 0;
 }
 
+
+static int myFastMergeSort (
+    int         txt,
+    int         asc,
+    int         upperFirst,
+    domNode   * a[],
+    int       * posa,
+    domNode   * b[],
+    int       * posb,
+    char     ** vs,
+    double    * vd,
+    char     ** vstmp,
+    double    * vdtmp,
+    int         size,
+    char     ** errMsg
+) {
+    domNode *tmp;
+    int tmpPos, lptr, rptr, middle, i, j, gt, rc;
+    char    *tmpVs;
+    double   tmpVd;
+    
+    if (size < 10) {
+          /* use simple and fast insertion for small sizes ! */
+        for (i = 1; i < size; i++) {
+            tmp    = a    [i];
+            tmpPos = posa [i];
+            tmpVs  = vs   [i];
+            tmpVd  = vd   [i];
+            j = i; 
+            if (j>0) {
+                rc = myNodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
+                                   vd[j-1], tmpVd, &gt);
+                CHECK_RC;
+            }            
+            while ( j > 0 && gt) {
+                a   [j] = a   [j-1];
+                posa[j] = posa[j-1];
+                vs  [j] = vs  [j-1];
+                vd  [j] = vd  [j-1];
+                j--;
+                if (j>0) {
+                    rc = myNodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
+                                       vd[j-1], tmpVd, &gt);
+                    CHECK_RC;
+                }
+            }
+            a   [j] = tmp;
+            posa[j] = tmpPos;
+            vs  [j] = tmpVs;
+            vd  [j] = tmpVd;
+        }
+        return 0;
+    }
+    middle = size/2;
+ 
+    rc = myFastMergeSort(txt, asc, upperFirst, a, posa, b, posb, vs, vd,
+                         vstmp, vdtmp, middle, errMsg);
+    CHECK_RC;
+    rc = myFastMergeSort(txt, asc, upperFirst, a+middle, posa+middle, b+middle,
+                         posb+middle, vs+middle, vd+middle, vstmp+middle,
+                         vdtmp+middle, size-middle, errMsg);
+    CHECK_RC;
+ 
+    lptr = 0;
+    rptr = middle;
+ 
+    for (i = 0; i < size; i++) {
+        if (lptr == middle) {
+            b    [i] = a   [rptr  ];
+            posb [i] = posa[rptr  ];
+            vstmp[i] = vs  [rptr  ];
+            vdtmp[i] = vd  [rptr++];
+        } else if (rptr < size) {
+            rc = myNodeGreater(txt, asc, upperFirst, vs[lptr], vs[rptr],
+                             vd[lptr], vd[rptr], &gt); 
+            if (gt) {
+                b    [i] = a   [rptr  ];
+                posb [i] = posa[rptr  ];
+                vstmp[i] = vs  [rptr  ];
+                vdtmp[i] = vd  [rptr++];
+            } else {
+                b    [i] = a   [lptr  ];
+                posb [i] = posa[lptr  ];
+                vstmp[i] = vs  [lptr  ];
+                vdtmp[i] = vd  [lptr++];
+            }
+        } else {
+            b    [i] = a   [lptr  ];
+            posb [i] = posa[lptr  ];
+            vstmp[i] = vs  [lptr  ];
+            vdtmp[i] = vd  [lptr++];
+        } 
+    } 
+    memcpy(a,    b,     size*sizeof(domNode*));
+    memcpy(posa, posb,  size*sizeof(int*));
+    memcpy(vs,   vstmp, size*sizeof(char*));
+    memcpy(vd,   vdtmp, size*sizeof(double));
+    return 0;
+}
+
+static int mysortNodeSetFastMerge(
+    xsltState * xs,
+    int         txt,
+    int         asc,
+    int         upperFirst,
+    domNode   * nodes[], 
+    int         n,
+    char     ** vs,
+    double    * vd,
+    int       * pos,
+    char     ** errMsg
+)
+{
+    domNode **b;
+    int      *posb;
+    char    **vstmp;
+    double   *vdtmp;
+    int       rc;
+
+    b = (domNode **) malloc( n * sizeof(domNode *) );
+    if (b == NULL) {
+        perror("malloc in sortNodeSetMergeSort");
+        exit(1);
+    }
+    posb = (int *) malloc( n * sizeof(int) );
+    if (posb == NULL) {
+        perror("malloc in sortNodeSetMergeSort");
+        exit(1);
+    }
+    vstmp = (char **) malloc (sizeof (char *) * n);
+    vdtmp = (double *)malloc (sizeof (double) * n);
+    
+    rc = myFastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd, 
+                         vstmp, vdtmp, n, errMsg);
+    free (posb);
+    free (b);
+    free (vstmp);
+    free (vdtmp);
+    CHECK_RC;
+    return 0;
+}
 
 /*----------------------------------------------------------------------------
 |   xsltSetVar
@@ -2498,17 +2730,17 @@ static int doSortActions (
     xpathResultSet  * context,
     domNode         * currentNode,
     int               currentPos,
-    int             * sorted,
     char           ** errMsg    
 )
 {
-    domNode *child;
-    char    *str, *evStr, *select, *lang;
-    int      rc, typeText, ascending, upperFirst = 1, *pos, i;
-    ast      t;
+    domNode       *child;
+    char          *str, *evStr, *select, *lang;
+    char         **vs = NULL;
+    double        *vd = NULL;
+    int            rc = 0, typeText, ascending, upperFirst, *pos = NULL, i, NaN;
+    xpathResultSet rs;
+    ast            t;
     
-    *sorted = 0;
-
     child = actionNode->lastChild; /* do it backwards, so that multiple sort
                                       levels are correctly processed */
     while (child) {
@@ -2521,6 +2753,7 @@ static int doSortActions (
                 }
                 typeText  = 1;
                 ascending = 1;
+                upperFirst = 1;
                 select = getAttr(child, "select", a_select);
                 if (!select) select = ".";
                 xs->currentXSLTNode = child;
@@ -2555,22 +2788,55 @@ static int doSortActions (
                        select, typeText, ascending, nodelist->nr_nodes);
                 rc = xpathParse(select, errMsg, &t, 0);
                 CHECK_RC;
-                pos = (int*) malloc( sizeof(int) * nodelist->nr_nodes);
+                if (!pos) 
+                    pos = (int*) malloc( sizeof(int) * nodelist->nr_nodes);
                 for (i=0; i<nodelist->nr_nodes;i++) pos[i] = i;
 
                 xs->currentXSLTNode = child;
-                rc = sortNodeSetFastMerge(xs, t, select, typeText, ascending,
-                                          upperFirst, nodelist->nodes,
-                                          nodelist->nr_nodes, pos, errMsg);
-                free(pos);
-                CHECK_RC;
-                xpathFreeAst( t );                 
-                *sorted = 1;
+                
+                if (!vs) {
+                    vs = (char **) malloc (sizeof (char *) * nodelist->nr_nodes);
+                    for (i=0; i<nodelist->nr_nodes;i++) vs[i] = NULL;
+                    vd = (double *)malloc (sizeof (double) * nodelist->nr_nodes);
+                }
+                for (i = 0; i < nodelist->nr_nodes; i++) {
+                    xpathRSInit (&rs);
+                    rc = evalXPath (xs, nodelist, nodelist->nodes[i], i,
+                                    select, &rs, errMsg);
+                    if (rc < 0) 
+                        goto doSortActionCleanUp;
+                    
+                    if (typeText) {
+                        vs[i] = xpathFuncString (&rs);
+                    } else {
+                        vd[i] = xpathFuncNumber (&rs, &NaN);
+                    }
+                    xpathRSFree (&rs);
+                }
+                rc = mysortNodeSetFastMerge (xs, typeText, ascending,
+                                             upperFirst, nodelist->nodes,
+                                             nodelist->nr_nodes, vs, vd,
+                                             pos, errMsg);
+/*                  rc = sortNodeSetFastMerge(xs, t, select, typeText, ascending, */
+/*                                            upperFirst, nodelist->nodes, */
+/*                                            nodelist->nr_nodes, pos, errMsg); */
+/*                  free(pos); */
+                if (typeText) {
+                    for (i = 0; i < nodelist->nr_nodes; i++) {
+                        free (vs[i]);
+                    }
+                }
+                if (rc < 0)
+                    goto doSortActionCleanUp;
             }
         }
         child = child->previousSibling;
     }
-    return 0;
+ doSortActionCleanUp:
+    if (pos) free (pos);
+    if (vs) free (vs);
+    if (vd) free (vd);
+    return rc;
 }
 
 
@@ -2848,7 +3114,7 @@ static int ExecAction (
     char           *str, *str2, *mode, *select, *pc;
     char           *nsAT, *ns;
     char           *uri, *localName, prefix[MAX_PREFIX_LEN];
-    int             rc, b, i, len, sorted, disableEsc = 0;
+    int             rc, b, i, len, disableEsc = 0;
     double          currentPrio, currentPrec;
 
     if (actionNode->nodeType == TEXT_NODE) {
@@ -2991,7 +3257,7 @@ static int ExecAction (
             }
             
             rc = doSortActions (xs, &rs, actionNode, context, currentNode,
-                                currentPos, &sorted, errMsg);
+                                currentPos, errMsg);
             CHECK_RC;
             /* should not be necessary, because every node set is
                returned already in doc Order */
@@ -3395,7 +3661,7 @@ static int ExecAction (
                 || (rs.type == MixedSetResult)) {
 
                 rc = doSortActions (xs, &rs, actionNode, context, currentNode,
-                                    currentPos, &sorted, errMsg);
+                                    currentPos, errMsg);
                 CHECK_RC;
                 /* should not be necessary, because every node set is
                    returned already in doc Order */
