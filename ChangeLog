@@ -36,7 +36,7 @@
         * tests/domNode.test: Created this files, tests from dom.test
           and domCmd.test.  
 
-        * doc/expat,*  
+        * doc/expat.*  
         * tests/xpath.test
         * tests/xslt.test: Minor changes.
   
