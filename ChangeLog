@@ -1,6 +1,6 @@
 2005-03-21  Rolf Ade  <rolf@pointsman.de>
 
-        * tests/domDoc.test: Fixed flawed test, which slipped throu,
+        * tests/domDoc.test: Fixed flawed test, which slipped through,
           somehow.
 
 2005-03-18  Rolf Ade  <rolf@pointsman.de>
