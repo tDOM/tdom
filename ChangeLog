@@ -1,90 +1,19 @@
-2003-06-13  Rolf Ade  <rolf@pointsman.de>
+2003-07-03  Zoran Vasiljevic  <zoran@archiware.com>
 
-        * generic/tcldom.c: Added an argument check for XSLTCmds.
 
-2003-06-11  Rolf Ade  <rolf@pointsman.de>
-
-        * generic/domxslt.c: Fixed a bug in xsl:number. If there is no
-          'count' attribute given to xsl:number, it must default to
-          the pattern that matches any node with the same node type as
-          the current node and, if the current node has an
-          expanded-name, with the same expanded-name as the current
-          node. But in case of PROCESSING_INSTRUCTION_NODEs as the
-          current node and no 'count' attribute, it counted all pi's
-          regardless of the name. Now, the name is respected, as it
-          should be.
-    
-2003-06-11  Zoran Vasiljevic  <zoran@archiware.com>
+	---- Changes done in rel-0-7-branch ----
+	---- Those should be merged in HEAD ----
 
 	* generic/domlock.c: fixed double mutex unlock.
 
-2003-05-19  Rolf Ade  <rolf@pointsman.de>
-
-        * doc/dom.*: Corrected the documentation of the
-          createDocumentNS method: the args uri and docElementName
-          were documented in the wrong order (reported by Vico
-          Klump). Minor markup changes.
-
-2003-05-16  Zoran Vasiljevic  <zoran@archiware.com>
-
-	* generic/dom.h 
-	* generic/tdom.decls
-	* generic/tdomDecls.h
-	* generic/tdomStubInit.c 
-	* generic/tdomStubLib.c 
-	* generic/tdominit.c: fixed so it compiles cleanly when 
-	  -NS_AOLSERVER is defined.
-
-2003-05-16  Rolf Ade  <rolf@pointsman.de>
-
-        * generic/dom.h
-	* generic/tcldom.c
-	* generic/domxslt.c
-	* generic/tclexpat.c: Switched to use XML_ParserCreate_MM(), to be
-	  able (at tDOM build time) to make the expat parser use custom
-	  *alloc/free() functions (macro MEM_SUITE in dom.h). For
-	  TCL_MEM_DEBUG and NS_AOLSERVER builds the mem functions, used by
-	  the parser default now to Tcl_Alloc()/Tcl_Realloc()/Tcl_Free().
-	  Switched to XML_FreeContentModel(), for freeing stored element
-	  content models.
-
-2003-05-11  Rolf Ade  <rolf@pointsman.de>
-
-        * generic/dom.c
-        * generic/domxslt.c
-        * generic/xmlsimple.c: Renamed the documents rootNode (in the
-          sense of the XPath data model, that is not the document
-          element) from "(rootNode)" to "", in preparation for the
-          promissed 'domDoc without documentElement' feature, to fix a
-          somewhat outlying problem with xslt numbering and because
-          it's clearly more the 'right thing' according to the rec.
-
-        * generic/domxslt.c: Removed the arg xs from
-          sortNodeSetFastMerge(), because it isn't used.
-
-2003-04-20  Rolf Ade  <rolf@pointsman.de>
-
-        * extensions/tdomhtml/tdomhtml.tcl: Proc newdoc: New optional
-          argument (list of names of local variables) allows the use
-          of local variables (in the scope of the caller of newdoc) in
-          the script argument of newdoc. Contributed by Chuck Ferril.
-
-2003-04-16  Rolf Ade  <rolf@pointsman.de>
-
-        * generic/domxslt.c: Optimization: Improved caching of
-          external documents.
-
-2003-04-12  Rolf Ade  <rolf@pointsman.de>
-
-        * README
-        * README.AOL
-        * configure.in
-        * configure
-        * configure-8.0.5
-        * tests/loadtdom.tcl
-        * mac/Prefix/tDOMPrefix.h
-        * mac/Prefix/tDOMPrefix_OSX.h    
-        * extensions/tnc/tnc.c: Bumped version to 0.8.0 (alpha).
+	* generic/tcldom.c: allows same thread to issue several
+	  "attachDocument" commands to artificially bump the 
+          document refcount thus making the document sticky.
+	  
+	  Also, fixed variable tracing issues when tearing down the
+	  dom document. Now, all node object command variables are
+	  automatically untraced. This prevents memory trashing when
+	  such variables are unset by user or by Tcl.
 
 2003-04-09  Rolf Ade  <rolf@pointsman.de>
 
@@ -317,7 +246,7 @@
 	* unix/CONFIG: new file. Adds some examples how to build
 	  the extension on some common Unix platforms.
 
-	* mac: added Bernards CodeWarrior files for Mac builds.
+	* mac: added Bernard CodeWarrior files for Mac builds.
 	* macosx: added directory where we will supply the ProjectBuilder
 	  files (hopefully :)
 
