@@ -448,7 +448,7 @@ void tcldom_deleteDoc (
 
     TDomThreaded(deleted = tcldom_UnregisterDocShared(interp, doc));
     if (deleted) {
-        domDeleteDocument(doc, tcldom_deleteNode, interp);
+        domFreeDocument(doc, tcldom_deleteNode, interp);
     }
 }
 
@@ -773,7 +773,7 @@ tcldom_getElementsByTagName (
             continue;
         }
         if ( (nsIndex == -1)
-             || (nsIndex == node->namespace)
+             || (nsIndex == (int)node->namespace)
              || (nsIndex == -3)
              || (nsIndex == -2 
                  && node->namespace 
@@ -1148,7 +1148,7 @@ int tcldom_appendXML (
         domAppendChild(node, nodeToAppend);
         nodeToAppend = nodeToAppend->nextSibling;
     }
-    domDeleteDocument(doc, NULL, NULL);
+    domFreeDocument(doc, NULL, NULL);
 
     return tcldom_returnNodeObj(interp, node, 0, NULL);
 #endif
@@ -2298,7 +2298,7 @@ void tcldom_AppendEscaped (
                         Tcl_UtfToUniChar(pc, &uniChar);
                         AP('&') AP('#')
                             sprintf(charRef, "%d", uniChar);
-                        for (i = 0; i < strlen(charRef); i++) {
+                        for (i = 0; i < (int)strlen(charRef); i++) {
                             AP(charRef[i]);
                         }
                         AP(';')

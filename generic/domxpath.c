@@ -292,7 +292,7 @@ void rsPrint ( xpathResultSet *rs ) {
              if (!i) fprintf(stderr,"nodeSet result (len %d):\n",rs->nr_nodes);
              for (i=0; i<rs->nr_nodes; i++) {
                  if (rs->nodes[i]->nodeType == ELEMENT_NODE) {
-                     fprintf(stderr, "%2d domNode0x%x %s ",
+                     fprintf(stderr, "%2d domNode%p %s ",
                              i, rs->nodes[i], rs->nodes[i]->nodeName);
                      if (rs->nodes[i]->firstChild &&
                          rs->nodes[i]->firstChild->nodeType == TEXT_NODE)
@@ -310,7 +310,7 @@ void rsPrint ( xpathResultSet *rs ) {
                      if (l > 60) l = 60;
                      memcpy(tmp, ((domTextNode*)rs->nodes[i])->nodeValue, l);
                      tmp[l] = '\0';
-                     fprintf(stderr, "%2d domNode0x%x text:'%s' \n",
+                     fprintf(stderr, "%2d domNode%p text:'%s' \n",
                              i, rs->nodes[i], tmp);
                  } else
                  if (rs->nodes[i]->nodeType == COMMENT_NODE) {
@@ -320,7 +320,7 @@ void rsPrint ( xpathResultSet *rs ) {
                      memcpy(&tmp[4], ((domTextNode*)rs->nodes[i])->nodeValue, l);
                      memcpy(&tmp[4+l], "-->", 3);
                      tmp[7+l] = '\0';
-                     fprintf(stderr, "%2d domNode0x%x text:'%s' \n",
+                     fprintf(stderr, "%2d domNode%p text:'%s' \n",
                              i, rs->nodes[i], tmp);
                  } else
                  if (rs->nodes[i]->nodeType == ATTRIBUTE_NODE) {
@@ -3504,9 +3504,9 @@ xpathEvalFunction (
                     attr = attr->nextSibling;
                     i++;
                 }
-                sprintf(tmp,"id%x-%d", node, i);
+                sprintf(tmp,"id%p-%d", node, i);
             } else {
-                sprintf(tmp,"id%x", leftResult.nodes[0]);
+                sprintf(tmp,"id%p", leftResult.nodes[0]);
             }
             rsSetString (result, tmp);
         } else

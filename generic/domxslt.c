@@ -480,14 +480,14 @@ static void printXML (domNode *node, int level, int maxlevel) {
                 if (l > 30) l = 30;
                 memmove(tmp, tnode->nodeValue, l);
                 tmp[l] = '\0';
-                fprintf(stderr, "<%s/domNode0x%x> '%s'\n", node->nodeName, 
+                fprintf(stderr, "<%s/domNode0x%p> '%s'\n", node->nodeName, 
                         node, tmp);
             } else {
                 tmp[0] = '\0';
                 if ((level>=maxlevel) && (node->firstChild)) {
                     strcpy( tmp, "...");
                 }
-                fprintf(stderr, "<%s/domNode0x%x> %s\n", node->nodeName,
+                fprintf(stderr, "<%s/domNode0x%p> %s\n", node->nodeName,
                         node, tmp);
             }
             if (level<maxlevel) {
@@ -581,11 +581,11 @@ static char * getAttr (
     attr = node->firstAttr;
     while (attr) {
 
-        if (attr->info == attrTypeNo) {
+        if (attr->info == (unsigned int)attrTypeNo) {
             return attr->nodeValue;
         } else if (attr->info == 0) {
             if (strcmp ((char*)attr->nodeName, name)==0) {
-                attr->info = attrTypeNo;
+                attr->info = (unsigned int)attrTypeNo;
                 return attr->nodeValue;
             }
         }
@@ -2932,7 +2932,6 @@ static int addMatch (
     int            rc, hnew;
     Tcl_DString    dStr;
     Tcl_HashEntry *h;
-    domNS         *ns;
     
     if (a->type == CombinePath) {
         t = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
@@ -5289,7 +5288,6 @@ static int ApplyTemplate (
     char           *localName, prefix[MAX_PREFIX_LEN];
     Tcl_HashEntry  *h;
     Tcl_DString     dStr;
-    domNS          *ns;
     xsltSubDoc     *currentSubDoc;
 
     TRACE2("\n\nApplyTemplate mode='%s' currentPos=%d \n", mode, currentPos);

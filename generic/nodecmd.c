@@ -38,6 +38,7 @@
 |
 \---------------------------------------------------------------------------*/
 #include <dom.h>
+#include <tcldom.h>
 #include <tcl.h>
 #include <nodecmd.h>
 
@@ -415,7 +416,7 @@ NodeObjCmd (arg, interp, objc, objv)
             aval = Tcl_GetString(opts[i+1]);
             if (abs(type) == ELEMENT_NODE_AVALUE_CHK
                 || abs(type) == ELEMENT_NODE_CHK) {
-                if (!tcldom_textCheck (interp, aval, "attribute", 0)) {
+                if (!tcldom_textCheck (interp, aval, "attribute")) {
                     return TCL_ERROR;
                 }
             }
