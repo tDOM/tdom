@@ -2,4 +2,4 @@
 
 package ifneeded tdom @VERSION@        \
     "source [file join $dir tdom.tcl]; \
-     load   [file join $dir tdom@VERSION@[info sharedlibextension] ] tdom  "
+     load   [file join $dir tdom@VERSION@@TCL_DBGX@[info sharedlibextension] ] tdom  "
