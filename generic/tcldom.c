@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2002/03/07 22:12:10  rolf
+|   Freeze of actual state, befor feeding stuff to Jochen.
+|
 |   Revision 1.4  2002/03/01 01:22:14  rolf
 |   Changed parsing. [dom parse ..] now uses Tcl_GetStringFromObj(),
 |   dom parse -channel now respects the encoding of the channel.
@@ -2988,7 +2991,8 @@ int tcldom_createDocument (
         newObjName = objv[2];
         setVariable = 1;
     }
-    doc = domCreateDocument ( Tcl_GetStringFromObj (objv[1], NULL) );
+    doc = domCreateDocument ( interp, Tcl_GetStringFromObj (objv[1], NULL) );
+    if (!doc) return TCL_ERROR;
     return tcldom_returnDocumentObj( 
                  interp, doc, setVariable, newObjName
     );
