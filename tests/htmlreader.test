@@ -1,0 +1,36 @@
+# Features covered: HTML parser
+#
+# This file contains a collection of tests for the HTML parser.
+# Tested functionalities:
+#    html-1.*: Character encoding
+#
+# Copyright (c) 2002 Rolf Ade.
+
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest
+    namespace import -force ::tcltest::*
+}
+
+if {[catch {package require tdom 0.7}]} {
+   puts stderr "Cannot load tDOM 0.7 package"
+   return
+}
+
+
+test html-1.1 {HTML character entities} {
+    set doc [dom parse -html {<html><body>&nbsp;&iexcl;&Auml;&uuml;</body></html>}]
+    set root [$doc documentElement]
+    set body [$root firstChild]
+    set result [$body text]
+    $doc delete
+    set result
+} "\u00A0\u00A1\u00c4\u00fc"
+
+test html-1.2 {character entities} {
+    set doc [dom parse -html {<html><body>&#214;&#xC4;&#xc4;</body></html>}]
+    set root [$doc documentElement]
+    set body [$root firstChild]
+    set result [$body text]
+    $doc delete
+    set result
+} "\u00d6\u00c4\u00c4"
