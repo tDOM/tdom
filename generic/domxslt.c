@@ -58,16 +58,12 @@
 #include <domxpath.h>
 #include <domxslt.h>
 #include <tcl.h>         /* for hash tables */
-#ifdef _MSC_VER
-#include <win32.h>
-#endif
 
 /*----------------------------------------------------------------------------
 |   Defines
 |
 \---------------------------------------------------------------------------*/
 #define XSLT_NAMESPACE  "http://www.w3.org/1999/XSL/Transform"
-#define PRIO_UNKNOWN    -111.0
 
 
 /*----------------------------------------------------------------------------
@@ -1595,7 +1591,7 @@ static int xsltXPathFuncs (
 )
 {
     xsltState         * xs = clientData;
-    char              * keyId, *filterValue, *str, *baseURI, tmp[5];
+    char              * keyId, *filterValue, *str, *baseURI;
     char              * localName, prefix[MAX_PREFIX_LEN];
     int                 rc, i, len, NaN, freeStr;
     double              n;
@@ -1750,16 +1746,14 @@ static int xsltXPathFuncs (
         NaN = 0;
         n   = xpathFuncNumber (argv[0], &NaN);
         if (NaN) {
-            sprintf(tmp, "%f", n);
-            if (strcmp(tmp,"nan")==0)  rsSetString (result, df->NaN);
-            else if (strcmp(tmp,"inf")==0)  rsSetString (result, df->infinity);
-            else if (strcmp(tmp,"-inf")==0) {
+            if      (NaN == 2) rsSetString (result, df->NaN);
+            else if (NaN == 1) rsSetString (result, df->infinity);
+            else {
                 Tcl_DStringInit (&dStr);
                 Tcl_DStringAppend (&dStr, "-", 1);
                 Tcl_DStringAppend (&dStr, df->infinity, -1);
                 rsSetString (result, Tcl_DStringValue (&dStr));
             }
-            else reportError (exprContext, "format-number: unrecognized NaN!!! - Please report!", errMsg);
             return 0;
         }
         str = xpathFuncString (argv[1]);
