@@ -452,6 +452,8 @@ char * tcldom_nodeTrace (
 
     DBG(fprintf (stderr, "--> tcldom_nodeTrace %d 0x%x !\n", flags, (int)clientData );)
 
+    if (flags & TCL_INTERP_DESTROYED) return NULL;
+    
     node = (domNode*) clientData;
 
     if (flags & TCL_TRACE_UNSETS) {
@@ -1988,18 +1990,31 @@ void tcldom_treeAsHTML (
     domNode     *node,
     Tcl_Channel  chan,
     int          escapeNonASCII,
-    int          htmlEntities
+    int          htmlEntities,
+    int          noEscaping
 )
 {
-    int          empty;
+    int          empty, scriptTag;
     domNode     *child;
     domAttrNode *attrs;
     char         tag[80], attrName[80];
 
-    if (node->nodeType == PROCESSING_INSTRUCTION_NODE) return;
+    if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
+        writeChars (htmlString, chan, "<?", 2);
+        writeChars (htmlString, chan, 
+                    ((domProcessingInstructionNode*)node)->targetValue,
+                    ((domProcessingInstructionNode*)node)->targetLength);
+        writeChars (htmlString, chan, " ", 1);
+        writeChars (htmlString, chan, 
+                    ((domProcessingInstructionNode*)node)->dataValue,
+                    ((domProcessingInstructionNode*)node)->dataLength);
+        writeChars (htmlString, chan, ">", 1);
+        return;
+    }
 
     if (node->nodeType == TEXT_NODE) {
-        if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
+        if ((node->nodeFlags & DISABLE_OUTPUT_ESCAPING) 
+            || noEscaping) {
             writeChars (htmlString, chan, ((domTextNode*)node)->nodeValue,
                         ((domTextNode*)node)->valueLength);
         } else {
@@ -2012,10 +2027,15 @@ void tcldom_treeAsHTML (
     }
 
     if (node->nodeType == CDATA_SECTION_NODE) {
+        if (noEscaping) {
+            writeChars (htmlString, chan, ((domTextNode*)node)->nodeValue,
+                        ((domTextNode*)node)->valueLength);
+        } else {
             tcldom_AppendEscaped (htmlString, chan,
                                   ((domTextNode*)node)->nodeValue,
                                   ((domTextNode*)node)->valueLength, 0,
                                   escapeNonASCII, htmlEntities);
+        }
     }
 
     if (node->nodeType == COMMENT_NODE) {
@@ -2031,6 +2051,34 @@ void tcldom_treeAsHTML (
     writeChars (htmlString, chan, "<", 1);
     writeChars (htmlString, chan, tag, -1);
 
+
+    /*-----------------------------------------------------------
+    |   check for HTML tags, that must be handled special:
+    |   empty tags and script tags (todo: HTML tags with
+    |   URI attributes, to do escaping of Non-ASCII chars
+    |   in the URI).
+    \----------------------------------------------------------*/
+    empty = 0;
+    scriptTag = 0;
+    switch (tag[0]) {
+        case 'a':  if (!strcmp(tag,"area"))       empty = 1; break;
+        case 'b':  if (!strcmp(tag,"br")     ||
+                       !strcmp(tag,"base")   ||
+                       !strcmp(tag,"basefont"))   empty = 1;
+        case 'c':  if (!strcmp(tag,"col"))        empty = 1; break;
+        case 'f':  if (!strcmp(tag,"frame"))      empty = 1; break;
+        case 'h':  if (!strcmp(tag,"hr"))         empty = 1; break;
+        case 'i':  if (!strcmp(tag,"img")    ||
+                       !strcmp(tag,"input")  ||
+                       !strcmp(tag,"isindex"))    empty = 1; break;
+        case 'l':  if (!strcmp(tag,"link"))       empty = 1; break;
+        case 'm':  if (!strcmp(tag,"meta"))       empty = 1; break;
+        case 'p':  if (!strcmp(tag,"param"))      empty = 1; break;
+        case 's':  if (!strcmp(tag,"script") ||     
+                       !strcmp(tag,"style"))      scriptTag = 1; break;
+    }
+
+
     attrs = node->firstAttr;
     while (attrs) {
         tcldom_tolower(attrs->nodeName, attrName, 80);
@@ -2045,36 +2093,12 @@ void tcldom_treeAsHTML (
     writeChars (htmlString, chan, ">", 1);
 
 
-    /*-----------------------------------------------------------
-    |   check for empty HTML tags
-    \----------------------------------------------------------*/
-    empty = 0;
-    switch (tag[0]) {
-        case 'a':  if (!strcmp(tag,"area"))     empty = 1; break;
-        case 'b':  if (!strcmp(tag,"br")     ||
-                       !strcmp(tag,"base")   ||
-                       !strcmp(tag,"basefont")) empty = 1; break;
-        case 'c':  if (!strcmp(tag,"col"))      empty = 1; break;
-        case 'f':  if (!strcmp(tag,"frame"))    empty = 1; break;
-        case 'h':  if (!strcmp(tag,"hr"))       empty = 1; break;
-        case 'i':  if (!strcmp(tag,"img")   ||
-                       !strcmp(tag,"input") ||
-                       !strcmp(tag,"isindex"))  empty = 1; break;
-        case 'l':  if (!strcmp(tag,"link"))     empty = 1; break;
-        case 'm':  if (!strcmp(tag,"meta"))     empty = 1; break;
-        case 'p':  if (!strcmp(tag,"param"))    empty = 1; break;
-/*          case 'p':  if (!strcmp(tag,"p")   || */
-/*                         !strcmp(tag,"param"))    empty = 1; break; */
-    }
     if (empty) {
-/*          if (node->nextSibling && node->nextSibling->nodeType != TEXT_NODE) { */
-/*              writeChars (htmlString, chan, "\n", 1); */
-/*          } */
         /* strange ! should not happen ! */
         child = node->firstChild;
         while (child != NULL) {
             tcldom_treeAsHTML (htmlString, child, chan, escapeNonASCII,
-                               htmlEntities);
+                               htmlEntities, scriptTag);
             child = child->nextSibling;
         }
         return;
@@ -2088,7 +2112,7 @@ void tcldom_treeAsHTML (
         }
         while (child != NULL) {
             tcldom_treeAsHTML (htmlString, child, chan, escapeNonASCII,
-                               htmlEntities);
+                               htmlEntities, scriptTag);
             child = child->nextSibling;
         }
         if ((node->firstChild != NULL) && (node->firstChild != node->lastChild)
@@ -2099,11 +2123,6 @@ void tcldom_treeAsHTML (
     writeChars (htmlString, chan, "</", 2);
     writeChars (htmlString, chan, tag, -1);
     writeChars (htmlString, chan, ">",  1);
-    /* The following code is problematic because of things like
-       <i>s</i><sub>2</sub> */
-/*      if (node->nextSibling && node->nextSibling->nodeType != TEXT_NODE) { */
-/*          writeChars (htmlString, chan, "\n", 1); */
-/*      } */
 }
 
 
@@ -2164,11 +2183,13 @@ void tcldom_treeAsXML (
 
     if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
         writeChars (xmlString, chan, "<?", 2);
-        writeChars (xmlString, chan, ((domProcessingInstructionNode*)node)->targetValue,
-                                     ((domProcessingInstructionNode*)node)->targetLength);
+        writeChars (xmlString, chan, 
+                    ((domProcessingInstructionNode*)node)->targetValue,
+                    ((domProcessingInstructionNode*)node)->targetLength);
         writeChars (xmlString, chan, " ", 1);
-        writeChars (xmlString, chan, ((domProcessingInstructionNode*)node)->dataValue,
-                                    ((domProcessingInstructionNode*)node)->dataLength);
+        writeChars (xmlString, chan, 
+                    ((domProcessingInstructionNode*)node)->dataValue,
+                    ((domProcessingInstructionNode*)node)->dataLength);
         writeChars (xmlString, chan, "?>", 2);
         if (indent != -1) writeChars (xmlString, chan, "\n", 1);
         return;
@@ -2428,7 +2449,7 @@ static int serializeAsHTML (
         }
     }
     resultPtr = Tcl_NewStringObj ("", 0);
-    tcldom_treeAsHTML(resultPtr, node, chan, escapeNonASCII, htmlEntities);
+    tcldom_treeAsHTML(resultPtr, node, chan, escapeNonASCII, htmlEntities, 0);
     Tcl_AppendResult (interp, Tcl_GetStringFromObj (resultPtr, NULL), NULL);
     Tcl_DecrRefCount (resultPtr);
     return TCL_OK;
