@@ -36,6 +36,9 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2002/03/07 22:11:32  rolf
+|   Freeze of actual state, befor feeding stuff to Jochen.
+|
 |   Revision 1.4  2002/03/01 01:30:20  rolf
 |   No real code changes. Only to log additional change in 1.3:
 |   Fixed namespace overflow throu repeated (identical in prefix and uri)
@@ -259,6 +262,28 @@ domProcessingInstructionNode * coerceToProcessingInstructionNode( domNode *n ) {
     return (domProcessingInstructionNode *)n;
 }
 
+/*---------------------------------------------------------------------------
+|   domLookupNamespace
+|
+\--------------------------------------------------------------------------*/
+static int
+domIsNCNAME (
+    char *name
+    )
+{
+    char *p;
+    int   i;
+    
+    p = name;
+    if (!isNameStart(p)) return 0;
+    p += UTF8_CHAR_LEN(*p);
+    while (*p) {
+        if (isNameChar(p)) 
+            p += UTF8_CHAR_LEN(*p);
+        else return 0;
+    }
+    return 1;
+}
 
 /*---------------------------------------------------------------------------
 |   domLookupNamespace
@@ -575,7 +600,7 @@ startElement(
     domAttrNode   *attrnode, *lastAttr;
     const char   **atPtr, **idAttPtr;
     Tcl_HashEntry *h;
-    int            hnew, len, pos, idatt;
+    int            hnew, len, pos, idatt, newNSdecls;
     char          *xmlns, *localname;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];    
@@ -655,6 +680,7 @@ startElement(
     |
     \-------------------------------------------------------------*/    
 #ifdef TDOM_NS    
+    newNSdecls = 0;
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
         if (strncmp((char *)atPtr[0], "xmlns", 5) == 0) {
@@ -677,9 +703,13 @@ startElement(
             }
             info->activeNS[info->activeNSpos].depth     = info->depth;
             info->activeNS[info->activeNSpos].namespace = ns;
+            newNSdecls++;
         } 
     }
-
+    if (newNSdecls) {
+        
+    }
+    
     /*----------------------------------------------------------
     |   look for namespace of element
     \---------------------------------------------------------*/
@@ -1350,9 +1380,11 @@ domReadDocument (
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
+    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
+    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
     doc->extResolver      = extResolver;
 
     info.parser               = parser;
@@ -1568,10 +1600,12 @@ domCreateDoc ( )
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
+    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->documentElement  = NULL;
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
+    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), "(rootNode)", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
@@ -1595,7 +1629,8 @@ domCreateDoc ( )
 \--------------------------------------------------------------------------*/
 domDocument *
 domCreateDocument (
-    char      *documentElementTagName
+    Tcl_Interp *interp,
+    char       *documentElementTagName
 )
 {
     Tcl_HashEntry *h;
@@ -1604,6 +1639,11 @@ domCreateDocument (
     domDocument   *doc;
     GetTDomTSD();
 
+    /* what about full qualified names? */
+/*      if (!domIsNCNAME (documentElementTagName)) { */
+/*          Tcl_SetObjResult (interp, Tcl_NewStringObj ("invalid root element name", -1)); */
+/*          return NULL; */
+/*      } */
     doc = domCreateDoc ();
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), documentElementTagName, &hnew); 
@@ -3347,9 +3387,11 @@ tdom_resetProc (
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
+    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
+    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
 
     info->document          = doc;
     info->currentNode       = NULL;
@@ -3452,9 +3494,11 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
+        doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
         Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
         Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
+        Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
 
         info = (domReadInfo *) Tcl_Alloc (sizeof (domReadInfo));
         info->document          = doc;
