@@ -1,3 +1,23 @@
+2002-11-16  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Fixed bugs, which only raised there head
+          if compiled against tcl8.0.5.
+
+        * tests/all.tcl  
+        * tests/loadtdom.tcl
+        * tests/domCmd.test
+        * tests/domnamespace.test
+        * tests/htmlreader.test
+        * tests/i18n.test
+        * tests/xmlsimple.test
+        * tests/xslt.test: Made test suite also running under
+          tcl8.0.5. Added constraint to the tests, which uses i18n tcl
+          features.
+        
+        * doc/tnc.xml
+        * doc/tnc.html
+        * doc/tnc.n: Updated documentation.  
+
 2002-11-15  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/dom.h: added IS_DELETED node flag
