@@ -2778,123 +2778,162 @@ domSetNodeValue (
     return OK;
 }
 
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domRemoveChild --
+ *
+ *      This procedure implements the dom method removeChild. Removes
+ *      child from the list of children of node.
+ *
+ * Results:
+ *	Returns a domException:
+ *
+ *      NOT_FOUND_ERR: Raised if the node child is not a child of node.
+ *
+ *      NOT_SUPPORTED_ERR: Raised if node is the rootNode.
+ *
+ *      OK: otherwise
+ *
+ * Side effects:
+ *	Alters the involved document.
+ *
+ *----------------------------------------------------------------------
+ */
 
-/*---------------------------------------------------------------------------
-|   domRemoveChild
-|
-\--------------------------------------------------------------------------*/
 domException
 domRemoveChild (
     domNode *node,
-    domNode *childToRemove
+    domNode *child
 )
 {
-    domNode *child;
 
-    /*----------------------------------------------------
-    |   try to find the child
-    \---------------------------------------------------*/
-    child = node->firstChild;
-    while (child && child != childToRemove) {
-        child = child->nextSibling;
+    if (node == node->ownerDocument->rootNode) {
+        return NOT_SUPPORTED_ERR;
     }
-    if (child) {
-        /* unlink child from child list */
-        if (child->previousSibling) {
-            child->previousSibling->nextSibling = child->nextSibling;
-        } else {
-            child->parentNode->firstChild = child->nextSibling;
-        }
-        if (child->nextSibling) {
-            child->nextSibling->previousSibling = child->previousSibling;
-        } else {
-            child->parentNode->lastChild = child->previousSibling;
-        }
+    
+    if (child->parentNode != node) {
+        return NOT_FOUND_ERR;
+    }
 
-        /* link child into the fragments list */
-        if (child->ownerDocument->fragments) {
-            child->nextSibling = child->ownerDocument->fragments;
-            child->ownerDocument->fragments->previousSibling = child;
-            child->ownerDocument->fragments = child;
-        } else {
-            child->ownerDocument->fragments = child;
-            child->nextSibling = NULL;
-        }
-        child->parentNode = NULL;
-        child->previousSibling = NULL;
-        MutationEvent3(DOMNodeRemoved, childToRemove, node);
-        MutationEvent2(DOMSubtreeModified, node);
-        return OK;
+    if (child->previousSibling) {
+        child->previousSibling->nextSibling =  child->nextSibling;
+    } else {
+        child->parentNode->firstChild = child->nextSibling;
     }
-    return NOT_FOUND_ERR;
+    if (child->nextSibling) {
+        child->nextSibling->previousSibling =  child->previousSibling;
+    } else {
+        child->parentNode->lastChild = child->previousSibling;
+    }
+
+    /* link child into the fragments list */
+    if (child->ownerDocument->fragments) {
+        child->nextSibling = child->ownerDocument->fragments;
+        child->ownerDocument->fragments->previousSibling = child;
+        child->ownerDocument->fragments = child;
+    } else {
+        child->ownerDocument->fragments = child;
+        child->nextSibling = NULL;
+    }
+    child->parentNode = NULL;
+    child->previousSibling = NULL;
+    MutationEvent3(DOMNodeRemoved, child, node);
+    MutationEvent2(DOMSubtreeModified, node);
+    return OK;
 }
 
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domAppendChild --
+ *
+ *      This procedure implements the dom method appendChild.  Adds the
+ *      node newChild to the end of the list of children of this
+ *      node. If the newChild is already in the tree, it is first
+ *      removed.
+ *
+ * Results:
+ *	Returns a domException:
+ *
+ *      HIERARCHY_REQUEST_ERR: Raised if node is of a type that does
+ *      not allow children of the type of the childToAppend node, or
+ *      if the node to append is one of node's ancestors or the
+ *      rootNode of node's document.
+ *
+ *      NOT_SUPPORTED_ERR: Raised if the childToInsert is the rootNode
+ *      of another document or if node is a rootNode.
+ *
+ *      OK: otherwise
+ *
+ * Side effects:
+ *	Alters the involved document(s).
+ *
+ *----------------------------------------------------------------------
+ */
 
-/*---------------------------------------------------------------------------
-|   domAppendChild
-|
-\--------------------------------------------------------------------------*/
 domException
 domAppendChild (
     domNode *node,
     domNode *childToAppend
 )
 {
-    domNode *frag_node, *n;
+    domNode *n;
 
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
     }
 
-    if (childToAppend->parentNode == node) {
-        return HIERARCHY_REQUEST_ERR;
-    }
-
-    /* check, whether childToAppend is one of node's ancestors */
+    /* check, whether childToAppend is node or one of node's ancestors */
     n = node;
     while (n) {
-        if (n->parentNode == childToAppend) {
+        if (n == childToAppend) {
             return HIERARCHY_REQUEST_ERR;
         }
         n = n->parentNode;
     }
 
-    /* if that node was in the fragment list, remove it from there */
-    frag_node = childToAppend->ownerDocument->fragments;
-    while (frag_node) {
-        if (frag_node == childToAppend) {
-
-            /* unlink childToAppend from fragment list */
-
-            if (childToAppend->previousSibling) {
-                childToAppend->previousSibling->nextSibling = childToAppend->nextSibling;
-            } else {
-                childToAppend->ownerDocument->fragments = childToAppend->nextSibling;
-            }
-            if (childToAppend->nextSibling) {
-                childToAppend->nextSibling->previousSibling = childToAppend->previousSibling;
-            }
-            break;
+    if (childToAppend == childToAppend->ownerDocument->rootNode) {
+        if (childToAppend == node->ownerDocument->rootNode) {
+            return HIERARCHY_REQUEST_ERR;
+        } else {
+            return NOT_SUPPORTED_ERR;
         }
-        frag_node = frag_node->nextSibling;
     }
 
-    if (!frag_node) {
-        /* unlink childToAppend from normal tree */
-        if (childToAppend->previousSibling) {
-            childToAppend->previousSibling->nextSibling = childToAppend->nextSibling;
+    /* unlink childToAppend */
+    if (childToAppend->previousSibling) {
+        childToAppend->previousSibling->nextSibling = 
+            childToAppend->nextSibling;
+    } else {
+        if (childToAppend->parentNode) {
+            childToAppend->parentNode->firstChild = childToAppend->nextSibling;
         } else {
-            if (childToAppend->parentNode) {
-                childToAppend->parentNode->firstChild = childToAppend->nextSibling;
+            /* childToAppend is either out of the fragment list or
+               a child of the rootNode of its document */
+            if (childToAppend->ownerDocument->fragments == childToAppend) {
+                childToAppend->ownerDocument->fragments = 
+                    childToAppend->nextSibling;
             } else {
-                childToAppend->ownerDocument->documentElement =  childToAppend->nextSibling;
+                childToAppend->ownerDocument->rootNode->firstChild =
+                    childToAppend->nextSibling;
             }
         }
-        if (childToAppend->nextSibling) {
-            childToAppend->nextSibling->previousSibling = childToAppend->previousSibling;
+    }
+    if (childToAppend->nextSibling) {
+        childToAppend->nextSibling->previousSibling =
+            childToAppend->previousSibling;
+    } else {
+        if (childToAppend->parentNode) {
+            childToAppend->parentNode->lastChild = 
+                childToAppend->previousSibling;
         } else {
-            if (childToAppend->parentNode) {
-                childToAppend->parentNode->lastChild = childToAppend->previousSibling;
+            if (childToAppend->ownerDocument->rootNode->lastChild
+                == childToAppend) {
+                childToAppend->ownerDocument->rootNode->lastChild =
+                    childToAppend->previousSibling;
             }
         }
     }
@@ -2908,9 +2947,21 @@ domAppendChild (
     }
     node->lastChild = childToAppend;
     childToAppend->nextSibling = NULL;
-    childToAppend->parentNode = node;
+    if (!childToAppend->parentNode &&
+        (childToAppend->ownerDocument->documentElement == childToAppend)) {
+        childToAppend->ownerDocument->documentElement =
+            childToAppend->ownerDocument->rootNode->firstChild;
+    }
+    if (node == node->ownerDocument->rootNode) {
+        childToAppend->parentNode = NULL;
+    } else {
+        childToAppend->parentNode = node;
+    }
 
-    domSetDocument (childToAppend, node->ownerDocument);
+    if ((node->ownerDocument != childToAppend->ownerDocument)
+        || node->ownerDocument->nsptr) {
+        domSetDocument (childToAppend, node->ownerDocument);
+    }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
     MutationEvent();
     return OK;
@@ -2923,25 +2974,30 @@ domAppendChild (
  * domInsertBefore --
  *
  *	This procedure implements the dom method insertBefore.
- *      Inserts the node childToInsert before the existing child node
- *      referenceChild. If referenceChild is null, insert childToInsert
- *      at the end of the list of children of node. The arguments node
- *      and childToInsert must be non NULL. The childToInsert is 
- *      unliked from its previous place (fragment list or tree).
+ *      It inserts the node childToInsert before the existing child
+ *      node referenceChild. If referenceChild is null, insert
+ *      childToInsert at the end of the list of children of node. The
+ *      arguments node and childToInsert must be non NULL. The
+ *      childToInsert is unlinked from its previous place (fragment
+ *      list or tree).
  *
  * Results:
  *	Returns a domException:
- *      HIERARCHY_REQUEST_ERR: Raised if this node is of a type that
- *      does not allow children of the type of the childToInsert node, or
- *      if the node to insert is one of this node's ancestors or it the 
- *      rootNode of the node's document.
+ *
+ *      HIERARCHY_REQUEST_ERR: Raised if node is of a type that does
+ *      not allow children of the type of the childToInsert node, or
+ *      if the node to insert is node or one of node's ancestors or the
+ *      rootNode of node's document.
+ *
  *      NOT_FOUND_ERR: Raised if refChild is not a child of this node.
+ *
  *      NOT_SUPPORTED_ERR: Raised if the childToInsert is the rootNode
- *      of another document.
+ *      of another document or if node is a rootNode.
+ *
  *      OK: otherwise
  *
  * Side effects:
- *	Alters the involved document.
+ *	Alters the involved document(s).
  *
  *----------------------------------------------------------------------
  */
@@ -2959,15 +3015,16 @@ domInsertBefore (
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
     }
+
+    /* check, if node is in deed the parent of referenceChild */
+    if (referenceChild && (referenceChild->parentNode != node)) {
+        return NOT_FOUND_ERR;
+    }
+    
     if (childToInsert == referenceChild) {
         return OK;
     }
 
-    /* check, if node is in deed the parent of referenceChild */
-    if (referenceChild && referenceChild->parentNode != node) {
-        return NOT_FOUND_ERR;
-    }
-    
     /* check, whether childToInsert is one of node's ancestors */
     n = node;
     while (n) {
@@ -2977,69 +3034,53 @@ domInsertBefore (
         n = n->parentNode;
     }
 
-    /* The rootNode isn't really a node (in the scope of DOM). Although
-       is may be possible, to define sensible rules what is allowed in
-       this case and what should happen, for now we just don't support
-       this. */
-    if (node == node->ownerDocument->rootNode) {
-        return NOT_SUPPORTED_ERR;
+    if (childToInsert == childToInsert->ownerDocument->rootNode) {
+        if (childToInsert == node->ownerDocument->rootNode) {
+            return HIERARCHY_REQUEST_ERR;
+        } else {
+            /* For now, we simply don't allow the rootNode of
+               another element as childToInsert. The way to go may
+               be simply to treat the rootNode as DocumentFragment
+               and to insert all childs of that rootNode before the
+               referenceChild.  This would result in a document
+               without documentElement, which then should be
+               handled right by other methods. This is planed, but
+               not carefully considered, yet.  */
+            return NOT_SUPPORTED_ERR;
+        }
     }
-    
-    if (childToInsert->parentNode == NULL 
-        && childToInsert != childToInsert->ownerDocument->documentElement) {
-        /* The child to insert is either out of a fragment list 
-           (not necessary out of the fragment list of the current
-           document), the root element of the current document
-           the root element of another document, or the document
-           element of another document. */
-        if (childToInsert == childToInsert->ownerDocument->rootNode) {
-            if (childToInsert == node->ownerDocument->rootNode) {
-                return HIERARCHY_REQUEST_ERR;
-            } else {
-                /* For now, we simply don't allow the rootNode of
-                   another element as childToInsert. The way to go may
-                   be simply to treat the rootNode as DocumentFragment
-                   and to insert all child of that rootNode before the
-                   referenceChild.  This would result in a document
-                   without documentElement, which then should be
-                   handled right by other methods. This is planed, but
-                   not carefully considered, yet.  */
-                return NOT_SUPPORTED_ERR;
-            }
-        }
-        
-        /* unlink childToInsert from fragment list */
-        if (childToInsert->previousSibling) {
-            childToInsert->previousSibling->nextSibling = 
-                childToInsert->nextSibling;
-        } else {
-            childToInsert->ownerDocument->fragments = 
-                childToInsert->nextSibling;
-        }
-        if (childToInsert->nextSibling) {
-            childToInsert->nextSibling->previousSibling = 
-                childToInsert->previousSibling;
-        }
+
+
+    /* unlink childToInsert */
+    if (childToInsert->previousSibling) {
+        childToInsert->previousSibling->nextSibling = 
+            childToInsert->nextSibling;
     } else {
-        /* unlink childToInsert from normal tree */
-        if (childToInsert->previousSibling) {
-            childToInsert->previousSibling->nextSibling = 
-                childToInsert->nextSibling;
+        if (childToInsert->parentNode) {
+            childToInsert->parentNode->firstChild = childToInsert->nextSibling;
         } else {
-            if (childToInsert->parentNode) {
-                childToInsert->parentNode->firstChild = 
+            /* childToInsert is either out of the fragment list or
+               a child of the rootNode of its document */
+            if (childToInsert->ownerDocument->fragments == childToInsert) {
+                childToInsert->ownerDocument->fragments = 
                     childToInsert->nextSibling;
             } else {
-                childToInsert->ownerDocument->documentElement =
+                childToInsert->ownerDocument->rootNode->firstChild =
                     childToInsert->nextSibling;
             }
         }
-        if (childToInsert->nextSibling) {
-            childToInsert->nextSibling->previousSibling = 
+    }
+    if (childToInsert->nextSibling) {
+        childToInsert->nextSibling->previousSibling =
+            childToInsert->previousSibling;
+    } else {
+        if (childToInsert->parentNode) {
+            childToInsert->parentNode->lastChild = 
                 childToInsert->previousSibling;
         } else {
-            if (childToInsert->parentNode) {
-                childToInsert->parentNode->lastChild = 
+            if (childToInsert->ownerDocument->rootNode->lastChild
+                == childToInsert) {
+                childToInsert->ownerDocument->rootNode->lastChild =
                     childToInsert->previousSibling;
             }
         }
@@ -3065,8 +3106,20 @@ domInsertBefore (
         }
         node->lastChild = childToInsert;
     }
-    childToInsert->parentNode = node;
-    domSetDocument (childToInsert, node->ownerDocument);
+    if (!childToInsert->parentNode &&
+        (childToInsert->ownerDocument->documentElement == childToInsert)) {
+        childToInsert->ownerDocument->documentElement =
+            childToInsert->ownerDocument->rootNode->firstChild;
+    }
+    if (node == node->ownerDocument->rootNode) {
+        childToInsert->parentNode = NULL;
+    } else {
+        childToInsert->parentNode = node;
+    }
+    if (node->ownerDocument != childToInsert->ownerDocument
+        || node->ownerDocument->nsptr) {
+        domSetDocument (childToInsert, node->ownerDocument);
+    }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
     MutationEvent3(DOMNodeInsert, childToInsert, node);
     MutationEvent2(DOMSubtreeModified, node);
@@ -3074,10 +3127,37 @@ domInsertBefore (
 }
 
 
-/*---------------------------------------------------------------------------
-|   domReplaceChild
-|
-\--------------------------------------------------------------------------*/
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domReplaceChild --
+ *
+ *	This procedure implements the dom method replaceChild.
+ *      Replaces the child node oldChild with newChild in the list of
+ *      children of node 'node'.
+ *
+ * Results:
+ *	Returns a domException:
+ *
+ *      HIERARCHY_REQUEST_ERR: Raised if node is of a type that does
+ *      not allow children of the type of the newChild node, or
+ *      if newChild is node or one of node's ancestors or the
+ *      rootNode of node's document.
+ *
+ *      NOT_FOUND_ERR: Raised if oldChild is not a child of node.
+ *
+ *      NOT_SUPPORTED_ERR: Raised if the newChild is the rootNode
+ *      of another document.
+ *
+ *      OK: otherwise
+ *
+ * Side effects:
+ *	Alters the involved document(s).
+ *
+ *----------------------------------------------------------------------
+ */
+
 domException
 domReplaceChild (
     domNode *node,
@@ -3085,105 +3165,110 @@ domReplaceChild (
     domNode *oldChild
 )
 {
-    domNode *frag_node, *searchNode, *n;
+    domNode *n;
 
 
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
     }
-    if ((newChild->parentNode != NULL) &&
-        (newChild->parentNode == node->parentNode))
-    {
-        return HIERARCHY_REQUEST_ERR;
-    }
 
-    /* check, whether childToAppend is one of node's ancestors */
+    /* check, if node is in deed the parent of oldChild */
+    if (oldChild->parentNode != node) {
+        return NOT_FOUND_ERR;
+    }
+    
+    if (oldChild == newChild) {
+        return OK;
+    }
+    
+    /* check, whether newChild is node or one of node's ancestors */
     n = node;
     while (n) {
-        if (n->parentNode == newChild) {
+        if (n == newChild) {
             return HIERARCHY_REQUEST_ERR;
         }
         n = n->parentNode;
     }
 
-    /* if that node was in the fragment list, remove it from there */
-    frag_node = newChild->ownerDocument->fragments;
-    while (frag_node) {
-        if (frag_node == newChild) {
+    if (newChild == newChild->ownerDocument->rootNode) {
+        if (newChild == node->ownerDocument->rootNode) {
+            return HIERARCHY_REQUEST_ERR;
+        } else {
+            return NOT_SUPPORTED_ERR;
+        }
+    }
 
-            /* unlink newChild from fragment list */
-
-            if (newChild->previousSibling) {
-                newChild->previousSibling->nextSibling = newChild->nextSibling;
-            } else {
+    /* unlink newChild */
+    if (newChild->previousSibling) {
+        newChild->previousSibling->nextSibling = newChild->nextSibling;
+    } else {
+        if (newChild->parentNode) {
+            newChild->parentNode->firstChild = newChild->nextSibling;
+        } else {
+            /* newChild is either out of the fragment list or
+               a child of the rootNode of its document */
+            if (newChild->ownerDocument->fragments == newChild) {
                 newChild->ownerDocument->fragments = newChild->nextSibling;
+            } else {
+                newChild->ownerDocument->rootNode->firstChild =
+                    newChild->nextSibling;
             }
-            if (newChild->nextSibling) {
-                newChild->nextSibling->previousSibling = newChild->previousSibling;
-            }
-            break;
         }
-        frag_node = frag_node->nextSibling;
     }
-
-    if (!frag_node) {
-        /* unlink childToAppend from normal tree */
-        if (newChild->previousSibling) {
-            newChild->previousSibling->nextSibling = newChild->nextSibling;
+    if (newChild->nextSibling) {
+        newChild->nextSibling->previousSibling = newChild->previousSibling;
+    } else {
+        if (newChild->parentNode) {
+            newChild->parentNode->lastChild = newChild->previousSibling;
         } else {
-            if (newChild->parentNode) {
-                newChild->parentNode->firstChild = newChild->nextSibling;
-            } else {
-                newChild->ownerDocument->documentElement =  newChild->nextSibling;
-            }
-        }
-        if (newChild->nextSibling) {
-            newChild->nextSibling->previousSibling = newChild->previousSibling;
-        } else {
-            if (newChild->parentNode) {
-                newChild->parentNode->lastChild = newChild->previousSibling;
+            if (newChild->ownerDocument->rootNode->lastChild == newChild) {
+                newChild->ownerDocument->rootNode->lastChild =
+                    newChild->previousSibling;
             }
         }
     }
 
-
-    searchNode = node->firstChild;
-    while (searchNode) {
-        if (searchNode == oldChild) {
-
-            newChild->nextSibling     = oldChild->nextSibling;
-            newChild->previousSibling = oldChild->previousSibling;
-            newChild->parentNode      = node;
-            if (oldChild->previousSibling) {
-                oldChild->previousSibling->nextSibling = newChild;
-            } else {
-                oldChild->parentNode->firstChild = newChild;
-            }
-            if (oldChild->nextSibling) {
-                oldChild->nextSibling->previousSibling = newChild;
-            } else {
-                oldChild->parentNode->lastChild = newChild;
-            }
-            domSetDocument (newChild, node->ownerDocument);
-
-            /* add old child into his fragment list */
-
-            if (oldChild->ownerDocument->fragments) {
-                oldChild->nextSibling = oldChild->ownerDocument->fragments;
-                oldChild->ownerDocument->fragments->previousSibling = oldChild;
-                oldChild->ownerDocument->fragments = oldChild;
-            } else {
-                oldChild->ownerDocument->fragments = oldChild;
-                oldChild->nextSibling = oldChild->previousSibling = NULL;
-            }
-            oldChild->parentNode = NULL;
-            node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
-            MutationEvent();
-            return OK;
-        }
-        searchNode = searchNode->nextSibling;
+    newChild->nextSibling     = oldChild->nextSibling;
+    newChild->previousSibling = oldChild->previousSibling;
+    if (!newChild->parentNode &&
+        (newChild->ownerDocument->documentElement == newChild)) {
+        newChild->ownerDocument->documentElement =
+            newChild->ownerDocument->rootNode->firstChild;
     }
-    return NOT_FOUND_ERR;
+    if (node == node->ownerDocument->rootNode) {
+        newChild->parentNode  = NULL;
+    } else {
+        newChild->parentNode  = node;
+    }
+    if (oldChild->previousSibling) {
+        oldChild->previousSibling->nextSibling = newChild;
+    } else {
+        oldChild->parentNode->firstChild = newChild;
+    }
+    if (oldChild->nextSibling) {
+        oldChild->nextSibling->previousSibling = newChild;
+    } else {
+        oldChild->parentNode->lastChild = newChild;
+    }
+
+    if (node->ownerDocument != newChild->ownerDocument
+        || node->ownerDocument->nsptr) {
+        domSetDocument (newChild, node->ownerDocument);
+    }
+
+    /* add old child into his fragment list */
+    if (oldChild->ownerDocument->fragments) {
+        oldChild->nextSibling = oldChild->ownerDocument->fragments;
+        oldChild->ownerDocument->fragments->previousSibling = oldChild;
+        oldChild->ownerDocument->fragments = oldChild;
+    } else {
+        oldChild->ownerDocument->fragments = oldChild;
+        oldChild->nextSibling = oldChild->previousSibling = NULL;
+    }
+    oldChild->parentNode = NULL;
+    node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
+    MutationEvent();
+    return OK;
 }
 
 
