@@ -2113,6 +2113,7 @@ int tcldom_NodeObjCmd (
 
         case m_xslt:
             str = Tcl_GetStringFromObj (objv[2], NULL);
+            parameters = NULL;
             if ((str[0] == '-') && (strcmp (str, "-parameters")==0)) {
                 if (objc < 5) {
                     Tcl_WrongNumArgs (interp, 2, objv, "?-parameters parameterList? xsltDoc ?resultVar?");
@@ -2137,8 +2138,6 @@ int tcldom_NodeObjCmd (
                 objc -= 2;
                 objv += 2;
                 str = Tcl_GetStringFromObj (objv[2], NULL);
-            } else {
-                parameters = NULL;
             }
             xsltDoc = tcldom_getDocumentFromName (interp, str, &errMsg);
             if (xsltDoc == NULL) {
