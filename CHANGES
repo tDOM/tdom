@@ -1,3 +1,8 @@
+2002-12-28  Rolf Ade  <rolf@pointsman.de>
+
+        The xslt method now understands also the options
+          -ignoreUndeclaredParameters and -xsltmessagecmd.
+
 2002-10-01  Zoran Vasiljevic  <zoran@archiware.com>
 
 	The library file lib/tdomhtml.tcl is now moved to a separate
