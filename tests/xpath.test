@@ -11,6 +11,8 @@
 #    xpath-5.*: erroneous XPath exprs
 #
 # Copyright (c) 2002 Rolf Ade.
+#
+# RCS: @(#) $Id$
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
