@@ -66,7 +66,7 @@
 \---------------------------------------------------------------------------*/
 #define JDBG(x)
 #define DBG(x)           
-#define DDBG(x)
+#define DDBG(x)          
 #define TRACE(x)         DDBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)      DDBG(fprintf(stderr,(x),(a)))
 #define TRACE2(x,a,b)    DDBG(fprintf(stderr,(x),(a),(b)))
@@ -1528,6 +1528,8 @@ Production(AbsoluteLocationPath)
         a = New(SelectRoot);
         if ( (LA==AXISNAME)
            ||(LA==WCARDNAME)
+           ||(LA==NSPREFIX)
+           ||(LA==NSWC)
            ||(LA==NODE)
            ||(LA==TEXT)
            ||(LA==COMMENT)
@@ -1955,7 +1957,7 @@ int xpathParse (
             fprintf(stderr, "\nPattern AST for '%s': \n", xpath);
             printAst (0, *t);
         } else {
-            fprintf(stderr, "AST:\n");
+            fprintf(stderr, "AST (xpathParse):\n");
             printAst (0, *t);
         }
     )
@@ -3778,7 +3780,7 @@ static int xpathEvalStep (
                 attr = attr->nextSibling;
             }
 
-            if (node == ctxNode->ownerDocument->documentElement) {
+            if (node == node->ownerDocument->documentElement) {
                 if (ctxNode != ctxNode->ownerDocument->rootNode) {
                     node = ctxNode->ownerDocument->rootNode;
                 } else {
@@ -4063,8 +4065,8 @@ static int xpathEvalStep (
         xpathRSInit (&rightResult);
 
         savedDocOrder = *docOrder;
-        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                               cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
         CHECK_RC;
         *docOrder = savedDocOrder;
 
@@ -4392,7 +4394,12 @@ static int xpathEvalStep (
         return XPATH_OK;
 
     case SelectRoot:
-        rsAddNode(result, ctxNode->ownerDocument->rootNode);
+        if (ctxNode->nodeType == ATTRIBUTE_NODE) {
+            node = ((domAttrNode *)ctxNode)->parentNode;
+            checkRsAddNode(result, node->ownerDocument->rootNode);
+        } else {
+            checkRsAddNode(result, ctxNode->ownerDocument->rootNode);
+        }
         break;
 
     case UnaryMinus:
@@ -4632,9 +4639,12 @@ int xpathEvalSteps (
     int i, rc, first = 1;
     xpathResultSet savedContext;
 
+    DBG (fprintf (stderr, "xpathEvalSteps start\n");)
     savedContext = *nodeList;
     xpathRSInit (result);
     while (steps) {
+        DBG (fprintf (stderr, "xpathEvalSteps: eval step '%s'\n", 
+                      astType2str[steps->type]);)
         if (steps->type == Pred) {
             *errMsg = "Pred step not expected now!";
             return XPATH_EVAL_ERR;
@@ -5011,6 +5021,9 @@ int xpathMatches (
                 break;
 
             case IsRoot:
+                if (nodeToMatch->nodeType == ATTRIBUTE_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 if (nodeToMatch != nodeToMatch->ownerDocument->rootNode) {
                     xpathRSFree (&nodeList); return 0;
                 }
@@ -5034,7 +5047,6 @@ int xpathMatches (
             case ToAncestors:
                 if (steps->next == NULL) { xpathRSFree (&nodeList); return 1;}
                 while (1) {
-/*                      if (nodeToMatch->nodeType != ELEMENT_NODE) return 0; */
                     if (nodeToMatch->nodeType == ATTRIBUTE_NODE) {
                         nodeToMatch = ((domAttrNode *)nodeToMatch)->parentNode;
                     } else {
