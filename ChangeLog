@@ -1,3 +1,11 @@
+2004-08-19  Rolf Ade  <rolf@pointsman.de>
+
+        * unix/CONFIG    
+        * generic/dom.h
+        * generic/tcldom.c: Made tDOM work out of the box on 64-bit
+          systems like Itanium 2 (though --disable-tdomalloc configure
+          option at build time is still needed).
+
 2004-08-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.h: Added fluff, to fix build problemx on AIX w/
