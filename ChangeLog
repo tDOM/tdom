@@ -1,5 +1,13 @@
 2003-02-09  Rolf Ade  <rolf@pointsman.de>
 
+        * expat/*: Update to expat 1.95.6.
+
+        * apps/xslt.tcl: Updated to use the new -xsltmessagecmd option
+          of the xslt method and the -doctypeDeclaration of the
+          asXML/asHTML methods. Added a few comments.
+
+2003-02-09  Rolf Ade  <rolf@pointsman.de>
+
         * generic/dom.c
         * generic/dom.h
         * generic/domxslt.c
