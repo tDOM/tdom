@@ -61,9 +61,6 @@ EXTERN int		XML_GetSpecifiedAttributeCount _ANSI_ARGS_((
 EXTERN int		XML_GetIdAttributeIndex _ANSI_ARGS_((
 				XML_Parser parser));
 
-typedef struct TdomStubHooks {
-} TdomStubHooks;
-
 typedef struct TdomStubs {
     int magic;
     struct TdomStubHooks *hooks;
