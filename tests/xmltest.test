@@ -1,0 +1,64 @@
+# Features covered:  Conformance
+#
+# This file contains a collection of tests for the TclXML parser.
+# This file tests the parser's performance on conformance to the 
+# XML specification.  As such it is crude and does not test callback
+# features.
+#
+# Sourcing this file into Tcl runs the tests and generates output
+# for errors.  No output means no errors were found.
+#
+# Copyright (c) 1999-2000 Zveno Pty Ltd.
+#
+# $Id$
+
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    source [file join [pwd] [file dirname [info script]] defs.tcl]
+}
+
+if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
+    set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
+}
+
+if {[catch {package require expat 2.0}]} {
+    catch {puts stderr "Cannot load expat 2.0 package"}
+    return
+}
+
+proc xmltest {expect dir subdir f} {
+
+    set ch [open $f]
+    set data [read $ch]
+    close $ch
+
+    test xmltest-$dir-$subdir-[file rootname [file tail $f]] "Document $dir $subdir [file tail $f]" {
+	set parser [xml::parser xmltest]
+	set code [catch {$parser parse $data}]
+	rename $parser {}
+	set code
+    } $expect
+}
+
+# NB. Uses James Clark's test suite for WFF checking.
+# Need a framework to test against each file: it's too time-
+# consuming to setup a test proc for each one.
+
+set testDir [file join [pwd] xmltest]
+
+# These documents should fail
+foreach dir {not-wf} {
+    foreach file [glob -nocomplain [file join $testDir $dir sa *.xml]] {
+	xmltest 1 $dir sa $file
+    }
+}
+
+# These documents should pass
+foreach dir {invalid valid} {
+    foreach file [glob -nocomplain [file join $testDir $dir sa *.xml]] {
+	xmltest 0 $dir sa $file
+    }
+}
+
+# cleanup
+::tcltest::cleanupTests
+return

@@ -1,0 +1,59 @@
+# Features covered:  Document Type Declaration
+#
+# This file contains a collection of tests for the TclXML parser.
+# This file tests the parser's performance on Document Type Declarations.
+# Sourcing this file into Tcl runs the tests and generates output
+# for errors.  No output means no errors were found.
+#
+# Copyright (c) 1998-2000 Zveno Pty Ltd.
+#
+# $Id$
+
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    source [file join [pwd] [file dirname [info script]] defs.tcl]
+}
+
+if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
+    set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
+}
+
+if {[catch {package require expat 2.0}]} {
+    catch {puts stderr "Cannot load expat 2.0 package"}
+    return
+}
+
+catch {unset result}
+proc doctype {name pub system dtd} {
+    lappend ::result $name $pub $system $dtd
+}
+
+test doctype-1.1 {Document Type Declaration: no internal DTD subset} {
+    set ::result {}
+
+    catch {rename xml::doctype-1.1 {}}
+    set parser [xml::parser doctype-1.1 \
+	-startdoctypedeclcommand doctype]
+    $parser parse {<?xml version="1.0"?>
+<!DOCTYPE Test>
+<Test></Test>
+}
+    set ::result
+} {Test NULL NULL 0}
+
+test doctype-2.1 {Document Type Declaration: internal DTD subset} {
+    set ::result {}
+
+    catch {rename xml::doctype-2.1 {}}
+    set parser [xml::parser doctype-2.1 \
+	-startdoctypedeclcommand doctype]
+    $parser parse {<?xml version="1.0"?>
+<!DOCTYPE Test [<!ELEMENT Test EMPTY>]>
+<Test></Test>
+}
+    set ::result
+} {Test NULL NULL 1}
+
+
+# cleanup
+::tcltest::cleanupTests
+return

@@ -1,0 +1,12 @@
+
+test xpath-1.1 {function normalize-space} {
+    set doc [dom createDocument foo]
+    set root [$doc documentElement]
+    set r [$root selectNodes {normalize-space('f  ')}]
+    $doc delete
+    string length $r
+} {1}
+
+# cleanup
+::tcltest::cleanupTests
+return

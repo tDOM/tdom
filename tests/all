@@ -1,0 +1,14 @@
+# expat.tcl --
+#
+# This scripts runs the tests using the expat parser.
+#
+# Copyright (c) 1999-2000 by Zveno Pty Ltd
+# All rights reserved.
+#
+# $Id$
+
+set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
+
+package require expat 2.0
+
+source all.tcl

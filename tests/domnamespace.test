@@ -1,0 +1,15 @@
+
+test domnamespace-1.1 {multiple definition of the same namespace (same prefix/uri)} {
+    set ch [open data/REC-xslt-19991116.xml]
+    fconfigure $ch -encoding iso8859-1
+    set doc [dom parse -channel $ch]
+    set root [$doc documentElement]
+    set nodes [$root selectNodes //e:element-syntax]
+    $doc delete
+    llength $nodes
+} {35}
+
+
+# cleanup
+::tcltest::cleanupTests
+return
