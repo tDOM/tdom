@@ -89,6 +89,7 @@
 #else
 # define STRCASECMP(a,b)  strcasecmp (a,b)
 #endif
+#define IS_WHITESPACE(c)    ((c)==' ' || (c)=='\n' || (c)=='\r' || (c)=='\t')
 
 extern void printAst (int depth, ast t);
 
@@ -340,10 +341,10 @@ typedef struct xsltWSInfo
 {
 
     int            hasData;
+    int            stripAll;
     double         wildcardPrec;
-    Tcl_HashTable  NCNames;
-    Tcl_HashTable  FQNames;
-    Tcl_HashTable  NSWildcards;
+    Tcl_HashTable  stripTokens;
+    Tcl_HashTable  preserveTokens;
 
 } xsltWSInfo;
 
@@ -369,8 +370,7 @@ typedef struct {
     xsltTemplate      * templates;
     Tcl_HashTable       namedTemplates;
     Tcl_HashTable       isElementTpls;
-    xsltWSInfo          stripInfo;
-    xsltWSInfo          preserveInfo;
+    xsltWSInfo          wsInfo;
     domNode           * xmlRootNode;
     domDocument       * resultDoc;
     domNode           * lastNode;
@@ -1825,9 +1825,10 @@ void StripXMLSpace (
 )
 {
     domNode       *child, *newChild, *parent;
-    int            i, len, onlySpace, strip;
+    int            i, len, onlySpace, found, strip;
     char          *p, *nsname, *localName, prefix[MAX_PREFIX_LEN];
     double        *f, stripPrecedence, stripPrio;
+    domNS         *ns;
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
 
@@ -1837,7 +1838,7 @@ void StripXMLSpace (
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
         for (i=0; i<len; i++) {
-            if ((*p!=' ') && (*p!='\n') && (*p!='\r') && (*p!='\t')) {
+            if (!IS_WHITESPACE(*p)) {
                 onlySpace = 0;
                 break;
             }
@@ -1859,94 +1860,54 @@ void StripXMLSpace (
     } else
     if (node->nodeType == ELEMENT_NODE) {
         if (node->firstChild == NULL) return;
-        strip = 0;
-        stripPrecedence = 0.0;
-        stripPrio       = -0.5;
-        if (xs->stripInfo.wildcardPrec > 0) {
-            strip = 1;
-            stripPrecedence = xs->stripInfo.wildcardPrec;
-        }
-        nsname = domNamespaceURI (node);
-        if (nsname) {
-            h = Tcl_FindHashEntry (&(xs->stripInfo.NSWildcards), nsname);
-            if (h) {
-                strip = 1;
-                f = (double *)Tcl_GetHashValue (h);
-                if (*f >= stripPrecedence) {
-                    stripPrecedence = *f;
-                    stripPrio = -0.25;
-                }
-            }
-            domSplitQName (node->nodeName, prefix, &localName);
-            Tcl_DStringInit (&dStr);
-            Tcl_DStringAppend (&dStr, nsname, -1);
-            Tcl_DStringAppend (&dStr, localName, -1);
-            h = Tcl_FindHashEntry (&(xs->stripInfo.FQNames),
-                                   Tcl_DStringValue (&dStr));
-            if (h) {
-                strip = 1;
-                f = (double *)Tcl_GetHashValue (h);
-                if (*f >= stripPrecedence) {
-                    stripPrecedence = *f;
-                    stripPrio = 0.0;
-                }
-            }
-        } else {
-            h = Tcl_FindHashEntry (&(xs->stripInfo.NCNames), node->nodeName);
-            if (h) {
-                strip = 1;
-                f = (double *)Tcl_GetHashValue (h);
-                if (*f >= stripPrecedence) {
-                    stripPrecedence = *f;
-                    stripPrio = 0.0;
-                }
-            }
-        }
-        if (strip && xs->preserveInfo.hasData) {
-            if (xs->preserveInfo.wildcardPrec > stripPrecedence) {
-                strip = 0;
-            } else {
-                if (nsname) {
-                    h = Tcl_FindHashEntry (&(xs->preserveInfo.FQNames),
+        strip = xs->wsInfo.stripAll;
+        found = 0;
+        domSplitQName (node->nodeName, prefix, &localName);
+        ns = NULL;
+        Tcl_DStringInit (&dStr);
+        if (prefix[0] != '\0') {
+            ns =  domLookupPrefix (node, prefix);
+            if (ns) {
+                Tcl_DStringAppend (&dStr, ns->uri, -1);
+                Tcl_DStringAppend (&dStr, ":*", 2);
+                if (xs->wsInfo.stripAll) {
+                    h = Tcl_FindHashEntry (&xs->wsInfo.preserveTokens,
                                            Tcl_DStringValue (&dStr));
-                    if (h) {
-                        f = (double *)Tcl_GetHashValue (h);
-                        if (*f > stripPrecedence) {
-                            strip = 0;
-                        } else
-                        if (*f == stripPrecedence && stripPrio < 0.0) {
-                            strip = 0;
-                        }
-                    }
-                    if (strip) {
-                        h = Tcl_FindHashEntry (&(xs->preserveInfo.NSWildcards),
-                                               nsname);
-                        if (h) {
-                            f = (double *)Tcl_GetHashValue (h);
-                            if (*f > stripPrecedence) {
-                                strip = 0;
-                            } else
-                            if (*f == stripPrecedence && stripPrio < -0.25) {
-                                strip = 0;
-                            }
-                        }
-                    }
                 } else {
-                    h = Tcl_FindHashEntry (&(xs->preserveInfo.NCNames),
-                                           node->nodeName);
-                    if (h) {
-                        f = (double *)Tcl_GetHashValue (h);
-                        if (*f > stripPrecedence) {
-                            strip = 0;
-                        } else
-                        if (*f == stripPrecedence && stripPrio < 0.0) {
-                            strip = 0;
-                        }
+                    h = Tcl_FindHashEntry (&xs->wsInfo.stripTokens,
+                                           Tcl_DStringValue (&dStr));
+                }
+                if (h) {
+                    f = Tcl_GetHashValue (h);
+                    if (*f >= xs->wsInfo.wildcardPrec) {
+                        strip = !xs->wsInfo.stripAll;
+                        found = 1;
                     }
+                }
+                if (!found) {
+                    Tcl_DStringFree (&dStr);
+                    Tcl_DStringAppend (&dStr, ns->uri, -1);
+                    Tcl_DStringAppend (&dStr, ":", 1);
                 }
             }
         }
-        if (nsname) Tcl_DStringFree (&dStr);
+        if (!found) {
+            Tcl_DStringAppend (&dStr, localName, -1);
+            if (xs->wsInfo.stripAll) {
+                h = Tcl_FindHashEntry (&xs->wsInfo.preserveTokens,
+                                       Tcl_DStringValue (&dStr));
+            } else {
+                h = Tcl_FindHashEntry (&xs->wsInfo.stripTokens,
+                                       Tcl_DStringValue (&dStr));
+            }
+            if (h) {
+                f = Tcl_GetHashValue (h);
+                if (*f >= xs->wsInfo.wildcardPrec) {
+                    strip = !xs->wsInfo.stripAll;
+                }
+            }
+        }
+        Tcl_DStringFree (&dStr);
         if (strip) {
             child = node->firstChild;
             while (child) {
@@ -2198,7 +2159,7 @@ static int xsltXPathFuncs (
                         if (freeStr) FREE(str);
                         return -1;
                     }
-                    if (xs->stripInfo.hasData) {
+                    if (xs->wsInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
                     if (freeStr) FREE(str);
@@ -2236,7 +2197,7 @@ static int xsltXPathFuncs (
                     if (freeStr) FREE(str);
                     return -1;
                 }
-                if (xs->stripInfo.hasData) {
+                if (xs->wsInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
                 if (freeStr) FREE(str);
@@ -2270,7 +2231,7 @@ static int xsltXPathFuncs (
                         if (freeStr) FREE(str);
                         return -1;
                     }
-                    if (xs->stripInfo.hasData) {
+                    if (xs->wsInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
                     if (freeStr) FREE(str);
@@ -2282,7 +2243,7 @@ static int xsltXPathFuncs (
                     FREE(str);
                     return -1;
                 }
-                if (xs->stripInfo.hasData) {
+                if (xs->wsInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
                 FREE(str);
@@ -3075,11 +3036,11 @@ int ExecUseAttributeSets (
     domNS       *ns;
 
     pc = styles;
-    while (*pc == ' ') pc++;
-    aSet = pc;
-
     while (*pc) {
-        while (*pc && (*pc != ' ')) pc++;
+        while (*pc && IS_WHITESPACE(*pc)) pc++;
+        if (*pc == '\0') break;
+        aSet = pc;
+        while (*pc && !IS_WHITESPACE(*pc)) pc++;
         save = *pc;
         *pc = '\0';
         TRACE1("use-attribute-set '%s' \n", aSet);
@@ -3113,13 +3074,10 @@ int ExecUseAttributeSets (
                 rc = ExecActions(xs, context, currentNode, currentPos,
                                  attrSet->content->firstChild, errMsg);
                 CHECK_RC;
-                /*  break; */
             }
             attrSet = attrSet->next;
         }
         *pc = save;
-        while (*pc == ' ') pc++;
-        aSet = pc;
     }
     return 0;
 }
@@ -5107,7 +5065,8 @@ int ApplyTemplates (
 |
 \---------------------------------------------------------------------------*/
 int fillElementList (
-    xsltWSInfo   * wsinfo,
+    xsltWSInfo   * wsInfo,
+    int            strip,
     double         precedence,
     domNode      * node,
     char         * str,
@@ -5117,88 +5076,86 @@ int fillElementList (
     char *pc, *start, save;
     char *localName, prefix[MAX_PREFIX_LEN];
     double *f;
-    int   count, hnew;
+    int   hnew;
     Tcl_HashEntry *h;
     Tcl_DString dStr;
     domNS  *ns;
 
-
-    count = 0;
     pc = str;
     while (*pc) {
-        while (*pc == ' ') pc++;
+        while (*pc && IS_WHITESPACE(*pc)) pc++;
         if (*pc == '\0') break;
-        while (*pc && (*pc != ' ')) pc++;
-        count++;
-    }
-
-    pc = str;
-    while (*pc) {
-        while (*pc == ' ') pc++;
         start = pc;
-        if (*pc == '\0') break;
-        while (*pc && (*pc != ' ')) pc++;
+        while (*pc && !IS_WHITESPACE(*pc)) pc++;
         save = *pc;
         *pc = '\0';
-        wsinfo->hasData = 1;
+        wsInfo->hasData = 1;
         if (strcmp (start, "*")==0) {
-            if (wsinfo->wildcardPrec < precedence) {
-                wsinfo->wildcardPrec = precedence;
-            }
+            if (strip) wsInfo->stripAll = 1;
+            else       wsInfo->stripAll = 0;
+            wsInfo->wildcardPrec = precedence;
         } else {
+            Tcl_DStringInit (&dStr);
+            ns = NULL;
             domSplitQName (start, prefix, &localName);
             if (prefix[0] != '\0') {
-                ns = domLookupPrefix (node, prefix);
-                if (ns) {
-                    if (strcmp (localName, "*")==0) {
-                        h = Tcl_CreateHashEntry (&(wsinfo->NSWildcards), ns->uri,
-                                                 &hnew);
-                        if (!hnew) {
-                            f = (double *)Tcl_GetHashValue (h);
-                            if (*f < precedence) { *f = precedence; }
-                        } else {
-                            f = (double *)MALLOC(sizeof (double));
-                            *f = precedence;
-                            Tcl_SetHashValue (h, f);
-                        }
-                    } else {
-                        Tcl_DStringInit (&dStr);
-                        Tcl_DStringAppend (&dStr, ns->uri, -1);
-                        Tcl_DStringAppend (&dStr, localName, -1);
-                        h = Tcl_CreateHashEntry (&(wsinfo->FQNames),
-                                                 Tcl_DStringValue (&dStr), &hnew);
-                        if (!hnew) {
-                            f = (double *)Tcl_GetHashValue (h);
-                            if (*f < precedence) { *f = precedence; }
-                        } else {
-                            f = (double *)MALLOC(sizeof (double));
-                            *f = precedence;
-                            Tcl_SetHashValue (h, f);
-                        }
-                        Tcl_DStringFree (&dStr);
-                    }
-                } else {
-                    reportError (node, "prefix isn't bound to a namespace",
-                                 errMsg);
+                if (!domIsNCNAME (prefix)) {
+                    reportError (node, "Invalid token", errMsg);
+                    *pc = save;
+                    Tcl_DStringFree (&dStr);
                     return -1;
                 }
-            } else {
-                h = Tcl_CreateHashEntry (&(wsinfo->NCNames), start, &hnew);
-                if (!hnew) {
-                    f = (double *)Tcl_GetHashValue (h);
-                    if (*f < precedence) { *f = precedence; }
-                } else {
-                    f = (double *)MALLOC(sizeof (double));
-                    *f = precedence;
-                    Tcl_SetHashValue (h, f);
+                ns = domLookupPrefix (node, prefix);
+                if (!ns) {
+                    reportError (node, "prefix isn't bound to a namespace",
+                                 errMsg);
+                    *pc = save;
+                    Tcl_DStringFree (&dStr);
+                    return -1;
+                }
+                Tcl_DStringAppend (&dStr, ns->uri, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+            }
+            if (strcmp ("*", localName) != 0) {
+                if (!domIsNCNAME (localName)) {
+                    reportError (node, "Invalid token", errMsg);
+                    *pc = save;
+                    Tcl_DStringFree (&dStr);
+                    return -1;
                 }
             }
+            Tcl_DStringAppend (&dStr, localName, -1);
+            if (strip) {
+                h = Tcl_FindHashEntry (&wsInfo->preserveTokens, 
+                                       Tcl_DStringValue (&dStr));
+            } else {
+                h = Tcl_FindHashEntry (&wsInfo->stripTokens,
+                                       Tcl_DStringValue (&dStr));
+            }
+            if (h) {
+                FREE (Tcl_GetHashValue (h));
+                Tcl_DeleteHashEntry (h);
+            }
+            if (strip) {
+                h = Tcl_CreateHashEntry (&wsInfo->stripTokens, 
+                                         Tcl_DStringValue (&dStr), &hnew);
+            } else {
+                h = Tcl_CreateHashEntry (&wsInfo->preserveTokens,
+                                         Tcl_DStringValue (&dStr), &hnew);
+            }
+            if (hnew) {
+                f = (double *)MALLOC(sizeof (double));
+                *f = precedence;
+                Tcl_SetHashValue (h, f);
+            } else {
+                f = (double *)Tcl_GetHashValue (h);
+                *f = precedence;
+            }
+            Tcl_DStringFree (&dStr);
         }
         *pc = save;
     }
-    return 0;
 }
-
 
 /*----------------------------------------------------------------------------
 |   StripSpace
@@ -5219,7 +5176,7 @@ void StripSpace (
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
         for (i=0; i<len; i++) {
-            if ((*p!=' ') && (*p!='\n') && (*p!='\r') && (*p!='\t')) {
+            if (!IS_WHITESPACE(*p)) {
                 onlySpace = 0;
                 break;
             }
@@ -5277,10 +5234,12 @@ parseList (
     if (str) {
         pc = str;
         while (*pc) {
-            while (*pc == ' ') pc++;
+            while (*pc && IS_WHITESPACE(*pc))
+                pc++;
             if (*pc == '\0') break;
             start = pc;
-            while (*pc && (*pc != ' ')) pc++;
+            while (*pc && !IS_WHITESPACE(*pc))
+                pc++;
             save = *pc;
             *pc = '\0';
             eNS = (xsltExclExtNS *)MALLOC(sizeof (xsltExclExtNS));
@@ -6161,7 +6120,7 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
-                    rc = fillElementList(&(xs->preserveInfo), precedence,
+                    rc = fillElementList(&xs->wsInfo, 0, precedence,
                                          node, str, errMsg);
                     CHECK_RC;
                 } else {
@@ -6177,7 +6136,7 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
-                    rc = fillElementList(&(xs->stripInfo), precedence, node,
+                    rc = fillElementList(&xs->wsInfo, 1, precedence, node,
                                          str, errMsg);
                     CHECK_RC;
                 } else {
@@ -6445,53 +6404,21 @@ xsltFreeState (
        FREE((char*)tplsave);
     }
 
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->stripInfo.NCNames), &search);
+    for (entryPtr = Tcl_FirstHashEntry (&(xs->wsInfo.stripTokens), &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
         FREE((char *)f);
     }
-    Tcl_DeleteHashTable (&(xs->stripInfo.NCNames));
+    Tcl_DeleteHashTable (&(xs->wsInfo.stripTokens));
 
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->stripInfo.FQNames), &search);
+    for (entryPtr = Tcl_FirstHashEntry (&(xs->wsInfo.preserveTokens), &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
         FREE((char *)f);
     }
-    Tcl_DeleteHashTable (&(xs->stripInfo.FQNames));
-
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->stripInfo.NSWildcards), &search);
-         entryPtr != (Tcl_HashEntry*) NULL;
-         entryPtr = Tcl_NextHashEntry (&search)) {
-        f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
-    }
-    Tcl_DeleteHashTable (&(xs->stripInfo.NSWildcards));
-
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->preserveInfo.NCNames), &search);
-         entryPtr != (Tcl_HashEntry*) NULL;
-         entryPtr = Tcl_NextHashEntry (&search)) {
-        f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
-    }
-    Tcl_DeleteHashTable (&(xs->preserveInfo.NCNames));
-
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->preserveInfo.FQNames), &search);
-         entryPtr != (Tcl_HashEntry*) NULL;
-         entryPtr = Tcl_NextHashEntry (&search)) {
-        f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
-    }
-    Tcl_DeleteHashTable (&(xs->preserveInfo.FQNames));
-
-    for (entryPtr = Tcl_FirstHashEntry (&(xs->preserveInfo.NSWildcards), &search);
-         entryPtr != (Tcl_HashEntry*) NULL;
-         entryPtr = Tcl_NextHashEntry (&search)) {
-        f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
-    }
-    Tcl_DeleteHashTable (&(xs->preserveInfo.NSWildcards));
+    Tcl_DeleteHashTable (&(xs->wsInfo.preserveTokens));
 
     FREE((char*)xs->varFramesStack);
     FREE((char*)xs->varStack);
@@ -6565,16 +6492,11 @@ int xsltProcess (
     xs.varsInProcess       = NULL;
     xs.nsAliases           = NULL;
     xs.nsUniqeNr           = 0;
-    Tcl_InitHashTable ( &(xs.stripInfo.NCNames), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.stripInfo.FQNames), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.stripInfo.NSWildcards), TCL_STRING_KEYS);
-    xs.stripInfo.hasData = 0;
-    xs.stripInfo.wildcardPrec = 0.0;
-    Tcl_InitHashTable ( &(xs.preserveInfo.NCNames), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.preserveInfo.FQNames), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.preserveInfo.NSWildcards), TCL_STRING_KEYS);
-    xs.preserveInfo.hasData = 0;
-    xs.preserveInfo.wildcardPrec = 0.0;
+    Tcl_InitHashTable ( &(xs.wsInfo.stripTokens), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs.wsInfo.preserveTokens), TCL_STRING_KEYS);
+    xs.wsInfo.hasData      = 0;
+    xs.wsInfo.stripAll     = 0;
+    xs.wsInfo.wildcardPrec = 0.0;
     Tcl_InitHashTable ( &(xs.xpaths), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.pattern), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.formats), TCL_STRING_KEYS);
@@ -6671,7 +6593,7 @@ int xsltProcess (
         StripSpace (&xs, sdoc->doc->documentElement);
         sdoc = sdoc->next;
     }
-    if (xs.stripInfo.hasData) {
+    if (xs.wsInfo.hasData) {
         StripXMLSpace (&xs, sdoc->doc->documentElement);
     }
 
@@ -6707,10 +6629,7 @@ int xsltProcess (
                 for (i=0, pc = ((domTextNode*)node)->nodeValue;
                      i < ((domTextNode*)node)->valueLength;
                      i++, pc++) {
-                    if ( (*pc != ' ')  &&
-                         (*pc != '\t') &&
-                         (*pc != '\n') &&
-                         (*pc != '\r') ) {
+                    if (!IS_WHITESPACE(*pc)) {
                         only_whites = 0;
                         break;
                     }
