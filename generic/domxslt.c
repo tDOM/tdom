@@ -57,7 +57,9 @@
 #include <domxpath.h>
 #include <domxslt.h>
 #include <tcl.h>         /* for hash tables */
-
+#ifdef _MSC_VER
+#include <win32.h>
+#endif
 
 /*----------------------------------------------------------------------------
 |   Defines
