@@ -1,3 +1,10 @@
+2003-02-25  Rolf Ade  <rolf@pointsman.de>
+
+        * expat/VERSION    
+        * expat/internal.h: Applied post 1.95.6 patch, to fix compiler
+          warnings ("warning: `regparm' attribute directive ignored")
+          from gcc on Solaris.
+
 2003-02-22  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c
