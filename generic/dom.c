@@ -661,7 +661,7 @@ startElement(
         ) {
             sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
             if (Tcl_Eval(info->interp, feedbackCmd) != TCL_OK) {
-                fprintf (stderr, "%s\n", info->interp->result);
+                fprintf (stderr, "%s\n", Tcl_GetStringResult (info->interp));
                 exit (1);
             }
             info->lastFeedbackPosition += info->feedbackAfter;
@@ -1484,7 +1484,7 @@ domReadDocument (
     domNode       *rootNode;
     int            hnew, done, len;
     domReadInfo    info;
-    char           buf[1024];
+    char           buf[8192];
 #if !TclOnly8Bits
     Tcl_Obj       *bufObj;
     Tcl_DString    dStr;

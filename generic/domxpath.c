@@ -254,14 +254,10 @@ void xpathRSFree ( xpathResultSet *rs ) {
 
     if (rs->type == xNodeSetResult) {
         if (rs->nodes) FREE((char*)rs->nodes);
-        rs->nodes     = NULL;
         rs->nr_nodes  = 0;
-        rs->allocated = 0;
-    }
+    } else 
     if (rs->type == StringResult) {
         if (rs->string) FREE((char*)rs->string);
-        rs->string     = NULL;
-        rs->string_len = 0;
     }
     rs->type = EmptyResult;
 }
