@@ -454,7 +454,8 @@ domNS* domNewNamespace (
     domNS *ns = NULL;
 
     DBG(fprintf(stderr, "domNewNamespace '%s' --> '%s' \n", prefix, namespaceURI);)
-
+    ns = domLookupNamespace (doc, prefix, namespaceURI);
+    if (ns != NULL) return ns;
     doc->nsptr++;
     if (doc->nsptr > 254) {
         fprintf (stderr, "maximum number of namespaces exceeded!!!\n");
@@ -1624,10 +1625,7 @@ domCreateXMLNamespaceNode (
     memset (attr, 0, sizeof (domAttrNode));
     h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,attrNames),
                             "xmlns:xml", &hnew);
-    ns = domLookupNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
-    if (!ns) {
-        ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
-    }
+    ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
     attr->nodeType      = ATTRIBUTE_NODE;
     attr->nodeFlags     = IS_NS_NODE;
     attr->namespace     = ns->index;
@@ -3254,10 +3252,7 @@ domNewElementNodeNS (
     node->nodeName      = (char *)&(h->key);
 
     domSplitQName (tagName, prefix, &localname);
-    ns = domLookupNamespace (doc, prefix, uri);
-    if (ns == NULL) {
-        ns = domNewNamespace(doc, prefix, uri);
-    }
+    ns = domNewNamespace(doc, prefix, uri);
     node->namespace = ns->index;
 
     if (doc->fragments) {
@@ -3415,12 +3410,7 @@ domCopyTo (
             }
             nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
             nattr->nodeFlags = attr->nodeFlags;
-            ns1 = domLookupNamespace (n->ownerDocument,
-                                      ns->prefix, ns->uri);
-            if (!ns1) {
-                ns1 = domNewNamespace (n->ownerDocument,
-                                       ns->prefix, ns->uri);
-            }
+            ns1 = domNewNamespace (n->ownerDocument, ns->prefix, ns->uri);
             nattr->namespace = ns1->index;
         } else {
             nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
