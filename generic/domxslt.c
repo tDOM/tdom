@@ -612,6 +612,7 @@ static xsltTag getTag (
     char *name;
 
     if (node->nodeType != ELEMENT_NODE) {
+        node->info = (int)unknown;
         return unknown;
     }
     if (node->info != 0) {
@@ -3236,7 +3237,7 @@ static int setParamVars (
     while (child) {
         if (child->nodeType == ELEMENT_NODE) {
             TRACE1("setParamVars child '%s' \n", child->nodeName);
-            if (getTag(child) == withParam) {
+            if (child->info == withParam) {
                 str = getAttr(child, "name", a_name);
                 if (str) {
                     TRACE1("setting with-param '%s' \n", str);
@@ -3284,7 +3285,7 @@ static int doSortActions (
     while (child) {
         if (child->nodeType == ELEMENT_NODE) {
             TRACE1("doSortActions child '%s' \n", child->nodeName);
-            if (getTag(child) == sort) {
+            if (child->info == sort) {
                 if (child->firstChild) {
                     reportError (child, "xsl:sort has to be empty.", errMsg);
                     return -1;
@@ -3710,7 +3711,7 @@ static int ExecAction (
     TRACE1("\nExecAction '%s' \n", actionNode->nodeName);
     DBG (printXML (currentNode, 3, 5);)
     xs->currentXSLTNode = actionNode;
-    switch ( getTag(actionNode) ) {
+    switch ( actionNode->info ) {
 
         case applyImports:
             if (actionNode->firstChild) {
@@ -4083,7 +4084,7 @@ static int ExecAction (
                  child = child->nextSibling)
             {
                 if (child->nodeType != ELEMENT_NODE) continue;
-                switch (getTag(child)) {
+                switch (child->info) {
                     case when:
                         str = getAttr(child, "test", a_test);
                         if (str) {
@@ -5149,6 +5150,7 @@ void StripSpace (
     char   *p;
 
     if (node->nodeType == TEXT_NODE) {
+        node->info = (int)unknown;
         p = ((domTextNode*)node)->nodeValue;
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
@@ -5160,7 +5162,7 @@ void StripSpace (
             p++;
         }
         if (onlySpace) {
-            if (node->parentNode && (getTag(node->parentNode) == text)) {
+            if (node->parentNode && (node->parentNode->info == text)) {
                 /* keep white texts below xsl:text elements */
                 return;
             }
@@ -5178,12 +5180,15 @@ void StripSpace (
         }
     } else
     if (node->nodeType == ELEMENT_NODE) {
+        getTag(node);
         child = node->firstChild;
         while (child) {
             newChild = child->nextSibling;
             StripSpace (xs, child);
             child = newChild;
         }
+    } else {
+        node->info = (int)unknown;
     }
 }
 
