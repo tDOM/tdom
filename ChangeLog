@@ -1,3 +1,7 @@
+2004-09-08  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Editorial changes.
+
 2004-09-02  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
@@ -94,7 +98,7 @@
           for getAttribute, if attribute is not found. Changed
           behavior of getElementByID: if no element with the given id
           is found, returns now the emtpy string, not a TCL_ERROR
-          (more close to DOM rec, getElementByID never raise an
+          (closer to DOM rec, getElementByID never raise an
           exception). Bug fix: nodeName now returns the per DOM rec
           correct values for comment and cdata section nodes (were as
           yet reported as if they where text nodes).
