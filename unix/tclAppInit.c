@@ -19,14 +19,6 @@
 
 #include "tcl.h"
  
-/*
- * The following variable is a special hack that is needed in order for
- * Sun shared libraries to be used for Tcl.
- */
-
-extern int matherr();
-int *tclDummyMathPtr = (int *) matherr;
-
 extern int Tdom_Init _ANSI_ARGS_((Tcl_Interp *interp));
 extern int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
 
