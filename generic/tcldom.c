@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.9  2002/04/08 02:12:13  rolf
+|   Added -parameters option to domNode xslt method, to enable setting of
+|   top level parameters from tcl level.
+|
 |   Revision 1.8  2002/04/02 00:36:20  rolf
 |   Escape '\n' in Attribute Values while serializing, to fulfill the
 |   note in xslt rec. 7.1.3.
@@ -2031,9 +2035,10 @@ int tcldom_NodeObjCmd (
     domException exception;
     char         tmp[200], objCmdName[40], prefix[MAX_PREFIX_LEN],
                 *method, *nodeName, *str, *localName, *channelId,
-                *attr_name, *attr_val, *filter, *option, *errMsg, *uri;
+                *attr_name, *attr_val, *filter, *option, *errMsg, *uri,
+               **parameters;
     int          result, length, methodIndex, i, line, column, indent, mode;
-    Tcl_Obj     *namePtr, *resultPtr;
+    Tcl_Obj     *namePtr, *resultPtr, *objPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
     Tcl_Channel  chan = (Tcl_Channel) NULL;
@@ -2178,15 +2183,46 @@ int tcldom_NodeObjCmd (
             return TCL_OK;
             
         case m_xslt:
-            nodeName = Tcl_GetStringFromObj (objv[2], NULL);
-            xsltDoc = tcldom_getDocumentFromName (interp, nodeName, &errMsg);
+            str = Tcl_GetStringFromObj (objv[2], NULL);
+            if ((str[0] == '-') && (strcmp (str, "-parameters")==0)) {
+                if (objc < 5) {
+                    Tcl_WrongNumArgs (interp, 2, objv, "?-parameters parameterList? xsltDoc ?resultVar?");
+                    return TCL_ERROR;
+                }
+                if (Tcl_ListObjLength (interp, objv[3], &length) != TCL_OK) {
+                    SetResult ("ill-formed parameters list: the -parameters option needs a list of parameter name and parameter value pairs");
+                    return TCL_ERROR;
+                }
+                if (length % 2) {
+                    SetResult ("parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs");
+                    return TCL_ERROR;
+                }
+                
+                parameters =  (char **)Tcl_Alloc(sizeof (char **)*(length+1));
+                for (i = 0; i < length; i += 2) {
+                    Tcl_ListObjIndex (interp, objv[3], i, &objPtr);
+                    parameters[i] = Tcl_GetString (objPtr);
+                    Tcl_ListObjIndex (interp, objv[3], i+1, &objPtr);
+                    parameters[i+1] = Tcl_GetString (objPtr);
+                }
+                parameters[length] = NULL;
+                objc -= 2;
+                objv += 2;
+                str = Tcl_GetString (objv[2]);
+            } else {
+                parameters = NULL;
+            }
+
+            xsltDoc = tcldom_getDocumentFromName (interp, str, &errMsg);
             if (xsltDoc == NULL) {
                 SetResult ( errMsg );
+                if (parameters) Tcl_Free ((char *) parameters);
                 return TCL_ERROR;
             }
-            result = xsltProcess (xsltDoc, node, 
+            result = xsltProcess (xsltDoc, node, parameters,
                                  tcldom_xpathFuncCallBack,  interp,
                                  &errMsg, &resultDoc);
+            if (parameters) Tcl_Free ((char *) parameters);
             if (result < 0) {
                 SetResult ( errMsg );
                 free (errMsg);
