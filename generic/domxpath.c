@@ -1833,7 +1833,11 @@ Production(StepPattern)
                     aCopyChild->type      = a->child->type;
                     aCopyChild->next      = NULL;
                     aCopyChild->child     = NULL;
-                    aCopyChild->strvalue  = a->child->strvalue;
+                    if (a->child->strvalue) {
+                        aCopyChild->strvalue  = tdomstrdup(a->child->strvalue);
+                    } else {
+                        aCopyChild->strvalue  = NULL;
+                    }
                     aCopyChild->intvalue  = a->child->intvalue;
                     aCopyChild->realvalue = a->child->realvalue;
                     aCopy->child = aCopyChild;
