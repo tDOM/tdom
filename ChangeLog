@@ -1,4 +1,9 @@
+
 2003-10-01  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/dom.c: Removed unnecessary check of 
+          domModuleIsInitialized in domReadDocument(). Corrected typo
+          in a comment.
 
         * generic/dom.c
         * generic/dom.h
