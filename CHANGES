@@ -1,3 +1,7 @@
+2005-01-06  Rolf Ade  <rolf@pointsman.de>
+
+        Added the methods 'transform' and 'delete' to xsltCmds.
+    
 2004-09-21  Rolf Ade  <rolf@pointsman.de>
 
         Added the '-namespaces' option to the selectNodes
