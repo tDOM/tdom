@@ -1676,7 +1676,7 @@ domReadDocument (
     XML_SetDoctypeDeclHandler (parser, startDoctypeDeclHandler,
                                endDoctypeDeclHandler);
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
     if (storeLineColumn) {
         rootNode = (domNode*) domAlloc(sizeof(domNode)
                                         + sizeof(domLineColumn));
@@ -1912,7 +1912,7 @@ domCreateDoc ( )
     domNode       *rootNode;
     domDocument   *doc = domCreateEmptyDoc();
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
     memset(rootNode, 0, sizeof(domNode));
     rootNode->nodeType      = ELEMENT_NODE;
@@ -4327,7 +4327,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "DOM tree is already transformed to a tcl command.", NULL);
             return TCL_ERROR;
         }
-        h = Tcl_CreateHashEntry (&HASHTAB(info->document,tagNames), "(rootNode)", &hnew);
+        h = Tcl_CreateHashEntry (&HASHTAB(info->document,tagNames), "", &hnew);
         if (info->storeLineColumn) {
             rootNode = (domNode*) domAlloc(sizeof(domNode)
                                             + sizeof(domLineColumn));

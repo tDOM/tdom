@@ -1087,7 +1087,7 @@ XML_SimpleParseDocument (
         Tcl_IncrRefCount(extResolver);
     }
     
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
     memset(rootNode, 0, sizeof(domNode));
     rootNode->nodeType      = ELEMENT_NODE;
