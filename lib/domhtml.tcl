@@ -1,20 +1,13 @@
 #----------------------------------------------------------------------------
-#   Copyright (c) 1999,2000 Jochen Loewer (loewerj@hotmail.com)   
+#   Copyright (c) 1999,2000 Jochen Loewer (loewerj@hotmail.com) et al.   
 #----------------------------------------------------------------------------
 #
-#   $Header$
-#
+#   Rcsid: @(#)$Id$
 #
 #   Implements simple HTML layer on top of core DOM Level-1 specification,
-#   as implemented in tDOM0.4 package by Jochen Loewer (loewerj@hotmail.com)
-# 
+#   as implemented in tDOM package.
 #   No error checking is performed. This should be delegated to some
 #   other level (internal DOM DTD checking probably ?).
-#    
-#   Not all HTML elements are implemented, but it's fairly simple to
-#   add them as needed. A short usage example is at the bottom of file.
-#
-#
 #
 #   The contents of this file are subject to the Mozilla Public License
 #   Version 1.1 (the "License"); you may not use this file except in
@@ -27,270 +20,331 @@
 #   under the License.
 #
 #   The Original Code is tDOM.
+#   The Initial Developer of the Original Code is Jochen Loewer.
 #
-#   The Initial Developer of the Original Code is Jochen Loewer
 #   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
 #   Jochen Loewer. All Rights Reserved.
 #
+#   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
+#   Zoran Vasiljevic. All Rights Reserved.
+#
+#   Portions created by Rolf Ade are Copyright (C) 1999-2002
+#   Rolf Ade. All Rights Reserved.
+
 #   Contributor(s):
 #
 #       3 Apr 2000   Zoran Vasiljevic (zoran@v-connect.com)
-#                    Initial domHTML idea
+#                    Initial idea
 #
-#   $Log$
-#   Revision 1.1  2002/02/22 01:05:35  rolf
-#   Initial revision
+#      20 Oct 2002   Rolf Ade (rolf@pointsman.de)
+#                    Suggestion to rewrite with new tdom :)
 #
+#      23 Oct 2002   Zoran Vasiljevic (zoran@archiware.com)
+#                    Rewritten from scratch using new tdom.
 #
-#
-#   written by Zoran Vasiljevic / Jochen Loewer
+#   Written by Zoran Vasiljevic
 #   April, 2000      
 #
 #----------------------------------------------------------------------------
 
-
 package require tdom
-
-
-
-#-----------------------------------------------------------------------------
-#                            Utility procedures
-#-----------------------------------------------------------------------------
+package provide tdomhtml
 
 namespace eval ::dom::domHTML {
-
-    variable ownerDocument {}; # the current document
-    variable parent        {}; # the current parent element
-}
-
-
-#-----------------------------------------------------------------------------
-#  _elm  -  Generate named element node. Ignores the very last argument.
-#           Called only within the element-with-body procedure "eb".
-#
-#-----------------------------------------------------------------------------
-proc ::dom::domHTML::_elm { name args } {
-
-    set obj [$::dom::domHTML::ownerDocument createElement $name]
-    $::dom::domHTML::parent appendChild $obj
-
-    eval $obj setAttribute [lrange $args 0 [expr {[llength $args] - 2}]]
-
-    return $obj
-}
-
-
-#-----------------------------------------------------------------------------
-#   el  -  Generate named element node w/o associated body
-#
-#-----------------------------------------------------------------------------
-proc ::dom::domHTML::el { name args } {
-
-    set obj [$::dom::domHTML::ownerDocument createElement $name]
-    $::dom::domHTML::parent appendChild $obj
-
-    eval $obj setAttribute $args
-    return $obj  
-}
-
-
-#-----------------------------------------------------------------------------
-#   eb  -  Generate named element node with associated body.
-#
-#-----------------------------------------------------------------------------
-proc ::dom::domHTML::eb { name args } {
-
-    set ::dom::domHTML::parent [eval ::dom::domHTML::_elm $name $args]
-    uplevel 2 [lindex $args end]
-    set ::dom::domHTML::parent [$::dom::domHTML::parent parentNode]
-}
-
-
-#-----------------------------------------------------------------------------
-#   HTML  -  Creates HTML document.
-#            One should use "$doc documentElement" to fetch the "<HTML>" 
-#            node and print it, and/or "$doc delete" to reclaim memory 
-#            used by the tree.
-#
-#      See usage example at the end of file...
-#
-#-----------------------------------------------------------------------------
-proc HTML {args} {
-
+    
     #
-    # Create the HTML document
+    # Create commands for generating HTML tags. This is a complete 
+    # set taken from http://www.w3.org/TR/html4/index/elements.html
     #
     
+    foreach name {
+        a
+        abbr
+        acronym
+        address
+        applet
+        area
+        b
+        base
+        basefont
+        bdo
+        big
+        blockquote
+        body
+        br
+        button
+        caption
+        center
+        cite
+        code
+        col
+        colgroup
+        dd
+        del
+        dfn
+        dir
+        div
+        dl
+        dt
+        em
+        fieldset
+        font
+        form
+        frame
+        frameset
+        h1
+        h2 
+        h3 
+        h4 
+        h5 
+        h6
+        head
+        hr
+        html
+        i
+        iframe
+        img
+        input
+        ins
+        isindex
+        kbd
+        label
+        legend
+        li
+        link
+        map
+        menu
+        meta 
+        noframes
+        noscript
+        object 
+        ol
+        optgroup
+        option
+        p
+        param
+        pre
+        q
+        s
+        samp
+        script
+        select
+        small
+        span
+        strike
+        strong
+        style
+        sub
+        sup
+        table
+        tbody
+        td
+        textarea
+        tfoot
+        th
+        thead
+        title
+        tr
+        tt
+        u
+        ul
+        var
+    } {
+        dom createNodeCmd elementNode $name
+    }
+
+    #
+    # Miscelaneous commands. Not part of HTML specs but needed 
+    # for generation of special DOM nodes.
+    #
+
+    dom createNodeCmd textNode    t; # Emits a text node
+    dom createNodeCmd commentNode c; # Emits a comment node
+}
+
+#-----------------------------------------------------------------------------
+# ::dom::domHTML::newdoc --  
+#
+# Creates the HTML document and fils it with content. 
+# Note: script is evaluated in the context of ::dom::domHTML namespace.
+#-----------------------------------------------------------------------------
+
+proc ::dom::domHTML::newdoc {script} {
     set doc [dom createDocument html]
-
-    set ::dom::domHTML::ownerDocument $doc
-
-    #
-    # Push its top-level element on stack
-    # and evaluate body in caller's context
-    #
-
-    set ::dom::domHTML::parent [$doc documentElement]
-    uplevel [lindex $args end]
-    set ::dom::domHTML::parent [$::dom::domHTML::parent parentNode]
-
-    #
-    # Returns document node. 
-    #
+    [$doc documentElement] appendFromScript $script
 
     return $doc
 }
 
-
 #-----------------------------------------------------------------------------
-#                          HTML element commands
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------
-#   Elements appearing outside of the document body
-#-----------------------------------------------------------------
-
-proc HEAD  {args} {eval ::dom::domHTML::eb  head  $args}
-proc TITLE {args} {eval ::dom::domHTML::eb  title $args}
-proc BODY  {args} {eval ::dom::domHTML::eb  body  $args}
-
-
-#-----------------------------------------------------------------
-#   Link elements
-#-----------------------------------------------------------------
-
-proc A    {h args} {eval ::dom::domHTML::eb  a    href $h  $args}
-proc LINK {h args} {eval ::dom::domHTML::el  link href $h  $args}
-proc BASE {h args} {eval ::dom::domHTML::el  base href $h  $args}
-
-
-#-----------------------------------------------------------------
-#   Object, image elements
-#-----------------------------------------------------------------
-
-proc IMG    {s args} {eval ::dom::domHTML::el  img   src $s  $args}
-proc MAP    {n args} {eval ::dom::domHTML::eb  map   name $n $args}
-proc OBJECT {args}   {eval ::dom::domHTML::eb  object        $args}
-proc PARAM  {args}   {eval ::dom::domHTML::el  param         $args}
-proc AREA   {args}   {eval ::dom::domHTML::el  area          $args}
-
-
-#-----------------------------------------------------------------
-#   List elements
-#-----------------------------------------------------------------
-
-proc UL {args} {eval ::dom::domHTML::eb  ul  $args}
-proc OL {args} {eval ::dom::domHTML::eb  ol  $args}
-proc LI {args} {eval ::dom::domHTML::eb  li  $args}
-proc DL {args} {eval ::dom::domHTML::eb  dl  $args}
-proc DT {args} {eval ::dom::domHTML::eb  dt  $args}
-proc DD {args} {eval ::dom::domHTML::eb  dd  $args}
-
-
-#-----------------------------------------------------------------
-#   Table elements
-#-----------------------------------------------------------------
-
-proc TABLE {args} {eval ::dom::domHTML::eb table $args}
-proc TR    {args} {eval ::dom::domHTML::eb tr    $args}
-proc TH    {args} {eval ::dom::domHTML::eb th    $args}
-proc TD    {args} {eval ::dom::domHTML::eb td    $args}
-
-
-#-----------------------------------------------------------------
-#   Form elements
-#-----------------------------------------------------------------
-
-proc FORM     {a args}     {eval ::dom::domHTML::eb form     action $a method post $args}
-proc FORMGET  {a args}     {eval ::dom::domHTML::eb form     action $a method get  $args}
-proc INPUT    {t n v args} {eval ::dom::domHTML::el input    type $t name $n value $v $args}
-proc BUTTON   {t n args}   {eval ::dom::domHTML::el buttonn  type $t name $n $args}
-proc SELECT   {n args}     {eval ::dom::domHTML::eb seelct   name $n $args}
-proc OPTION   {args}       {eval ::dom::domHTML::eb option   $args}
-proc TEXTAREA {n r c args} {eval ::dom::domHTML::eb textarea name $n rows $r cols $c $args}
-
-
-#-----------------------------------------------------------------
-#   Text elements
-#-----------------------------------------------------------------
-
-proc HR {args} {eval ::dom::domHTML::el  hr  $args}
-proc BR {args} {eval ::dom::domHTML::el  br  $args}
-proc P  {args} {eval ::dom::domHTML::eb  p   $args}
-proc TT {args} {eval ::dom::domHTML::eb  tt  $args}
-proc I  {args} {eval ::dom::domHTML::eb  i   $args}
-proc B  {args} {eval ::dom::domHTML::eb  b   $args}
-proc H1 {args} {eval ::dom::domHTML::eb  h1  $args}
-proc H2 {args} {eval ::dom::domHTML::eb  h2  $args}
-proc H3 {args} {eval ::dom::domHTML::eb  h3  $args}
-proc H4 {args} {eval ::dom::domHTML::eb  h4  $args}
-proc H5 {args} {eval ::dom::domHTML::eb  h5  $args}
-proc H6 {args} {eval ::dom::domHTML::eb  h6  $args}
-
-proc BIG    {args} {eval ::dom::domHTML::eb  big     $args}
-proc SMALL  {args} {eval ::dom::domHTML::eb  small   $args}
-proc STRONG {args} {eval ::dom::domHTML::eb  string  $args}
-proc PRE    {args} {eval ::dom::domHTML::eb  pre     $args}
-
-
-#-----------------------------------------------------------------
-#   Style elements
-#-----------------------------------------------------------------
-
-proc STYLE {args} {eval ::dom::domHTML::eb  style  type text/css $args}
-
-# ...
-# to be continued
-# ...
-
-
-
-#-----------------------------------------------------------------------------
-#         *NOT* part of HTML but handy for constructing text element nodes
+# ::dom::domHTML::putdoc --  
 #
-#   T  -  Generate new text element node and append it to parent
-#
+# Convenience wrapper to serialize the document to the output channel
 #-----------------------------------------------------------------------------
-proc T {text} {
 
-    set textNode [$::dom::domHTML::ownerDocument createTextNode $text]
-    $::dom::domHTML::parent appendChild $textNode
+proc ::dom::domHTML::putdoc {doc chan} {
+    [$doc documentElement] asHTML -channel $chan
 }
 
 #-----------------------------------------------------------------------------
-#   M  -  Generate new subtree out of XML markup and append it to parent
+# ::dom::domHTML::deldoc --
 #
+# Convenience wrapper to dispose the html document 
 #-----------------------------------------------------------------------------
-proc M {markup} {
 
-    $::dom::domHTML::parent appendXML $markup
+proc ::dom::domHTML::deldoc {doc} {
+    $doc delete
 }
 
+#-----------------------------------------------------------------------------
+# ::dom::domHTML::html2tcl --  
+#
+# Parses the html file and creates a Tcl script usable for passing
+# to the ::dom::domHTML::newdoc command.
+#-----------------------------------------------------------------------------
+
+proc ::dom::domHTML::html2tcl {htmlfile {outfile ""}} {
+
+    variable doc
+
+    if {$outfile == ""} {
+        set outfile [file root $htmlfile].tcl
+    }
+    
+    #
+    # Slurp-in the entire html file
+    #
+
+    set ichan [open $htmlfile]
+    set html  [read $ichan]
+    close $ichan
+
+    #
+    # Create in-memory DOM tree by parsing
+    # the html content with the built-in
+    # tdom html parser.
+    #
+
+    if {[catch {dom parse -html $html} doc]} {
+        return -1
+    }
+
+    #
+    # Open output file and recursively
+    # format all elements found there.
+    #
+
+    set ochan [open $outfile w]
+    _astcl [$doc documentElement] $ochan
+    close $ochan
+    $doc delete
+
+    return 0
+}
 
 #-----------------------------------------------------------------------------
-#   Short usage example .... No need to worry about closing HTML tags and
-#   debugging ugly ASP, ADP, PHP, JSP, LiveWire, whatever, pages....
-#   Tcl parser and tDOM care about everything !!!
+# ::dom::domHTML::_astcl --  
+#
+# Helper procedure for recursively parsing the html tag
+#-----------------------------------------------------------------------------
+
+proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
+
+    variable doc
+    set space [string repeat " " $offset]
+
+    foreach child [$top childNodes] {
+        switch -- [$child nodeType] {
+            ELEMENT_NODE {    
+          
+                # Emit the nodename as html command
+                set nodecmd [string tolower [$child nodeName]]
+                puts -nonewline $ochan $space
+                puts -nonewline $ochan $nodecmd
+
+                # Emit node attributes as key/value pairs
+                foreach att [$child attributes] {
+                    puts -nonewline $ochan " "
+                    puts -nonewline $ochan [string tolower $att]
+                    puts -nonewline $ochan " "
+                    set val [_entesc [$child getAttribute $att]]
+                    if {[regexp { } $val]} {
+                        puts -nonewline $ochan \"$val\"
+                    } else {
+                        puts -nonewline $ochan $val
+                    }
+                }
+
+                # Recurse to child nodes
+                if {[llength [$child childNodes]]} {
+                    puts $ochan " {"
+                    _astcl $child $ochan $indent [expr {$offset+$indent}]
+                    puts -nonewline $ochan $space
+                    puts $ochan "}"
+                } else {
+                    puts $ochan ""
+                }
+            }
+            TEXT_NODE - CDATA_SECTION_NODE {
+
+                # Escape contents of text nodes
+                puts -nonewline $ochan $space
+                puts -nonewline $ochan "t {"
+                puts -nonewline $ochan [_entesc [$child nodeValue]]
+                puts $ochan "}"
+            }
+            COMMENT_NODE {
+
+                # Pass commaent nodes as-is
+                puts -nonewline $ochan $space
+                puts -nonewline $ochan "c {"
+                puts -nonewline $ochan [$child nodeValue]
+                puts $ochan "}"
+            }
+        }
+    }
+}
+
+#-----------------------------------------------------------------------------
+# ::dom::domHTML::_entesc --  
+#
+# Helper procedure for entity escaping
+#-----------------------------------------------------------------------------
+
+proc ::dom::domHTML::_entesc {string} {
+
+    regsub -all {(&[^;]+;)}  $string {\\\1} string
+    regsub -all {([\#\[\]])} $string {\\\1} string
+
+    return $string
+}
+
+#-----------------------------------------------------------------------------
+# Short usage example.
 #
 #-----------------------------------------------------------------------------
-if 0 {
-    set doc [HTML {
-        TITLE {T "Test document generated with tDOM0.4"}
-        BODY {
-          TABLE border 1 width 100 {
 
-              # -- make 5 rows with 2 columns...
-              for {set i 0} {$i < 5} {incr i} {
-                  TR {
-                      # -- use XML shortcut...
-                      TD { M "<i>italic $i and <b>italic-bold $i</b></i>"}
-            
-                      # -- or write with nodes...
-                      TD { I {T "italic $i and "; B {T "italic-bold $i"}}}
-                  }
-              }
-          }
+if {0} {
+    set doc [dom::domHTML::newdoc {
+        title {t "Test document generated with tDOM0.7"}
+        body {
+            table -border 1 -width 100 {
+                for {set i 0} {$i < 5} {incr i} {
+                    tr {
+                        td {
+                            i {
+                                t "italic $i and "
+                                b {t "italic-bold $i"}
+                            }
+                        }
+                    }
+                }
+            }
         }
     }]
-    puts stdout [[$doc documentElement] asXML]; $doc delete
+
+    dom::domHTML::putdoc $doc stdout
+    dom::domHTML::deldoc $doc
 }
+
+# - EOF -
