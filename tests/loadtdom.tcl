@@ -7,8 +7,14 @@
 #
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
-    package require tcltest
-    namespace import ::tcltest::*
+    if {$tcl_version < 8.2} {
+        puts stderr "sourcing def.tcl"
+        source [file join [file dir [info script]] defs.tcl]
+        set auto_path [pwd]
+    } else {
+        package require tcltest
+        namespace import ::tcltest::*
+    }
 }
 
 if {[catch {package present tdom}]} {

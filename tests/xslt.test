@@ -13,7 +13,7 @@
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
-test xslt-1.1 {unicode chars outside of US-ASCII in var name} {
+test xslt-1.1 {unicode chars outside of US-ASCII in var name} {need_i18n} {
      set xml [dom parse {<root/>}]
      set xslt [dom parse [tDOM::xmlReadFile [file join [pwd] [file dir [info script]] data/xslt_1.xsl]]]
      set xmlroot [$xml documentElement]

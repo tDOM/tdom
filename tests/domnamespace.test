@@ -12,7 +12,7 @@
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
-test domnamespace-1.1 {multiple definition of the same namespace (same prefix/uri)} {
+test domnamespace-1.1 {multiple definition of the same namespace (same prefix/uri)} {need_i18n} {
     set ch [open [file join [pwd] [file dir [info script]] data/REC-xslt-19991116.xml]]
     fconfigure $ch -encoding iso8859-1
     set doc [dom parse -channel $ch]
