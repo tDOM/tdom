@@ -211,6 +211,9 @@ test comment-2.3 {comment with entities} {
 list [string compare $::comment ${comment_2_3}] [string trim $::result] $::element
 } [list 0 {} 2]
 
+foreach parser [info commands comment-*] {
+    $parser free
+}
 
 # cleanup
 ::tcltest::cleanupTests

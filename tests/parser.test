@@ -262,6 +262,14 @@ test parser-5.1 {parse channel input} {
     list $::count
 } {42}
 
+
+foreach parser [info commands xmlparser*] {
+    $parser free
+}
+foreach parser [info commands parser-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return

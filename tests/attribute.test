@@ -307,6 +307,11 @@ test attrList-5.1 {Attribute list with quoted value} {
     list $retval [array get ::result]
 } {0 {test,example {isn't this legal?}}}
 
+foreach parser [info commands attrList-*] {
+    $parser free
+}
+
+
 # cleanup
 ::tcltest::cleanupTests
 return
