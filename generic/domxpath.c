@@ -1156,7 +1156,10 @@ Production(FilterExpr)
         ErrExpected("$var or (expr) or literal or number or func");
     }
     while (LA==LBRACKET) {
-        Append( a, New1WithEvalSteps( Pred, Recurse(Predicate)));
+        ast b;
+        b = Recurse(Predicate);
+        if (!b) return NULL;
+        Append( a, New1WithEvalSteps( Pred, b));
     }
 EndProduction
 
@@ -1478,6 +1481,7 @@ Production(Step)
         a = Recurse(Basis);
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
+            if (!b) return NULL;
             if (isFirst) {
                 a->intvalue = IsStepPredOptimizable (b);
                 DBG (fprintf (stderr, "step type %s, intvalue: %d\n", astType2str[a->type], a->intvalue);)
@@ -1682,6 +1686,7 @@ Production(StepPattern)
         int stepIsOptimizable = 1, isFirst = 1;
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
+            if (!b) return NULL;
             if (stepIsOptimizable) {
                 if (!IsStepPatternPredOptimizable(b)) stepIsOptimizable = 0;
             }
