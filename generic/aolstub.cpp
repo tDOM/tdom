@@ -10,17 +10,28 @@
  * ---------------------------------------------------------------------------
  */
 
-#if 1 && defined (NS_AOLSERVER)
+#if defined (NS_AOLSERVER)
 #include <ns.h>
 
 int Ns_ModuleVersion = 1;
+
+/*
+ * Structure to pass to NsThread_Init. This holds the module
+ * and virtual server name for proper interp initializations. 
+ * This is valid only for AOLservers 4.x or later.
+ */
+
+struct mydata {
+    char *modname;
+    char *server;
+};
 
 /*
  *----------------------------------------------------------------------------
  *
  * NsTdom_Init --
  *
- *    Loads the package for the first time, i.e. in the startup thread.
+ *    Loads the package in the Tcl interpreter. 
  *
  * Results:
  *    Standard Tcl result
@@ -32,16 +43,18 @@ int Ns_ModuleVersion = 1;
  */
 
 static int
-NsTdom_Init (Tcl_Interp *interp, void *context)
+NsTdom_Init (Tcl_Interp *interp, void *cd)
 {
+    struct mydata *md = (struct mydata*)cd;
     int ret = Tdom_Init(interp);
 
     if (ret != TCL_OK) {
-        Ns_Log(Warning, "can't load module %s: %s", 
-               (char *)context, Tcl_GetStringResult(interp));
+        Ns_Log(Warning, "can't load module %s: %s", md->modname,
+               Tcl_GetStringResult(interp));
     }
+    Tcl_SetAssocData(interp, "tdom:nsd", NULL, (ClientData)md);
 
-    return ret;
+    return TCL_OK;
 }
 
 /*
@@ -63,7 +76,13 @@ NsTdom_Init (Tcl_Interp *interp, void *context)
 int
 Ns_ModuleInit(char *srv, char *mod)
 {
-    return (Ns_TclInitInterps(srv, NsTdom_Init, (void*)mod) == TCL_OK)
+    struct mydata *md = NULL;
+
+    md = (struct mydata*)ns_malloc(sizeof(struct mydata));
+    md->modname = strcpy(ns_malloc(strlen(mod)+1), mod);
+    md->server  = strcpy(ns_malloc(strlen(srv)+1), srv);
+
+    return (Ns_TclInitInterps(srv, NsTdom_Init, (void*)md) == TCL_OK)
         ? NS_OK : NS_ERROR; 
 }
 
