@@ -2001,8 +2001,11 @@ domFreeDocument (
         Tcl_DecrRefCount (doc->extResolver);
     }
 
-    if (doc->rootNode->firstAttr) domFree ((void*)doc->rootNode->firstAttr);
-    domFree ((void*)doc->rootNode);
+    if (doc->rootNode) {
+        if (doc->rootNode->firstAttr) 
+            domFree ((void*)doc->rootNode->firstAttr);
+        domFree ((void*)doc->rootNode);
+    }
 
     /*-----------------------------------------------------------
     | delete tag/attribute hash tables (for threaded builds only)
@@ -2382,7 +2385,7 @@ domSetDocument (
 )
 {
     domNode *child;
-    domNS   *ns, *orgns;
+    domNS   *ns, *orgns = NULL;
 
     if (node->nodeType == ELEMENT_NODE) {
         if (node->namespace) {
@@ -3815,12 +3818,9 @@ tdom_freeProc (
     void       *userData
 )
 {
-    char         objCmdName[40];
-    Tcl_CmdInfo  cmd_info;
     domReadInfo *info = (domReadInfo *) userData;
 
-    sprintf (objCmdName, "domDoc%d", info->document->documentNumber);
-    if (!Tcl_GetCommandInfo (interp, objCmdName, &cmd_info)) {
+    if (info->document) {
         domFreeDocument (info->document, NULL, NULL);
         if (info->activeNS) {
             FREE ( (char *) info->activeNS);
@@ -3835,13 +3835,10 @@ tdom_resetProc (
     void       *userData
 )
 {
-    char         objCmdName[40];
-    Tcl_CmdInfo  cmd_info;
     domReadInfo *info = (domReadInfo *) userData;
     domDocument *doc;
 
-    DOC_CMD(objCmdName, info->document);
-    if (!Tcl_GetCommandInfo (interp, objCmdName, &cmd_info)) {
+    if (info->document) {
         domFreeDocument (info->document, NULL, NULL);
     }
 
@@ -3882,7 +3879,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     int              methodIndex, result, bool, hnew;
     domDocument     *doc;
     domNode         *rootNode;
-    domReadInfo     *info;
+    domReadInfo        *info;
     domLineColumn   *lc;
     Tcl_HashEntry   *h;
     TclGenExpatInfo *expat;
@@ -3973,6 +3970,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "parser object isn't tdom enabled.", NULL);
             return TCL_ERROR;
         }
+        if (!info->document) {
+            Tcl_SetResult (interp, "DOM tree is already transformed to a tcl command.", NULL);
+            return TCL_ERROR;
+        }
         h = Tcl_CreateHashEntry (&HASHTAB(info->document,tagNames), "(rootNode)", &hnew);
         if (info->storeLineColumn) {
             rootNode = (domNode*) domAlloc(sizeof(domNode)
@@ -4010,8 +4011,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             rootNode->nodeFlags |= HAS_BASEURI;
         }
         info->document->rootNode = rootNode;
-        return tcldom_returnDocumentObj (interp, info->document, 0,
-                                         newObjName);
+        result = tcldom_returnDocumentObj (interp, info->document, 0,
+                                           newObjName);
+        info->document = NULL;
+        return result;
 
     case m_setResultEncoding:
         info = CHandlerSetGetUserData (interp, objv[1], "tdom");
