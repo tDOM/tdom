@@ -5677,10 +5677,12 @@ int xsltProcess (
     Tcl_InitHashTable ( &(xs.stripInfo.NCNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.FQNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.NSWildcards), TCL_STRING_KEYS);
+    xs.stripInfo.hasData = 0;
     xs.stripInfo.wildcardPrec = 0.0;
     Tcl_InitHashTable ( &(xs.preserveInfo.NCNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.preserveInfo.FQNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.preserveInfo.NSWildcards), TCL_STRING_KEYS);
+    xs.preserveInfo.hasData = 0;
     xs.preserveInfo.wildcardPrec = 0.0;
     Tcl_InitHashTable ( &(xs.xpaths), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.pattern), TCL_STRING_KEYS);
