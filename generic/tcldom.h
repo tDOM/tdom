@@ -51,7 +51,7 @@ Tcl_ObjCmdProc TclTdomObjCmd;
 #  define TCL_STORAGE_CLASS DLLEXPORT
 #endif
 
-#define STR_TDOM_VERSION(v) ("0.7.5")
+#define STR_TDOM_VERSION(v) (VERSION)
 
 EXTERN int Tdom_Init     _ANSI_ARGS_((Tcl_Interp *interp));
 EXTERN int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
