@@ -18,7 +18,7 @@
 #endif
 
 #include "tcl.h"
-
+ 
 /*
  * The following variable is a special hack that is needed in order for
  * Sun shared libraries to be used for Tcl.
@@ -28,6 +28,7 @@ extern int matherr();
 int *tclDummyMathPtr = (int *) matherr;
 
 extern int Tdom_Init _ANSI_ARGS_((Tcl_Interp *interp));
+extern int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
 
 /*
  *----------------------------------------------------------------------
@@ -79,13 +80,13 @@ Tcl_AppInit(interp)
     Tcl_Interp *interp;		/* Interpreter for application. */
 {
     if (Tcl_Init(interp) == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
+    }
+    if (Tdom_Init(interp) == TCL_ERROR) {
+        return TCL_ERROR;
     }
 
-    
-    if (Tdom_Init(interp) == TCL_ERROR) {
-         return TCL_ERROR;
-    }
+    Tcl_StaticPackage(interp, "tdom", Tdom_Init, Tdom_SafeInit);
 
     /*
      * Call the init procedures for included packages.  Each call should
