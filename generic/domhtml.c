@@ -79,7 +79,7 @@
 #define DBG(x)          
 #define RetError(m,p)   *errStr = tdomstrdup(m); *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
-#define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') )
+#define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') || ((c) >= '0' && (c) <= '9') )
 #define TU(c)           toupper(c)
 
 
@@ -724,7 +724,7 @@ HTML_SimpleParse (
     register char *x, *start, *piSep;
     int            saved;
     int            hasContent;
-    domNode        *pnode, *toplevel;
+    domNode       *pnode, *toplevel;
     domNode       *node = NULL, *parent_node = NULL;
     domTextNode   *tnode;
     domAttrNode   *attrnode, *lastAttr;
@@ -732,11 +732,6 @@ HTML_SimpleParse (
     int            only_whites   = 0;
     int            hnew, autoclose, ignore;
     char           tmp[250], *y = NULL;
-/**
- #define LATE_CLOSE_DEEPNESS 100
-    char          *lateClose[LATE_CLOSE_DEEPNESS];
-    int            topLateClose = 0;
-**/
     Tcl_HashEntry *h;
     domProcessingInstructionNode *pinode;
 
@@ -757,12 +752,7 @@ HTML_SimpleParse (
             if (c=='<') x++;
             while ( (c=*x)!=0 && c!='<' ) {
                 if (c=='&') ampersandSeen = 1;
-                if ( (c != ' ')  &&
-                     (c != '\t') &&
-                     (c != '\n') &&
-                     (c != '\r') ) {
-                    only_whites = 0;
-                }
+                if ( !SPACE(c) ) only_whites = 0;
                 x++;
             }
             if (!(only_whites && ignoreWhiteSpaces) && parent_node) {
@@ -780,6 +770,7 @@ HTML_SimpleParse (
                 tnode->nodeValue   = (char*)MALLOC((x - start)+1);
                 memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
+                DBG(fprintf(stderr, "New text node: '%s'\n", tnode->nodeValue);)
                 if (ampersandSeen) {
                     TranslateEntityRefs(tnode->nodeValue, &(tnode->valueLength) );
                 }
@@ -818,13 +809,17 @@ HTML_SimpleParse (
             \---------------------------------------------------------------------*/
             ignore = 0;
             pnode = NULL;
-            if (parent_node->lastChild && parent_node->lastChild->nodeType == ELEMENT_NODE) {
-                pnode = parent_node->lastChild;
-            } else 
-            if (parent_node->lastChild && parent_node->lastChild->previousSibling &&
-                parent_node->lastChild->previousSibling->nodeType == ELEMENT_NODE)
-            {
-                pnode = parent_node->lastChild->previousSibling;
+            if (parent_node) {
+                if (parent_node->lastChild 
+                    && (parent_node->lastChild->nodeType == ELEMENT_NODE)) {
+                    pnode = parent_node->lastChild;
+                } else 
+                    if (parent_node->lastChild 
+                        && parent_node->lastChild->previousSibling 
+                        && (parent_node->lastChild->previousSibling->nodeType 
+                            == ELEMENT_NODE)) {
+                        pnode = parent_node->lastChild->previousSibling;
+                    }
             }
             if (pnode) {
                 DBG(fprintf(stderr, "'%s' closing with last empty tag '%s' ?\n", start+2, pnode->nodeName);)
@@ -1165,7 +1160,7 @@ HTML_SimpleParse (
             |
             \---------------------------------------------------------------*/
             while ((c=*x)!=0 && c!='/' && c!='>' && c!='<' && !SPACE(c) ) {
-                if (!isalpha(c)) goto readText;
+                if (!isalnum(c)) goto readText;
                 *x = tolower(c);
                 x++;
             }
@@ -1192,7 +1187,8 @@ HTML_SimpleParse (
                           break;
                 case 'b': if(!strcmp(e,"b")&&!strcmp(pn,"b")) autoclose=1;
                           break;
-                case 'p': if(!strcmp(e,"pre")&&!strcmp(pn,"pre")) autoclose=1;
+                case 'p': if((!strcmp(e,"pre")&&!strcmp(pn,"pre")) 
+                             ||(!strcmp(e,"p")&&!strcmp(pn,"p"))) autoclose=1;
                           break;
             }
             if (autoclose) {
@@ -1438,7 +1434,7 @@ HTML_SimpleParse (
         /*---------------------------------------------------------------
         |   check for tags for which end tag can be omitted
         \--------------------------------------------------------------*/
-        autoclose = 1;
+        autoclose = 0;
         switch (pn[0]) {
             case 'b': if (!strcmp(pn,"body"))     autoclose = 1; break;
             case 'c': if (!strcmp(pn,"colgroup")) autoclose = 1; break;
