@@ -29,6 +29,9 @@
 |
 |
 |   $Log$
+|   Revision 1.14  2002/07/28 08:27:50  zoran
+|   Moved to new memory allocation macros.
+|
 |   Revision 1.13  2002/07/02 19:25:07  zoran
 |   Fixed references to CONS'ified Tcl API (8.4 and later)
 |   Also, fixed (disappeared) NODE_NO references which broke the
@@ -132,26 +135,60 @@
 #ifndef __DOM_H__
 #define __DOM_H__
 
-
 #include <tcl.h>
-/*#include <xmlparse.h> */
 #include <expat.h>
 #include <utf8conv.h>
+#include <domalloc.h>
 
 /*
- * Beginning with 8.4 tcl API is CONST'ified
+ * tDOM provides it's own memory allocator which is optimized for
+ * low heap usage. It uses the native Tcl allocator underneath,
+ * though, but it is not very MT-friendly. Therefore, you might
+ * use the (normal) Tcl allocator with USE_NORMAL_ALLOCATOR
+ * defined during compile time. Actually, the symbols name is 
+ * a misnomer. It should have benn called "USE_TCL_ALLOCATOR"
+ * but I did not want to break any backward compatibility. 
+ */
+
+#ifndef USE_NORMAL_ALLOCATOR
+# define MALLOC             malloc
+# define FREE               free
+# define REALLOC            realloc
+# define tdomstrdup         strdup
+#else
+# define domAllocInit()
+# define domAlloc           MALLOC 
+# define domFree            FREE
+# if defined(TCL_MEM_DEBUG) || defined(NS_AOLSERVER) 
+#  define MALLOC            Tcl_Alloc
+#  define FREE              Tcl_Free
+#  define REALLOC           Tcl_Realloc
+#  define tdomstrdup(s)     (char*)strcpy(MALLOC(strlen((s))+1),(char*)s)
+# else    
+#  define MALLOC            malloc
+#  define FREE              free
+#  define REALLOC           realloc
+#  define tdomstrdup        strdup
+# endif /* TCL_MEM_DEBUG */
+#endif /* USE_NORMAL_ALLOCATOR */
+
+/*
+ * Beginning with 8.4, Tcl API is CONST'ified
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
 # define CONST84
 #endif
 
+/*
+ * If compiled against threaded Tcl core, we must take
+ * some extra care about process-wide globals and the
+ * way we name Tcl object accessor commands.
+ */
 #ifndef TCL_THREADS
-
   extern unsigned int domUniqueNodeNr;
   extern unsigned int domUniqueDocNr;
   extern Tcl_HashTable tagNames;
   extern Tcl_HashTable attrNames;
-
 # define TDomNotThreaded(x) x
 # define TDomThreaded(x)
 # define HASHTAB(doc,tab)   tab
@@ -159,9 +196,7 @@
 # define DOC_NO(doc)        ++domUniqueDocNr
 # define NODE_CMD(s,node)   sprintf((s), "domNode%d", (node)->nodeNumber)
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
-
 #else
-
 # define TDomNotThreaded(x)
 # define TDomThreaded(x)    x
 # define HASHTAB(doc,tab)   (doc)->tab
@@ -169,7 +204,6 @@
 # define DOC_NO(doc)        (unsigned int)(doc)
 # define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc0x%x", (doc)->documentNumber)
-
 #endif /* TCL_THREADS */
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"

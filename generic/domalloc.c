@@ -35,7 +35,6 @@
 \--------------------------------------------------------------------------*/
 
 
-
 /*---------------------------------------------------------------------------
 |   Includes
 |
@@ -44,7 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
-#include <dom.h>
+#include <domalloc.h>
 
 
 /*---------------------------------------------------------------------------
@@ -65,7 +64,6 @@
 |
 \--------------------------------------------------------------------------*/
 typedef struct domAllocBlock {
-
     struct domAllocBin    * bin;
     void                  * end;
     struct domAllocBlock  * prev;
@@ -80,47 +78,45 @@ typedef struct domAllocBlock {
     int                     freePos;
     int                     freeBit;
     unsigned int            freeMask;
-
 } domAllocBlock;
 
 
 typedef struct domAllocBin {
-
     int                     size;
     int                     nrSlots;
     int                     freeSlots;
     int                     nrBlocks;
     domAllocBlock         * freeBlocks;
     domAllocBlock         * usedBlocks;
-
 } domAllocBin;
 
 
 typedef struct domAllocBins {
-
-    struct domAllocBin    * bin[MAX_BINS];
-    struct domAllocBlock  * hashedBlocks[BIN_HASH_SIZE];
-    struct domAllocBlock  * blockCache[CACHE_SIZE];
-
+    struct domAllocBin   * bin[MAX_BINS];
+    struct domAllocBlock * hashedBlocks[BIN_HASH_SIZE];
+    struct domAllocBlock * blockCache[CACHE_SIZE];
 } domAllocBins;
 
 
-
 /*---------------------------------------------------------------------------
-|   Globals
+|   Globals. This is a "single-threaded" allocator.
 |
 \--------------------------------------------------------------------------*/
-static domAllocBins  bins;
-TDomThreaded(static Tcl_Mutex binMutex;)
+static domAllocBins bins;
 
+#ifdef TCL_THREADS
+# define TDomThreaded(x) x
+  static Tcl_Mutex binMutex;
+#else
+# define TDomThreaded(x)
+#endif
 
 /*---------------------------------------------------------------------------
 |   domAllocInit
 |
 \--------------------------------------------------------------------------*/
 void
-domAllocInit (
-)
+domAllocInit()
 {
     int i;
 
@@ -207,13 +203,13 @@ domAlloc (
      |   would like to have, don't we ?  (zv)
      \------------------------------------------------*/
 
-    TDomThreaded(Tcl_MutexLock(&binMutex);)
+    TDomThreaded(Tcl_MutexLock(&binMutex);) /* LOCK !*/
 
     if (bins.bin[size] == NULL) {
         /*-------------------------------------------------
         |   create new bin
         \------------------------------------------------*/
-        bin = malloc(sizeof(domAllocBin));
+        bin = (domAllocBin *)malloc(sizeof(domAllocBin));
         bin->size        = size;
         bin->nrSlots     = 0;
         bin->freeSlots   = 0;
@@ -237,7 +233,7 @@ domAlloc (
         slots     = bitmaps * 32;
         blockSize = sizeof(domAllocBlock) + bitmaps*4 + slots*size;
 
-        block = malloc( blockSize );
+        block = (domAllocBlock *)malloc( blockSize );
         block->bin        = bin;
         block->end        = (char*)block + blockSize;
         block->slots      = slots;
@@ -330,7 +326,7 @@ domAlloc (
                     block->freeBit  = j;
                     block->freeMask = mask;
 
-                    TDomThreaded(Tcl_MutexUnlock(&binMutex);)
+                    TDomThreaded(Tcl_MutexUnlock(&binMutex);) /* UNLOCK !*/
                     return mem;
                 }
                 j++; mask = mask >> 1;
@@ -565,7 +561,7 @@ domFree (
             hashedBlock = hashedBlock->next;
         }
         )
-        free(block);
+        free((char*)block);
 
     } else {
         /*-----------------------------------------------------------
@@ -579,6 +575,6 @@ domFree (
             bins.blockCache[CACHE_SIZE-1] = block;
         }
     }
-    TDomThreaded(Tcl_MutexUnlock(&binMutex);)
+    TDomThreaded(Tcl_MutexUnlock(&binMutex);) /* UNLOCK !*/
 }
 

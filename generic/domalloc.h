@@ -34,27 +34,7 @@
 |
 \--------------------------------------------------------------------------*/
 
-
-/* #define USE_NORMAL_ALLOCATOR */
-
-#ifdef USE_NORMAL_ALLOCATOR
-
-#define   domAllocInit()
-#define   domAlloc(x)    malloc(x)   /* ckalloc(x) */
-#define   domFree(x)     free(x)     /* ckfree(x)  */
-
-#elif defined(NS_AOLSERVER)
-
-#define domAllocInit()
-#define domAlloc(x) Tcl_Alloc(x)
-#define domFree(x)  Tcl_Free(x);
-
-#else
-
-void    domAllocInit ();
-void  * domAlloc (int size);
-void    domFree  (void  * mem);
-
-#endif
-
+void   domAllocInit();
+void * domAlloc(int size);
+void   domFree(void *mem);
 

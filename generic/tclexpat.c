@@ -227,8 +227,8 @@ CreateTclHandlerSet (name)
 {
     TclHandlerSet *handlerSet;
 
-    handlerSet = (TclHandlerSet*) Tcl_Alloc (sizeof (TclHandlerSet)); \
-    handlerSet->name                      = strdup (name);
+    handlerSet = (TclHandlerSet*) MALLOC (sizeof (TclHandlerSet)); \
+    handlerSet->name                      = tdomstrdup (name);
     handlerSet->ignoreWhiteCDATAs         = 0;
     handlerSet->status                    = TCL_OK;
     handlerSet->continueCount             = 0;
@@ -280,8 +280,8 @@ CHandlerSetCreate (name)
 {
     CHandlerSet *handlerSet;
 
-    handlerSet = (CHandlerSet *) Tcl_Alloc (sizeof (CHandlerSet));
-    handlerSet->name                     = strdup (name);
+    handlerSet = (CHandlerSet *) MALLOC (sizeof (CHandlerSet));
+    handlerSet->name                     = tdomstrdup (name);
     handlerSet->ignoreWhiteCDATAs        = 0;
     handlerSet->nextHandlerSet           = NULL;
 
@@ -347,8 +347,8 @@ TclExpatObjCmd(dummy, interp, objc, objv)
    * Create the data structures for this parser.
    */
 
-  if (!(genexpat = (TclGenExpatInfo *) Tcl_Alloc(sizeof(TclGenExpatInfo)))) {
-    Tcl_Free( (char*) genexpat);
+  if (!(genexpat = (TclGenExpatInfo *) MALLOC(sizeof(TclGenExpatInfo)))) {
+    FREE( (char*) genexpat);
     Tcl_SetResult(interp, "unable to create parser", NULL);
     return TCL_ERROR;
   }
@@ -386,7 +386,7 @@ TclExpatObjCmd(dummy, interp, objc, objv)
   genexpat->nsSeparator = ':';
 
   if (TclExpatCreateParser(interp, genexpat) != TCL_OK) {
-    Tcl_Free( (char*) genexpat);
+    FREE( (char*) genexpat);
     return TCL_ERROR;
   }
 
@@ -3284,7 +3284,7 @@ TclGenExpatElementDeclHandler(userData, name, model)
 
   TclExpatDispatchPCDATA(expat);
 
-  eContent = (ExpatElemContent *) Tcl_Alloc (sizeof (ExpatElemContent));
+  eContent = (ExpatElemContent *) MALLOC (sizeof (ExpatElemContent));
   eContent->content = model;
   eContent->next = expat->eContents;
   expat->eContents = eContent;
@@ -3611,12 +3611,12 @@ TclGenExpatEndDoctypeDeclHandler(userData)
 
   eContent = expat->eContents;
   while (eContent) {
-      free (eContent->content);
+      free(eContent->content); /* This *must* be done with free() */
       eContentSave = eContent;
       eContent = eContent->next;
-      Tcl_Free ((char *) eContentSave);
+      FREE((char *) eContentSave);
   }
-  expat->eContents;
+
   return;
 }
 
@@ -3744,7 +3744,7 @@ TclExpatDeleteCmd(clientData)
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
-      free (activeTclHandlerSet->name);
+      FREE (activeTclHandlerSet->name);
 
       if (activeTclHandlerSet->elementstartcommand) {
           Tcl_DecrRefCount(activeTclHandlerSet->elementstartcommand);
@@ -3806,12 +3806,12 @@ TclExpatDeleteCmd(clientData)
 
       tmpTclHandlerSet = activeTclHandlerSet;
       activeTclHandlerSet = activeTclHandlerSet->nextHandlerSet;
-      Tcl_Free ( (char*) tmpTclHandlerSet);
+      FREE ( (char*) tmpTclHandlerSet);
   }
 
   activeCHandlerSet = expat->firstCHandlerSet;
   while (activeCHandlerSet) {
-      free (activeCHandlerSet->name);
+      FREE (activeCHandlerSet->name);
 
       if (activeCHandlerSet->freeProc) {
           activeCHandlerSet->freeProc (expat->interp, activeCHandlerSet->userData);
@@ -3819,10 +3819,10 @@ TclExpatDeleteCmd(clientData)
 
       tmpCHandlerSet = activeCHandlerSet;
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
-      Tcl_Free ( (char*) tmpCHandlerSet);
+      FREE ( (char*) tmpCHandlerSet);
   }
 
-  Tcl_Free( (char*) expat);
+  FREE( (char*) expat);
 }
 
 
@@ -3902,7 +3902,7 @@ CHandlerSetRemove (interp, expatObj, handlerSetName)
     activeCHandlerSet = expat->firstCHandlerSet;
     while (activeCHandlerSet) {
         if (strcmp (activeCHandlerSet->name, handlerSetName) == 0) {
-            free (activeCHandlerSet->name);
+            FREE (activeCHandlerSet->name);
             if (activeCHandlerSet->freeProc) {
                 activeCHandlerSet->freeProc (interp, activeCHandlerSet->userData);
             }
@@ -3912,7 +3912,7 @@ CHandlerSetRemove (interp, expatObj, handlerSetName)
             } else {
                 expat->firstCHandlerSet = activeCHandlerSet->nextHandlerSet;
             }
-            Tcl_Free ( (char*) activeCHandlerSet);
+            FREE ( (char*) activeCHandlerSet);
             return 0;
         }
         parentHandlerSet = activeCHandlerSet;

@@ -79,7 +79,7 @@
 #define TRACE5(x,a,b,c,d,e) DBG(fprintf(stderr,(x),(a),(b),(c),(d),(e)))
 
 #define CHECK_RC            if (rc < 0) return rc
-#define CHECK_RC1(x)        if (rc < 0) {free((x)); return rc;}
+#define CHECK_RC1(x)        if (rc < 0) {FREE((char*)(x)); return rc;}
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
 #define SETSCOPESTART       xs->varFramesStack[xs->varFramesStackPtr].stop=1
 #define SETPARAMDEF         xs->varFramesStack[xs->varFramesStackPtr].stop=2
@@ -551,7 +551,7 @@ reportError (
         if (baseURI) Tcl_DStringAppend (&dStr, ": ", 2);
         Tcl_DStringAppend (&dStr, str, -1);
     }
-    *errMsg = strdup (Tcl_DStringValue (&dStr));
+    *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
     Tcl_DStringFree (&dStr);
 }
 
@@ -702,9 +702,9 @@ static void xsltPushVarFrame (
     
     xs->varFramesStackPtr++;
     if (xs->varFramesStackPtr >= xs->varFramesStackLen) {
-        xs->varFramesStack = (xsltVarFrame *) realloc (xs->varFramesStack,
-                                                   sizeof (xsltVarFrame)
-                                                  * 2 * xs->varFramesStackLen);
+        xs->varFramesStack = (xsltVarFrame *) REALLOC ((char*)xs->varFramesStack,
+                                                        sizeof (xsltVarFrame)
+                                                        * 2 * xs->varFramesStackLen);
         xs->varFramesStackLen *= 2;
     }
     frame = &(xs->varFramesStack[xs->varFramesStackPtr]);
@@ -744,7 +744,7 @@ static int xsltAddExternalDocument (
     }
     if (!found) {
         if (!xs->xsltDoc->extResolver) {
-            *errMsg = strdup("need resolver Script to include Stylesheet! (use \"-externalentitycommand\")");
+            *errMsg = tdomstrdup("need resolver Script to include Stylesheet! (use \"-externalentitycommand\")");
             return -1;
         }
         extDocument = getExternalDocument (
@@ -781,10 +781,10 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     if (!hnew) {
         return (xsltNumberFormat *) Tcl_GetHashValue (h);
     } else {
-        format = (xsltNumberFormat *) Tcl_Alloc (sizeof (xsltNumberFormat));
+        format = (xsltNumberFormat *)MALLOC(sizeof (xsltNumberFormat));
         memset (format, 0 , sizeof (xsltNumberFormat));
         format->tokens = (xsltNumberFormatToken *)
-            Tcl_Alloc (sizeof (xsltNumberFormatToken) * 20);
+            MALLOC(sizeof (xsltNumberFormatToken) * 20);
         memset (format->tokens, 0, sizeof (xsltNumberFormatToken) * 20);
         format->maxtokens = 20;
         Tcl_SetHashValue (h, format);
@@ -794,7 +794,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
         clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
             *errMsg =
-                strdup("xsl:number: UTF-8 form of character longer than 3 Byte");
+                tdomstrdup("xsl:number: UTF-8 form of character longer than 3 Byte");
             return NULL;
         }
         if (clen > 1) {
@@ -822,7 +822,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {                                 \
         clen = UTF8_CHAR_LEN(*p);                \
         if (!clen) {                             \
-            *errMsg = strdup("xsl:number: UTF-8 form of character longer than 3 Byte"); \
+            *errMsg = tdomstrdup("xsl:number: UTF-8 form of character longer than 3 Byte"); \
             return NULL;                         \
         }                                        \
         if (clen > 1) {                          \
@@ -840,7 +840,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     }                                            \
     nrOfTokens++;                                \
     if (nrOfTokens == format->maxtokens) {       \
-        format->tokens = (xsltNumberFormatToken *) Tcl_Realloc ((char *)format->tokens, sizeof (xsltNumberFormatToken) * format->maxtokens * 2);          \
+        format->tokens = (xsltNumberFormatToken *) REALLOC ((char *)format->tokens, sizeof (xsltNumberFormatToken) * format->maxtokens * 2);  \
         format->maxtokens *= 2;                  \
     }                                            \
     format->tokens[nrOfTokens].minlength = 1;    \
@@ -889,7 +889,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     return format;
 
  wrongSyntax:
-    *errMsg = strdup("xsl:number: Wrong syntax in format attribute");
+    *errMsg = tdomstrdup("xsl:number: Wrong syntax in format attribute");
     return NULL;
 }
 
@@ -1248,7 +1248,7 @@ static int xsltFormatNumber (
         sprintf(s,"%s%s%s", prefix, n, suffix);
     }
     DBG(fprintf(stderr, "returning s='%s' \n\n", s);)
-    *resultStr = strdup(s);
+    *resultStr = tdomstrdup(s);
     *resultLen = strlen(s);
     return 0;
 }
@@ -1277,7 +1277,7 @@ static int buildKeyInfoForDoc (
 
     /* this must be a new entry, no check for hnew==1 needed */
     h = Tcl_CreateHashEntry (&(sd->keyData), keyId, &hnew);
-    valueTable = (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
+    valueTable = (Tcl_HashTable *)MALLOC(sizeof (Tcl_HashTable));
     Tcl_InitHashTable (valueTable, TCL_STRING_KEYS);
     Tcl_SetHashValue (h, valueTable);
 
@@ -1311,13 +1311,13 @@ static int buildKeyInfoForDoc (
                         useValue = xpathFuncStringForNode (rs.nodes[i]);
                         TRACE1("use value = '%s'\n", useValue);
                         keyValue =
-                            (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
+                            (xsltKeyValue *)MALLOC(sizeof(xsltKeyValue));
                         keyValue->node = node;
                         keyValue->next = NULL;
                         h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                         if (hnew) {
                             keyValues =
-                                (xsltKeyValues*)Tcl_Alloc(sizeof (xsltKeyValues));
+                                (xsltKeyValues*)MALLOC(sizeof (xsltKeyValues));
                             Tcl_SetHashValue (h, keyValues);
                             keyValues->value = keyValue;
                         } else {
@@ -1325,19 +1325,19 @@ static int buildKeyInfoForDoc (
                             keyValues->lastvalue->next = keyValue;
                         }
                         keyValues->lastvalue = keyValue;
-                        free (useValue);
+                        FREE(useValue);
                     }
                 }
                 else {
                     useValue = xpathFuncString (&rs);
                     TRACE1("use value = '%s'\n", useValue);
-                    keyValue = (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
+                    keyValue = (xsltKeyValue *)MALLOC(sizeof(xsltKeyValue));
                     keyValue->node = node;
                     keyValue->next = NULL;
                     h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                     if (hnew) {
                         keyValues =
-                            (xsltKeyValues*)Tcl_Alloc (sizeof (xsltKeyValues));
+                            (xsltKeyValues*)MALLOC(sizeof (xsltKeyValues));
                         Tcl_SetHashValue (h, keyValues);
                         keyValues->value = keyValue;
                     } else {
@@ -1345,7 +1345,7 @@ static int buildKeyInfoForDoc (
                         keyValues->lastvalue->next = keyValue;
                     }
                     keyValues->lastvalue = keyValue;
-                    free (useValue);
+                    FREE(useValue);
                 }
                 xpathRSFree( &context );
                 xpathRSFree( &rs );
@@ -1612,7 +1612,7 @@ static int xsltXPathFuncs (
         \-------------------------------------------------------------------*/
         DBG(fprintf(stderr,"xslt key function called!\n");)
         if (argc != 2) {
-            *errMsg = strdup("key() needs two arguments!");
+            *errMsg = tdomstrdup("key() needs two arguments!");
             return 1;
         }
         /* check, if there is a key definition with the given name */
@@ -1623,20 +1623,20 @@ static int xsltXPathFuncs (
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (exprContext, prefix);
             if (!ns) {
-                *errMsg = strdup("There isn't a namespace bound to the prefix.");
-                free (keyId);
+                *errMsg = tdomstrdup("There isn't a namespace bound to the prefix.");
+                FREE(keyId);
                 return 1;
             }
             Tcl_DStringAppend (&dStr, ns->uri, -1);
         }
         Tcl_DStringAppend (&dStr, localName, -1);
-        free (keyId);
-        keyId = strdup (Tcl_DStringValue (&dStr));
+        FREE(keyId);
+        keyId = tdomstrdup (Tcl_DStringValue (&dStr));
         Tcl_DStringFree (&dStr);
         h = Tcl_FindHashEntry (&xs->keyInfos, keyId);
         if (!h) {
-            *errMsg = strdup("Unkown key in key() function call!");
-            free (keyId);
+            *errMsg = tdomstrdup("Unkown key in key() function call!");
+            FREE(keyId);
             return 1;
         }
 
@@ -1652,12 +1652,12 @@ static int xsltXPathFuncs (
         h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         if (!h) {
             if (buildKeyInfoForDoc(sdoc,keyId,&(xs->keyInfos),xs,errMsg)<0) {
-                free (keyId);
+                FREE(keyId);
                 return 1;
             }
             h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         }
-        free (keyId);
+        FREE(keyId);
 
         docKeyData = (Tcl_HashTable *) Tcl_GetHashValue (h);
 
@@ -1674,7 +1674,7 @@ static int xsltXPathFuncs (
                         value = value->next;
                     }
                 }
-                free (filterValue);
+                FREE(filterValue);
             }
             sortByDocOrder (result);
             return 0;
@@ -1690,7 +1690,7 @@ static int xsltXPathFuncs (
                    value = value->next;
                }
            }
-           free (filterValue);
+           FREE(filterValue);
            return 0;
         }
     } else
@@ -1715,7 +1715,7 @@ static int xsltXPathFuncs (
                 ns = domLookupPrefix (exprContext, prefix);
                 if (!ns) {
                     reportError (exprContext, "There isn't a namespace bound to the prefix.", errMsg);
-                    free (str);
+                    FREE(str);
                     return 1;
                 }
             }
@@ -1731,7 +1731,7 @@ static int xsltXPathFuncs (
                 }
                 df = df->next;
             }
-            free (str);
+            FREE(str);
             if (df == NULL) {
                 reportError (exprContext, "There isn't a decimal format with this name.", errMsg);
                 return 1;
@@ -1761,7 +1761,7 @@ static int xsltXPathFuncs (
         result->type = StringResult;
         rc = xsltFormatNumber(n, str, df, &(result->string),
                               &(result->string_len), errMsg);
-        free (str);
+        FREE(str);
         CHECK_RC;
         DBG(fprintf(stderr, "after format-number \n");)
         return 0;
@@ -1786,20 +1786,20 @@ static int xsltXPathFuncs (
                     /* the case document('') */
                     if (*str == '\0') {
                         if (freeStr) {
-                            free (str);
+                            FREE(str);
                             freeStr = 0;
                         }
                         str = baseURI;
                     }
                     if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
-                        if (freeStr) free (str);
+                        if (freeStr) FREE(str);
                         return -1;
                     }
                     if (xs->stripInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
-                    if (freeStr) free (str);
+                    if (freeStr) FREE(str);
                 }
             }
             else {
@@ -1824,25 +1824,25 @@ static int xsltXPathFuncs (
                     baseURI = findBaseURI (xs->xsltDoc->rootNode);
                 }
                 if (*str == '\0') {
-                    free (str);
+                    FREE(str);
                     freeStr = 0;
                     str = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
                 if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
-                    if (freeStr) free (str);
+                    if (freeStr) FREE(str);
                     return -1;
                 }
                 if (xs->stripInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
-                if (freeStr) free (str);
+                if (freeStr) FREE(str);
             }
         } else
         if (argc == 2) {
             if (argv[1]->type != xNodeSetResult) {
-                *errMsg = strdup("second arg of document() has to be a nodeset!");
+                *errMsg = tdomstrdup("second arg of document() has to be a nodeset!");
             }
             if (argv[1]->nodes[0]->nodeType == ATTRIBUTE_NODE) {
                 baseURI = findBaseURI (((domAttrNode*)argv[1]->nodes[0])->parentNode);
@@ -1859,34 +1859,34 @@ static int xsltXPathFuncs (
                         freeStr = 1;
                     }
                     if (*str == '\0') {
-                        free (str);
+                        FREE(str);
                         freeStr = 0;
                         str = baseURI;
                     }
                     if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
-                        if (freeStr) free (str);
+                        if (freeStr) FREE(str);
                         return -1;
                     }
                     if (xs->stripInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
-                    if (freeStr) free (str);
+                    if (freeStr) FREE(str);
                 }
             } else {
                 str = xpathFuncString (argv[0]);
                 if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
-                    free (str);
+                    FREE(str);
                     return -1;
                 }
                 if (xs->stripInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
-                free (str);
+                FREE(str);
             }
         } else {
-            *errMsg = strdup("wrong # of args in document() call!");
+            *errMsg = tdomstrdup("wrong # of args in document() call!");
             return 1;
         }
         return 0;
@@ -2152,25 +2152,25 @@ static int sortNodeSetFastMerge(
     double   *vdtmp;
     int       rc;
 
-    b = (domNode **) malloc( n * sizeof(domNode *) );
+    b = (domNode **)MALLOC(n * sizeof(domNode *));
     if (b == NULL) {
         perror("malloc in sortNodeSetMergeSort");
         exit(1);
     }
-    posb = (int *) malloc( n * sizeof(int) );
+    posb = (int *)MALLOC(n * sizeof(int));
     if (posb == NULL) {
         perror("malloc in sortNodeSetMergeSort");
         exit(1);
     }
-    vstmp = (char **) malloc (sizeof (char *) * n);
-    vdtmp = (double *)malloc (sizeof (double) * n);
+    vstmp = (char **)MALLOC(sizeof (char *) * n);
+    vdtmp = (double *)MALLOC(sizeof (double) * n);
 
     rc = fastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd,
                          vstmp, vdtmp, n, errMsg);
-    free (posb);
-    free (b);
-    free (vstmp);
-    free (vdtmp);
+    FREE((char*)posb);
+    FREE((char*)b);
+    FREE((char*)vstmp);
+    FREE((char*)vdtmp);
     CHECK_RC;
     return 0;
 }
@@ -2232,7 +2232,7 @@ static int xsltSetVar (
     
     xs->varStackPtr++;
     if (xs->varStackPtr >= xs->varStackLen) {
-        xs->varStack = (xsltVariable *) realloc (xs->varStack,
+        xs->varStack = (xsltVariable *) REALLOC ((char*)xs->varStack,
                                                  sizeof (xsltVariable)
                                                  * 2 * xs->varStackLen);
         xs->varStackLen *= 2;
@@ -2441,7 +2441,7 @@ static int xsltAddTemplate (
     int           rc;
     domNS        *ns;
 
-    tpl = malloc(sizeof(xsltTemplate));
+    tpl = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
 
     tpl->match      = getAttr(node,"match", a_match);
     str = getAttr(node, "name", a_name);
@@ -2600,7 +2600,7 @@ static int evalAttrTemplates (
     int             rc, aLen, inTpl = 0, p = 0, inLiteral;
 
     aLen = 500;
-    *out = malloc(aLen);
+    *out = MALLOC(aLen);
     while (*str) {
         if (inTpl) {
             if (!inLiteral) {
@@ -2633,12 +2633,12 @@ static int evalAttrTemplates (
                 while (*pc) {
                    (*out)[p++] = *pc++;
                     if (p>=aLen) { /* enlarge output buffer */
-                         *out = realloc(*out, 2*aLen);
+                         *out = REALLOC(*out, 2*aLen);
                          aLen += aLen;
                     }
                 }
                 inTpl = 0;
-                free(tplResult);
+                FREE(tplResult);
             }
         } else {
             if (*str == '{') {
@@ -2650,13 +2650,13 @@ static int evalAttrTemplates (
                     str++;
                     (*out)[p++] = *str++;
                     if (p>=aLen) { /* enlarge output buffer */
-                        *out = realloc(*out, 2*aLen);
+                        *out = REALLOC(*out, 2*aLen);
                         aLen += aLen;
                     }
                     while (*str && (*str != '}') && (*(str-1) != '}')) {
                         (*out)[p++] = *str++;
                         if (p>=aLen) { /* enlarge output buffer */
-                            *out = realloc(*out, 2*aLen);
+                            *out = REALLOC(*out, 2*aLen);
                             aLen += aLen;
                         }
                     }
@@ -2672,7 +2672,7 @@ static int evalAttrTemplates (
                 }
                 (*out)[p++] = *str;
                 if (p>=aLen) { /* enlarge output buffer */
-                    *out = realloc(*out, 2*aLen);
+                    *out = REALLOC(*out, 2*aLen);
                     aLen += aLen;
                 }
             }
@@ -2771,7 +2771,7 @@ static int doSortActions (
                                             currentPos, str, &evStr, errMsg);
                     CHECK_RC;
                     if (strcmp(evStr,"number")==0) typeText = 0;
-                    free (evStr);
+                    FREE(evStr);
                 }
                 str = getAttr(child, "order", a_order);
                 if (str) {
@@ -2779,7 +2779,7 @@ static int doSortActions (
                                             currentPos, str, &evStr, errMsg);
                     CHECK_RC;
                     if (strcmp(evStr,"descending")==0) ascending = 0;
-                    free (evStr);
+                    FREE(evStr);
                 }
                 str = getAttr(child, "case-order", a_caseorder);
                 if (str) {
@@ -2787,7 +2787,7 @@ static int doSortActions (
                                             currentPos, str, &evStr, errMsg);
                     CHECK_RC;
                     if (strcmp(evStr,"lower-first")==0) upperFirst = 0;
-                    free (evStr);
+                    FREE(evStr);
                 }
                 /* jcl: TODO */
                 lang = getAttr(child, "lang", a_lang);
@@ -2796,15 +2796,15 @@ static int doSortActions (
                        select, typeText, ascending, nodelist->nr_nodes);
                 CHECK_RC;
                 if (!pos)
-                    pos = (int*) malloc( sizeof(int) * nodelist->nr_nodes);
+                    pos = (int*)MALLOC(sizeof(int) * nodelist->nr_nodes);
                 for (i=0; i<nodelist->nr_nodes;i++) pos[i] = i;
 
                 xs->currentXSLTNode = child;
 
                 if (!vs) {
-                    vs = (char **) malloc (sizeof (char *) * nodelist->nr_nodes);
+                    vs = (char **)MALLOC(sizeof (char *) * nodelist->nr_nodes);
                     for (i=0; i<nodelist->nr_nodes;i++) vs[i] = NULL;
-                    vd = (double *)malloc (sizeof (double) * nodelist->nr_nodes);
+                    vd = (double *)MALLOC(sizeof (double) * nodelist->nr_nodes);
                 }
                 for (i = 0; i < nodelist->nr_nodes; i++) {
                     xpathRSInit (&rs);
@@ -2826,7 +2826,7 @@ static int doSortActions (
                                            pos, errMsg);
                 if (typeText) {
                     for (i = 0; i < nodelist->nr_nodes; i++) {
-                        free (vs[i]);
+                        FREE(vs[i]);
                     }
                 }
                 if (rc < 0)
@@ -2836,9 +2836,9 @@ static int doSortActions (
         child = child->previousSibling;
     }
  doSortActionCleanUp:
-    if (pos) free (pos);
-    if (vs) free (vs);
-    if (vd) free (vd);
+    if (pos) FREE((char*)pos);
+    if (vs) FREE((char*)vs);
+    if (vd) FREE((char*)vd);
     return rc;
 }
 
@@ -2877,7 +2877,7 @@ static int xsltNumber (
     CHECK_RC;
     f = xsltNumberFormatTokenizer (xs, format, errMsg);
     if (!f) {
-        free (format);
+        FREE(format);
         return -1;
     }
     groupingSeparator = getAttr(actionNode, "grouping-separator",
@@ -2989,7 +2989,7 @@ static int xsltNumber (
             }
             if (node == start) {
                 domAppendNewTextNode (xs->lastNode, "", 0, TEXT_NODE, 0);
-                free (format);
+                FREE(format);
                 return 0;
             } else {
                 vVals = 1;
@@ -3020,7 +3020,7 @@ static int xsltNumber (
                 else node = node->parentNode;
             }
             if (rs.nr_nodes > 20) {
-                vd = (int *) Tcl_Alloc (sizeof (int) * rs.nr_nodes);
+                vd = (int *)MALLOC(sizeof (int) * rs.nr_nodes);
                 v = vd;
             }
             vVals = rs.nr_nodes;
@@ -3086,9 +3086,9 @@ static int xsltNumber (
         domAppendNewTextNode(xs->lastNode, Tcl_DStringValue (&dStr),
                              Tcl_DStringLength (&dStr), TEXT_NODE, 0);
     }
-    free (format);
+    FREE(format);
     if (vd) {
-        Tcl_Free ((char *)vd);
+        FREE((char *)vd);
     }
     Tcl_DStringFree (&dStr);
     return 0;
@@ -3374,7 +3374,7 @@ static int ExecAction (
                     } else {
                         Tcl_DStringAppend (&dStr, str2, -1);
                     }
-                    free (nsStr);
+                    FREE(nsStr);
                     nsStr = NULL;
                 } else {
                     if (prefix[0] == '\0') {
@@ -3394,7 +3394,7 @@ static int ExecAction (
             } else {
                 if (prefix[0] != '\0') {
                     ns = domLookupPrefix (actionNode, prefix);
-                    if (ns) nsStr = strdup (ns->uri);
+                    if (ns) nsStr = tdomstrdup (ns->uri);
                     else goto ignoreAttribute;
                 }
                 Tcl_DStringAppend (&dStr, str2, -1);
@@ -3412,13 +3412,13 @@ static int ExecAction (
             DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, nsStr);)
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
                                nsStr, 1);
-            free(pc);
+            FREE(pc);
             Tcl_DStringFree (&dStr);
             domDeleteNode (xs->lastNode, NULL, NULL);
             xs->lastNode = savedLastNode;
     ignoreAttribute:
-            if (nsStr) free (nsStr);
-            free(str2);
+            if (nsStr) FREE(nsStr);
+            FREE(str2);
             break;
 
         case attributeSet: 
@@ -3566,14 +3566,14 @@ static int ExecAction (
                     if (i == len - 1) {
                         reportError (actionNode, "The text produced by xsl:comment must not end with the '-' character.", errMsg);
                         domDeleteNode (fragmentNode, NULL, NULL);
-                        free (str);
+                        FREE(str);
                         return -1;
                     }
                     pc++; i++;
                     if (*pc == '-') {
                         reportError (actionNode, "The text produced by xsl:comment must not contain the string \"--\"", errMsg);
                         domDeleteNode (fragmentNode, NULL, NULL);
-                        free (str);
+                        FREE(str);
                         return -1;
                     }
                 }
@@ -3582,7 +3582,7 @@ static int ExecAction (
             xs->lastNode = savedLastNode;
             domAppendNewTextNode(xs->lastNode, str, len, COMMENT_NODE, 0);
             domDeleteNode (fragmentNode, NULL, NULL);
-            free (str);
+            FREE(str);
             break;
 
         case copy:
@@ -3708,7 +3708,7 @@ static int ExecAction (
                 TRACE1("copyOf: xpathString='%s' \n", str);
                 domAppendNewTextNode(xs->lastNode, str, strlen(str),
                                      TEXT_NODE, 0);
-                free(str);
+                FREE(str);
             }
             xpathRSFree( &rs );
             break;
@@ -3730,7 +3730,7 @@ static int ExecAction (
             CHECK_RC;
             if (!domIsNAME (str2)) {
                 reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
-                free (str2);
+                FREE(str2);
                 return -1;
             }
             nsStr = NULL;
@@ -3743,7 +3743,7 @@ static int ExecAction (
                 if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                     || !domIsNCNAME (localName)) {
                     reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
-                    free (str2);
+                    FREE(str2);
                     return -1;
                 }
                 ns = domLookupPrefix (actionNode, prefix);
@@ -3751,15 +3751,15 @@ static int ExecAction (
                 else {
                     if (prefix[0] != '\0') {
                         reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
-                        free (str2);
+                        FREE(str2);
                         return -1;
                     }
                 }
             }
             savedLastNode = xs->lastNode;
             xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, nsStr);
-            free (str2);
-            if (nsAT) free (nsStr);
+            FREE(str2);
+            if (nsAT) FREE(nsStr);
             str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
             if (str) {
                 TRACE1("use-attribute-sets = '%s' \n", str);
@@ -3894,7 +3894,7 @@ static int ExecAction (
 
             str2 = xpathGetTextValue(fragmentNode, &len);
             fprintf (stderr, "xsl:message %s\n", str2);
-            free (str2);
+            FREE(str2);
             xs->lastNode = savedLastNode;
             domDeleteNode (fragmentNode, NULL, NULL);
             if (strcmp (str, "yes")==0) {
@@ -3951,8 +3951,8 @@ static int ExecAction (
                 n = (domNode*)domNewProcessingInstructionNode(
                                  xs->resultDoc, str2, strlen(str), pc, len);
                 domAppendChild(xs->lastNode, n);
-                free(str2);
-                free(pc);
+                FREE(str2);
+                FREE(pc);
             } else {
                 reportError (actionNode, "xsl:processing-instruction: missing mandatory attribute \"name\".", errMsg);
                 return -1;
@@ -3973,7 +3973,7 @@ static int ExecAction (
             pc = xpathGetTextValue (actionNode, &len);
             DBG(fprintf(stderr, "text: pc='%s'%d \n", pc, len);)
             domAppendNewTextNode(xs->lastNode, pc, len, TEXT_NODE, disableEsc);
-            free (pc);
+            FREE(pc);
             break;
 
         case transform: return 0;
@@ -4000,7 +4000,7 @@ static int ExecAction (
                 domAppendNewTextNode(xs->lastNode, str, strlen(str),
                                      TEXT_NODE, disableEsc);
                 xpathRSFree( &rs );
-                free(str);
+                FREE(str);
             } else {
                 reportError (actionNode,
                              "xsl:value-of must have a \"select\" attribute!",
@@ -4048,7 +4048,7 @@ static int ExecAction (
                 sDoc = sDoc->next;
             }
             if (!sDoc) {
-                *errMsg = strdup ("While copying literal result elements: Internal Error");
+                *errMsg = tdomstrdup ("While copying literal result elements: Internal Error");
                 return -1;
             }
             while (n) {
@@ -4171,7 +4171,7 @@ static int ExecAction (
                         }
                     }
                     domSetAttributeNS (n, attr->nodeName, str, uri, 1);
-                    free(str);
+                    FREE(str);
                 }
                 attr = attr->nextSibling;
             }
@@ -4476,7 +4476,7 @@ int fillElementList (
                             f = (double *)Tcl_GetHashValue (h);
                             if (*f < precedence) { *f = precedence; }
                         } else {
-                            f = (double *) Tcl_Alloc (sizeof (double));
+                            f = (double *)MALLOC(sizeof (double));
                             *f = precedence;
                             Tcl_SetHashValue (h, f);
                         }
@@ -4490,7 +4490,7 @@ int fillElementList (
                             f = (double *)Tcl_GetHashValue (h);
                             if (*f < precedence) { *f = precedence; }
                         } else {
-                            f = (double *) Tcl_Alloc (sizeof (double));
+                            f = (double *)MALLOC(sizeof (double));
                             *f = precedence;
                             Tcl_SetHashValue (h, f);
                         }
@@ -4507,7 +4507,7 @@ int fillElementList (
                     f = (double *)Tcl_GetHashValue (h);
                     if (*f < precedence) { *f = precedence; }
                 } else {
-                    f = (double *) Tcl_Alloc (sizeof (double));
+                    f = (double *)MALLOC(sizeof (double));
                     *f = precedence;
                     Tcl_SetHashValue (h, f);
                 }
@@ -4597,23 +4597,23 @@ parseList (
             while (*pc && (*pc != ' ')) pc++;
             save = *pc;
             *pc = '\0';
-            excludeNS = (xsltExcludeNS *) Tcl_Alloc (sizeof (xsltExcludeNS));
+            excludeNS = (xsltExcludeNS *)MALLOC(sizeof (xsltExcludeNS));
             excludeNS->next = docData->excludeNS;
             docData->excludeNS = excludeNS;
             if (strcmp (start, "#default")==0) {
                 ns = domLookupPrefix (xsltRoot, "");
                 if (!ns) {
-                    *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    *errMsg = tdomstrdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
                     return -1;
                 }
                 excludeNS->uri = NULL;
             } else {
                 ns = domLookupPrefix (xsltRoot, start);
                 if (!ns) {
-                    *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    *errMsg = tdomstrdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
                     return -1;
                 }
-                excludeNS->uri = strdup (ns->uri);
+                excludeNS->uri = tdomstrdup (ns->uri);
             }
             *pc = save;
         }
@@ -4717,11 +4717,11 @@ getExternalDocument (
             goto wrongScriptResult;
         }
         if ((mode & TCL_READABLE) == 0) {
-            *errMsg = strdup("-externalentitycommand returned a channel that wasn't opened for reading");
+            *errMsg = tdomstrdup("-externalentitycommand returned a channel that wasn't opened for reading");
             return NULL;
         }
     } else if (strcmp (resultType, "filename") == 0) {
-          *errMsg = strdup("-externalentitycommand result type \"filename\" not yet implemented");
+          *errMsg = tdomstrdup("-externalentitycommand result type \"filename\" not yet implemented");
           return NULL;
     } else {
         goto wrongScriptResult;
@@ -4751,7 +4751,7 @@ getExternalDocument (
                            chan, extbase, xsltDoc->extResolver, interp);
 
     if (doc == NULL) {
-        *errMsg = strdup (XML_ErrorString (XML_GetErrorCode (parser)));
+        *errMsg = tdomstrdup (XML_ErrorString (XML_GetErrorCode (parser)));
         XML_ParserFree (parser);
         return NULL;
     }
@@ -4762,9 +4762,9 @@ getExternalDocument (
        "ordinary" stylesheet with root element xsl:stylesheet, with
        one template child with match pattern "/". */
 
-    sdoc = (xsltSubDoc*) Tcl_Alloc (sizeof (xsltSubDoc));
+    sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
     sdoc->doc = doc;
-    sdoc->baseURI = strdup (extbase);
+    sdoc->baseURI = tdomstrdup (extbase);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
     sdoc->excludeNS = NULL;
     if (addExcludeNS (sdoc, doc->documentElement, errMsg) < 0) {
@@ -4776,7 +4776,7 @@ getExternalDocument (
     return doc;
 
  wrongScriptResult:
-    *errMsg = strdup(Tcl_GetStringFromObj(Tcl_GetObjResult(interp), NULL));
+    *errMsg = tdomstrdup(Tcl_GetStringFromObj(Tcl_GetObjResult(interp), NULL));
     return NULL;
 }
 
@@ -4818,7 +4818,7 @@ static int processTopLevelVars (
                     Tcl_DStringAppend (&dStr, "No namespace bound to prefix (passed parameter \"", -1);
                     Tcl_DStringAppend (&dStr, parameters[i], -1);
                     Tcl_DStringAppend (&dStr, "\")", -1);
-                    *errMsg = strdup (Tcl_DStringValue (&dStr));
+                    *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
                     Tcl_DStringFree (&dStr);
                     xpathRSFree (&nodeList);
                     return -1;
@@ -4835,7 +4835,7 @@ static int processTopLevelVars (
                 Tcl_DStringAppend (&dStr, "There isn't a parameter named \"", -1);
                 Tcl_DStringAppend (&dStr, parameters[i], -1);
                 Tcl_DStringAppend (&dStr, "\" defined at top level in the stylesheet.", -1);
-                *errMsg = strdup (Tcl_DStringValue (&dStr));
+                *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
                 Tcl_DStringFree (&dStr);
                 xpathRSFree (&nodeList);
                 return -1;
@@ -4846,7 +4846,7 @@ static int processTopLevelVars (
                 Tcl_DStringAppend (&dStr, "\"", 1);
                 Tcl_DStringAppend (&dStr, parameters[i], -1);
                 Tcl_DStringAppend (&dStr, "\" is defined as variable, not as parameter.", -1);
-                *errMsg = strdup (Tcl_DStringValue (&dStr));
+                *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
                 Tcl_DStringFree (&dStr);
                 xpathRSFree (&nodeList);
                 return -1;
@@ -4861,7 +4861,7 @@ static int processTopLevelVars (
 
             xs->varStackPtr++;
             if (xs->varStackPtr >= xs->varStackLen) {
-                xs->varStack = (xsltVariable *) realloc (xs->varStack,
+                xs->varStack = (xsltVariable *) REALLOC ((char*)xs->varStack,
                                                          sizeof (xsltVariable)
                                                          * 2*xs->varStackLen);
                 xs->varStackLen *= 2;
@@ -4958,10 +4958,10 @@ static int processTopLevel (
                     if (xs->attrSets) {
                         attrSet = xs->attrSets;
                         while (attrSet->next) attrSet = attrSet->next;
-                        attrSet->next = (xsltAttrSet*)malloc(sizeof(xsltAttrSet));
+                        attrSet->next = (xsltAttrSet*)MALLOC(sizeof(xsltAttrSet));
                         attrSet = attrSet->next;
                     } else {
-                        attrSet = (xsltAttrSet*)malloc(sizeof(xsltAttrSet));
+                        attrSet = (xsltAttrSet*)MALLOC(sizeof(xsltAttrSet));
                         xs->attrSets = attrSet;
                     }
                     attrSet->next    = NULL;
@@ -5008,7 +5008,7 @@ static int processTopLevel (
                         df = df->next;
                     }
                     if (df == NULL) {
-                        df = malloc(sizeof(xsltDecimalFormat));
+                        df = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
                         memset (df, 0, sizeof (xsltDecimalFormat));
                         /* initialize to defaults */
                         df->decimalSeparator  = '.';
@@ -5021,8 +5021,8 @@ static int processTopLevel (
                         df->digit             = '#';
                         df->patternSeparator  = ';';
 
-                        df->name = strdup(str);
-                        if (ns) df->uri = strdup(ns->uri);
+                        df->name = tdomstrdup(str);
+                        if (ns) df->uri = tdomstrdup(ns->uri);
                         else df->uri = NULL;
                         /* prepend into list of decimal format
                            after the default one */
@@ -5194,7 +5194,7 @@ static int processTopLevel (
                     return -1;
                 }
 
-                keyInfo = (xsltKeyInfo *) malloc(sizeof(xsltKeyInfo));
+                keyInfo = (xsltKeyInfo *)MALLOC(sizeof(xsltKeyInfo));
                 keyInfo->node = node;
                 rc = xpathParse (match, errMsg, &(keyInfo->matchAst), 1);
                 CHECK_RC1(keyInfo);
@@ -5207,7 +5207,7 @@ static int processTopLevel (
                     ns = domLookupPrefix (node, prefix);
                     if (!ns) {
                         reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
-                        free (keyInfo);
+                        FREE((char*)keyInfo);
                         return -1;
                     }
                     Tcl_DStringAppend (&dStr, ns->uri, -1);
@@ -5272,14 +5272,14 @@ static int processTopLevel (
                     nsAlias = nsAlias->next;
                 }
                 if (nsAlias) {
-                    free (nsAlias->toUri);
+                    FREE(nsAlias->toUri);
                 } else {
-                    nsAlias = (xsltNSAlias *) Tcl_Alloc (sizeof (xsltNSAlias));
-                    nsAlias->fromUri = strdup (nsFrom->uri);
+                    nsAlias = (xsltNSAlias *)MALLOC(sizeof (xsltNSAlias));
+                    nsAlias->fromUri = tdomstrdup (nsFrom->uri);
                     nsAlias->next = xs->nsAliases;
                     xs->nsAliases = nsAlias;
                 }
-                nsAlias->toUri = strdup (nsTo->uri);
+                nsAlias->toUri = tdomstrdup (nsTo->uri);
                 break;
 
             case output:
@@ -5289,18 +5289,18 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "method", a_method);
                 if (str) { 
-                    if (xs->outputMethod) free (xs->outputMethod);
-                    xs->outputMethod    = strdup(str);
+                    if (xs->outputMethod) FREE(xs->outputMethod);
+                    xs->outputMethod    = tdomstrdup(str);
                 }
                 str = getAttr(node, "encoding", a_encoding);
                 if (str) {
-                    if (xs->outputEncoding) free (xs->outputEncoding);
-                    xs->outputEncoding  = strdup(str);
+                    if (xs->outputEncoding) FREE(xs->outputEncoding);
+                    xs->outputEncoding  = tdomstrdup(str);
                 }
                 str = getAttr(node, "media-type", a_mediaType);
                 if (str) { 
-                    if (xs->outputMediaType) free (xs->outputMediaType);
-                    xs->outputMediaType = strdup(str); 
+                    if (xs->outputMediaType) FREE(xs->outputMediaType);
+                    xs->outputMediaType = tdomstrdup(str); 
                 }
                 str = getAttr(node, "doctype-public", a_doctypePublic);
                 str = getAttr(node, "doctype-system", a_doctypeSystem);
@@ -5379,7 +5379,7 @@ static int processTopLevel (
                         return -1;
                     }
                 } else {
-                    topLevelVar = malloc (sizeof (xsltTopLevelVar));
+                    topLevelVar = (xsltTopLevelVar*)MALLOC(sizeof (xsltTopLevelVar));
                     Tcl_SetHashValue (h, topLevelVar);
                 }
                 topLevelVar->node = node;
@@ -5458,8 +5458,8 @@ xsltFreeState (
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
         nf = (xsltNumberFormat *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)nf->tokens);
-        Tcl_Free ((char *)nf);
+        FREE((char *)nf->tokens);
+        FREE((char *)nf);
     }
     Tcl_DeleteHashTable(&xs->formats);
 
@@ -5468,7 +5468,7 @@ xsltFreeState (
              entryPtr != (Tcl_HashEntry*) NULL;
              entryPtr = Tcl_NextHashEntry(&search)) {
             tlv = (xsltTopLevelVar *) Tcl_GetHashValue (entryPtr);
-            Tcl_Free ((char *)tlv);
+            FREE((char *)tlv);
         }
         Tcl_DeleteHashTable (&xs->topLevelVars);
     }
@@ -5483,7 +5483,7 @@ xsltFreeState (
             ki = ki->next;
             xpathFreeAst (kisave->matchAst);
             xpathFreeAst (kisave->useAst);
-            free (kisave);
+            FREE((char*)kisave);
         }
     }
     Tcl_DeleteHashTable (&xs->keyInfos);
@@ -5505,35 +5505,35 @@ xsltFreeState (
                 while (kv) {
                     kvsave = kv;
                     kv = kv->next;
-                    Tcl_Free ((char*)kvsave);
+                    FREE((char*)kvsave);
                 }
-                Tcl_Free ((char*)kvalues);
+                FREE((char*)kvalues);
             }
             Tcl_DeleteHashTable (htable);
-            Tcl_Free ((char*)htable);
+            FREE((char*)htable);
         }
         Tcl_DeleteHashTable (&sdsave->keyData);
         excludeNS = sdsave->excludeNS;
         while (excludeNS) {
-            if (excludeNS->uri) free (excludeNS->uri);
+            if (excludeNS->uri) FREE(excludeNS->uri);
             excludeNSsave = excludeNS;
             excludeNS = excludeNS->next;
-            Tcl_Free ((char *)excludeNSsave);
+            FREE((char *)excludeNSsave);
         }
         if (sdsave->next && sdsave->next->next) {
             domFreeDocument (sdsave->doc, NULL, NULL);
-            if (sdsave->baseURI) free(sdsave->baseURI);
+            if (sdsave->baseURI) FREE(sdsave->baseURI);
         }
-        Tcl_Free((char*)sdsave);
+        FREE((char*)sdsave);
     }
 
     nsAlias = xs->nsAliases;
     while (nsAlias) {
         nsAliasSave = nsAlias;
         nsAlias = nsAlias->next;
-        if (nsAliasSave->fromUri) free(nsAliasSave->fromUri);
-        if (nsAliasSave->toUri) free(nsAliasSave->toUri);
-        Tcl_Free ((char *) nsAliasSave);
+        if (nsAliasSave->fromUri) FREE(nsAliasSave->fromUri);
+        if (nsAliasSave->toUri) FREE(nsAliasSave->toUri);
+        FREE((char *) nsAliasSave);
     }
 
     /*--- free decimal formats ---*/
@@ -5541,9 +5541,9 @@ xsltFreeState (
     while (df) {
         dfsave = df;
         df = df->next;
-        if (dfsave->name) free(dfsave->name);
-        if (dfsave->uri) free(dfsave->uri);
-        free(dfsave);
+        if (dfsave->name) FREE(dfsave->name);
+        if (dfsave->uri) FREE(dfsave->uri);
+        FREE((char*)dfsave);
     }
 
     /*--- free attribute sets ---*/
@@ -5551,7 +5551,7 @@ xsltFreeState (
     while (as) {
        assave = as;
        as = as->next;
-       free(assave);
+       FREE((char*)assave);
     }
 
     /*--- free templates ---*/
@@ -5560,14 +5560,14 @@ xsltFreeState (
        tplsave = tpl;
        if (tpl->ast) xpathFreeAst (tpl->ast);
        tpl = tpl->next;
-       free(tplsave);
+       FREE((char*)tplsave);
     }
 
     for (entryPtr = Tcl_FirstHashEntry (&(xs->stripInfo.NCNames), &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->stripInfo.NCNames));
 
@@ -5575,7 +5575,7 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->stripInfo.FQNames));
 
@@ -5583,7 +5583,7 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->stripInfo.NSWildcards));
 
@@ -5591,7 +5591,7 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->preserveInfo.NCNames));
 
@@ -5599,7 +5599,7 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->preserveInfo.FQNames));
 
@@ -5607,15 +5607,15 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        Tcl_Free ((char *)f);
+        FREE((char *)f);
     }
     Tcl_DeleteHashTable (&(xs->preserveInfo.NSWildcards));
 
-    free (xs->varFramesStack);
-    free (xs->varStack);
-    if (xs->outputMethod) free(xs->outputMethod);
-    if (xs->outputEncoding) free(xs->outputEncoding);
-    if (xs->outputMediaType) free(xs->outputMediaType);
+    FREE((char*)xs->varFramesStack);
+    FREE((char*)xs->varStack);
+    if (xs->outputMethod) FREE(xs->outputMethod);
+    if (xs->outputEncoding) FREE(xs->outputEncoding);
+    if (xs->outputMediaType) FREE(xs->outputMediaType);
 }
 
 /*----------------------------------------------------------------------------
@@ -5651,10 +5651,10 @@ int xsltProcess (
     xs.cbs.funcClientData  = &xs;
     xs.orig_funcCB         = funcCB;
     xs.orig_funcClientData = clientData;
-    xs.varFramesStack      = (xsltVarFrame *) malloc (sizeof (xsltVarFrame) * 4);
+    xs.varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame) * 4);
     xs.varFramesStackPtr   = -1;
     xs.varFramesStackLen   = 4;
-    xs.varStack            = (xsltVariable *) malloc (sizeof (xsltVariable) * 8);
+    xs.varStack            = (xsltVariable *)MALLOC(sizeof (xsltVariable) * 8);
     xs.varStackPtr         = -1;
     xs.varStackLen         = 8;
     xs.templates           = NULL;
@@ -5666,7 +5666,7 @@ int xsltProcess (
     xs.outputMethod        = NULL;
     xs.outputEncoding      = NULL;
     xs.outputMediaType     = NULL;
-    xs.decimalFormats      = malloc(sizeof(xsltDecimalFormat));
+    xs.decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
     xs.subDocs             = NULL;
     xs.currentTplRule      = NULL;
     xs.currentXSLTNode     = NULL;
@@ -5710,7 +5710,7 @@ int xsltProcess (
     node = xsltDoc->documentElement;
 
     /* add the xml doc to the doc list */
-    sdoc = (xsltSubDoc*) Tcl_Alloc (sizeof (xsltSubDoc));
+    sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
     sdoc->doc = xmlNode->ownerDocument;
     sdoc->baseURI = findBaseURI (xmlNode);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
@@ -5719,7 +5719,7 @@ int xsltProcess (
     xs.subDocs = sdoc;
 
     /* add the xslt doc to the doc list */
-    sdoc = (xsltSubDoc*) Tcl_Alloc (sizeof (xsltSubDoc));
+    sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
     sdoc->doc = xsltDoc;
     sdoc->baseURI = findBaseURI (xsltDoc->documentElement);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);

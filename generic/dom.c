@@ -51,7 +51,6 @@
 #include <string.h>
 #include <dom.h>
 #include <utf8conv.h>
-#include <domalloc.h>
 #include <tclexpat.h>
 
 
@@ -462,23 +461,23 @@ domNS* domNewNamespace (
         return NULL;
     }
     if (doc->nsptr >= doc->nslen) {
-        doc->namespaces = (domNS**) Tcl_Realloc ((char*) doc->namespaces,
-                                                sizeof (domNS*) * 2 * doc->nslen);
+        doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
+                                             sizeof (domNS*) * 2 * doc->nslen);
         doc->nslen *= 2;
     }
-    doc->namespaces[doc->nsptr] = (domNS*)Tcl_Alloc (sizeof (domNS));
+    doc->namespaces[doc->nsptr] = (domNS*)MALLOC (sizeof (domNS));
     ns = doc->namespaces[doc->nsptr];
 
 
     if (prefix == NULL) {
-        ns->prefix = strdup("");
+        ns->prefix = tdomstrdup("");
     } else {
-        ns->prefix = strdup(prefix);
+        ns->prefix = tdomstrdup(prefix);
     }
     if (namespaceURI == NULL) {
-        ns->uri = strdup("");
+        ns->uri = tdomstrdup("");
     } else {
-        ns->uri   = strdup(namespaceURI);
+        ns->uri   = tdomstrdup(namespaceURI);
     }
     ns->index = doc->nsptr + 1;
 
@@ -651,7 +650,7 @@ startElement(
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                  (char*) node->nodeNumber,
                                  &hnew);
-        Tcl_SetHashValue (h, strdup (info->baseURI));
+        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
     }
 
@@ -714,7 +713,7 @@ startElement(
                 /* push active namespace */
                 info->activeNSpos++;
                 if (info->activeNSpos >= info->activeNSsize) {
-                    info->activeNS = (domActiveNS*) Tcl_Realloc(
+                    info->activeNS = (domActiveNS*) REALLOC(
                         (char*)info->activeNS,
                         sizeof(domActiveNS) * 2 * info->activeNSsize);
                     info->activeNSsize = 2 * info->activeNSsize;
@@ -737,7 +736,7 @@ startElement(
                 tdom_Utf8to8Bit(info->encoding_8bit, (char *)atPtr[1], &len);
             }
             attrnode->valueLength = len;
-            attrnode->nodeValue   = (char*)Tcl_Alloc(len+1);
+            attrnode->nodeValue   = (char*)MALLOC(len+1);
             strcpy(attrnode->nodeValue, (char *)atPtr[1]);
             if (node->firstAttr) {
                 lastAttr->nextSibling = attrnode;
@@ -829,7 +828,7 @@ startElement(
             tdom_Utf8to8Bit(info->encoding_8bit, (char *)atPtr[1], &len);
         }
         attrnode->valueLength = len;
-        attrnode->nodeValue   = (char*)Tcl_Alloc(len+1);
+        attrnode->nodeValue   = (char*)MALLOC(len+1);
         strcpy(attrnode->nodeValue, (char *)atPtr[1]);
 
         if (node->firstAttr) {
@@ -921,7 +920,7 @@ characterDataHandler (
 
         /* normalize text node, i.e. there are no adjacent text nodes */
         node = (domTextNode*)parentNode->lastChild;
-        node->nodeValue = Tcl_Realloc(node->nodeValue, node->valueLength + len);
+        node->nodeValue = REALLOC(node->nodeValue, node->valueLength + len);
         memmove(node->nodeValue + node->valueLength, s, len);
         node->valueLength += len;
 
@@ -961,12 +960,12 @@ characterDataHandler (
             info->baseURI  = XML_GetBase (info->parser);
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                      (char*) node->nodeNumber, &hnew);
-            Tcl_SetHashValue (h, strdup (info->baseURI));
+            Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
             node->nodeFlags |= HAS_BASEURI;
         }
 
         node->valueLength = len;
-        node->nodeValue   = (char*)Tcl_Alloc(len);
+        node->nodeValue   = (char*)MALLOC(len);
         memmove(node->nodeValue, s, len);
 
         node->ownerDocument = info->document;
@@ -1034,12 +1033,12 @@ commentHandler (
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                  (char*) node->nodeNumber,
                                  &hnew);
-        Tcl_SetHashValue (h, strdup (info->baseURI));
+        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
     }
 
     node->valueLength = len;
-    node->nodeValue   = (char*)Tcl_Alloc(len);
+    node->nodeValue   = (char*)MALLOC(len);
     memmove(node->nodeValue, s, len);
 
     node->ownerDocument = info->document;
@@ -1111,7 +1110,7 @@ processingInstructionHandler(
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                  (char*) node->nodeNumber,
                                  &hnew);
-        Tcl_SetHashValue (h, strdup (info->baseURI));
+        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
     }
 
@@ -1120,7 +1119,7 @@ processingInstructionHandler(
         tdom_Utf8to8Bit(info->encoding_8bit, target, &len);
     }
     node->targetLength = len;
-    node->targetValue  = (char*)Tcl_Alloc(len);
+    node->targetValue  = (char*)MALLOC(len);
     memmove(node->targetValue, target, len);
 
     len = strlen(data);
@@ -1128,7 +1127,7 @@ processingInstructionHandler(
         tdom_Utf8to8Bit(info->encoding_8bit, data, &len);
     }
     node->dataLength = len;
-    node->dataValue  = (char*)Tcl_Alloc(len);
+    node->dataValue  = (char*)MALLOC(len);
     memmove(node->dataValue, data, len);
 
     node->ownerDocument = info->document;
@@ -1186,7 +1185,7 @@ entityDeclHandler (
         entryPtr = Tcl_CreateHashEntry (&info->document->unparsedEntities,
                                         entityName, &hnew);
         if (hnew) {
-            Tcl_SetHashValue (entryPtr, strdup (systemId));
+            Tcl_SetHashValue (entryPtr, tdomstrdup (systemId));
         }
     }
 }
@@ -1429,7 +1428,7 @@ domReadDocument (
     info.interp               = interp;
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
-    info.activeNS             = (domActiveNS*) Tcl_Alloc (sizeof(domActiveNS) * info.activeNSsize);
+    info.activeNS             = (domActiveNS*) MALLOC (sizeof(domActiveNS) * info.activeNSsize);
 /*      memset (info.activeNS, 0, sizeof (domActiveNS) * info.activeNSsize); */
     info.baseURI              = NULL;
     info.insideDTD            = 0;
@@ -1477,7 +1476,7 @@ domReadDocument (
     if (XML_GetBase (info.parser) != NULL) {
         h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode->nodeNumber,
                                  &hnew);
-        Tcl_SetHashValue (h, strdup (XML_GetBase (info.parser)));
+        Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info.parser)));
         rootNode->nodeFlags |= HAS_BASEURI;
     }
     doc->rootNode = rootNode;
@@ -1485,14 +1484,14 @@ domReadDocument (
 
     if (channel == NULL) {
         if (!XML_Parse(parser, xml, length, 1)) {
-            Tcl_Free ( (char*) info.activeNS );
+            FREE ( (char*) info.activeNS );
             return NULL;
         }
     } else {
 #if !TclOnly8Bits
         Tcl_DStringInit (&dStr);
         if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
-            Tcl_Free ( (char*) info.activeNS );
+            FREE ( (char*) info.activeNS );
             return NULL;
         }
         if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
@@ -1503,7 +1502,7 @@ domReadDocument (
                 len = Tcl_Read (channel, buf, sizeof(buf));
                 done = len < sizeof(buf);
                 if (!XML_Parse (parser, buf, len, done)) {
-                    Tcl_Free ( (char*) info.activeNS );
+                    FREE ( (char*) info.activeNS );
                     return NULL;
                 }
             } while (!done);
@@ -1515,7 +1514,7 @@ domReadDocument (
                 done = (len < 1024);
                 str = Tcl_GetStringFromObj (bufObj, &len);
                 if (!XML_Parse (parser, str, len, done)) {
-                    Tcl_Free ( (char*) info.activeNS );
+                    FREE ( (char*) info.activeNS );
                     Tcl_DecrRefCount (bufObj);
                     return NULL;
                 }
@@ -1527,13 +1526,13 @@ domReadDocument (
             len = Tcl_Read (channel, buf, sizeof(buf));
             done = len < sizeof(buf);
             if (!XML_Parse (parser, buf, len, done)) {
-                Tcl_Free ( (char*) info.activeNS );
+                FREE ( (char*) info.activeNS );
                 return NULL;
             }
         } while (!done);
 #endif
     }
-    Tcl_Free ( (char*) info.activeNS );
+    FREE ( (char*) info.activeNS );
 
     rootNode->firstChild = doc->documentElement;
     while (rootNode->firstChild->previousSibling) {
@@ -1644,14 +1643,14 @@ domCreateXMLNamespaceNode (
 domDocument *
 domCreateEmptyDoc(void)
 {
-    domDocument *doc = (domDocument *) Tcl_Alloc (sizeof (domDocument));
+    domDocument *doc = (domDocument *) MALLOC (sizeof (domDocument));
 
     memset(doc, 0, sizeof(domDocument));
     doc->nodeType       = DOCUMENT_NODE;
     doc->documentNumber = DOC_NO(doc);
     doc->nsptr          = -1;
     doc->nslen          =  4;
-    doc->namespaces     = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
+    doc->namespaces     = (domNS**) MALLOC (sizeof (domNS*) * doc->nslen);
 
     Tcl_InitHashTable (&doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (&doc->unparsedEntities, TCL_STRING_KEYS);
@@ -1800,7 +1799,7 @@ domFreeNode (
             } else {
                 ((domAttrNode*)node)->parentNode->firstAttr = attr->nextSibling;
             }
-            Tcl_Free (attr->nodeValue);
+            FREE (attr->nodeValue);
             domFree ((void*)attr);
         }
     } else if (node->nodeType == ELEMENT_NODE) {
@@ -1818,18 +1817,18 @@ domFreeNode (
         while (attr) {
             atemp = attr;
             attr = attr->nextSibling;
-            Tcl_Free (atemp->nodeValue);
+            FREE (atemp->nodeValue);
             domFree ((void*)atemp);
         }
         domFree ((void*)node);
 
     } else if (node->nodeType == PROCESSING_INSTRUCTION_NODE && !shared) {
-        Tcl_Free (((domProcessingInstructionNode*)node)->dataValue);
-        Tcl_Free (((domProcessingInstructionNode*)node)->targetValue);
+        FREE (((domProcessingInstructionNode*)node)->dataValue);
+        FREE (((domProcessingInstructionNode*)node)->targetValue);
         domFree ((void*)node);
 
     } else if (!shared) {
-        Tcl_Free (((domTextNode*)node)->nodeValue);
+        FREE (((domTextNode*)node)->nodeValue);
         domFree ((void*)node);
     }
 }
@@ -1942,11 +1941,11 @@ domFreeDocument (
     \-----------------------------------------------------------*/
     for (i = 0; i <= doc->nsptr; i++) {
         ns = doc->namespaces[i];
-        free(ns->uri);
-        free(ns->prefix);
-        Tcl_Free ((char*) ns);
+        FREE(ns->uri);
+        FREE(ns->prefix);
+        FREE ((char*) ns);
     }
-    Tcl_Free ((char *)doc->namespaces);
+    FREE ((char *)doc->namespaces);
 
     /*-----------------------------------------------------------
     | delete ID hash table
@@ -1958,7 +1957,7 @@ domFreeDocument (
     \-----------------------------------------------------------*/
     entryPtr = Tcl_FirstHashEntry (&doc->unparsedEntities, &search);
     while (entryPtr) {
-        Tcl_Free ((char *) Tcl_GetHashValue (entryPtr));
+        FREE ((char *) Tcl_GetHashValue (entryPtr));
         entryPtr = Tcl_NextHashEntry (&search);
     }
     Tcl_DeleteHashTable (&doc->unparsedEntities);
@@ -1968,7 +1967,7 @@ domFreeDocument (
     \-----------------------------------------------------------*/
     entryPtr = Tcl_FirstHashEntry (&doc->baseURIs, &search);
     while (entryPtr) {
-        free (Tcl_GetHashValue (entryPtr));
+        FREE (Tcl_GetHashValue (entryPtr));
         entryPtr = Tcl_NextHashEntry (&search);
     }
     Tcl_DeleteHashTable (&doc->baseURIs);
@@ -2003,7 +2002,7 @@ domFreeDocument (
         }
     )
 
-    Tcl_Free ((char*)doc);
+    FREE ((char*)doc);
 }
 
 
@@ -2046,9 +2045,9 @@ domSetAttribute (
                 Tcl_SetHashValue (h, tmp);
             }
         }
-        Tcl_Free (attr->nodeValue);
+        FREE (attr->nodeValue);
         attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
         strcpy(attr->nodeValue, attributeValue);
     } else {
         /*-----------------------------------------------
@@ -2064,7 +2063,7 @@ domSetAttribute (
         attr->nodeName    = (char *)&(h->key);
         attr->parentNode  = node;
         attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
         strcpy(attr->nodeValue, attributeValue);
 
         if (node->firstAttr) {
@@ -2159,9 +2158,9 @@ domSetAttributeNS (
     }
     if (attr) {
         DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old valure: %s\n", attr->nodeName, attr->nodeValue);)
-        Tcl_Free (attr->nodeValue);
+        FREE (attr->nodeValue);
         attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
         strcpy(attr->nodeValue, attributeValue);
     } else {
         /*--------------------------------------------------------
@@ -2213,7 +2212,7 @@ domSetAttributeNS (
         attr->nodeName    = (char *)&(h->key);
         attr->parentNode  = node;
         attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
         strcpy(attr->nodeValue, attributeValue);
 
         if (isNSAttr) {
@@ -2280,7 +2279,7 @@ domRemoveAttribute (
             attr->parentNode->lastAttr = previous;
         }
         */
-        Tcl_Free (attr->nodeValue);
+        FREE (attr->nodeValue);
         MutationEvent();
 
         domFree ((void*)attr);
@@ -2321,7 +2320,7 @@ domRemoveAttributeNS (
                     attr->parentNode->firstAttr = attr->nextSibling;
                 }
 
-                Tcl_Free (attr->nodeValue);
+                FREE (attr->nodeValue);
                 MutationEvent();
                 domFree ((void*)attr);
                 return 0;
@@ -2421,8 +2420,8 @@ domSetNodeValue (
     }
 
     textnode = (domTextNode*) node;
-    Tcl_Free(textnode->nodeValue);
-    textnode->nodeValue   = Tcl_Alloc (valueLen);
+    FREE(textnode->nodeValue);
+    textnode->nodeValue   = MALLOC (valueLen);
     textnode->valueLength = valueLen;
     memmove(textnode->nodeValue, nodeValue, valueLen);
     MutationEvent();
@@ -2796,7 +2795,7 @@ domNewTextNode(
     node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->valueLength   = length;
-    node->nodeValue     = (char*)Tcl_Alloc(length);
+    node->nodeValue     = (char*)MALLOC(length);
     memmove(node->nodeValue, value, length);
 
     if (doc->fragments) {
@@ -2889,23 +2888,23 @@ domAppendNewTextNode(
         \-----------------------------------------------------------------*/
         if (TNODE->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
            if (disableOutputEscaping) {
-                TNODE->nodeValue = Tcl_Realloc (TNODE->nodeValue,
-                                                TNODE->valueLength + length);
+                TNODE->nodeValue = REALLOC (TNODE->nodeValue,
+                                            TNODE->valueLength + length);
                 memmove (TNODE->nodeValue + TNODE->valueLength, value, length);
                 TNODE->valueLength += length;
            } else {
                 domEscapeCData (value, length, &escData);
                 if (Tcl_DStringLength (&escData)) {
-                    TNODE->nodeValue = Tcl_Realloc (TNODE->nodeValue,
-                                                    TNODE->valueLength +
-                                                    Tcl_DStringLength (&escData));
+                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
+                                                TNODE->valueLength +
+                                                Tcl_DStringLength (&escData));
                     memmove (TNODE->nodeValue + TNODE->valueLength,
                              Tcl_DStringValue (&escData),
                              Tcl_DStringLength (&escData));
                     TNODE->valueLength += Tcl_DStringLength (&escData);
                 } else {
-                    TNODE->nodeValue = Tcl_Realloc (TNODE->nodeValue,
-                                                    TNODE->valueLength+length);
+                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
+                                                TNODE->valueLength+length);
                     memmove (TNODE->nodeValue + TNODE->valueLength,
                              value, length);
                     TNODE->valueLength += length;
@@ -2918,20 +2917,20 @@ domAppendNewTextNode(
                 domEscapeCData (TNODE->nodeValue, TNODE->valueLength,
                                 &escData);
                 if (Tcl_DStringLength (&escData)) {
-                    Tcl_Free (TNODE->nodeValue);
+                    FREE (TNODE->nodeValue);
                     TNODE->nodeValue =
-                        Tcl_Alloc (Tcl_DStringLength (&escData) + length);
+                        MALLOC (Tcl_DStringLength (&escData) + length);
                     memmove (TNODE->nodeValue, Tcl_DStringValue (&escData),
                              Tcl_DStringLength (&escData));
                     TNODE->valueLength = Tcl_DStringLength (&escData);
                 } else {
-                    TNODE->nodeValue = Tcl_Realloc (TNODE->nodeValue,
-                                                    TNODE->valueLength+length);
+                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
+                                                TNODE->valueLength+length);
                 }
                 Tcl_DStringFree (&escData);
             } else {
-                TNODE->nodeValue = Tcl_Realloc (TNODE->nodeValue,
-                                                TNODE->valueLength + length);
+                TNODE->nodeValue = REALLOC (TNODE->nodeValue,
+                                            TNODE->valueLength + length);
             }
             memmove (TNODE->nodeValue + TNODE->valueLength, value, length);
             TNODE->valueLength += length;
@@ -2951,7 +2950,7 @@ domAppendNewTextNode(
     node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->valueLength   = length;
-    node->nodeValue     = (char*)Tcl_Alloc(length);
+    node->nodeValue     = (char*)MALLOC(length);
     memmove(node->nodeValue, value, length);
 
     if (parent->lastChild) {
@@ -3086,7 +3085,7 @@ domAddNSToNode (
     attr->nodeName    = (char *)&(h->key);
     attr->parentNode  = node;
     attr->valueLength = strlen(nsToAdd->uri);
-    attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+    attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
     strcpy(attr->nodeValue, nsToAdd->uri);
 
     lastNSAttr = NULL;
@@ -3173,11 +3172,11 @@ domNewProcessingInstructionNode(
     node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->targetLength  = targetLength;
-    node->targetValue   = (char*)Tcl_Alloc(targetLength);
+    node->targetValue   = (char*)MALLOC(targetLength);
     memmove(node->targetValue, targetValue, targetLength);
 
     node->dataLength    = dataLength;
-    node->dataValue     = (char*)Tcl_Alloc(dataLength);
+    node->dataValue     = (char*)MALLOC(dataLength);
     memmove(node->dataValue, dataValue, dataLength);
 
     if (doc->fragments) {
@@ -3799,10 +3798,10 @@ tdom_freeProc (
     if (!Tcl_GetCommandInfo (interp, objCmdName, &cmd_info)) {
         domFreeDocument (info->document, NULL, NULL);
         if (info->activeNS) {
-            Tcl_Free ( (char *) info->activeNS);
+            FREE ( (char *) info->activeNS);
         }
     }
-    Tcl_Free ( (char *) info);
+    FREE ( (char *) info);
 }
 
 void
@@ -3919,7 +3918,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
 
         doc = domCreateEmptyDoc();
 
-        info = (domReadInfo *) Tcl_Alloc (sizeof (domReadInfo));
+        info = (domReadInfo *) MALLOC (sizeof (domReadInfo));
         info->document          = doc;
         info->currentNode       = NULL;
         info->depth             = 0;
@@ -3931,7 +3930,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->interp            = interp;
         info->activeNSpos       = -1;
         info->activeNSsize      = 8;
-        info->activeNS          = (domActiveNS*) Tcl_Alloc(sizeof(domActiveNS) * info->activeNSsize);
+        info->activeNS          = (domActiveNS*) MALLOC(sizeof(domActiveNS) * info->activeNSsize);
         info->baseURI           = NULL;
         info->insideDTD         = 0;
 
@@ -3981,7 +3980,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                      (char*)rootNode->nodeNumber,
                                      &hnew);
-            Tcl_SetHashValue (h, strdup (XML_GetBase (info->parser)));
+            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
             rootNode->nodeFlags |= HAS_BASEURI;
         }
         info->document->rootNode = rootNode;

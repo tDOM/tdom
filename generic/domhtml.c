@@ -68,7 +68,6 @@
 #include <tcl.h>
 #include <ctype.h>
 #include <string.h>
-#include <domalloc.h>
 #include <dom.h>
 
 
@@ -78,7 +77,7 @@
 |
 \---------------------------------------------------------------------------*/
 #define DBG(x)          
-#define RetError(m,p)   *errStr = strdup(m); *pos = p; return TCL_ERROR;
+#define RetError(m,p)   *errStr = tdomstrdup(m); *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 #define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') )
 #define TU(c)           toupper(c)
@@ -775,7 +774,7 @@ HTML_SimpleParse (
                 tnode->ownerDocument = doc;
                 tnode->nodeNumber  = NODE_NO(doc);
                 tnode->valueLength = (x - start);
-                tnode->nodeValue   = (char*)Tcl_Alloc((x - start)+1);
+                tnode->nodeValue   = (char*)MALLOC((x - start)+1);
                 memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
                 if (ampersandSeen) {
@@ -979,7 +978,7 @@ HTML_SimpleParse (
                         tnode->nodeNumber    = NODE_NO(doc);
                         tnode->parentNode    = parent_node;
                         tnode->valueLength   = x - start - 4;
-                        tnode->nodeValue     = (char*)Tcl_Alloc(tnode->valueLength+1);
+                        tnode->nodeValue     = (char*)MALLOC(tnode->valueLength+1);
                         memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
@@ -1060,7 +1059,7 @@ HTML_SimpleParse (
                             tnode->nodeNumber    = NODE_NO(doc);
                             tnode->parentNode    = parent_node;
                             tnode->valueLength   = (x - start);
-                            tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
+                            tnode->nodeValue     = (char*)MALLOC((x - start)+1);
                             memmove(tnode->nodeValue, start, (x - start));
                             *(tnode->nodeValue + (x - start)) = 0;
                             if (parent_node->firstChild)  {
@@ -1095,7 +1094,7 @@ HTML_SimpleParse (
                     |   allocate new PI node for processing instruction section
                     \-----------------------------------------------------------*/
                     pinode = (domProcessingInstructionNode*)
-                            Tcl_Alloc(sizeof(domProcessingInstructionNode));
+                            MALLOC(sizeof(domProcessingInstructionNode));
                     memset(pinode, 0, sizeof(domProcessingInstructionNode));
                     pinode->nodeType      = PROCESSING_INSTRUCTION_NODE;
                     pinode->nodeFlags     = 0;
@@ -1115,7 +1114,7 @@ HTML_SimpleParse (
                     *piSep = '\0'; /* temporarily terminate the string */
 
                     pinode->targetLength = strlen(start);
-                    pinode->targetValue  = (char*)Tcl_Alloc(pinode->targetLength);
+                    pinode->targetValue  = (char*)MALLOC(pinode->targetLength);
                     memmove(pinode->targetValue, start, pinode->targetLength);
 
                     *piSep = c;  /* remove temporarily termination */
@@ -1127,7 +1126,7 @@ HTML_SimpleParse (
                         piSep++;
                     }
                     pinode->dataLength = x - piSep;
-                    pinode->dataValue  = (char*)Tcl_Alloc(pinode->dataLength);
+                    pinode->dataValue  = (char*)MALLOC(pinode->dataLength);
                     memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
@@ -1310,7 +1309,7 @@ HTML_SimpleParse (
                 attrnode->nodeName    = (char *)&(h->key);
                 attrnode->nodeType    = ATTRIBUTE_NODE;
                 attrnode->nodeFlags   = 0;
-                attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
+                attrnode->nodeValue   = (char*)MALLOC(nArgVal+1);
                 attrnode->valueLength = nArgVal;
                 memmove(attrnode->nodeValue, ArgVal, nArgVal);
                 *(attrnode->nodeValue + nArgVal) = 0;
@@ -1407,7 +1406,7 @@ HTML_SimpleParse (
                     tnode->nodeNumber    = NODE_NO(doc);
                     tnode->parentNode    = node;
                     tnode->valueLength   = (x - start);
-                    tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
+                    tnode->nodeValue     = (char*)MALLOC((x - start)+1);
                     memmove(tnode->nodeValue, start, (x - start));
                     *(tnode->nodeValue + (x - start)) = 0;
                     if (node->firstChild)  {

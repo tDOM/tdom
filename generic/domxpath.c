@@ -74,16 +74,16 @@
 
 #define INITIAL_SIZE     100
 
-#define ADD_TOKEN(t)  if ((l+1)>=allocated) {                               \
-                          tokens=(XPathTokens)realloc(tokens, 2*allocated   \
-                                                      *sizeof(XPathToken)); \
-                          allocated = allocated * 2;                        \
-                      }                                                     \
-                      tokens[l].token     = (t);                            \
-                      tokens[l++].pos     = i;                              \
-                      tokens[l].token     = EOS;                            \
-                      tokens[l].strvalue  = NULL;                           \
-                      tokens[l].intvalue  = 0;                              \
+#define ADD_TOKEN(t)  if ((l+1)>=allocated) {                                \
+                          tokens=(XPathTokens)REALLOC((char*)tokens, 2*allocated\
+                                                      *sizeof(XPathToken));  \
+                          allocated = allocated * 2;                         \
+                      }                                                      \
+                      tokens[l].token     = (t);                             \
+                      tokens[l++].pos     = i;                               \
+                      tokens[l].token     = EOS;                             \
+                      tokens[l].strvalue  = NULL;                            \
+                      tokens[l].intvalue  = 0;                               \
                       tokens[l].realvalue = 0.0;
 
 
@@ -117,13 +117,13 @@
 #define STRVAL            tokens[(*l)-1].strvalue
 #define INTVAL            tokens[(*l)-1].intvalue
 #define REALVAL           tokens[(*l)-1].realvalue
-#define NEWCONS           ((ast)malloc(sizeof(astElem)))
+#define NEWCONS           ((ast)MALLOC(sizeof(astElem)))
 
 #define IS_STR(c,s)       (c==*(tokens[(*l)-1].strvalue))&&(strcmp(tokens[(*l)-1].strvalue,s)==0)
 #define IS_FUNC(c,s)      ((*(step->strvalue)==(c)) && (strcmp((s),step->strvalue)==0))
 
 
-#define ErrExpected(msg)  *errMsg = (char*)malloc(255);        \
+#define ErrExpected(msg)  *errMsg = (char*)MALLOC(255);        \
                           **errMsg = '\0';                     \
                           strcpy(*errMsg, __func);             \
                           strcat(*errMsg, ": Expected " #msg); \
@@ -229,13 +229,13 @@ static int xpathEvalStep (ast step, domNode *ctxNode, domNode *exprContext,
 void xpathRSFree ( xpathResultSet *rs ) {
 
     if (rs->type == xNodeSetResult) {
-        if (rs->nodes) free(rs->nodes);
+        if (rs->nodes) FREE((char*)rs->nodes);
         rs->nodes     = NULL;
         rs->nr_nodes  = 0;
         rs->allocated = 0;
     }
     if (rs->type == StringResult) {
-        if (rs->string) free(rs->string);
+        if (rs->string) FREE((char*)rs->string);
         rs->string     = NULL;
         rs->string_len = 0;
     }
@@ -346,10 +346,10 @@ void rsSetString ( xpathResultSet *rs, char *s) {
 
     rs->type = StringResult;
     if (s) {
-        rs->string     = strdup(s);
+        rs->string     = tdomstrdup(s);
         rs->string_len = strlen(s);
     } else {
-        rs->string     = strdup("");
+        rs->string     = tdomstrdup("");
         rs->string_len = 0;
     }
     rs->nr_nodes = 0;
@@ -362,7 +362,7 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
     if (rs->type == EmptyResult) {
 
         rs->type      = xNodeSetResult;
-        rs->nodes     = (domNode**)malloc(INITIAL_SIZE * sizeof(domNode*) );
+        rs->nodes     = (domNode**)MALLOC(INITIAL_SIZE * sizeof(domNode*));
         rs->allocated = INITIAL_SIZE;
         rs->nr_nodes  = 1;
         rs->nodes[0]  = node;
@@ -379,8 +379,8 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
         }
 
         if ((rs->nr_nodes+1) >= rs->allocated) {
-            rs->nodes = (domNode**)realloc( (void*)rs->nodes,
-                                            2 * rs->allocated * sizeof(domNode*) );
+            rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
+                                           2 * rs->allocated * sizeof(domNode*));
             rs->allocated = rs->allocated * 2;
         }
         rs->nodes[rs->nr_nodes++] = node;
@@ -395,15 +395,15 @@ void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
     if (rs->type == EmptyResult) {
 
         rs->type      = xNodeSetResult;
-        rs->nodes     = (domNode**)malloc(INITIAL_SIZE * sizeof(domNode*) );
+        rs->nodes     = (domNode**)MALLOC(INITIAL_SIZE * sizeof(domNode*));
         rs->allocated = INITIAL_SIZE;
         rs->nr_nodes  = 1;
         rs->nodes[0]  = node;
 
     } else {
         if ((rs->nr_nodes+1) >= rs->allocated) {
-            rs->nodes = (domNode**)realloc( (void*)rs->nodes,
-                                            2 * rs->allocated * sizeof(domNode*) );
+            rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
+                                           2 * rs->allocated * sizeof(domNode*));
             rs->allocated = rs->allocated * 2;
         }
         rs->nodes[rs->nr_nodes++] = node;
@@ -418,12 +418,12 @@ void rsCopy ( xpathResultSet *to, xpathResultSet *from ) {
     to->intvalue   = from->intvalue;
     to->realvalue  = from->realvalue;
     if (to->type == StringResult) {
-        to->string     = strdup(from->string);
+        to->string     = tdomstrdup(from->string);
         to->string_len = from->string_len;
     }
     if (to->type == xNodeSetResult) {
         to->nr_nodes = from->nr_nodes;
-        to->nodes = (domNode**)malloc(from->nr_nodes * sizeof(domNode*) );
+        to->nodes = (domNode**)MALLOC(from->nr_nodes * sizeof(domNode*));
         for (i=0; i<from->nr_nodes; i++)
             to->nodes[i] = from->nodes[i];
     }
@@ -515,7 +515,7 @@ static ast NewStr( astType type, char *str ) {
     ast t = NEWCONS;
 
     t->type      = type;
-    t->strvalue  = strdup(str);
+    t->strvalue  = tdomstrdup(str);
     t->intvalue  = 0;
     t->realvalue = 0.0;
 
@@ -567,9 +567,9 @@ static void freeAst (ast t)
 
     while (t) {
         tmp = t->next;
-        if (t->strvalue) free(t->strvalue);
+        if (t->strvalue) FREE(t->strvalue);
         if (t->child) freeAst (t->child);
-        free(t);
+        FREE((char*)t);
         t = tmp;
     }
 }
@@ -632,9 +632,9 @@ static XPathTokens xpathLexer (
     int token = EOS;
 
 
-    tokens = (XPathTokens)malloc( INITIAL_SIZE * sizeof(XPathToken) );
+    tokens = (XPathTokens)MALLOC(INITIAL_SIZE * sizeof(XPathToken));
     if (tokens == NULL) {
-        *errMsg = (char*)strdup("Unable to alloc initial memory!");
+        *errMsg = (char*)tdomstrdup("Unable to alloc initial memory!");
         return NULL;
     }
     allocated = INITIAL_SIZE;
@@ -666,19 +666,19 @@ static XPathTokens xpathLexer (
                                i += UTF8_CHAR_LEN (xpath[i]);
                            save = xpath[i];
                            xpath[i] = '\0';
-                           tokens[l].strvalue = (char*)strdup(ps);
+                           tokens[l].strvalue = (char*)tdomstrdup(ps);
                            xpath[i] = save;
                            if (save == ':' && xpath[i+1] != ':') {
                                token = ATTRIBUTEPREFIX;
                                ADD_TOKEN (token);
                                if (xpath[i+1] == '*') {
                                    token = ATTRIBUTE;
-                                   tokens[l].strvalue = strdup("*");
+                                   tokens[l].strvalue = tdomstrdup("*");
                                    i++;
                                } else {
                                    ps = &(xpath[++i]);
                                    if (!(isNCNameStart (&xpath[i]))) {
-                                       *errMsg = strdup ("Illegal attribute name");
+                                       *errMsg = tdomstrdup ("Illegal attribute name");
                                        return NULL;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
@@ -687,7 +687,7 @@ static XPathTokens xpathLexer (
                                    save = xpath[i];
                                    xpath[i] = '\0';
                                    token = ATTRIBUTE;
-                                   tokens[l].strvalue = (char*)strdup(ps);
+                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
                                    xpath[i--] = save;
                                }
                            } else {
@@ -695,10 +695,10 @@ static XPathTokens xpathLexer (
                                i--;
                            }
                        } else if (xpath[i]=='*') {
-                           tokens[l].strvalue = (char*)strdup("*");
+                           tokens[l].strvalue = (char*)tdomstrdup("*");
                            token = ATTRIBUTE;
                        } else {
-                           *errMsg = (char*)strdup("Expected attribute name");
+                           *errMsg = (char*)tdomstrdup("Expected attribute name");
                            return NULL;
                        }; break;
 
@@ -716,11 +716,11 @@ static XPathTokens xpathLexer (
             case '\'': delim = xpath[i]; start = ++i;
                        while (xpath[i] && (xpath[i] != delim)) i++;
                        if (!xpath[i]) {
-                           *errMsg = (char*)strdup("Undetermined string");
+                           *errMsg = (char*)tdomstrdup("Undetermined string");
                            return NULL;
                        }
                        xpath[i] = '\0'; /* terminate string */
-                       tokens[l].strvalue = (char*)strdup(&xpath[start]);
+                       tokens[l].strvalue = (char*)tdomstrdup(&xpath[start]);
                        token = LITERAL;
                        xpath[i] = delim;
                        break;
@@ -771,7 +771,7 @@ static XPathTokens xpathLexer (
                            token = MULTIPLY;
                        } else {
                            token = WCARDNAME;
-                           tokens[l].strvalue = (char*)strdup("*");
+                           tokens[l].strvalue = (char*)tdomstrdup("*");
                        }; break;
 
             case '$':  i++;
@@ -783,7 +783,7 @@ static XPathTokens xpathLexer (
                            if (xpath[i] == ':' && xpath[i+1] != ':') {
                                token = FQVARIABLE;
                                if (!isNCNameStart (&xpath[++i])) {
-                                   *errMsg = strdup ("Illegal variable name");
+                                   *errMsg = tdomstrdup ("Illegal variable name");
                                    return NULL;
                                }
                                i += UTF8_CHAR_LEN (xpath[i]);
@@ -794,10 +794,10 @@ static XPathTokens xpathLexer (
                            }
                            save = xpath[i];
                            xpath[i] = '\0';
-                           tokens[l].strvalue = (char*)strdup(ps);
+                           tokens[l].strvalue = (char*)tdomstrdup(ps);
                            xpath[i--] = save;
                        } else {
-                           *errMsg = (char*)strdup("Expected variable name");
+                           *errMsg = (char*)tdomstrdup("Expected variable name");
                            return NULL;
                        }; break;
 
@@ -825,7 +825,7 @@ static XPathTokens xpathLexer (
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
                                    token = NSWC;
-                                   tokens[l].strvalue = strdup (ps);
+                                   tokens[l].strvalue = tdomstrdup (ps);
                                    xpath[i] = save;
                                    i++;
                                    break;
@@ -836,13 +836,13 @@ static XPathTokens xpathLexer (
                                        (xpath[k] == '\n') ||
                                        (xpath[k] == '\r') ||
                                        (xpath[k] == '\t')) {
-                                       *errMsg = strdup("whitespace after namespace prefix");
+                                       *errMsg = tdomstrdup("whitespace after namespace prefix");
                                        return NULL;
                                    }
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
                                    token = NSPREFIX;
-                                   tokens[l].strvalue = strdup (ps);
+                                   tokens[l].strvalue = tdomstrdup (ps);
                                    xpath[i] = save;
                                    break;
                                }
@@ -874,7 +874,7 @@ static XPathTokens xpathLexer (
                                    if ((save!='(') && (strcmp(ps,"div")==0)) token = DIV;
                                    else {
                                        token = FUNCTION;
-                                       tokens[l].strvalue = (char*)strdup(ps);
+                                       tokens[l].strvalue = (char*)tdomstrdup(ps);
                                    }
                                }
                                xpath[i] = save;
@@ -882,7 +882,7 @@ static XPathTokens xpathLexer (
                                token = AXISNAME;
                                save = xpath[i];
                                xpath[i] = '\0'; /* terminate */
-                               tokens[l].strvalue = (char*)strdup(ps);
+                               tokens[l].strvalue = (char*)tdomstrdup(ps);
                                xpath[i] = save;
                            } else {
                                save = xpath[i];
@@ -918,11 +918,11 @@ static XPathTokens xpathLexer (
                                        token = DIV;
                                    } else {
                                        token = WCARDNAME;
-                                       tokens[l].strvalue = (char*)strdup(ps);
+                                       tokens[l].strvalue = (char*)tdomstrdup(ps);
                                    }
                                } else {
                                    token = WCARDNAME;
-                                   tokens[l].strvalue = (char*)strdup(ps);
+                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
                                }
                                xpath[i] = save;
                            }
@@ -1698,7 +1698,7 @@ Production(StepPattern)
                 ast aCopy = NEWCONS;
                 aCopy->type      = a->type;
                 aCopy->next      = NULL;
-                aCopy->strvalue  = strdup(a->strvalue);
+                aCopy->strvalue  = tdomstrdup(a->strvalue);
                 aCopy->intvalue  = a->intvalue;
                 aCopy->realvalue = a->realvalue;
                 aCopy->child     = NULL;
@@ -1867,10 +1867,10 @@ int xpathFreeTokens (
 
     for (i=0; tokens[i].token != EOS; i++) {
         if (tokens[i].strvalue) {
-            free (tokens[i].strvalue);
+            FREE(tokens[i].strvalue);
         }
     }
-    free (tokens);
+    FREE((char*)tokens);
     return 0;
 }
 
@@ -1917,12 +1917,12 @@ int xpathParse (
         *t = OrExpr (&l, tokens, errMsg);
     }
     if ((*errMsg == NULL) && (tokens[l].token != EOS)) {
-        *errMsg = (char*)strdup("Unexpected tokens (beyond end)!");
+        *errMsg = (char*)tdomstrdup("Unexpected tokens (beyond end)!");
     }
     if (*errMsg) {
         len    = strlen(*errMsg);
         newlen = strlen(xpath);
-        *errMsg = (char*)realloc(*errMsg, len+newlen+10);
+        *errMsg = (char*)REALLOC(*errMsg, len+newlen+10);
         memmove(*errMsg + len, " for '", 6);
         memmove(*errMsg + len+6, xpath, newlen);
         memmove(*errMsg + len+6+newlen, "' ", 3);
@@ -1944,7 +1944,7 @@ int xpathParse (
                 slen = strlen(tokens[i].strvalue);
             }
 
-            *errMsg = (char*)realloc(*errMsg, len+newlen+slen+1);
+            *errMsg = (char*)REALLOC(*errMsg, len+newlen+slen+1);
             memmove(*errMsg + len, tmp, newlen);
             memmove(*errMsg + len + newlen, tokens[i].strvalue, slen);
             (*errMsg)[len + newlen + slen] = '\0';
@@ -2178,7 +2178,7 @@ double xpathFuncNumber (
                       break;
                   }
               }
-              free(pc);
+              FREE(pc);
               return d;
         default:
               DBG(fprintf(stderr, "funcNumber: default: 0.0\n");)
@@ -2204,27 +2204,27 @@ char * xpathGetTextValueForElement (
 
     if (node->nodeType == ELEMENT_NODE) {
         DBG(fprintf(stderr,"GetTextValue: tag='%s' \n", node->nodeName);)
-        pc = malloc(1); *pc = '\0'; *len = 0;
+        pc = MALLOC(1); *pc = '\0'; *len = 0;
         child = node->firstChild;
         while (child) {
             t = xpathGetTextValueForElement(child, &l);
-            pc = (char*)realloc(pc, 1 + *len + l);
+            pc = (char*)REALLOC(pc, 1 + *len + l);
             memmove(pc + *len, t, l );
             *len += l;
             pc[*len] = '\0';
-            free(t);
+            FREE((char*)t);
             child = child->nextSibling;
         }
     } else
     if (node->nodeType == TEXT_NODE) {
 
         *len = ((domTextNode*)node)->valueLength;
-        pc   = (char*)malloc(1+*len);
+        pc   = (char*)MALLOC(1+*len);
         memmove(pc, ((domTextNode*)node)->nodeValue, *len);
         pc[*len] = '\0';
         DBG(fprintf(stderr,"GetTextValue: text='%s' \n", pc);)
     } else {
-        pc   = strdup ("");
+        pc   = tdomstrdup ("");
         *len = 0;
     }
     return pc;
@@ -2242,15 +2242,15 @@ char * xpathGetTextValue (
 
     if (node->nodeType == ELEMENT_NODE) {
         DBG(fprintf(stderr,"GetTextValue: tag='%s' \n", node->nodeName);)
-        pc = malloc(1); *pc = '\0'; *len = 0;
+        pc = MALLOC(1); *pc = '\0'; *len = 0;
         child = node->firstChild;
         while (child) {
             t = xpathGetTextValueForElement(child, &l);
-            pc = (char*)realloc(pc, 1 + *len + l);
+            pc = (char*)REALLOC(pc, 1 + *len + l);
             memmove(pc + *len, t, l );
             *len += l;
             pc[*len] = '\0';
-            free(t);
+            FREE((char*)t);
             child = child->nextSibling;
         }
     } else
@@ -2260,27 +2260,27 @@ char * xpathGetTextValue (
     ) {
 
         *len = ((domTextNode*)node)->valueLength;
-        pc   = (char*)malloc(1+*len);
+        pc   = (char*)MALLOC(1+*len);
         memmove(pc, ((domTextNode*)node)->nodeValue, *len);
         pc[*len] = '\0';
         DBG(fprintf(stderr,"GetTextValue: text='%s' \n", pc);)
     } else
     if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
         *len = ((domProcessingInstructionNode*)node)->dataLength;
-        pc   = (char*)malloc(1+*len);
+        pc   = (char*)MALLOC(1+*len);
         memmove(pc, ((domProcessingInstructionNode*)node)->dataValue, *len);
         pc[*len] = '\0';
     } else
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
         DBG(fprintf(stderr,"GetTextValue: attr='%s' \n", attr->nodeName);)
-        pc = malloc(attr->valueLength +1 );
+        pc = MALLOC(attr->valueLength +1);
         memmove(pc, attr->nodeValue, attr->valueLength);
         *(pc + attr->valueLength) = '\0';
         *len = attr->valueLength;
     }
     else {
-        pc   = strdup ("");
+        pc   = tdomstrdup ("");
         *len = 0;
     }
     return pc;
@@ -2299,50 +2299,50 @@ char * xpathFuncString (
 
     switch (rs->type) {
         case BoolResult:
-            if (rs->intvalue) return (strdup("true"));
-                         else return (strdup("false"));
+            if (rs->intvalue) return (tdomstrdup("true"));
+                         else return (tdomstrdup("false"));
         case IntResult:
             sprintf(tmp, "%d", rs->intvalue);
-            return (strdup(tmp));
+            return (tdomstrdup(tmp));
 
         case RealResult:
-            if (IS_NAN (rs->realvalue)) return strdup ("NaN");
+            if (IS_NAN (rs->realvalue)) return tdomstrdup ("NaN");
             else if (IS_INF (rs->realvalue)) {
-                if (IS_INF (rs->realvalue) == 1) return strdup ("Infinity");
-                else                             return strdup ("-Infinity");
+                if (IS_INF (rs->realvalue) == 1) return tdomstrdup ("Infinity");
+                else                             return tdomstrdup ("-Infinity");
             }
             sprintf(tmp, "%f", rs->realvalue);
             /* strip trailing 0 and . */
             len = strlen(tmp);
             for (; (len > 0) && (tmp[len-1] == '0'); len--) tmp[len-1] = '\0';
             if ((len > 0) && (tmp[len-1] == '.'))   tmp[len-1] = '\0';
-            return (strdup(tmp));
+            return (tdomstrdup(tmp));
             
         case NaNResult:
-            return strdup ("NaN");
+            return tdomstrdup ("NaN");
 
         case InfResult:
-            return strdup ("Infinity");
+            return tdomstrdup ("Infinity");
 
         case NInfResult:
-            return strdup ("-Infinity");
+            return tdomstrdup ("-Infinity");
 
         case StringResult:
-            pc = malloc(rs->string_len +1 );
+            pc = MALLOC(rs->string_len +1);
             memmove(pc, rs->string, rs->string_len);
             *(pc + rs->string_len) = '\0';
             return pc;
 
         case xNodeSetResult:
             if (rs->nr_nodes == 0) {
-                pc = strdup ("");
+                pc = tdomstrdup ("");
             } else {
                 pc = xpathGetTextValue (rs->nodes[0], &len);
             }
             return pc;
 
         default:
-            return (strdup (""));
+            return (tdomstrdup (""));
     }
 }
 
@@ -2376,7 +2376,7 @@ double xpathFuncNumberForNode (
     pc = xpathGetTextValue (node, &len);
     rc = sscanf (pc,"%lf", &d);
     if (rc != 1) *NaN = 2;
-    free(pc);
+    FREE(pc);
     return d;
 }
 
@@ -2418,7 +2418,7 @@ static int xpathArityCheck (
         step = step->next;
     }
     if (arity!=parms) {
-        *errMsg = (char*)strdup("wrong number of parameters!");
+        *errMsg = (char*)tdomstrdup("wrong number of parameters!");
         return 1;
     }
     return 0;
@@ -2624,7 +2624,7 @@ xpathEvalFunction (
                rsSetString (result, leftStr);
            }
            xpathRSFree( &leftResult );
-           free(leftStr);
+           FREE(leftStr);
            break;
 
     case f_not:
@@ -2664,7 +2664,7 @@ xpathEvalFunction (
                rsPrint(&leftResult);
            )
            if (leftResult.type == EmptyResult) {
-               *errMsg = (char*)strdup ("id() requires an argument!");
+               *errMsg = (char*)tdomstrdup ("id() requires an argument!");
                return XPATH_EVAL_ERR;
            }
            if (leftResult.type == xNodeSetResult) {
@@ -2680,7 +2680,7 @@ xpathEvalFunction (
                            checkRsAddNode (result, node);
                        }
                    }
-                   free (leftStr);
+                   FREE(leftStr);
                    /*xpathRSFree (&newNodeList);*/
                }
            } else {
@@ -2729,7 +2729,7 @@ xpathEvalFunction (
                        }
                    }
                }
-               free (leftStr);
+               FREE(leftStr);
            }
            sortByDocOrder (result);
            xpathRSFree (&leftResult);
@@ -2751,7 +2751,7 @@ xpathEvalFunction (
                    return XPATH_OK;
                } else {
                    xpathRSFree( &leftResult );
-                   *errMsg = (char*)strdup("sum() requires a node set!");
+                   *errMsg = (char*)tdomstrdup("sum() requires a node set!");
                    xpathRSFree( &leftResult );
                    return XPATH_EVAL_ERR;
                }
@@ -2801,7 +2801,7 @@ xpathEvalFunction (
                    tcldom_tolower (leftStr, tmp1, 80);
                    if (strcmp (tmp, tmp1)==0) {
                        rsSetBool (result, 1);
-                       free (leftStr);
+                       FREE(leftStr);
                        xpathRSFree (&leftResult);
                        return XPATH_OK;
                    } else {
@@ -2817,12 +2817,12 @@ xpathEvalFunction (
                        }
                        if (strcmp (tmp, tmp1)==0) {
                            rsSetBool (result, 1);
-                           free (leftStr);
+                           FREE(leftStr);
                            xpathRSFree (&leftResult);
                            return XPATH_OK;
                        } else {
                            rsSetBool (result, 0);
-                           free (leftStr);
+                           FREE(leftStr);
                            xpathRSFree (&leftResult);
                            return XPATH_OK;
                        }
@@ -2831,7 +2831,7 @@ xpathEvalFunction (
                node = node->parentNode;
            }
            rsSetBool (result, 0);
-           free (leftStr);
+           FREE(leftStr);
            xpathRSFree (&leftResult);
            break;
 
@@ -2898,13 +2898,13 @@ xpathEvalFunction (
            }
            xpathRSFree (&leftResult);
            xpathRSFree (&rightResult);
-           free(rightStr);
-           free(leftStr);
+           FREE(rightStr);
+           FREE(leftStr);
            break;
 
     case f_concat:
            nextStep = step->child;
-           pto = malloc(1);
+           pto = MALLOC(1);
            *pto = '\0';
            len = 0;
            while (nextStep) {
@@ -2916,16 +2916,16 @@ xpathEvalFunction (
                *docOrder = savedDocOrder;
 
                leftStr  = xpathFuncString( &leftResult  );
-               pto = (char*)realloc(pto, 1+len+strlen(leftStr));
+               pto = (char*)REALLOC(pto, 1+len+strlen(leftStr));
                memmove(pto + len, leftStr, strlen(leftStr));
                len += strlen(leftStr);
                *(pto + len) = '\0';
                xpathRSFree( &leftResult );
-               free(leftStr);
+               FREE(leftStr);
                nextStep = nextStep->next;
            }
            rsSetString (result, pto);
-           free(pto);
+           FREE(pto);
            break;
 
     case f_substring:
@@ -2947,7 +2947,7 @@ xpathEvalFunction (
            from = xpathRound(xpathFuncNumber(&rightResult, &NaN))-1;
            xpathRSFree( &rightResult );
            if (NaN) {
-               free (leftStr);
+               FREE(leftStr);
                rsSetString (result, "");
                return XPATH_OK;
            }
@@ -2968,7 +2968,7 @@ xpathEvalFunction (
                    if (NaN == 1) {
                        len = INT_MAX;
                    } else {
-                       free (leftStr);
+                       FREE(leftStr);
                        rsSetString (result, "");
                        return XPATH_OK;
                    }
@@ -2977,7 +2977,7 @@ xpathEvalFunction (
                if (from < 0) {
                    len = len + from;
                    if (len <= 0) {
-                       free (leftStr);
+                       FREE(leftStr);
                        rsSetString (result, "");
                        return XPATH_OK;
                    }
@@ -2990,7 +2990,7 @@ xpathEvalFunction (
 
            if (from >= strlen(leftStr)) {
                rsSetString (result, "");
-               free(leftStr);
+               FREE(leftStr);
                return XPATH_OK;
            } else {
                if ( (len == INT_MAX) || ((from + len) > strlen(leftStr)) ) {
@@ -3003,7 +3003,7 @@ xpathEvalFunction (
 
            *(leftStr+from+len) = '\0';
            rsSetString (result, (leftStr+from));
-           free(leftStr);
+           FREE(leftStr);
            break;
 
     case f_translate:
@@ -3094,7 +3094,7 @@ xpathEvalFunction (
            xpathRSFree( &replaceResult );
            xpathRSFree( &rightResult   );
            xpathRSFree( &leftResult    );
-           free(leftStr); free(rightStr); free(replaceStr);
+           FREE(leftStr); FREE(rightStr); FREE(replaceStr);
            break;
 
     case f_count:
@@ -3111,7 +3111,7 @@ xpathEvalFunction (
                return XPATH_OK;
            }
            if (leftResult.type != xNodeSetResult) {
-               *errMsg = (char*)strdup("count() requires a node set!");
+               *errMsg = (char*)tdomstrdup("count() requires a node set!");
                xpathRSFree( &leftResult );
                return XPATH_EVAL_ERR;
            }
@@ -3136,7 +3136,7 @@ xpathEvalFunction (
            } else {
                rsSetString (result, "");
            }
-           free (leftStr);
+           FREE(leftStr);
            xpathRSFree (&leftResult);
            break;
 
@@ -3167,7 +3167,7 @@ xpathEvalFunction (
 
            if (step->intvalue == f_generateId) {
                if (leftResult.type != xNodeSetResult) {
-                   *errMsg = (char*)strdup("generate-id() requires a nodeset or no argument!");
+                   *errMsg = (char*)tdomstrdup("generate-id() requires a nodeset or no argument!");
                    xpathRSFree (&leftResult);
                    return XPATH_EVAL_ERR;
                }
@@ -3189,7 +3189,7 @@ xpathEvalFunction (
 
            if (step->intvalue == f_namespaceUri) {
                if (leftResult.type != xNodeSetResult) {
-                   *errMsg = (char*)strdup("namespace-uri() requires a node set!");
+                   *errMsg = (char*)tdomstrdup("namespace-uri() requires a node set!");
                    xpathRSFree( &leftResult );
                    return XPATH_EVAL_ERR;
                }
@@ -3206,7 +3206,7 @@ xpathEvalFunction (
 
            if (step->intvalue == f_localName) {
                if (leftResult.type != xNodeSetResult) {
-                   *errMsg = (char*)strdup("local-name() requires a node set!");
+                   *errMsg = (char*)tdomstrdup("local-name() requires a node set!");
                    xpathRSFree( &leftResult );
                    return XPATH_EVAL_ERR;
                }
@@ -3243,7 +3243,7 @@ xpathEvalFunction (
 
            if (step->intvalue == f_name) {
                if (   leftResult.type != xNodeSetResult ) {
-                   *errMsg = (char*)strdup("name() requires a node set!");
+                   *errMsg = (char*)tdomstrdup("name() requires a node set!");
                    xpathRSFree( &leftResult );
                    return XPATH_EVAL_ERR;
                }
@@ -3292,13 +3292,13 @@ xpathEvalFunction (
                    argc++;
                    nextStep = nextStep->next;
                }
-               args = (xpathResultSets*) malloc( (argc+1) * sizeof(xpathResultSets));
+               args = (xpathResultSets*)MALLOC((argc+1) * sizeof(xpathResultSets));
                args[0] = NULL;
                argc = 0;
                nextStep = step->child;
                savedDocOrder = *docOrder;
                while (nextStep) {
-                   arg = (xpathResultSet*) malloc (sizeof(xpathResultSet));
+                   arg = (xpathResultSet*)MALLOC(sizeof(xpathResultSet));
                    args[argc++] = arg;
                    args[argc]   = NULL;
                    xpathRSInit (arg);
@@ -3314,14 +3314,14 @@ xpathEvalFunction (
                argc = 0;
                while ( args[argc] != NULL) {
                    xpathRSFree( args[argc] );
-                   free (args[argc++]);
+                   FREE((char*)args[argc++]);
                }
-               free(args);
+               FREE((char*)args);
                return rc;
            } else {
                if (strlen(step->strvalue)>50) *(step->strvalue + 50) = '\0';
                sprintf(tmp, "Unknown function '%s'!", step->strvalue);
-               *errMsg = (char*)strdup(tmp);
+               *errMsg = (char*)tdomstrdup(tmp);
            }
            return XPATH_EVAL_ERR;
     }
@@ -3799,7 +3799,7 @@ static int xpathEvalStep (
                    not be GetFQVar. Omit test prefix[0] != '\0'. */
                 ns = domLookupPrefix (exprContext, prefix);
                 if (!ns) {
-                    *errMsg = strdup ("There isn't a namespace bound to the prefix.");
+                    *errMsg = tdomstrdup ("There isn't a namespace bound to the prefix.");
                     return XPATH_EVAL_ERR;
                 }
                 leftStr  = localName;
@@ -3965,7 +3965,7 @@ static int xpathEvalStep (
             ((rightResult.type != xNodeSetResult)
              && (rightResult.type != EmptyResult)))
         {
-            *errMsg = (char*)strdup("| requires node sets!");
+            *errMsg = (char*)tdomstrdup("| requires node sets!");
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_EVAL_ERR;
@@ -4139,10 +4139,10 @@ static int xpathEvalStep (
                         res = strcmp (leftStr, rightStr);
                         if      (step->type == Equal)    res = (res==0);
                         else if (step->type == NotEqual) res = (res!=0);
-                        free (rightStr);
+                        FREE(rightStr);
                         if (res) break;
                     }
-                    free (leftStr);
+                    FREE(leftStr);
                     if (res) break;
                 }
                 break;
@@ -4180,10 +4180,10 @@ static int xpathEvalStep (
                     res = strcmp (leftStr, rightStr);
                     if (step->type == Equal) res = (res == 0);
                     else                     res = (res != 0);
-                    free (leftStr);
+                    FREE(leftStr);
                     if (res) break;
                 }
-                free (rightStr);
+                FREE(rightStr);
                 break;
             }
         } else
@@ -4236,8 +4236,8 @@ static int xpathEvalStep (
                 res = strcmp (leftStr, rightStr);
                 if (step->type == Equal) res = (res == 0);
                 else                     res = (res != 0);
-                free (leftStr);
-                free (rightStr);
+                FREE(leftStr);
+                FREE(rightStr);
             }
         }
         rsSetBool (result, res);
@@ -4418,7 +4418,7 @@ static int xpathEvalStep (
             rsPrint (result);
             fprintf (stderr, "leftResult:\n");
             rsPrint (&leftResult); )
-            *errMsg = (char*)strdup("can not merge different result types!");
+            *errMsg = (char*)tdomstrdup("can not merge different result types!");
             return XPATH_EVAL_ERR;
         }
         switch (leftResult.type) {
@@ -4551,7 +4551,7 @@ static int xpathEvalStepAndPredicates (
 {
     xpathResultSet  stepResult, tmpResult;
     int             rc, i, j;
-    char           *done;
+    int            *done;
     domNode        *parent;
 
     if (steps->next && steps->next->type == Pred) {
@@ -4564,7 +4564,8 @@ static int xpathEvalStepAndPredicates (
            "The Predicate filters the node-set with respect to the
            child axis" */
         if (steps->type == AxisDescendantOrSelf || steps->type == AxisDescendant) {
-            done = calloc (stepResult.nr_nodes, sizeof (char));
+            done = (int*)MALLOC(stepResult.nr_nodes*sizeof (int));
+            memset(done, 0, stepResult.nr_nodes*sizeof (int));
             for (i = 0; i < stepResult.nr_nodes; i++) {
                 if (done[i]) continue;
                 xpathRSInit (&tmpResult);
@@ -4591,7 +4592,7 @@ static int xpathEvalStepAndPredicates (
                 CHECK_RC;
                 xpathRSFree (&tmpResult);
             }
-            free (done);
+            FREE((char*)done);
         } else {
             rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
                                      cbs, docOrder, errMsg);
@@ -5476,7 +5477,7 @@ static void nodeToXPath (
     len = strlen(step);
     if ( (len + *xpathLen) > *xpathAllocated ) {
         *xpathAllocated = *xpathAllocated * 2;
-        *xpath = realloc(*xpath, *xpathAllocated + 1);
+        *xpath = REALLOC(*xpath, *xpathAllocated + 1);
     }
     strcpy( *xpath + *xpathLen, step);
     *xpathLen += len;
@@ -5498,7 +5499,7 @@ char * xpathNodeToXPath (
 
     xpathAllocated = 100;
     xpathLen       = 0;
-    xpath          = malloc(xpathAllocated + 1);
+    xpath          = MALLOC(xpathAllocated + 1);
 
     nodeToXPath (node, &xpath, &xpathLen, &xpathAllocated);
 
