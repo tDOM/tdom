@@ -627,6 +627,92 @@ test xslt-5.1 {xslt document('') with empty baseURI} {
     set result
 } {<out>Data stored in the stylesheet</out>}
 
+proc xslt-5.2 {args} {
+    error "script error in xslt-5.2 external enitity resolver"
+}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+      
+      <xsl:template match="/">
+        <out><xsl:value-of select="document('foo')/*"/></out>
+      </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-5.2 {xslt document() with script error in -externalentitycommand} {
+    dom parse <dontMatter/> xmldoc
+    dom parse -externalentitycommand xslt-5.2 $xslt xsltdoc
+    set result [catch {$xmldoc xslt $xsltdoc resultDoc} errMsg]
+    $xmldoc delete
+    $xsltdoc delete
+    lappend result $errMsg
+} {1 {script error in xslt-5.2 external enitity resolver}}
+    
+proc xslt-5.3 {args} {
+    return [list string file://some/base "<not-wellformed<"]
+}
+
+test xslt-5.3 {xslt document() with script error in -externalentitycommand} {
+    dom parse <dontMatter/> xmldoc
+    dom parse -externalentitycommand xslt-5.3 $xslt xsltdoc
+    set result [catch {$xmldoc xslt $xsltdoc resultDoc} errMsg]
+    $xmldoc delete
+    $xsltdoc delete
+    lappend result $errMsg
+} {1 {Error while processing external entity "foo":
+At line 1 character 15: not well-formed (invalid token)}}
+
+proc xslt-5.4 {base systemId publicId} {
+    
+    switch $systemId {
+        "firstlevel" {
+            return [list string file://some/base/first {
+                <xsl:stylesheet
+                  version="1.0" 
+                  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                
+                  <xsl:import href="secondlevel"/>
+                
+                  <xsl:template match="foo">
+                    <out><xsl:value-of select="."/></out>
+                  </xsl:template>
+                </xsl:stylesheet>}]
+
+        }
+        "secondlevel" {
+            return [list string file://some/base/second "<not-wellformed<"]
+        }
+        default {
+            error "error within the test"
+        }
+    }
+}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+      <xsl:import href="firstlevel"/>
+
+      <xsl:template match="/">
+        <out>foo</out>
+      </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-5.4 {xslt document() with script error in -externalentitycommand} {
+    dom parse <dontMatter/> xmldoc
+    dom parse -externalentitycommand xslt-5.4 $xslt xsltdoc
+    set result [catch {$xmldoc xslt $xsltdoc resultDoc} errMsg]
+    $xmldoc delete
+    $xsltdoc delete
+    lappend result $errMsg
+} {1 {Error while processing external entity "secondlevel":
+At line 1 character 15: not well-formed (invalid token)}}
+
+
 set xslt {
     <xsl:stylesheet
       version="1.0" 
