@@ -2031,7 +2031,10 @@ int tcldom_NodeObjCmd (
         objc--;
         objv++;
     }
-    CheckArgs(2,10,1,node_usage);
+    if (objc < 2) {
+        SetResult (node_usage);
+        return TCL_ERROR;
+    }
     if (Tcl_GetIndexFromObj(interp, objv[1], nodeMethods, "method", 0,
             &methodIndex) != TCL_OK) {
 
@@ -2088,8 +2091,7 @@ int tcldom_NodeObjCmd (
         \-------------------------------------------------------*/
         Tcl_ResetResult (interp);
         CheckArgs(2,3,1,"@<attributeName> ?defaultvalue?");
-        if ((node->nodeType != ELEMENT_NODE) &&
-	    (node->nodeType != PROCESSING_INSTRUCTION_NODE)) {
+        if (node->nodeType != ELEMENT_NODE) {
             SetResult ( "NOT_AN_ELEMENT : there are no attributes");
             return TCL_ERROR;
         }
@@ -2118,6 +2120,7 @@ int tcldom_NodeObjCmd (
     switch ((enum nodeMethod) methodIndex ) {
 
         case m_toXPath:
+            CheckArgs(2,2,2,"");
             SetResult ( xpathNodeToXPath(node) );
             return TCL_OK;
 
@@ -2276,6 +2279,7 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_asList:
+            CheckArgs(2,2,2,"");
             Tcl_SetObjResult (interp, tcldom_treeAsTclList(interp, node) );
             break;
 
@@ -2442,7 +2446,7 @@ int tcldom_NodeObjCmd (
                 SetResult ( "NOT_AN_ELEMENT : there are no attributes");
                 return TCL_ERROR;
             }
-            if ((objc < 2) || ((objc % 2)!=0)) {
+            if ((objc < 4) || ((objc % 2)!=0)) {
                 SetResult ( "attrName value  pairs expected");
                 return TCL_ERROR;
             }
@@ -2454,22 +2458,27 @@ int tcldom_NodeObjCmd (
             return tcldom_returnNodeObj (interp, node, 0, NULL);
 
         case m_setAttributeNS:
-            CheckArgs(5,5,2,"uri attrName attrVal");
             if (node->nodeType != ELEMENT_NODE) {
                 SetResult ( "NOT_AN_ELEMENT : there are no attributes");
                 return TCL_ERROR;
             }
-            uri       = Tcl_GetStringFromObj (objv[2], NULL);
-            attr_name = Tcl_GetStringFromObj (objv[3], NULL);
-            attr_val  = Tcl_GetStringFromObj (objv[4], NULL);
-            attrs = domSetAttributeNS (node, attr_name, attr_val, uri, 0);
-            if (!attrs) {
-                if (uri[0]) {
-                    SetResult ("A attribute in a namespace must have a prefix");
-                } else {
-                    SetResult ("For all prefixed attributes with prefixes other than 'xml' or 'xmlns' you have to provide a namespace URI");
-                }
+            if ((objc < 5) || (((objc - 2) % 3) != 0)) {
+                SetResult ( "uri attrName value triples expected");
                 return TCL_ERROR;
+            }
+            for ( i = 2; i < objc; ) {
+                uri       = Tcl_GetStringFromObj (objv[i++], NULL);
+                attr_name = Tcl_GetStringFromObj (objv[i++], NULL);
+                attr_val  = Tcl_GetStringFromObj (objv[i++], NULL);
+                attrs = domSetAttributeNS (node, attr_name, attr_val, uri, 0);
+                if (!attrs) {
+                    if (uri[0]) {
+                        SetResult ("A attribute in a namespace must have a prefix");
+                    } else {
+                        SetResult ("For all prefixed attributes with prefixes other than 'xml' or 'xmlns' you have to provide a namespace URI");
+                    }
+                    return TCL_ERROR;
+                }
             }
             return tcldom_returnNodeObj (interp, node, 0, NULL);
 
@@ -2568,14 +2577,17 @@ int tcldom_NodeObjCmd (
             return tcldom_returnNodeObj (interp, node, 0, NULL);
 
         case m_nextSibling:
+            CheckArgs(2,3,2,"?nodeObjVar?");
             return tcldom_returnNodeObj (interp, node->nextSibling, (objc == 3),
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_previousSibling:
+            CheckArgs(2,3,2,"?nodeObjVar?");
             return tcldom_returnNodeObj (interp, node->previousSibling, (objc == 3),
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_firstChild:
+            CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
                 return tcldom_returnNodeObj (interp, node->firstChild, (objc == 3),
                                              (objc == 3) ? objv[2] : NULL);
@@ -2584,6 +2596,7 @@ int tcldom_NodeObjCmd (
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_lastChild:
+            CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
                 return tcldom_returnNodeObj (interp, node->lastChild, (objc == 3),
                                              (objc == 3) ? objv[2] : NULL);
@@ -2592,6 +2605,7 @@ int tcldom_NodeObjCmd (
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_parentNode:
+            CheckArgs(2,3,2,"?nodeObjVar?");
             return tcldom_returnNodeObj (interp, node->parentNode, (objc == 3),
                                          (objc == 3) ? objv[2] : NULL);
 
@@ -2600,6 +2614,7 @@ int tcldom_NodeObjCmd (
             return tcldom_appendFromTclList (interp, node, objv[2]);
 
         case m_appendFromScript:
+            CheckArgs(3,3,2,"script");
             if (nodecmd_appendFromScript (interp, node, objv[2]) != TCL_OK) {
                 return TCL_ERROR;
             }
@@ -2714,6 +2729,7 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_childNodes:
+            CheckArgs (2,2,2,"");
             resultPtr = Tcl_GetObjResult(interp);
             if (node->nodeType == ELEMENT_NODE) {
                 child = node->firstChild;
@@ -2796,6 +2812,7 @@ int tcldom_NodeObjCmd (
             return TCL_ERROR;
 
         case m_nodeName:
+            CheckArgs (2,2,2,"");
             if (node->nodeType == ELEMENT_NODE) {
                 SetResult ( (char*)node->nodeName);
             } else
@@ -2812,8 +2829,14 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_nodeValue:
+            CheckArgs (2,3,2,"?newValue?");
             if (node->nodeType == ELEMENT_NODE) {
                 Tcl_SetStringObj (Tcl_GetObjResult (interp), "", 0);
+            } else if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
+                Tcl_SetStringObj (Tcl_GetObjResult (interp),
+                                  ((domProcessingInstructionNode*)node)->dataValue,
+                                  ((domProcessingInstructionNode*)node)->dataLength);
+                
             } else {
                 Tcl_SetStringObj (Tcl_GetObjResult (interp),
                                   ((domTextNode*)node)->nodeValue,
@@ -2830,7 +2853,8 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_nodeType:
-           switch (node->nodeType) {
+            CheckArgs (2,2,2,"");
+            switch (node->nodeType) {
                case ELEMENT_NODE:
                     SetResult ( "ELEMENT_NODE");
                     break;
@@ -2856,6 +2880,7 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_prefix:
+            CheckArgs (2,2,2,"");
             str = domNamespacePrefix(node);
             if (str) {
                 SetResult (str);
@@ -2865,6 +2890,7 @@ int tcldom_NodeObjCmd (
             return TCL_OK;
 
         case m_namespaceURI:
+            CheckArgs (2,2,2,"");
             str = domNamespaceURI(node);
             if (str) {
                 SetResult (str);
@@ -2874,6 +2900,7 @@ int tcldom_NodeObjCmd (
             return TCL_OK;
 
         case m_localName:
+            CheckArgs (2,2,2,"");
             if (node->nodeType == ELEMENT_NODE) {
                 if (node->namespace != 0) {
                     SetResult ( domGetLocalName((char*)node->nodeName) );
@@ -2884,10 +2911,12 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_ownerDocument:
+            CheckArgs (2,3,2,"?docObjVar?");
             return tcldom_returnDocumentObj(interp, node->ownerDocument, (objc == 3),
                                             (objc == 3) ? objv[2] : NULL);
 
         case m_target:
+            CheckArgs (2,2,2,"");
             if (node->nodeType != PROCESSING_INSTRUCTION_NODE) {
                 SetResult ( "not a PROCESSING_INSTRUCTION_NODE!");
                 return TCL_ERROR;
@@ -2899,26 +2928,31 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_delete:
+            CheckArgs (2,2,2,"");
             domDeleteNode (node, tcldom_docDeleteNode, interp);
             break;
 
         case m_data:
+            CheckArgs (2,2,2,"");
             if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
                 Tcl_SetStringObj (Tcl_GetObjResult (interp),
                                   ((domProcessingInstructionNode*)node)->dataValue,
                                   ((domProcessingInstructionNode*)node)->dataLength);
             } else
-            if (node->nodeType == TEXT_NODE || node->nodeType == CDATA_SECTION_NODE) {
+            if (   node->nodeType == TEXT_NODE 
+                || node->nodeType == CDATA_SECTION_NODE
+                || node->nodeType == COMMENT_NODE) {
                 Tcl_SetStringObj (Tcl_GetObjResult (interp),
                                   ((domTextNode*)node)->nodeValue,
                                   ((domTextNode*)node)->valueLength);
             } else {
-                SetResult ("not a TEXT_NODE / CDATA_SECTION_NODE / PROCESSING_INSTRUCTION_NODE !");
+                SetResult ("not a TEXT_NODE / CDATA_SECTION_NODE / COMMENT_NODE / PROCESSING_INSTRUCTION_NODE !");
                 return TCL_ERROR;
             }
             break;
 
         case m_getLine:
+            CheckArgs (2,2,2,"");
             if (domGetLineColumn (node, &line, &column) < 0) {
                 SetResult ( "no line/column information available!");
                 return TCL_ERROR;
@@ -2927,6 +2961,7 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_getColumn:
+            CheckArgs (2,2,2,"");
             if (domGetLineColumn (node, &line, &column) < 0) {
                 SetResult ( "no line/column information available!");
                 return TCL_ERROR;
@@ -2935,6 +2970,7 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_getBaseURI:
+            CheckArgs (2,2,2,"");
             str = findBaseURI (node);
             if (!str) {
                 SetResult ("no base URI information available!");
