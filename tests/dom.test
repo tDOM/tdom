@@ -13,6 +13,7 @@
 #    dom-8.*:  getElementsByTagNameNS
 #    dom-9.*:  nodeValue  
 #    dom-10.*: setAttribute
+#    dom-11.*: disableOutputEscaping 
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -665,6 +666,71 @@ test dom-10.1 {setAttribute - set multiple attributes at once} {
     $root setAttribute a1 1 a2 2 a3 3 a4 4 a5 5 a6 6 a7 7 a8 8
     $root asXML
 } {<foo a1="1" a2="2" a3="3" a4="4" a5="5" a6="6" a7="7" a8="8"/>
+}
+
+$doc delete
+
+set doc [dom parse {<root>&amp;</root>}]
+set root [$doc documentElement]
+set textnode [$root firstChild]
+
+test dom-11.1 {disableOutputEscaping} {
+    $textnode disableOutputEscaping
+} {0}
+
+test dom-11.2 {disableOutputEscaping} {
+    $textnode disableOutputEscaping 1
+} {0}
+
+test dom-11.3 {disableOutputEscaping} {
+    $textnode disableOutputEscaping
+} {1}
+
+test dom-11.4 {disableOutputEscaping} {
+    $root asXML
+} {<root>&</root>
+}
+
+$doc delete
+
+test dom-11.5 {disableOutputEscaping} {
+    set doc [dom createDocument root]
+    set textnode [$doc createTextNode "<p>some <b>important</b> text</p>"]
+    $textnode disableOutputEscaping 1
+    set root [$doc documentElement]
+    $root appendChild $textnode
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<root><p>some <b>important</b> text</p></root>
+}
+
+test dom-11.6 {disableOutputEscaping} {
+    set doc [dom createDocument root]
+    set textnode [$doc createTextNode "<p>some <b>important</b> text</p>"]
+    $textnode disableOutputEscaping 1
+    set root [$doc documentElement]
+    $root appendChild $textnode
+    set textnode [$doc createTextNode "&"]
+    $root appendChild $textnode
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<root><p>some <b>important</b> text</p>&amp;</root>
+}
+
+test dom-11.6 {disableOutputEscaping} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    set textnode [$doc createTextNode "&"]
+    $root appendChild $textnode
+    set result [$root asXML]
+    set textnode [$doc createTextNode "<p>some <b>important</b> text</p>"]
+    $textnode disableOutputEscaping 1
+    $root appendChild $textnode
+    $doc delete
+    set result
+} {<root>&amp;<p>some <b>important</b> text</p></root>
 }
 
 # cleanup
