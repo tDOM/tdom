@@ -765,7 +765,8 @@ static int xsltAddExternalDocument (
     }
     if (!found) {
         if (!xs->xsltDoc->extResolver) {
-            *errMsg = tdomstrdup("need resolver Script to include Stylesheet! (use \"-externalentitycommand\")");
+            *errMsg = tdomstrdup("need resolver Script to include Stylesheet! "
+                                 "(use \"-externalentitycommand\")");
             return -1;
         }
         extDocument = getExternalDocument (
@@ -1141,7 +1142,11 @@ static int xsltFormatNumber (
     p = formatStr;
 
     i = 0;
-    while (*p && (*p!=df->zeroDigit) && (*p!=df->digit) && (*p!=df->groupingSeparator) && (*p!=df->decimalSeparator)) {
+    while (*p 
+           && (*p!=df->zeroDigit) 
+           && (*p!=df->digit) 
+           && (*p!=df->groupingSeparator) 
+           && (*p!=df->decimalSeparator)) {
         if (i<79) { prefix[i++] = *p; }
         p++;
     }
@@ -1174,12 +1179,20 @@ static int xsltFormatNumber (
         /* Only prefix and suffix are taken from the second format string */
         p++;
         i = 0;
-        while (*p && *p!=df->zeroDigit && *p!=df->digit && *p!=df->groupingSeparator && *p!=df->decimalSeparator) {
+        while (*p 
+               && *p!=df->zeroDigit
+               && *p!=df->digit 
+               && *p!=df->groupingSeparator 
+               && *p!=df->decimalSeparator) {
             if (i<79) { prefix[i++] = *p; }
             p++;
         }
         prefix[i] = '\0';
-        while (*p && ((*p==df->zeroDigit) || (*p==df->digit) || (*p==df->groupingSeparator) || (*p==df->decimalSeparator))) p++;
+        while (*p 
+               && ((*p==df->zeroDigit) 
+                   || (*p==df->digit) 
+                   || (*p==df->groupingSeparator) 
+                   || (*p==df->decimalSeparator))) p++;
         i = 0;
         while (*p) {
             if (i<79) { suffix[i++] = *p; }
@@ -1377,7 +1390,8 @@ static int xsltFormatNumber (
     /* Check for more than one patternSeparator in the formatStr */
     while (*p) {
         if (*p == df->patternSeparator) {
-            *errMsg = tdomstrdup("More than one patternSeparator in the pattern");
+            *errMsg = 
+                tdomstrdup("More than one patternSeparator in the pattern");
             return -1;
         }
         p++;
@@ -1385,7 +1399,11 @@ static int xsltFormatNumber (
     p = format;
 
     i = 0;
-    while (*p && (*p!=df->zeroDigit) && (*p!=df->digit) && (*p!=df->groupingSeparator) && (*p!=df->decimalSeparator)) {
+    while (*p 
+           && (*p!=df->zeroDigit) 
+           && (*p!=df->digit) 
+           && (*p!=df->groupingSeparator) 
+           && (*p!=df->decimalSeparator)) {
         if (*p == df->percent) (percentMul = 1);
         else if (*p == df->perMille) (perMilleMul = 1);
         if (i<79) { 
@@ -1418,7 +1436,8 @@ static int xsltFormatNumber (
     while (*p) {
         /* Check for more than one decimalSeparator */
         if (*p == df->decimalSeparator) {
-            *errMsg = tdomstrdup("More than one decimalSeparator in subpattern");
+            *errMsg = 
+                tdomstrdup("More than one decimalSeparator in subpattern");
             return -1;
         }
         /* Check for groupingSeparator after decimalSeparator */
@@ -1445,7 +1464,11 @@ static int xsltFormatNumber (
         percentMul = 0; perMilleMul = 0;
         p++;
         i = 0;
-        while (*p && *p!=df->zeroDigit && *p!=df->digit && *p!=df->groupingSeparator && *p!=df->decimalSeparator) {
+        while (*p 
+               && *p!=df->zeroDigit 
+               && *p!=df->digit 
+               && *p!=df->groupingSeparator 
+               && *p!=df->decimalSeparator) {
             if (*p == df->percent) (percentMul = 1);
             else if (*p == df->perMille) (perMilleMul = 1);
             if (i<79) { 
@@ -1458,7 +1481,11 @@ static int xsltFormatNumber (
             p++;
         }
         prefix2[i] = '\0';
-        while (*p && ((*p==df->zeroDigit) || (*p==df->digit) || (*p==df->groupingSeparator) || (*p==df->decimalSeparator))) p++;
+        while (*p 
+               && ((*p==df->zeroDigit) 
+                   || (*p==df->digit) 
+                   || (*p==df->groupingSeparator) 
+                   || (*p==df->decimalSeparator))) p++;
         i = 0;
         while (*p) {
             if (*p == df->percent) (percentMul = 1);
@@ -1768,8 +1795,9 @@ static int buildKeyInfoForDoc (
                 rsAddNode (&context, node);
                 DBG(printXML(node, 0, 2);)
                 docOrder = 1;
-                rc = xpathEvalSteps (kinfo->useAst, &context, node, kinfo->node,
-                                     0, &docOrder, &(xs->cbs), &rs, errMsg);
+                rc = xpathEvalSteps (kinfo->useAst, &context, node, 
+                                     kinfo->node, 0, &docOrder, &(xs->cbs),
+                                     &rs, errMsg);
                 if (rc != XPATH_OK) {
                     xpathRSFree (&rs);
                     xpathRSFree (&context);
@@ -1808,6 +1836,17 @@ static int buildKeyInfoForDoc (
                 xpathRSFree( &rs );
             }
             kinfo = kinfo->next;
+        }
+        if ((node->nodeType == ELEMENT_NODE) && (node->firstAttr)) {
+            node = (domNode*) node->firstAttr;
+            continue;
+        }
+        if ((node->nodeType == ATTRIBUTE_NODE)) {
+            if (((domAttrNode*)node)->nextSibling) {
+                node = (domNode*) ((domAttrNode*)node)->nextSibling;
+                continue;
+            }
+            node = ((domAttrNode*)node)->parentNode;
         }
         if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
             node = node->firstChild;
@@ -4521,7 +4560,7 @@ static int ExecAction (
                             /* The xmlns:xml namespace node will always
                                be in scope, but never needed to be copied,
                                because the result tree will also always
-                               already have it. To surpress, that the result
+                               already have it. To suppress, that the result
                                tree gets glutted with xmlns:xml declarations
                                (they would not harm, but ev. irritate some and
                                are unnecessary, we check this here as a 
@@ -5757,7 +5796,11 @@ getExternalDocument (
     Tcl_Channel   chan;
     Tcl_DString   dStr;
     
-    
+    if (isStylesheet && (href[0] == '\0')) {
+        *errMsg = tdomstrdup("Recursive import/include: stylesheet tries "
+                             "to access itself.");
+        return NULL;
+    }
     cmdPtr = Tcl_NewStringObj (xsltDoc->extResolver, -1);
     Tcl_IncrRefCount (cmdPtr);
     if (baseURI) {
