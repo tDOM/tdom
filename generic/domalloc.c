@@ -42,7 +42,6 @@
 #include <tcl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 #include <domalloc.h>
 
 
