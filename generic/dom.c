@@ -4067,5 +4067,5 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         return TCL_ERROR;
     }
 
-    return TCL_OK;
+    return TCL_OK; /* Never reached */
 }
