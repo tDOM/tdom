@@ -36,6 +36,19 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.5  2002/03/03 20:08:25  rolf
+|   Improved detection of improper stylesheets: now triggers error if any
+|   mandatory attribute of a xsl element is missing. The mandatory
+|   attributes are: xsl:stylesheet: version; xsl:transform: version;
+|   xsl:include: href; xsl:import: href; xsl:strip-space: elements;
+|   xsl:preserve-space: elements; xsl:call-template: name;
+|   xsl:namespace-alias: stylesheet-prefix result-prefix; xsl:element:
+|   name; xsl:attribute: name; xsl:attribute-set: name;
+|   xsl:processing-instruction: name; xsl:value-of: select; xsl:for-each:
+|   select; xsl:if: test; xsl:when: test; xsl:variable: name; xsl:param:
+|   name; xsl:copy-of: select; xsl:with-param: name; xsl:key: name match
+|   use
+|
 |   Revision 1.4  2002/03/01 04:06:59  rolf
 |   Improved detection of improper stylesheets: xsl:include xsl:import
 |   xsl:strip-space xsl:preserve-space xsl:apply-imports
@@ -50,10 +63,6 @@
 |
 |   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
 |   tDOM0.7test with Jochens first set of patches
-|
-|   Revision 1.5  2002/02/04 22:10:59  jolo
-|   rolf 04022002
-|
 |
 |
 |   written by Jochen Loewer
@@ -142,7 +151,7 @@ typedef enum {
     a_terminate, a_test, a_use, a_useAttributeSets, a_value, 
     a_groupingSeparator, a_groupingSize,    
     a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent, 
-    a_perMille, a_zeroDigit, a_digit, a_patternSeparator
+    a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version
 
 } xsltAttr;
 
@@ -2143,10 +2152,9 @@ static int xsltGetVar (
     xsltVarInProcess *varInProcess, thisVarInProcess;
     xpathResultSet    nodeList;
     domNode          *savedCurrentXSLTNode;
-       
-#if 0       
+    Tcl_DString       dErrMsg;
+    
     TRACE1("xsltGetVar variableName='%s' \n", variableName);
-#endif    
     
     frame = xs->varFrames;
     d = 0;
@@ -2222,11 +2230,13 @@ static int xsltGetVar (
             return XPATH_OK;
         }
     }
-    *errMsg = strdup ("Undefined Variable requested.");
+    Tcl_DStringInit (&dErrMsg);
+    Tcl_DStringAppend (&dErrMsg, "Variable \"", -1);
+    Tcl_DStringAppend (&dErrMsg, variableName, -1);
+    Tcl_DStringAppend (&dErrMsg, "\" has not been declared.", -1);
+    reportError (xs->currentXSLTNode, Tcl_DStringValue (&dErrMsg), errMsg);
+    Tcl_DStringFree (&dErrMsg);
     return XPATH_EVAL_ERR;
-        
-/*      rsSetString(result, ""); */
-/*      return XPATH_OK; */
 }
 
 
@@ -2465,6 +2475,9 @@ static int setParamVars (
                                         NULL, child->firstChild, 0, errMsg);
                     }
                     CHECK_RC;
+                } else {
+                    reportError (child, "xsl:with-param: missing mandatory attribute \"name\".", errMsg);
+                    return -1;
                 }
             }
         }
@@ -3002,50 +3015,53 @@ static int ExecAction (
             }
             nsAT = getAttr(actionNode, "namespace", a_namespace);
             str = getAttr(actionNode, "name", a_name);
-            if (str) {                
-                rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        str, &str2, errMsg);
-                CHECK_RC;
-                ns = NULL;
-                Tcl_DStringInit (&dStr);
-                if (nsAT) {
-                    rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                            nsAT, &ns, errMsg);
-                    CHECK_RC;
-                    NS = domLookupURI (actionNode, ns);
-                    if (NS) {
-                        Tcl_DStringAppend (&dStr, NS->prefix, -1);
-                        Tcl_DStringAppend (&dStr, ":", 1);
-                        Tcl_DStringAppend (&dStr, str2, -1);
-                    } else goto ignoreAttribute;
-                } else {
-                    domSplitQName (str2, prefix, &localName);
-                    if (prefix[0] != '\0') {
-                        if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
-                        NS = domLookupPrefix (actionNode, prefix);
-                        if (NS) ns = NS->uri;
-                        else goto ignoreAttribute;
-                    } else {
-                        if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
-                    }
-                    Tcl_DStringAppend (&dStr, str2, -1);
-                }
-                
-                savedLastNode = xs->lastNode;
-                xs->lastNode  = domNewElementNode (xs->resultDoc,  
-                                    "container", ELEMENT_NODE);
-                rc = ExecActions(xs, context, currentNode, currentPos,
-                                 actionNode->firstChild, errMsg);
-                CHECK_RC;
-                pc = xpathGetTextValue (xs->lastNode, &len);
-                domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc, ns);
-                free(pc);
-                Tcl_DStringFree (&dStr);
-                domDeleteNode (xs->lastNode, NULL, NULL);
-                xs->lastNode = savedLastNode;
-            ignoreAttribute:
-                free(str2);
+            if (!str) {
+                reportError (actionNode, "xsl:attribute: missing mandatory attribute \"name\".", errMsg);
+                return -1;
             }
+            
+            rc = evalAttrTemplates( xs, context, currentNode, currentPos,
+                                    str, &str2, errMsg);
+            CHECK_RC;
+            ns = NULL;
+            Tcl_DStringInit (&dStr);
+            if (nsAT) {
+                rc = evalAttrTemplates( xs, context, currentNode, currentPos,
+                                        nsAT, &ns, errMsg);
+                CHECK_RC;
+                NS = domLookupURI (actionNode, ns);
+                if (NS) {
+                    Tcl_DStringAppend (&dStr, NS->prefix, -1);
+                    Tcl_DStringAppend (&dStr, ":", 1);
+                    Tcl_DStringAppend (&dStr, str2, -1);
+                } else goto ignoreAttribute;
+            } else {
+                domSplitQName (str2, prefix, &localName);
+                if (prefix[0] != '\0') {
+                    if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
+                    NS = domLookupPrefix (actionNode, prefix);
+                    if (NS) ns = NS->uri;
+                    else goto ignoreAttribute;
+                } else {
+                    if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
+                }
+                Tcl_DStringAppend (&dStr, str2, -1);
+            }
+                
+            savedLastNode = xs->lastNode;
+            xs->lastNode  = domNewElementNode (xs->resultDoc,  
+                                               "container", ELEMENT_NODE);
+            rc = ExecActions(xs, context, currentNode, currentPos,
+                             actionNode->firstChild, errMsg);
+            CHECK_RC;
+            pc = xpathGetTextValue (xs->lastNode, &len);
+            domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc, ns);
+            free(pc);
+            Tcl_DStringFree (&dStr);
+            domDeleteNode (xs->lastNode, NULL, NULL);
+            xs->lastNode = savedLastNode;
+    ignoreAttribute:
+            free(str2);
             break;
             
         case attributeSet: return 0;
@@ -3114,6 +3130,9 @@ static int ExecAction (
                                 CHECK_RC;
                                 return 0;
                             }                            
+                        } else {
+                            reportError (child, "xsl:when: missing mandatory attribute \"test\".", errMsg);
+                            return -1;
                         }
                         break;
                         
@@ -3249,16 +3268,30 @@ static int ExecAction (
                 return -1;
             }
             select = getAttr(actionNode, "select", a_select);
-            if (select != NULL) {
-                xs->current = currentNode;
-                rc = evalXPath(xs, context, currentNode, currentPos, select,
-                               &rs, errMsg);
-                CHECK_RC;            
-                TRACE1(" copyOf select='%s':\n", select);
-                DBG(rsPrint(&rs));
-                if (rs.type == NodeSetResult) {
-                    for (i=0; i<rs.nr_nodes; i++) { 
-                        if (rs.nodes[i]->nodeType == DOCUMENT_NODE) {
+            if (!select) {
+                reportError (actionNode, "xsl:copy-of: missing mandatory attribute \"select\".", errMsg);
+                return -1;
+            }
+            
+            xs->current = currentNode;
+            rc = evalXPath(xs, context, currentNode, currentPos, select,
+                           &rs, errMsg);
+            CHECK_RC;            
+            TRACE1(" copyOf select='%s':\n", select);
+            DBG(rsPrint(&rs));
+            if (rs.type == NodeSetResult) {
+                for (i=0; i<rs.nr_nodes; i++) { 
+                    if (rs.nodes[i]->nodeType == DOCUMENT_NODE) {
+                        child = rs.nodes[i]->firstChild;
+                        while (child) {
+                            n = domCloneNode(child, 1);
+                            domAppendChild(xs->lastNode, n);
+                            child = child->nextSibling;
+                        }
+                    } else {
+                        if (*(rs.nodes[i]->nodeName) == '(' &&
+                            ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
+                             || (strcmp(rs.nodes[i]->nodeName,"(rootNode)")==0))) {
                             child = rs.nodes[i]->firstChild;
                             while (child) {
                                 n = domCloneNode(child, 1);
@@ -3266,22 +3299,12 @@ static int ExecAction (
                                 child = child->nextSibling;
                             }
                         } else {
-                            if (*(rs.nodes[i]->nodeName) == '(' &&
-                                ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
-                                 || (strcmp(rs.nodes[i]->nodeName,"(rootNode)")==0))) {
-                                child = rs.nodes[i]->firstChild;
-                                while (child) {
-                                    n = domCloneNode(child, 1);
-                                    domAppendChild(xs->lastNode, n);
-                                    child = child->nextSibling;
-                                }
-                            } else {
-                                n = domCloneNode(rs.nodes[i], 1);
-                                domAppendChild(xs->lastNode, n);
-                            }
+                            n = domCloneNode(rs.nodes[i], 1);
+                            domAppendChild(xs->lastNode, n);
                         }
                     }
-                } else
+                }
+            } else
                 if ((rs.type == AttrNodeSetResult) ||
                     (rs.type == AttrValueSetResult)) {
                     for (i=0; i<rs.nr_nodes; i++) { 
@@ -3297,8 +3320,7 @@ static int ExecAction (
                                          TEXT_NODE, 0);
                     free(str);
                 }
-                xpathRSFree( &rs );               
-            }
+            xpathRSFree( &rs );               
             break;
             
         case decimalFormat: return 0;
@@ -3306,35 +3328,38 @@ static int ExecAction (
         case element:
             nsAT = getAttr(actionNode, "namespace", a_namespace);
             str  = getAttr(actionNode, "name", a_name);
-            if (str) {
-                rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        str, &str2, errMsg);
-                CHECK_RC;
+            if (!str) {
+                reportError (actionNode, "xsl:element: missing mandatory attribute \"name\".", errMsg);
+                return -1;
+            }
+            
+            rc = evalAttrTemplates( xs, context, currentNode, currentPos,
+                                    str, &str2, errMsg);
+            CHECK_RC;
                 
-                ns = NULL;
-                if (nsAT) {
-                    rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                            nsAT, &ns, errMsg);
-                    CHECK_RC;
-                }
-                savedLastNode = xs->lastNode;
-                xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, ns);
-                free(str2);
-                str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
-                if (str) {
-                    TRACE1("use-attribute-sets = '%s' \n", str);
-                    rc = ExecUseAttributeSets (xs, context, currentNode, currentPos,
-                                               str, errMsg);
-                    CHECK_RC;
-                }
-                /* process the children as well */
-                if (actionNode->firstChild) {
-                    rc = ExecActions(xs, context, currentNode, currentPos,
-                                     actionNode->firstChild, errMsg);
-                }
-                xs->lastNode = savedLastNode;
+            ns = NULL;
+            if (nsAT) {
+                rc = evalAttrTemplates( xs, context, currentNode, currentPos,
+                                        nsAT, &ns, errMsg);
                 CHECK_RC;
             }
+            savedLastNode = xs->lastNode;
+            xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, ns);
+            free(str2);
+            str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
+            if (str) {
+                TRACE1("use-attribute-sets = '%s' \n", str);
+                rc = ExecUseAttributeSets (xs, context, currentNode, currentPos,
+                                           str, errMsg);
+                CHECK_RC;
+            }
+            /* process the children as well */
+            if (actionNode->firstChild) {
+                rc = ExecActions(xs, context, currentNode, currentPos,
+                                 actionNode->firstChild, errMsg);
+            }
+            xs->lastNode = savedLastNode;
+            CHECK_RC;
             break;
             
         case fallback: return 0;
@@ -3412,6 +3437,9 @@ static int ExecAction (
                                      actionNode->firstChild, errMsg);
                     CHECK_RC;
                 }
+            } else {
+                reportError (actionNode, "xsl:if: missing mandatory attribute \"test\".", errMsg);
+                return -1;
             }
             break;
 
@@ -3479,7 +3507,10 @@ static int ExecAction (
                     }
                     CHECK_RC;
                 }
-            }        
+            } else {
+                reportError (actionNode, "xsl:param: missing mandatory attribute \"name\".", errMsg);
+                return -1;
+            }
             break;
             
         case preserveSpace: return 0;
@@ -3494,6 +3525,9 @@ static int ExecAction (
                                  xs->resultDoc, str2, strlen(str), pc, len);
                 domAppendChild(xs->lastNode, n);
                 free(str2);
+            } else {
+                reportError (actionNode, "xsl:processing-instruction: missing mandatory attribute \"name\".", errMsg);
+                return -1;
             }
             break;
             
@@ -4361,6 +4395,7 @@ static int processTopLevel (
                                  errMsg);
                     return -1;
                 }
+                /* mandatory attributes: stylesheet-prefix result-prefix */
                 break;
                 
             case output:
@@ -4386,6 +4421,9 @@ static int processTopLevel (
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
                     fillElementList(&(xs->preserveInfo), precedence, node, str);
+                } else {
+                    reportError (node, "xsl:preserve-space: missing required attribute \"elements\".", errMsg);
+                    return -1;
                 }
                 break;
                 
@@ -4397,6 +4435,9 @@ static int processTopLevel (
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
                     fillElementList(&(xs->stripInfo), precedence, node, str);
+                } else {
+                    reportError (node, "xsl:strip-space: missing required attribute \"elements\".", errMsg);
+                    return -1;
                 }
                 break;
                 
@@ -4655,6 +4696,7 @@ int xsltProcess (
     xpathResultSet  nodeList;
     domNode        *node;
     int             rc;
+    char           *str;
     double          precedence, precedenceLowBound;
     xsltState       xs;
     xsltSubDoc     *sdoc;
@@ -4747,7 +4789,13 @@ int xsltProcess (
         *resultDoc = xs.resultDoc;
         xsltFreeState (&xs);
         return 0;
-    } 
+    } else {
+        str = getAttr (node, "version", a_version);
+        if (!str) {
+            reportError (node, "missing mandatory attribute \"version\".", errMsg);
+            return -1;
+        }
+    }
     
     precedence = 1.0;
     precedenceLowBound = 0.0;
