@@ -17,22 +17,17 @@
 |   The Original Code is tDOM.
 |
 |   The Initial Developer of the Original Code is Jochen Loewer
+|
 |   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
 |   Jochen Loewer. All Rights Reserved.
 |
-|   Contributor(s):
-|       July00  Zoran Vasiljevic  Added this file.
+|   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
+|   Zoran Vasiljevic. All Rights Reserved.
 |
-|   $Log$
-|   Revision 1.2  2002/06/02 06:36:24  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
+|   Portions created by Rolf Ade are Copyright (C) 1999-2002
+|   Rolf Ade. All Rights Reserved.
 |
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|   written by Zoran Vasiljevic
+|   Written by Zoran Vasiljevic
 |   July 12, 2000
 |
 \---------------------------------------------------------------------------*/
@@ -46,4 +41,12 @@ int nodecmd_appendFromScript (Tcl_Interp *interp,
                               domNode    *node,
                               Tcl_Obj    *cmdObj);
 
+/* EOF $RCSfile $ */
+
+/* Emacs Setup Variables */
+/* Local Variables:      */
+/* mode: C               */
+/* indent-tabs-mode: nil */
+/* c-basic-offset: 4     */
+/* End:                  */
 

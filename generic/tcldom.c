@@ -150,7 +150,7 @@ static char dom_usage[] =
                 TDomThreaded(
                 "          attachDocument docObjCommand ?objVar?            \n"
                 )
-                "          createNodeCmd (element|comment|text|cdata|pi)Node commandName \n"
+                "          createNodeCmd ?-returnNodeCmd? (element|comment|text|cdata|pi)Node cmdName \n"
                 "          setResultEncoding ?encodingName?                 \n"
                 "          setStoreLineColumn ?boolean?                     \n"
                 "          isCharData string                                \n"
