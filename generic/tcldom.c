@@ -4229,9 +4229,9 @@ int tcldom_DocObjCmd (
 
         case m_renumber:
             CheckArgs(2,2,2,"");
-            if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
-                domRenumberTree (node->ownerDocument->rootNode);
-                node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+            if (doc->nodeFlags & NEEDS_RENUMBERING) {
+                domRenumberTree (doc->rootNode);
+                doc->nodeFlags &= ~NEEDS_RENUMBERING;
             }
             return TCL_OK;
         )
