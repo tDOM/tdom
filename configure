@@ -668,10 +668,10 @@ TDOMSHELL=tcldomsh
 MAJOR_VERSION=0
 
 
-MINOR_VERSION=8
+MINOR_VERSION=7
 
 
-PATCHLEVEL=0
+PATCHLEVEL=8
 
 
 # This package name must be replaced statically for AC_SUBST to work

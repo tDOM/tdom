@@ -33,7 +33,7 @@
 #
 #----------------------------------------------------------------------------
 
-package require tdom 0.7.5
+package require tdom 0.7.8
 
 # The following is normaly not needed, given, that tDOM is correctly
 # installed. This code only ensures, that the tDOM script library gets

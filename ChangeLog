@@ -1,9 +1,20 @@
 2003-07-03  Zoran Vasiljevic  <zoran@archiware.com>
 
-
 	---- Changes done in rel-0-7-branch ----
 	---- Those should be merged in HEAD ----
 
+	* README
+	* README.AOL
+	* configure
+	* configure-tcl8.0.5
+	* configure.in
+	* apps/xslt.tcl
+	* extensions/tnc/tnc.c
+	* generic/tcldom.c
+	* mac/Prefix/tDOMPrefix.h
+	* mac/Prefix/tDOMPrefix_OSX.h
+	* mac/tDOM/pkgIndex.tcl
+	* tests/loadtdom.tcl: bumped version string to 0.7.8
 	* generic/domlock.c: fixed double mutex unlock.
 
 	* generic/tcldom.c: allows same thread to issue several
