@@ -3218,8 +3218,9 @@ static int xpathEvalStep (
                 rsAddNode( &leftResult, ctxNode);
             } else {
                 XPATH_ARITYCHECK(step,1,errMsg);
-                rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                     position, docOrder, cbs, &leftResult, errMsg);
+                xpathRSInit (&leftResult);
+                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                    nodeList, cbs, &leftResult, docOrder, errMsg);
                 if (rc) {
                     xpathRSFree( &leftResult );
                     return rc;
@@ -3235,8 +3236,9 @@ static int xpathEvalStep (
             (IS_FUNC('r',"round"))
         ) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3255,8 +3257,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('b',"boolean")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
            if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3279,8 +3282,9 @@ static int xpathEvalStep (
 
             } else {
                 XPATH_ARITYCHECK(step,1,errMsg);
-                rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                     position, docOrder, cbs, &leftResult, errMsg);
+                xpathRSInit (&leftResult);
+                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                    nodeList, cbs, &leftResult, docOrder, errMsg);
                 if (rc) {
                     xpathRSFree( &leftResult );
                     return rc;
@@ -3328,8 +3332,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('n',"not")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext,
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                    nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree (&leftResult);
                 return rc;
@@ -3350,8 +3355,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('i',"id")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3434,8 +3440,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('s',"sum")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3475,8 +3482,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('l', "lang")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree (&leftResult);
                 return rc;
@@ -3795,8 +3803,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('c',"count")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3815,8 +3824,9 @@ static int xpathEvalStep (
 
         if (IS_FUNC('u',"unparsed-entry-uri")) {
             XPATH_ARITYCHECK(step,1,errMsg);
-            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                 position, docOrder, cbs, &leftResult, errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
             if (rc) {
                 xpathRSFree( &leftResult );
                 return rc;
@@ -3845,9 +3855,9 @@ static int xpathEvalStep (
                 rsAddNode( &leftResult, ctxNode);
             } else {
                 XPATH_ARITYCHECK(step,1,errMsg);
-                rc = xpathEvalSteps (step->child, nodeList, ctxNode,
-                                     exprContext, position, docOrder, cbs,
-                                     &leftResult, errMsg);
+                xpathRSInit (&leftResult);
+                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                    nodeList, cbs, &leftResult, docOrder, errMsg);
                 if (rc) {
                     xpathRSFree( &leftResult );
                     return rc;
