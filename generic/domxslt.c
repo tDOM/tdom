@@ -7561,7 +7561,6 @@ int xsltProcess (
     xs->resultDoc->documentElement = NULL;
     node = xs->resultDoc->rootNode->firstChild;
     while (node) {
-        node->parentNode = NULL;
         if (node->nodeType == ELEMENT_NODE) {
             xs->resultDoc->documentElement = node;
             break;
