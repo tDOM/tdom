@@ -74,9 +74,21 @@
 |   Defines
 |
 \---------------------------------------------------------------------------*/
+#define DBG(x)          
+#define TDOM_NS
 #define RetError(m,p)   *errStr = m; *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 
+/*---------------------------------------------------------------------------
+|   type domActiveNS
+|
+\--------------------------------------------------------------------------*/
+typedef struct _domActiveNS {
+
+    int    depth;
+    domNS *namespace;
+
+} domActiveNS;
 
 /*----------------------------------------------------------------------------
 |   Begin Character Entity Translator
@@ -322,6 +334,36 @@ static void TranslateEntityRefs (
 \---------------------------------------------------------------------------*/
 
 
+/*---------------------------------------------------------------------------
+|   domIsNamespaceInScope
+|
+\--------------------------------------------------------------------------*/
+static int
+domIsNamespaceInScope (
+    domActiveNS *NSstack,
+    int          NSstackPos,
+    char        *prefix,
+    char        *namespaceURI
+)
+{
+    int    i;
+
+    for (i = NSstackPos; i >= 0; i--) {
+        if (NSstack[i].namespace->prefix[0] &&
+            (strcmp(NSstack[i].namespace->prefix, prefix)==0)) {
+            if (strcmp(NSstack[i].namespace->uri, namespaceURI)==0) {
+                /* OK, exactly the same namespace declaration is in scope */
+                return 1;
+            } else {
+                /* This prefix is currently assigned to another uri,
+                   we need a new NS declaration, to override this one */
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
+
 /*----------------------------------------------------------------------------
 |   XML_SimpleParse (non recursive)
 |
@@ -352,6 +394,20 @@ XML_SimpleParse (
     int            hnew;
     Tcl_HashEntry *h;
     domProcessingInstructionNode *pinode;
+
+#ifdef TDOM_NS    
+    int            nspos, newNS;
+    int            depth = 0;
+    int            activeNSpos  = -1;
+    int            activeNSsize = 8;
+    domActiveNS   *activeNS     = (domActiveNS*) Tcl_Alloc (sizeof(domActiveNS) * activeNSsize);
+    char          *xmlns, *localname;
+    domNS         *ns;
+    char           tagPrefix[MAX_PREFIX_LEN];
+    char           prefix[MAX_PREFIX_LEN];
+    
+#endif
+
 
     x = &(xml[*pos]);
 
@@ -425,6 +481,15 @@ XML_SimpleParse (
             } else {
                 RetError("Missing \">\"",(x - xml)-1);
             }
+#ifdef TDOM_NS 
+            depth--;
+            /* pop active namespaces */
+            while ( (activeNSpos >= 0) &&
+                    (activeNS[activeNSpos].depth == depth) )
+            {
+                activeNSpos--;
+            } 
+#endif                                   
             if (parent_node == NULL) {
                 /* we return to main node and so finished parsing
                    create the root node now
@@ -773,32 +838,142 @@ XML_SimpleParse (
                     nArgVal = x - ArgVal;
                 }
 
-                /*--------------------------------------------------
-                |   allocate new attribute node
-                \--------------------------------------------------*/
-                h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
-                attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
-                memset(attrnode, 0, sizeof(domAttrNode));
-                attrnode->parentNode  = node;
-                attrnode->nodeName    = (char *)&(h->key);
-                attrnode->nodeType    = ATTRIBUTE_NODE;
-                attrnode->nodeFlags   = 0;
-                attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
-                attrnode->valueLength = nArgVal;
-                memmove(attrnode->nodeValue, ArgVal, nArgVal);
-                *(attrnode->nodeValue + nArgVal) = 0;
-                if (ampersandSeen) {
-                    TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
-                }
-                if (node->firstAttr) {
-                    lastAttr->nextSibling = attrnode;
+                
+#ifdef TDOM_NS
+                /*------------------------------------------------------------
+                |   handle namespace attributes or normal ones
+                \------------------------------------------------------------*/
+                if (strncmp((char *)ArgName, "xmlns", 5) == 0) {
+                    xmlns = ArgName;
+                    newNS = 1;
+                    
+                    h = Tcl_CreateHashEntry(&HASHTAB(doc, attrNames),ArgName, &hnew); 
+                    attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+                    memset(attrnode, 0, sizeof(domAttrNode));
+                    attrnode->parentNode  = node;
+                    attrnode->nodeName    = (char *)&(h->key);
+                    attrnode->nodeType    = ATTRIBUTE_NODE;
+                    attrnode->nodeFlags   = IS_NS_NODE;
+                    attrnode->namespace   = ns->index;
+                    attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
+                    attrnode->valueLength = nArgVal;
+                    memmove(attrnode->nodeValue, ArgVal, nArgVal);
+                    *(attrnode->nodeValue + nArgVal) = 0;
+                    if (ampersandSeen) {
+                        TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
+                    }
+                    
+                    if (xmlns[5] == ':') {
+                        if (domIsNamespaceInScope (activeNS, activeNSpos,
+                                                   &(xmlns[6]), (char*)attrnode->nodeValue) )
+                        {
+                            ns = domLookupPrefix (node, &(xmlns[6]));
+                            newNS = 0;
+                        } else {
+                            ns = domNewNamespace(doc, &(xmlns[6]), (char*)attrnode->nodeValue);
+                        }
+                    } else {
+                        ns = domNewNamespace(doc, "", (char*)attrnode->nodeValue);
+                    }
+                    if (newNS) {
+                        /* push active namespace */
+                        activeNSpos++;
+                        if (activeNSpos >= activeNSsize) {
+                            activeNS = (domActiveNS*) Tcl_Realloc(
+                                           (char*)activeNS,
+                                           sizeof(domActiveNS) * 2 * activeNSsize);
+                            activeNSsize = 2 * activeNSsize;
+                        }
+                        activeNS[activeNSpos].depth     = depth;
+                        activeNS[activeNSpos].namespace = ns;
+                    }
+    
+                    if (node->firstAttr) {
+                        lastAttr->nextSibling = attrnode;
+                    } else {
+                        node->firstAttr = attrnode;
+                    }
+                    lastAttr = attrnode;
+                    
+                    /*----------------------------------------------------------
+                    |   look for namespace of element
+                    \---------------------------------------------------------*/
+                    domSplitQName ((char*)ArgName, tagPrefix, &localname);
+                    for (nspos = activeNSpos; nspos >= 0; nspos--) {
+                        if (  ((tagPrefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
+                           || ((tagPrefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
+                               && (strcmp(tagPrefix, activeNS[nspos].namespace->prefix) == 0))
+                        ) {
+                            if (activeNS[nspos].namespace->prefix[0] == '\0'
+                                && activeNS[nspos].namespace->uri[0] == '\0'
+                                && tagPrefix[0] == '\0') 
+                            {
+                                /* xml-names rec. 5.2: "The default namespace can be
+                                   set to the empty string. This has the same effect,
+                                   within the scope of the declaration, of there being
+                                   no default namespace." */
+                                 break;
+                            }
+                            node->namespace = activeNS[nspos].namespace->index;
+                            DBG(fprintf(stderr, "tag='%s' uri='%s' \n",
+                                        node->nodeName,
+                                        activeNS[nspos].namespace->uri);
+                            )
+                            break;
+                        }
+                    }
+
                 } else {
-                    node->firstAttr = attrnode;
+#endif
+                
+                    /*------------------------------------------------------------
+                    |   allocate new attribute node
+                    \------------------------------------------------------------*/
+                    h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
+                    attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+                    memset(attrnode, 0, sizeof(domAttrNode));
+                    attrnode->parentNode  = node;
+                    attrnode->nodeName    = (char *)&(h->key);
+                    attrnode->nodeType    = ATTRIBUTE_NODE;
+                    attrnode->nodeFlags   = 0;
+                    attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
+                    attrnode->valueLength = nArgVal;
+                    memmove(attrnode->nodeValue, ArgVal, nArgVal);
+                    *(attrnode->nodeValue + nArgVal) = 0;
+                    if (ampersandSeen) {
+                        TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
+                    }
+                    if (node->firstAttr) {
+                        lastAttr->nextSibling = attrnode;
+                    } else {
+                        node->firstAttr = attrnode;
+                    }
+                    lastAttr = attrnode;
+#ifdef TDOM_NS
+                    /*----------------------------------------------------------
+                    |   look for attribute namespace
+                    \---------------------------------------------------------*/
+                    domSplitQName ((char*)attrnode->nodeName, prefix, &localname);
+                    if (prefix[0] != '\0') {
+                        for (nspos = activeNSpos; nspos >= 0; nspos--) {
+                            if (  ((prefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
+                               || ((prefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
+                                    && (strcmp(prefix, activeNS[nspos].namespace->prefix) == 0))
+                            ) {
+                                attrnode->namespace = activeNS[nspos].namespace->index;
+                                DBG(fprintf(stderr, "attr='%s' uri='%s' \n",
+                                    attrnode->nodeName,
+                                    activeNS[nspos].namespace->uri);
+                                )
+                                break;
+                            }
+                        }
+                    }
                 }
-                lastAttr = attrnode;
-
+                depth++;
+#endif
+ 
                 *(ArgName + nArgName) = saved;
-
                 while (SPACE(*x)) {
                     x++;
                 }
