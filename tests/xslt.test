@@ -92,7 +92,42 @@ test xslt-1.4 {pattern IsFQElement with FillNodeList} {
     $resultDoc delete
     set result
 } {<out xmlns:m="foo">m:elem</out>}
-     
+
+test xslt-1.5 {space between \$ and varname} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+     <xsl:variable name="var" select="'value'"/>
+     <xsl:template match="/">
+       <out><xsl:value-of select="$  var"/></out>
+     </xsl:template>
+</xsl:stylesheet>}]
+    set xsltCmd [$xslt toXSLTcmd]
+    set result [catch {set resultDoc [$xsltCmd transform $xml]} errMsg]
+    $xsltCmd delete
+    $xml delete
+    lappend result $errMsg
+} {1 {Expected variable name}}
+
+test xslt-1.6 {space in nodetest node(  )} {
+    set xml [dom parse {<doc><e/>text<e/></doc>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+     <xsl:template match="doc">
+       <xsl:value-of select="count(node(   ))"/>
+     </xsl:template>
+   </xsl:stylesheet>}]
+    set xsltCmd [$xslt toXSLTcmd]
+    set resultDoc [$xsltCmd transform $xml]
+    $xsltCmd delete
+    $xml delete
+    set result [$resultDoc asText]
+    $resultDoc delete
+    set result
+} {3}
+
 test xslt-2.1 {xslt top level parameter: use default value} {
     set xml [dom parse {<root/>}]
     set xslt [dom parse {<xsl:stylesheet 
