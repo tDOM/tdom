@@ -32,10 +32,11 @@
 |
 \---------------------------------------------------------------------------*/
 
-int nodecmd_createNodeCmd (ClientData      dummy,
-                           Tcl_Interp    * interp,
+int nodecmd_createNodeCmd (Tcl_Interp    * interp,
                            int             objc,
-                           Tcl_Obj *CONST  objv[]);
+                           Tcl_Obj *CONST  objv[],
+                           int             checkName,
+                           int             checkCharData);
 
 int nodecmd_appendFromScript (Tcl_Interp *interp, 
                               domNode    *node,

@@ -791,9 +791,13 @@ char *         findBaseURI (domNode *node);
 
 void           tcldom_tolower (char *str, char *str_out, int  len);
 int            domIsNAME (char *name);
+int            domIsPINAME (char *name);
 int            domIsQNAME (char *name);
 int            domIsNCNAME (char *name);
 int            domIsChar (char *str);
+int            domIsComment (char *str);
+int            domIsCDATA (char *str);
+int            domIsPIValue (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 void           domRenumberTree (domNode *node);
