@@ -382,9 +382,9 @@ If the optional flag \fI-disableOutputEscaping\fR is given, the
 escaping of the ampersand character (&) and the left angle bracket (<)
 inside the data is disabled. You should use this flag carefully.
 .PP
-If the first argument of the method is \fItextNode\fR, or \fIcdataNode\fR,
-the command will create an comment node or CDATA section node. The syntax of
-the created command is:
+If the first argument of the method is \fIcommentNode\fR, or
+\&\fIcdataNode\fR, the command will create an comment node or CDATA section
+node. The syntax of the created command is:
 
 
 
@@ -407,13 +407,41 @@ command is:
 .CE
 .RE
 .TP
-\&\fB\fBdom\fP \fBsetStoreLineColumn\fP \fI?boolean\fB
+\&\fB\fBdom\fP \fBsetStoreLineColumn\fP \fI?boolean\fB?
 \&\fRIf switched on, the DOM nodes will contain line and column
-position information for the original XML document after parsing.
+position information for the original XML document after parsing. The default
+is, not to store line and column position information.
+.TP
+\&\fB\fBdom\fP \fBsetNameCheck\fP \fI?boolean\fB?
+\&\fRIf NameCheck is true, every method which expects an XML Name,
+a full qualified name or a processing instructing target will check, if the
+given string is valid according to his production rule. For commands created
+with the \fIcreateNodeCmd\fR method to be used in the context of
+\&\fIappendFromScript\fR the status of the flag at creation time
+decides. If NameCheck is true at creation time, the command will
+check his arguments, otherwise not. The \fIsetNameCheck\fR
+set this flag. It returns the current NameCheck flag state. The
+default state for NameCheck is true.
+.TP
+\&\fB\fBdom\fP \fBsetTextCheck\fP \fI?boolean\fB?
+\&\fRIf TextCheck is true, every command which expects XML Chars,
+a comment, a CDATA section value or a processing instructing value will check,
+if the given string is valid according to his production rule. For commands
+created with the \fIcreateNodeCmd\fR method to be used in the
+context of \fIappendFromScript\fR the status of the flag at
+creation time decides. If TextCheck is true at creation time, the
+command will check his arguments, otherwise not.The
+\&\fIsetTextCheck\fR method set this flag. It returns the current
+TextCheck flag state. The default state for TextCheck is true.
 .TP
 \&\fB\fBdom\fP \fBisName\fP \fIname\fB
 \&\fRReturns 1, if \fIname\fR is a valid XML Name according to
 production 5 of the XML 1.0 recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBisPIName\fP \fIname\fB
+\&\fRReturns 1, if \fIname\fR is a valid XML processing instruction
+target according to
+production 17 of the XML 1.0 recommendation. Otherwise it returns 0.
 .TP
 \&\fB\fBdom\fP \fBisNCName\fP \fIname\fB
 \&\fRReturns 1, if \fIname\fR is a valid NCName according
@@ -428,6 +456,21 @@ to production 6 of the of the Namespaces in XML recommendation. Otherwise it ret
 \&\fB\fBdom\fP \fBisCharData\fP \fIstring\fB
 \&\fRReturns 1, if every character in \fIstring\fR is
 a valid XML Char according to production 2 of the XML 1.0
+recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBisComment\fP \fIstring\fB
+\&\fRReturns 1, if \fIstring\fR is
+a valid comment according to production 15 of the XML 1.0
+recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBisCDATA\fP \fIstring\fB
+\&\fRReturns 1, if \fIstring\fR is
+valid according to production 20 of the XML 1.0
+recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBisPIValue\fP \fIstring\fB
+\&\fRReturns 1, if \fIstring\fR is
+valid according to production 16 of the XML 1.0
 recommendation. Otherwise it returns 0.
 .SH KEYWORDS
 XML, DOM, Document, node, parsing

@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid909">DESCRIPTION </a> · <a href="#SECTid1450">KEYWORDS</a>
+<a href="#SECTid80ab088">NAME</a> · <a href="#SECTid80ab100">SYNOPSIS</a> · <a href="#SECTid80ab1c8">DESCRIPTION </a> · <a href="#SECTid80ad6a8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80ab088">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid80ab100">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid909">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid80ab1c8">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -263,9 +263,9 @@ a text node. The syntax of the created command is:</p>
 escaping of the ampersand character (&amp;) and the left angle bracket (&lt;)
 inside the data is disabled. You should use this flag carefully.</p>
 
-<p>If the first argument of the method is <i class="m">textNode</i>, or <i class="m">cdataNode</i>,
-the command will create an comment node or CDATA section node. The syntax of 
-the created command is:</p>
+<p>If the first argument of the method is <i class="m">commentNode</i>, or 
+<i class="m">cdataNode</i>, the command will create an comment node or CDATA section 
+node. The syntax of the created command is:</p>
 
 <pre class="syntax">
 <b class="cmd">nodeCmd</b> <i class="m">data</i>
@@ -284,11 +284,39 @@ command is:</p>
 
         
           <dt>
-<b class="cmd">dom</b> <b class="method">setStoreLineColumn</b> <i class="m">?boolean</i>
-</dt>
+<b class="cmd">dom</b> <b class="method">setStoreLineColumn</b> <i class="m">?boolean</i>?</dt>
           <dd>If switched on, the DOM nodes will contain line and column
-position information for the original XML document after parsing.</dd>
+position information for the original XML document after parsing. The default
+is, not to store line and column position information.</dd>
         
+
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">setNameCheck</b> <i class="m">?boolean</i>?</dt>
+          <dd>If NameCheck is true, every method which expects an XML Name,
+a full qualified name or a processing instructing target will check, if the
+given string is valid according to his production rule. For commands created
+with the <i class="m">createNodeCmd</i> method to be used in the context of
+<i class="m">appendFromScript</i> the status of the flag at creation time
+decides. If NameCheck is true at creation time, the command will
+check his arguments, otherwise not. The <i class="m">setNameCheck</i>
+set this flag. It returns the current NameCheck flag state. The
+default state for NameCheck is true. </dd>
+        
+
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">setTextCheck</b> <i class="m">?boolean</i>?</dt>
+          <dd>If TextCheck is true, every command which expects XML Chars,
+a comment, a CDATA section value or a processing instructing value will check,
+if the given string is valid according to his production rule. For commands
+created with the <i class="m">createNodeCmd</i> method to be used in the
+context of <i class="m">appendFromScript</i> the status of the flag at
+creation time decides. If TextCheck is true at creation time, the
+command will check his arguments, otherwise not.The
+<i class="m">setTextCheck</i> method set this flag. It returns the current
+TextCheck flag state. The default state for TextCheck is true.</dd>
+
 
         
           <dt>
@@ -296,6 +324,15 @@ position information for the original XML document after parsing.</dd>
 </dt>
           <dd>Returns 1, if <i class="m">name</i> is a valid XML Name according to
 production 5 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a> recommendation. Otherwise it returns 0.</dd>
+        
+
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">isPIName</b> <i class="m">name</i>
+</dt>
+          <dd>Returns 1, if <i class="m">name</i> is a valid XML processing instruction
+          target according to
+production 17 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a> recommendation. Otherwise it returns 0.</dd>
         
 
         
@@ -326,9 +363,39 @@ a valid XML Char according to production 2 of the <a href="http://www.w3.org/TR/
 recommendation. Otherwise it returns 0.</dd>
         
 
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">isComment</b>
+<i class="m">string</i>
+</dt>
+          <dd>Returns 1, if <i class="m">string</i> is
+a valid comment according to production 15 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a>
+recommendation. Otherwise it returns 0.</dd>
+        
+
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">isCDATA</b>
+<i class="m">string</i>
+</dt>
+          <dd>Returns 1, if <i class="m">string</i> is
+valid according to production 20 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a>
+recommendation. Otherwise it returns 0.</dd>
+        
+
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">isPIValue</b>
+<i class="m">string</i>
+</dt>
+          <dd>Returns 1, if <i class="m">string</i> is
+valid according to production 16 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a>
+recommendation. Otherwise it returns 0.</dd>
+        
+
       </dl>
 
-  <h2><a name="SECTid1450">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid80ad6a8">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">
