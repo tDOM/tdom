@@ -1,3 +1,15 @@
+2004-08-15  Rolf Ade  <rolf@pointsman.pointsman.de>
+
+        * generic/dom.h
+        * generic/dom.c
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * generic/xmlsimple.h
+        * generic/xmlsimple.c
+        * tests/dom.test: Pass external entity resolver script around
+          in string representation (insteand of Tcl_Obj), to avoid
+          problems with mt builds.
+
 --- Release 0.8.0, 11. Aug. 2004 ---
 
 2004-08-10  Rolf Ade  <rolf@pointsman.pointsman.de>
