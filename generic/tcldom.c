@@ -1514,6 +1514,9 @@ int tcldom_selectNodes (
                            " namespace' pairs list as argument");
                 return TCL_ERROR;
             }
+            if (mappings) {
+                FREE (mappings);
+            }
             mappings = MALLOC (sizeof (char *) * (len + 1));
             for (i = 0; i < len; i++) {
                 Tcl_ListObjIndex (interp, objv[2], i, &objPtr);
@@ -3118,11 +3121,53 @@ static int tcldom_XSLTObjCmd (
     Tcl_Obj    *CONST objv[]
 )
 {
-    CheckArgs(2,8,1,"?-parameters parameterList? ?-ignoreUndeclaredParameters?"
-              " ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?");
-    objv++;
-    objc--;
-    return applyXSLT(NULL, interp, (void *) clientData, objc, objv);
+    int          index;
+    char        *errMsg = NULL;
+    
+    static CONST84 char *options[] = {
+        "transform", "delete", NULL
+    };
+    enum option {
+        m_transform, m_delete
+    };
+    
+
+    /* Longest possible call currently is:
+       xsltCmd transform -parameters parameterList \
+                         -ignoreUndeclaredParameters
+                         -xsltmessagecmd cmd <xmlDocObj> objVar */
+    CheckArgs(2,9,1,"option ?arg ...?");
+
+    /* This is not optimal, because we do the
+       tcldom_getDocumentFromName call here and again in
+       applyXSLT. This is only transitional, until <domNode xslt ..>
+       will be deprecated */
+    if ((tcldom_getDocumentFromName (interp, Tcl_GetString(objv[1]), &errMsg) 
+         != NULL)
+        || (Tcl_GetString (objv[1])[0] == '-')) {
+        /* Method obmitted, may default to "transform", try this */
+        objv++;
+        objc--;
+        return applyXSLT(NULL, interp, (void *) clientData, objc, objv);
+    }
+
+    if (Tcl_GetIndexFromObj (interp, objv[1], options, "option", 0, &index)
+        != TCL_OK) {
+        return TCL_ERROR;
+    }
+    switch ((enum option) index) {
+    case m_transform:
+        objv++;objv++;
+        objc--;objc--;
+        return applyXSLT(NULL, interp, (void *) clientData, objc, objv);
+    case m_delete:
+        if (objc != 2) {
+            Tcl_WrongNumArgs(interp, 2, objv, "");
+            return TCL_ERROR;
+        }
+        Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
+    }
+    return TCL_OK;
 }
 
 /*----------------------------------------------------------------------------
@@ -5234,6 +5279,9 @@ int tcldom_DomObjCmd (
     if (objc < 2) {
         SetResult(dom_usage);
         return TCL_ERROR;
+    }
+    if (TSD(domCreateCmdMode) == DOM_CREATECMDMODE_AUTO) {
+        TSD(dontCreateObjCommands) = 0;
     }
     method = Tcl_GetString(objv[1]);
     if (Tcl_GetIndexFromObj(NULL, objv[1], domMethods, "method", 0,
