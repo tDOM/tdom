@@ -156,6 +156,7 @@ static char domObj_usage[] =
                 "Usage docObj <method> <args>, where method can be:\n"
                 "          documentElement ?objVar?                \n"
                 "          getElementsByTagName name               \n"
+                "          getElementsByTagNameNS uri localname    \n"
                 "          createElement tagName ?objVar?          \n"
                 "          createElementNS uri tagName ?objVar?    \n"
                 "          createCDATASection data ?objVar?        \n"
@@ -199,7 +200,7 @@ static char node_usage[] =
                 "    cloneNode ?-deep?    \n"
                 "    ownerDocument        \n"
                 "    getElementsByTagName name \n"
-                "    getElementsByTagNameNS uri name \n"
+                "    getElementsByTagNameNS uri localname \n"
                 "    getElementbyId id    \n"
                 "    find attrName attrValue ?nodeObjVar?   \n"
                 "    child      number|all ?type? ?attrName attrValue? \n"
@@ -626,42 +627,60 @@ tcldom_getElementsByTagName (
     Tcl_Interp *interp,
     char       *namePattern,
     domNode    *node,
-    int         nsIndex
+    int         nsIndex,
+    char       *uri
 )
 {
     int      result;
     domNode *child, *temp;
 
+    /* nsIndex == -1 ==> DOM 1 no NS i.e getElementsByTagName
+       nsIndex != -1 are the NS aware cases
+       nsIndex == -2 ==> more than one namespace in the document with the 
+                         requested namespace, we have to strcmp the URI
+                         with the namespace uri of every node
+       nsIndex == -3 ==> NS wildcard '*' */
 
-    if (    ((nsIndex == -1) || (nsIndex == node->namespace))
-         && Tcl_StringMatch( (char*)node->nodeName, namePattern)
-    ) {
-        Tcl_Obj *namePtr;
-        Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-        char    objCmdName[40];
-
-        tcldom_createNodeObj (interp, node, objCmdName);
-        namePtr = Tcl_NewStringObj (objCmdName, -1);
-        result = Tcl_ListObjAppendElement(interp, resultPtr,
-                                                  namePtr);
-        if (result != TCL_OK) {
-            Tcl_DecrRefCount (namePtr);
-            return result;
+    if (node->nodeType != ELEMENT_NODE) return TCL_OK;
+    if ( (nsIndex == -1) 
+         || (nsIndex == node->namespace)
+         || (nsIndex == -3)
+         || (nsIndex == -2 
+             && node->namespace 
+             && strcmp (uri, domNamespaceURI (node))==0) )
+    {
+        char prefix[MAX_PREFIX_LEN], *localName;
+        if (nsIndex == -1) {
+            localName = node->nodeName;
+        } else {
+            domSplitQName (node->nodeName, prefix, &localName);
         }
-        return TCL_OK;
+        if (Tcl_StringMatch (localName, namePattern)) {
+            Tcl_Obj *namePtr;
+            Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
+            char    objCmdName[40];
+            
+            tcldom_createNodeObj (interp, node, objCmdName);
+            namePtr = Tcl_NewStringObj (objCmdName, -1);
+            result = Tcl_ListObjAppendElement(interp, resultPtr,
+                                              namePtr);
+            if (result != TCL_OK) {
+                Tcl_DecrRefCount (namePtr);
+                return result;
+            }
+        }
     }
 
     /* recurs to the child nodes */
-    if (node->nodeType == ELEMENT_NODE) {
-        child = node->firstChild;
-        while (child) {
-            temp = child->nextSibling;
-            result = tcldom_getElementsByTagName (interp, namePattern, child, nsIndex);
-            if (result != TCL_OK) {
-                return result;
-            }
-            child = temp;
+    child = node->firstChild;
+    while (child) {
+        temp = child->nextSibling;
+        result = tcldom_getElementsByTagName (interp, namePattern, child,
+                                              nsIndex, uri);
+        if (result != TCL_OK) {
+            return result;
         }
+        child = temp;
     }
 
     return TCL_OK;
@@ -2065,6 +2084,7 @@ int tcldom_NodeObjCmd (
                 *attr_name, *attr_val, *filter, *option, *errMsg, *uri,
                **parameters;
     int          result, length, methodIndex, i, line, column, indent, mode;
+    int          nsIndex;
     Tcl_Obj     *namePtr, *resultPtr, *objPtr, *localListPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
@@ -2779,6 +2799,7 @@ int tcldom_NodeObjCmd (
             return tcldom_returnNodeObj (interp, child, 0, NULL);
 
         case m_replaceChild:
+            CheckArgs(4,4,2,"new old");
             nodeName = Tcl_GetStringFromObj (objv[2], NULL);
             child = tcldom_getNodeFromName (interp, nodeName, &errMsg);
             if (child == NULL) {
@@ -2800,6 +2821,7 @@ int tcldom_NodeObjCmd (
             return tcldom_returnNodeObj (interp, oldChild, 0, NULL);
 
         case m_hasChildNodes:
+            CheckArgs (2,2,2,"");
             if (node->nodeType == ELEMENT_NODE) {
                 SetIntResult( node->firstChild ? 1 : 0);
             } else {
@@ -2826,24 +2848,40 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_getElementsByTagName:
+            CheckArgs (3,3,2,"elementName");
             return tcldom_getElementsByTagName (
-                       interp, Tcl_GetStringFromObj (objv[2], NULL), node, -1
-            );
+                interp, Tcl_GetStringFromObj (objv[2], NULL), node, -1, NULL
+                );
 
         case m_getElementsByTagNameNS:
-            CheckArgs(4,4,2,"uri name");
+            CheckArgs(4,4,2,"uri localname");
             uri = Tcl_GetStringFromObj (objv[2], NULL);
             str = Tcl_GetStringFromObj (objv[3], NULL);
-            domSplitQName ((char*)str, prefix, &localName);
-            ns = domLookupNamespace (node->ownerDocument, prefix, uri);
-            if (ns == NULL) {
-                SetResult ("namespace not found");
+            nsIndex = -1;
+            if (uri[0] == '*' && uri[1] == '\0') {
+                nsIndex = -3;
+            } else {
+                for (i = 0; i <= node->ownerDocument->nsptr; i++) {
+                    if (strcmp (node->ownerDocument->namespaces[i]->uri,
+                                uri)==0) {
+                        if (nsIndex != -1) {
+                            /* OK, this is one of the 'degenerated' (though
+                               legal) documents, which bind the same URI
+                               to different prefixes. */
+                            nsIndex = -2;
+                            break;
+                        }
+                        nsIndex = node->ownerDocument->namespaces[i]->index;
+                    }
+                }
+            }
+            if (nsIndex == -1) {
+                SetResult ("There isn't such a namespace declared in this document");
                 return TCL_ERROR;
             }
-            return tcldom_getElementsByTagName (
-                       interp, str, node, ns->index
-            );
-
+            return tcldom_getElementsByTagName (interp, str, node, nsIndex,
+                                                uri);
+            
         case m_getElementById:
             CheckArgs(3,3,2,"id");
             str = Tcl_GetStringFromObj(objv[2], NULL);
@@ -3035,8 +3073,10 @@ int tcldom_DocObjCmd (
 {
     TcldomDocDeleteInfo * dinfo;
     domDocument         * doc;
-    char                * method, *tag, *data, *target, *uri, tmp[100], objCmdName[40];
+    char                * method, *tag, *data, *target, *uri, tmp[100];
+    char                  objCmdName[40], *str;
     int                   methodIndex, result, data_length, target_length, i;
+    int                   nsIndex;
     domNode             * n;
     Tcl_CmdInfo           cmdInfo;
     Tcl_Obj             * mobjv[MAX_REWRITE_ARGS];
@@ -3047,6 +3087,7 @@ int tcldom_DocObjCmd (
         "createElement",   "createCDATASection",         "createTextNode",
         "createComment",   "createProcessingInstruction",
         "createElementNS", "getDefaultOutputMethod",
+        "getElementsByTagNameNS",
 #ifdef TCL_THREADS
         "readlock", "writelock",
 #endif
@@ -3056,7 +3097,8 @@ int tcldom_DocObjCmd (
         m_documentElement,  m_getElementsByTagName,       m_delete,
         m_createElement,    m_createCDATASection,         m_createTextNode,
         m_createComment,    m_createProcessingInstruction,
-        m_createElementNS,  m_getdefaultoutputmethod
+        m_createElementNS,  m_getdefaultoutputmethod,
+        m_getElementsByTagNameNS
 #ifdef TCL_THREADS
         ,m_readlock, m_writelock
 #endif
@@ -3113,8 +3155,38 @@ int tcldom_DocObjCmd (
             CheckArgs (3,3,2,"elementName");
             return tcldom_getElementsByTagName (interp,
                                                 Tcl_GetStringFromObj (objv[2], NULL),
-                                                doc->documentElement, -1);
+                                                doc->documentElement, -1,
+                                                NULL);
 
+        case m_getElementsByTagNameNS:
+            CheckArgs(4,4,2,"uri localname");
+            uri = Tcl_GetStringFromObj (objv[2], NULL);
+            str = Tcl_GetStringFromObj (objv[3], NULL);
+            nsIndex = -1;
+            if (uri[0] == '*' && uri[1] == '\0') {
+                nsIndex = -3;
+            } else {
+                for (i = 0; i <= doc->nsptr; i++) {
+                    if (strcmp (doc->namespaces[i]->uri, uri)==0) {
+                        if (nsIndex != -1) {
+                            /* OK, this is one of the 'degenerated' (though
+                               legal) documents, which bind the same URI
+                               to different prefixes. */
+                            nsIndex = -2;
+                            break;
+                        }
+                        nsIndex = doc->namespaces[i]->index;
+                    }
+                }
+            }
+            if (nsIndex == -1) {
+                SetResult ("There isn't such a namespace declared in this document");
+                return TCL_ERROR;
+            }
+            return tcldom_getElementsByTagName (interp, str, 
+                                                doc->documentElement, nsIndex,
+                                                uri);
+            
         case m_createElement:
             CheckArgs (3,4,2,"elementName ?newObjVar?");
             tag = Tcl_GetStringFromObj (objv[2], NULL);
