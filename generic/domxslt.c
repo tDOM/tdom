@@ -2520,15 +2520,7 @@ static int sortNodeSetFastMerge(
     int       rc;
 
     b = (domNode **)MALLOC(n * sizeof(domNode *));
-    if (b == NULL) {
-        perror("malloc in sortNodeSetMergeSort");
-        exit(1);
-    }
     posb = (int *)MALLOC(n * sizeof(int));
-    if (posb == NULL) {
-        perror("malloc in sortNodeSetMergeSort");
-        exit(1);
-    }
     vstmp = (char **)MALLOC(sizeof (char *) * n);
     vdtmp = (double *)MALLOC(sizeof (double) * n);
 
@@ -2773,8 +2765,7 @@ static int xsltGetVar (
                in the list, shouldn't it? */
             varInProcess = xs->varsInProcess;
             if (varInProcess != &thisVarInProcess) {
-                DBG(fprintf (stderr, "error in top level vars processing\n");)
-                exit(1); /* FIXME */
+                domPanic ("error in top level vars processing");
             }
             xs->varsInProcess = varInProcess->next;
             xs->currentXSLTNode = savedCurrentXSLTNode;
@@ -3262,7 +3253,8 @@ static int doSortActions (
             if (child->info == sort) {
                 if (child->firstChild) {
                     reportError (child, "xsl:sort has to be empty.", errMsg);
-                    return -1;
+                    rc = -1;
+                    break;
                 }
                 typeText  = 1;
                 ascending = 1;
@@ -3310,6 +3302,7 @@ static int doSortActions (
                     vs = (char **)MALLOC(sizeof (char *) * nodelist->nr_nodes);
                     for (i=0; i<nodelist->nr_nodes;i++) vs[i] = NULL;
                     vd = (double *)MALLOC(sizeof (double) * nodelist->nr_nodes);
+                    for (i=0; i<nodelist->nr_nodes;i++) vd[i] = 0.0;
                 }
                 for (i = 0; i < nodelist->nr_nodes; i++) {
                     xpathRSInit (&rs);
@@ -3602,6 +3595,8 @@ static int xsltNumber (
                              Tcl_DStringLength (&dStr), TEXT_NODE, 0);
     }
     FREE(format);
+    if (groupingSeparator) FREE (groupingSeparator);
+    if (groupingSizeStr) FREE (groupingSizeStr);
     if (vd) {
         FREE((char *)vd);
     }
@@ -3898,7 +3893,10 @@ static int ExecAction (
 
             rc = doSortActions (xs, &rs, actionNode, context, currentNode,
                                 currentPos, errMsg);
-            CHECK_RC;
+            if (rc < 0) {
+                xpathRSFree (&rs);
+                return rc;
+            }
             /* should not be necessary, because every node set is
                returned already in doc Order */
             /*  if (!sorted) sortByDocOrder(&rs); */
@@ -3908,8 +3906,8 @@ static int ExecAction (
 
             rc = ApplyTemplates(xs, context, currentNode, currentPos,
                                 actionNode, &rs, mode, modeURI, errMsg);
-            CHECK_RC;
             xpathRSFree( &rs );
+            CHECK_RC;
             break;
 
         case attribute:
@@ -4393,8 +4391,8 @@ static int ExecAction (
             DBG(rsPrint( &nodeList ));
             xs->current = currentNode;
             rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
+            xpathRSFree (&nodeList);
             if (rc < 0) {
-                xpathRSFree (&nodeList);
                 return rc;
             }
             CHECK_RC;
@@ -4420,6 +4418,7 @@ static int ExecAction (
                                      actionNode->firstChild, errMsg);
                     if (rc < 0) {
                         xsltPopVarFrame (xs);
+                        xpathRSFree( &rs );
                         return rc;
                     }
                     if ((&xs->varFramesStack[xs->varFramesStackPtr])->polluted) {
@@ -4437,7 +4436,6 @@ static int ExecAction (
                 }
             }
             xpathRSFree( &rs );
-            xpathRSFree (&nodeList);
             break;
 
         case xsltIf:
@@ -4846,7 +4844,11 @@ static int ExecActions (
         xs->current = currentNode;
         rc = ExecAction (xs, context, currentNode, currentPos, actionNode,
                          errMsg);
-        CHECK_RC;
+        if (rc < 0) {
+            xs->lastNode = savedLastNode;
+            xs->current  = savedCurrentNode;
+            return rc;
+        }
         actionNode = actionNode->nextSibling;
     }
     xs->lastNode = savedLastNode;
@@ -5026,9 +5028,9 @@ static int ApplyTemplate (
         rc = ExecActions(xs, context, currentNode, currentPos,
                          tplChoosen->content->firstChild, errMsg);
         TRACE1("ApplyTemplate/ExecActions rc = %d \n", rc);
-        CHECK_RC;
         xs->currentTplRule = currentTplRule;
         xs->currentSubDoc = currentSubDoc;
+        CHECK_RC;
     }
     return 0;
 }
@@ -5063,6 +5065,7 @@ static int ApplyTemplates (
                                    actionNode, errMsg);
                 if (rc < 0) {
                     xsltPopVarFrame (xs);
+                    xs->lastNode = savedLastNode;
                     return rc;
                 }
                 SETSCOPESTART;
@@ -5072,6 +5075,7 @@ static int ApplyTemplates (
                                 i, mode, modeURI, errMsg);
             if (rc < 0) {
                 xsltPopVarFrame (xs);
+                xs->lastNode = savedLastNode;
                 return rc;
             }
             if ((&xs->varFramesStack[xs->varFramesStackPtr])->polluted) {
@@ -5397,12 +5401,13 @@ getExternalDocument (
 #endif    
 
     Tcl_DecrRefCount (cmdPtr);
+    resultObj = Tcl_GetObjResult (interp);
+    Tcl_IncrRefCount (resultObj);
+
     if (result != TCL_OK) {
         goto wrongScriptResult;
     }
 
-    resultObj = Tcl_GetObjResult (interp);
-    Tcl_IncrRefCount (resultObj);
     result = Tcl_ListObjLength (interp, resultObj, &len);
     if ((result != TCL_OK) || (len != 3)) {
         goto wrongScriptResult;
@@ -5447,6 +5452,7 @@ getExternalDocument (
         if (isStylesheet == sdoc->isStylesheet
             && sdoc->baseURI
             && strcmp(sdoc->baseURI, extbase) == 0) {
+            Tcl_DecrRefCount (resultObj);
             return sdoc->doc;
         }
         sdoc = sdoc->next;
@@ -5464,7 +5470,7 @@ getExternalDocument (
        a good idea?) */
     Tcl_ResetResult (interp);
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
-                           chan, extbase, xsltDoc->extResolver, interp);
+                           chan, extbase, xsltDoc->extResolver, 0, interp);
 
     if (doc == NULL) {
         DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
@@ -5523,6 +5529,7 @@ getExternalDocument (
 
  wrongScriptResult:
     *errMsg = tdomstrdup(Tcl_GetStringFromObj(Tcl_GetObjResult(interp), NULL));
+    Tcl_DecrRefCount (resultObj);
     return NULL;
 }
 
@@ -6915,6 +6922,11 @@ int xsltProcess (
  error:
     xsltPopVarFrame (xs);
     xpathRSFree( &nodeList );
+    /* domFreeDocument() needs a set resultDoc->documentElement to
+       work properly */
+    if (!xs->resultDoc->documentElement) {
+        xs->resultDoc->documentElement = xs->resultDoc->rootNode->firstChild;
+    }
     domFreeDocument (xs->resultDoc, NULL, NULL);
     if (xsltCmdData) {
         xsltResetState (xs);
