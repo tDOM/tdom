@@ -1,12 +1,12 @@
 
 		tDOM - a XML/DOM/XPath implementation for Tcl
-		(Version 0.7.5 / July 31, 2002)
+		(Version 0.7.5 / October 31, 2002)
 
 		Jochen Loewer	 (loewerj@hotmail.com)
-        
-                      with major contributions by:
-
                 Rolf Ade         (rolf@pointsman.de)
+        
+                    with some contributions by:
+
                 Zoran Vasiljevic (zoran@archiware.com)
                 
 
@@ -22,7 +22,7 @@ tDOM contains:
     *  a modified version of Steve Ball's Tclexpat, the Tcl interface to 
        expat, for event-like (SAX-like) XML parsing. The modifications
        are for performance improvements, to make the newest Expat
-       features (XML namespace) available and for additional features.
+       features (XML namespace) available and for some additional features.
 
     *  a (partial) DOM I and II implementation in C for maximum
        performance and minimum memory need following the W3C DOM Core
@@ -42,7 +42,7 @@ tDOM contains:
 
     *  optional DTD validation   
 
-    *  additional convinience methods
+    *  additional convenience methods
  
     *  documentation in TMML, HTML and nroff format
 
@@ -67,9 +67,10 @@ PLATFORMS
     HP-UX-9.x
     Linux 2.2.5                  (egcs 2.91.66, Suse 6.1)
     Solaris 2.5.1+               (both gcc and SunWorks compilers)
-    w2k                          (VC++ 6.0)
+    W2K                          (VC++ 6.0)
 
     Other machines and OS's are not tested but should work too. 
 
--EOF
+Have fun! 
 
+- EOF -
