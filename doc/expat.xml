@@ -262,7 +262,7 @@ an error.</p>
         return -code error \
                 -errorinfo &quot;Failed to open external entity $systemId&quot;
     }
-    return [list channel $fd $systemId]
+    return [list channel $systemId $fd]
 }
 
 set parser [expat -externalentitycommand externalEntityRefHandler \
