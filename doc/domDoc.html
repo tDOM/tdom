@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1232">SEE ALSO</a> · <a href="#SECTnode1241">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1253">SEE ALSO</a> · <a href="#SECTnode1262">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
@@ -144,9 +144,25 @@ parameterList?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
         <dd>Applies an XSLT transformation on the whole document of the node
 object using the XSLT <i class="m">stylesheet</i> (given as domDoc). Returns a document
 object containing the result document of that transformation and stores it in
-optional <i class="m">outputVar</i>. The optional <i class="m">-parameters</i> option sets top
-level &lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a
-tcl list consisting of parameter name and value pairs.</dd>
+optional <i class="m">outputVar</i>.
+
+<p>The optional <i class="m">-parameters</i> option sets top level
+&lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a tcl
+list consisting of parameter name and value pairs.</p>
+
+<p>If the option <i class="m">-ignoreUndeclaredParameters</i> is given, then parameter
+names in the <i class="m">parameterList</i> given to the <i class="m">-parameters</i> options that
+are not declared as top-level parameters in the stylesheet are silently
+ignored. Without this option, an error is raised, if the user tries to set a
+top-level parameter, which is not declared in the stylesheet.</p>
+
+<p>The <i class="m">-xsltmessagecmd</i> option sets a callback for xslt:message elements
+in the stylesheet. The actual command consists of the script, given as argument
+to the option, appended with the XML Fragment from instantiating the
+xsl:message element content as string (as if the XPath string() function would
+have been applied to the XML Fragment) and a flag, which indicates, if the
+xsl:message has an attribute &quot;terminate&quot; with the value &quot;yes&quot;.</p>
+</dd>
       
 
       </dl><p>Otherwise, if an unknown method name is given, the command with the
@@ -155,20 +171,16 @@ tried to be executed. This allows quick method additions on Tcl level.</p><p>New
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTnode1232">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode1253">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTnode1241">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTnode1262">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
-</div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-	<a class="navaid" href="index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+</div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

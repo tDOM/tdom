@@ -395,6 +395,8 @@ typedef struct {
     xpathCBs            cbs;
     xpathFuncCallback   orig_funcCB;
     void              * orig_funcClientData;
+    xsltMsgCB           xsltMsgCB;
+    void              * xsltMsgClientData;
     xsltDecimalFormat * decimalFormats;
     domNode           * current;
     xsltSubDoc        * subDocs;
@@ -1886,6 +1888,7 @@ void StripXMLSpace (
                 }
                 if (!found) {
                     Tcl_DStringFree (&dStr);
+                    Tcl_DStringInit (&dStr);
                     Tcl_DStringAppend (&dStr, ns->uri, -1);
                     Tcl_DStringAppend (&dStr, ":", 1);
                 }
@@ -3665,7 +3668,7 @@ static int ExecAction (
     char           *str, *str2, *mode, *modeURI, *select, *pc;
     char           *nsAT, *nsStr;
     char           *uri, *localName, prefix[MAX_PREFIX_LEN];
-    int             rc, b, i, len, disableEsc = 0;
+    int             rc, b, i, len, terminate, disableEsc = 0;
     double          currentPrio, currentPrec;
     Tcl_HashEntry  *h;
 
@@ -4451,8 +4454,11 @@ static int ExecAction (
 
         case message:
             str  = getAttr(actionNode,"terminate", a_terminate);
-            if (!str)  str = "no";
-            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)", ELEMENT_NODE);
+            if (!str) terminate = 0;
+            else if (strcmp (str, "yes") == 0) terminate = 1;
+            else terminate = 0;
+            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
+                                             ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
             xsltPushVarFrame (xs);
@@ -4462,11 +4468,11 @@ static int ExecAction (
             CHECK_RC;
 
             str2 = xpathGetTextValue(fragmentNode, &len);
-            DBG(fprintf (stderr, "xsl:message %s\n", str2);)
+            xs->xsltMsgCB (xs->xsltMsgClientData, str2, len, terminate);
             FREE(str2);
             xs->lastNode = savedLastNode;
             domDeleteNode (fragmentNode, NULL, NULL);
-            if (strcmp (str, "yes")==0) {
+            if (terminate) {
                 reportError (actionNode, "xsl:message with attribute \"terminate\"=\"yes\"", errMsg);
                 return -1;
             }
@@ -5359,11 +5365,11 @@ getExternalDocument (
     Tcl_ListObjAppendElement (interp, cmdPtr,
                               Tcl_NewStringObj ("", 0));
 
-    /* result = Tcl_EvalObjEx (interp, cmdPtr,
-     *                          TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL);
-     *  runs on Tcl 8.0 also:
-     */
+#if TclOnly8Bits
     result = Tcl_GlobalEvalObj(interp, cmdPtr);
+#else 
+    result = Tcl_EvalObjEx (interp, cmdPtr, TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL);
+#endif    
 
     Tcl_DecrRefCount (cmdPtr);
     if (result != TCL_OK) {
@@ -5502,6 +5508,7 @@ static int processTopLevelVars (
     domNode       * xmlNode,
     xsltState     * xs,
     char         ** parameters,
+    int             ignoreUndeclaredParameters,
     char         ** errMsg
     )
 {
@@ -5545,6 +5552,10 @@ static int processTopLevelVars (
                                           Tcl_DStringValue (&dStr));
             Tcl_DStringFree (&dStr);
             if (!entryPtr) {
+                if (ignoreUndeclaredParameters) {
+                    i += 2;
+                    continue;
+                }
                 Tcl_DStringInit (&dStr);
                 Tcl_DStringAppend (&dStr, "There isn't a parameter named \"", -1);
                 Tcl_DStringAppend (&dStr, parameters[i], -1);
@@ -6435,8 +6446,11 @@ int xsltProcess (
     domDocument       * xsltDoc,
     domNode           * xmlNode,
     char             ** parameters,
+    int                 ignoreUndeclaredParameters,
     xpathFuncCallback   funcCB,
-    void              * clientData,
+    void              * xpathFuncClientData,
+    xsltMsgCB           xsltMsgCB,
+    void              * xsltMsgClientData,
     char             ** errMsg,
     domDocument      ** resultDoc   
     )
@@ -6469,7 +6483,9 @@ int xsltProcess (
     xs.cbs.funcCB          = xsltXPathFuncs;
     xs.cbs.funcClientData  = &xs;
     xs.orig_funcCB         = funcCB;
-    xs.orig_funcClientData = clientData;
+    xs.orig_funcClientData = xpathFuncClientData;
+    xs.xsltMsgCB           = xsltMsgCB;
+    xs.xsltMsgClientData   = xsltMsgClientData;
     xs.varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame) * 4);
     xs.varFramesStackPtr   = -1;
     xs.varFramesStackLen   = 4;
@@ -6580,7 +6596,7 @@ int xsltProcess (
 
     precedence = 1.0;
     precedenceLowBound = 0.0;
-    rc = processTopLevel (clientData, node, xmlNode, &xs, precedence,
+    rc = processTopLevel (xpathFuncClientData, node, xmlNode, &xs, precedence,
                           &precedenceLowBound, errMsg);
     if (rc != 0) goto error;
     
@@ -6588,7 +6604,6 @@ int xsltProcess (
      *  but not from the XML document (last one in list)
      */
     sdoc = xs.subDocs;
-
     while (sdoc && sdoc->next) {
         StripSpace (&xs, sdoc->doc->documentElement);
         sdoc = sdoc->next;
@@ -6597,7 +6612,8 @@ int xsltProcess (
         StripXMLSpace (&xs, sdoc->doc->documentElement);
     }
 
-    rc = processTopLevelVars (xmlNode, &xs, parameters, errMsg);
+    rc = processTopLevelVars (xmlNode, &xs, parameters, 
+                              ignoreUndeclaredParameters, errMsg);
     if (rc != 0) goto error;
 
     rc = ApplyTemplates (&xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,

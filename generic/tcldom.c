@@ -174,7 +174,7 @@ static char domObj_usage[] =
                 "          asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
                 "          getDefaultOutputMethod                  \n"
                 "          delete                                  \n"
-                "          xslt ?-parameters parameterList? <xsltDocNode>\n"
+                "          xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
                 TDomThreaded(
                 "          readlock                                \n"
                 "          writelock                               \n"
@@ -259,7 +259,11 @@ typedef struct TcldomDocDeleteInfo {
 
 } TcldomDocDeleteInfo;
 
-
+typedef struct XsltMsgCBInfo 
+{
+    Tcl_Interp * interp;
+    Tcl_Obj    * msgcmd;
+} XsltMsgCBInfo;
 
 /*----------------------------------------------------------------------------
 |   Prototypes for procedures defined later in this file:
@@ -1351,6 +1355,43 @@ int tcldom_xpathFuncCallBack (
     return res;
 }
 
+/*----------------------------------------------------------------------------
+|   tcldom_xsltMsgCB
+|
+\---------------------------------------------------------------------------*/
+static
+void tcldom_xsltMsgCB (
+    void *clientData,
+    char *str,
+    int   length,
+    int   terminate
+    )
+{
+    XsltMsgCBInfo *msgCBInfo = (XsltMsgCBInfo *)clientData;
+    Tcl_Obj *cmdPtr;
+
+    if (msgCBInfo->msgcmd == NULL) {
+        return;
+    }
+    
+    cmdPtr = Tcl_DuplicateObj (msgCBInfo->msgcmd);
+    Tcl_IncrRefCount (cmdPtr);
+    if (Tcl_ListObjAppendElement (msgCBInfo->interp, cmdPtr, 
+                                  Tcl_NewStringObj (str, length)) != TCL_OK) {
+        Tcl_DecrRefCount (cmdPtr);
+        return;
+    }
+    if (terminate) {
+        Tcl_ListObjAppendElement (msgCBInfo->interp, cmdPtr,
+                                  Tcl_NewBooleanObj (1));
+    } else {
+        Tcl_ListObjAppendElement (msgCBInfo->interp, cmdPtr,
+                                  Tcl_NewBooleanObj (0));
+    }
+    Tcl_GlobalEvalObj (msgCBInfo->interp, cmdPtr);
+    Tcl_DecrRefCount (cmdPtr);
+    return;
+}
 
 /*----------------------------------------------------------------------------
 |   tcldom_selectNodes
@@ -2471,50 +2512,90 @@ static int applyXSLT (
     Tcl_Obj     *CONST objv[]
     )
 {
-    char        *str, **parameters, *errMsg;
-    Tcl_Obj     *objPtr, *localListPtr = (Tcl_Obj *)NULL;
-    int          i, result, length;
-    domDocument *xsltDoc, *resultDoc;
+    char          *str, **parameters = NULL, *errMsg;
+    Tcl_Obj       *objPtr, *localListPtr = (Tcl_Obj *)NULL;
+    int            i, result, length, optionIndex;
+    int            ignoreUndeclaredParameters = 0;
+    domDocument   *xsltDoc, *resultDoc;
+    XsltMsgCBInfo  xsltMsgInfo;
 
-    str = Tcl_GetStringFromObj (objv[2], NULL);
-    parameters = NULL;
-    if ((str[0] == '-') && (strcmp (str, "-parameters")==0)) {
-        if (objc < 5) {
-            Tcl_WrongNumArgs (interp, 2, objv, "?-parameters parameterList? xsltDoc ?resultVar?");
-            return TCL_ERROR;
+    static CONST84 char *usage = "wrong # args: should be \"nodeObj xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? xsltDocNode ?varname?\"";
+    static CONST84 char *xsltOptions[] = {
+        "-parameters", "-ignoreUndeclaredParameters", "-xsltmessagecmd", NULL
+    };
+    enum xsltOption {
+        m_parmeters, m_ignoreUndeclaredParameters, m_xsltmessagecmd
+    };
+
+    xsltMsgInfo.interp = interp;
+    xsltMsgInfo.msgcmd = NULL;
+
+    while (objc > 1) {
+        if (Tcl_GetIndexFromObj (interp, objv[0], xsltOptions, "option", 0,
+                                 &optionIndex) != TCL_OK) {
+            break;
         }
-        if (Tcl_ListObjLength (interp, objv[3], &length) != TCL_OK) {
-            SetResult ("ill-formed parameters list: the -parameters option needs a list of parameter name and parameter value pairs");
-            return TCL_ERROR;
+    
+        switch ((enum xsltOption) optionIndex) {
+
+        case m_parmeters:
+            if (objc < 3) {SetResult (usage); goto applyXSLTCleanUP;}
+            if (Tcl_ListObjLength (interp, objv[1], &length) != TCL_OK) {
+                SetResult ("ill-formed parameters list: the -parameters option needs a list of parameter name and parameter value pairs");
+                return TCL_ERROR;
+            }
+            if (length % 2) {
+                SetResult ("parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs");
+                return TCL_ERROR;
+            }
+            localListPtr = Tcl_DuplicateObj (objv[1]);
+            Tcl_IncrRefCount (localListPtr);
+            parameters =  (char **)MALLOC(sizeof (char *)*(length+1));
+            for (i = 0; i < length; i ++) {
+                Tcl_ListObjIndex (interp, localListPtr, i, &objPtr);
+                parameters[i] = Tcl_GetStringFromObj (objPtr, NULL);
+            }
+            parameters[length] = NULL;
+            objc -= 2;
+            objv += 2;
+            break;
+        
+        case m_ignoreUndeclaredParameters:
+            if (objc < 2) {SetResult (usage); goto applyXSLTCleanUP;}
+            ignoreUndeclaredParameters = 1;
+            objc--; objv++;
+            break;
+            
+        case m_xsltmessagecmd:
+            if (objc < 3) {SetResult (usage); goto applyXSLTCleanUP;}
+            if (xsltMsgInfo.msgcmd) {
+                Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
+            }
+            xsltMsgInfo.msgcmd = objv[1];
+            Tcl_IncrRefCount (xsltMsgInfo.msgcmd);
+            objc -= 2;
+            objv += 2;
+            break;
+            
+        default:
+            SetResult ("Unknown option");
+            goto applyXSLTCleanUP;
         }
-        if (length % 2) {
-            SetResult ("parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs");
-            return TCL_ERROR;
-        }
-        localListPtr = Tcl_DuplicateObj (objv[3]);
-        Tcl_IncrRefCount (localListPtr);
-        parameters =  (char **)MALLOC(sizeof (char **)*(length+1));
-        for (i = 0; i < length; i ++) {
-            Tcl_ListObjIndex (interp, localListPtr, i, &objPtr);
-            parameters[i] = Tcl_GetStringFromObj (objPtr, NULL);
-        }
-        parameters[length] = NULL;
-        objc -= 2;
-        objv += 2;
-        str = Tcl_GetStringFromObj (objv[2], NULL);
     }
-    xsltDoc = tcldom_getDocumentFromName (interp, str, &errMsg);
+    if (objc > 2 || objc < 1) {SetResult (usage); goto applyXSLTCleanUP;}
+    xsltDoc = tcldom_getDocumentFromName (interp, 
+                                          Tcl_GetStringFromObj(objv[0], NULL),
+                                          &errMsg);
     if (xsltDoc == NULL) {
         SetResult ( errMsg );
-        if (parameters) {
-            Tcl_DecrRefCount (localListPtr);
-            FREE((char *) parameters);
-        }
-        return TCL_ERROR;
+        goto applyXSLTCleanUP;
     }
-    result = xsltProcess (xsltDoc, node, parameters,
+    result = xsltProcess (xsltDoc, node, parameters, 
+                          ignoreUndeclaredParameters,
                           tcldom_xpathFuncCallBack,  interp,
+                          tcldom_xsltMsgCB, &xsltMsgInfo,
                           &errMsg, &resultDoc);
+
     if (parameters) {
         Tcl_DecrRefCount (localListPtr);
         FREE((char *) parameters);
@@ -2524,9 +2605,22 @@ static int applyXSLT (
         FREE(errMsg);
         return TCL_ERROR;
     }
-    return tcldom_returnDocumentObj (interp, resultDoc, (objc == 4),
-                                     (objc == 4) ? objv[3] : NULL);
-}   
+    if (xsltMsgInfo.msgcmd) {
+        Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
+    }
+    return tcldom_returnDocumentObj (interp, resultDoc, (objc == 2),
+                                     (objc == 2) ? objv[1] : NULL);
+            
+ applyXSLTCleanUP:
+    if (localListPtr) {
+        Tcl_DecrRefCount (localListPtr);
+        FREE((char *) parameters);
+    }
+    if (xsltMsgInfo.msgcmd) {
+        Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
+    }
+    return TCL_ERROR;
+}
 
 /*----------------------------------------------------------------------------
 |   tcldom_NodeObjCmd
@@ -2715,6 +2809,8 @@ int tcldom_NodeObjCmd (
             return TCL_OK;
 
         case m_xslt:
+            CheckArgs(3,9,2, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?");
+            objv += 2; objc -= 2;
             return applyXSLT (node, interp, objc, objv);
 
         case m_selectNodes:
@@ -3035,18 +3131,21 @@ int tcldom_NodeObjCmd (
 
         case m_nextSibling:
             CheckArgs(2,3,2,"?nodeObjVar?");
-            return tcldom_returnNodeObj (interp, node->nextSibling, (objc == 3),
+            return tcldom_returnNodeObj (interp, node->nextSibling,
+                                         (objc == 3), 
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_previousSibling:
             CheckArgs(2,3,2,"?nodeObjVar?");
-            return tcldom_returnNodeObj (interp, node->previousSibling, (objc == 3),
+            return tcldom_returnNodeObj (interp, node->previousSibling,
+                                         (objc == 3),
                                          (objc == 3) ? objv[2] : NULL);
 
         case m_firstChild:
             CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
-                return tcldom_returnNodeObj (interp, node->firstChild, (objc == 3),
+                return tcldom_returnNodeObj (interp, node->firstChild,
+                                             (objc == 3),
                                              (objc == 3) ? objv[2] : NULL);
             }
             return tcldom_returnNodeObj (interp, NULL, (objc == 3),
@@ -3055,7 +3154,8 @@ int tcldom_NodeObjCmd (
         case m_lastChild:
             CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
-                return tcldom_returnNodeObj (interp, node->lastChild, (objc == 3),
+                return tcldom_returnNodeObj (interp, node->lastChild,
+                                             (objc == 3),
                                              (objc == 3) ? objv[2] : NULL);
             }
             return tcldom_returnNodeObj (interp, NULL, (objc == 3),
@@ -3703,6 +3803,8 @@ int tcldom_DocObjCmd (
             return TCL_OK;
 
         case m_xslt:
+            CheckArgs(3,9,2, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?");
+            objv += 2; objc -= 2;
             return applyXSLT ((domNode *) doc, interp, objc, objv);
 
         TDomThreaded(

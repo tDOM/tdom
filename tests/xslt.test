@@ -311,7 +311,7 @@ test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
 } {setValue}
 
 
-test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
+test xslt-2.13 {xslt top level parameter: set FQ top-level param} {
     set xml [dom parse {<root/>}]
     set xslt [dom parse {<xsl:stylesheet 
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -332,7 +332,7 @@ test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
     set result
 } {setValue}
 
-test xslt-2.13 {xslt top level parameter: set FQ top-level param} {
+test xslt-2.14 {xslt top level parameter: set FQ top-level param} {
     set xml [dom parse {<root/>}]
     set xslt [dom parse {<xsl:stylesheet 
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -352,6 +352,115 @@ test xslt-2.13 {xslt top level parameter: set FQ top-level param} {
     $resultDoc delete
     set result
 } {setValue}
+
+test xslt-2.15 {xslt top level parameter:\
+        try to set nonexisted param with ignore} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    set result [catch {$xmlroot xslt -ignoreUndeclaredParameters\
+                                     -parameters {nonExistend foo}\
+                                     $xslt resultDoc} errMsg]
+    $resultDoc delete
+    $xml delete
+    $xslt delete
+    set result
+} {0}
+
+test xslt-2.16 {xslt top level parameter: try to set nonexisted param with ignore} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -ignoreUndeclaredParameters \
+                  -parameters {nonExistend foo parameter2 givenValue} \
+                  $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot nodeValue]
+    $resultDoc delete
+    $xml delete
+    $xslt delete
+    set result
+} {parameter1Value givenValue}
+
+proc xsltmessagecmd {msg terminate} {
+    global xsltMsgs
+    global terminatingMsg
+
+    append xsltMsgs "$msg terminate: $terminate "
+    if {$terminate} {
+        set terminatingMsg 1
+    } else {
+        set terminatingMsg 0
+    }
+}
+
+test xslt-2.17 {xslt - to less arguments to the method} {
+    set xml [dom parse {<root/>}]
+    set result [catch {$xml xslt}]
+    $xml delete
+    set result
+} {1}
+
+test xslt-2.18 {xslt -xsltmessagecmd} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:template match="/">
+    <xsl:text>some text</xsl:text>
+    <xsl:message>1. call</xsl:message>
+    <xsl:message terminate="no">2. call</xsl:message>
+    <xsl:message>3. call</xsl:message>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    set ::xsltMsgs ""
+    $xmlroot xslt -xsltmessagecmd xsltmessagecmd $xslt resultDoc
+    $resultDoc delete
+    $xml delete
+    $xslt delete
+    set ::xsltMsgs
+} {1. call terminate: 0 2. call terminate: 0 3. call terminate: 0 }
+
+test xslt-2.19 {xslt -xsltmessagecmd} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:template match="/">
+    <xsl:text>some text</xsl:text>
+    <xsl:message>1. call</xsl:message>
+    <xsl:message terminate="yes">2. call</xsl:message>
+    <xsl:message>3. call</xsl:message>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    set ::xsltMsgs ""
+    catch {$xmlroot xslt -xsltmessagecmd xsltmessagecmd $xslt resultDoc}
+    $xml delete
+    $xslt delete
+    set ::terminatingMsg
+} {1}
 
 test xslt-3.1 {xslt variable scope} {
     set xml [dom parse {<root/>}]

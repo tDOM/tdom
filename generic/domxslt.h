@@ -30,6 +30,10 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/12/27 23:40:10  rolf
+|   The xslt method now understands also the options
+|   -ignoreUndeclaredParameters and -xsltmessagecmd.
+|
 |   Revision 1.3  2002/06/02 06:36:24  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -57,6 +61,10 @@
 #include <dom.h>
 #include <domxpath.h>
 
+
+typedef void (*xsltMsgCB) (void *clientData, char *str, 
+                          int length, int terminate);
+
 /*----------------------------------------------------------------------------
 |   Prototypes
 |
@@ -64,8 +72,11 @@
 int xsltProcess (domDocument       * xsltDoc,
                  domNode           * xmlNode,
                  char             ** parameters,
+                 int                 ignoreUndeclaredParameters,
                  xpathFuncCallback   funcCB,
-                 void              * clientData,
+                 void              * xpathFuncClientData,
+                 xsltMsgCB           xsltMsgCB,
+                 void              * xsltMsgClientData,
                  char             ** errMsg,
                  domDocument      ** resultDoc
                 );

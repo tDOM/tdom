@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode2824">NAME</a> · <a href="#SECTnode2835">SYNOPSIS</a> · <a href="#SECTnode2846"> DESCRIPTION </a> · <a href="#SECTnode3872">SEE ALSO</a> · <a href="#SECTnode3881">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1961">SEE ALSO</a> · <a href="#SECTnode1970">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode2824">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode2835">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode2846"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTnode905"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -393,16 +393,20 @@ Otherwise an error is generated.</dd>
 <b class="method">selectNodes</b> <i class="m">xpathQuery</i> <b class="option">?typeVar?</b>
 </dt>
         <dd>Returns the result of applying the XPath query <i class="m">xpathQuery</i>
-to the subtree. This can be a string/value, a list of strings, a list of nodes,
-a list of attribute name and a list of attribute name / value pairs. If
+to the subtree. This can be a string/value, a list of strings, a list of nodes
+or a list of attribute name / value pairs. If
 <i class="m">typeVar</i> is given the result type name is store into that variable
-(empty, bool, number, string, nodes, attrnodes, attrvalues).
+(empty, bool, number, string, nodes, attrnodes or mixed).
 
       <pre class="example">set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
 foreach paragraph $paragraphNodes {
     lappend  values [$paragraph selectNodes attribute::type]
 }
       </pre>
+
+      <p>The expression context of the XPath query is the node. That means,
+every namespace prefix in the query is resolved using the namespace declaration
+that are in scope of the node.</p>
 </dd>
       
 
@@ -522,14 +526,31 @@ really know, what you do.</dd>
       
         <dt>
 <b class="method">xslt</b> <b class="option">?-parameters
-parameterList?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
+parameterList?</b> <b class="option">?-ignoreUndeclaredParameters?</b>
+<b class="option">?-xsltmessagecmd script?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
 </dt>
         <dd>Applies an XSLT transformation on the document using the XSLT
 <i class="m">stylesheet</i> (given as domDoc). Returns a document object containing the
-result document of that transformation and stores it in optional
-<i class="m">outputVar</i>. The optional <i class="m">-parameters</i> option sets top level
+result document of that transformation and stores it in the optional
+<i class="m">outputVar</i>. 
+
+<p>The optional <i class="m">-parameters</i> option sets top level
 &lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a tcl
-list consisting of parameter name and value pairs.</dd>
+list consisting of parameter name and value pairs.</p>
+
+<p>If the option <i class="m">-ignoreUndeclaredParameters</i> is given, then parameter
+names in the <i class="m">parameterList</i> given to the <i class="m">-parameters</i> options that
+are not declared as top-level parameters in the stylesheet are silently
+ignored. Without this option, an error is raised, if the user tries to set a
+top-level parameter, which is not declared in the stylesheet.</p>
+
+<p>The <i class="m">-xsltmessagecmd</i> option sets a callback for xslt:message elements
+in the stylesheet. The actual command consists of the script, given as argument
+to the option, appended with the XML Fragment from instantiating the
+xsl:message element content as string (as if the XPath string() function would
+have been applied to the XML Fragment) and a flag, which indicates, if the
+xsl:message has an attribute &quot;terminate&quot; with the value &quot;yes&quot;.</p>
+</dd>
       
 
       
@@ -542,20 +563,16 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode3872">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode1961">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode3881">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode1970">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
-</div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-	<a class="navaid" href="index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+</div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>
