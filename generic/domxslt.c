@@ -738,6 +738,7 @@ static int xsltAddExternalDocument (
     found = 0;
     sdoc = xs->subDocs;
     while (sdoc) {
+        if (!sdoc->baseURI) continue;
         if (strcmp (sdoc->baseURI, str)==0) {
             rsAddNode (result, sdoc->doc->rootNode);
             found = 1;
