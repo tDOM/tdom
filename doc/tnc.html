@@ -4,21 +4,21 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode14992">NAME</a> · <a href="#SECTnode15001">SYNOPSIS</a> · <a href="#SECTnode15007">DESCRIPTION</a> · <a href="#SECTnode15056">BUGS</a> · <a href="#SECTnode15071">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode892">SYNOPSIS</a> · <a href="#SECTnode898">DESCRIPTION</a> · <a href="#SECTnode947">BUGS</a> · <a href="#SECTnode965">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode14992">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
 <b class="names">tnc - </b><br>tnc is an expat parser object extension, that validates the XML
 stream according the document DTD while parsing.</p>
   
-  <h2><a name="SECTnode15001">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTnode892">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 package require tnc
 
 set parser [expat]
 
 tnc $parser enable</pre>
 
-  <h2><a name="SECTnode15007">DESCRIPTION</a></h2><p>
+  <h2><a name="SECTnode898">DESCRIPTION</a></h2><p>
 <i class="m">tnc</i> adds the C handler set &quot;tnc&quot; to an tcl expat parser
 obj. This handler set is a simple DTD validator. If the validator detects the
 first validation error, it sets the interp result, signals error and stops
@@ -41,17 +41,16 @@ valid documents are completely parsed.</p><p>This handler set has only two metho
       
     </dl>
 
-  <h2><a name="SECTnode15056">BUGS</a></h2><p>The validation error reports could be much more informative and
+  <h2><a name="SECTnode947">BUGS</a></h2><p>The validation error reports could be much more informative and
 user-friendly.</p><p>The validator doesn't detect ambiguous content models (see XML
-recomendation Section 3.2.1 and Appendix E). Some Java validators also doesn't,
+recomendation Section 3.2.1 and Appendix E). Most Java validators also doesn't,
 but handle such content models right anyhow. Tnc does not; if your DTD has
 such ambiguous content models, tnc can not used to validate documents against
-such (not completely XML spec compliant) DTDs.</p><p>There are a few bugs (two that I'm aware of, a third one is somehow
-fixed in the expat sources used by tDOM) in the underlying expat parser, that
-results either in &quot;not well-formed&quot; errors, although the document is
-well-formed or in passing the parsing step silently, although the document
-isn't well-formed in some rarely cases.</p>
-  <h2><a name="SECTnode15071">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-Validation">Validation</a></p>
+such (not completely XML spec compliant) DTDs.</p><p>You cannot validate XML documents with standalone=&quot;yes&quot; in the XML
+Declaration</p><p>Violations of the validity constraints Proper Group/PE Nesting and
+Proper Conditional Section/PE Nesting are not detected. The could only happen
+inside a invalid DTD, not in the content of a document.</p>
+  <h2><a name="SECTnode965">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-Validation">Validation</a></p>
   
 </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">

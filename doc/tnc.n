@@ -197,15 +197,16 @@ The validation error reports could be much more informative and
 user-friendly.
 .PP
 The validator doesn't detect ambiguous content models (see XML
-recomendation Section 3.2.1 and Appendix E). Some Java validators also doesn't,
+recomendation Section 3.2.1 and Appendix E). Most Java validators also doesn't,
 but handle such content models right anyhow. Tnc does not; if your DTD has
 such ambiguous content models, tnc can not used to validate documents against
 such (not completely XML spec compliant) DTDs.
 .PP
-There are a few bugs (two that I'm aware of, a third one is somehow
-fixed in the expat sources used by tDOM) in the underlying expat parser, that
-results either in "not well-formed" errors, although the document is
-well-formed or in passing the parsing step silently, although the document
-isn't well-formed in some rarely cases.
+You cannot validate XML documents with standalone="yes" in the XML
+Declaration
+.PP
+Violations of the validity constraints Proper Group/PE Nesting and
+Proper Conditional Section/PE Nesting are not detected. The could only happen
+inside a invalid DTD, not in the content of a document.
 .SH KEYWORDS
 Validation
