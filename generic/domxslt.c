@@ -5680,7 +5680,11 @@ getExternalDocument (
     Tcl_Channel   chan;
     Tcl_DString   dStr;
     
+#ifndef TCL_THREADS    
     cmdPtr = Tcl_DuplicateObj (xsltDoc->extResolver);
+#else 
+    cmdPtr = Tcl_NewStringObj (Tcl_GetString(xsltDoc->extResolver), -1);
+#endif
     Tcl_IncrRefCount (cmdPtr);
     if (baseURI) {
         Tcl_ListObjAppendElement(interp, cmdPtr,
