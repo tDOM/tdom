@@ -5705,6 +5705,7 @@ getExternalDocument (
     Tcl_Obj      *channelIdObj, *resultTypeObj;
     int           len, mode, result, storeLineColumn;
     char         *resultType, *extbase, *xmlstring, *channelId, s[20];
+    char         *extResolver = NULL;
     CONST84 char *str;
     domDocument  *doc;
     xsltSubDoc   *sdoc;
@@ -5712,11 +5713,8 @@ getExternalDocument (
     Tcl_Channel   chan;
     Tcl_DString   dStr;
     
-#ifndef TCL_THREADS    
-    cmdPtr = Tcl_DuplicateObj (xsltDoc->extResolver);
-#else 
-    cmdPtr = Tcl_NewStringObj (Tcl_GetString(xsltDoc->extResolver), -1);
-#endif
+    
+    cmdPtr = Tcl_NewStringObj (xsltDoc->extResolver, -1);
     Tcl_IncrRefCount (cmdPtr);
     if (baseURI) {
         Tcl_ListObjAppendElement(interp, cmdPtr,
@@ -5804,11 +5802,14 @@ getExternalDocument (
 
     parser = XML_ParserCreate_MM (NULL, MEM_SUITE, NULL);
 
+    Tcl_ResetResult (interp);
+    if (xsltDoc->extResolver) {
+        extResolver = tdomstrdup (xsltDoc->extResolver);
+    }
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
-    Tcl_ResetResult (interp);
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
-                           chan, extbase, xsltDoc->extResolver, 0, 
+                           chan, extbase, extResolver, 0, 
                            (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp);
 
     if (doc == NULL) {

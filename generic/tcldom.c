@@ -1069,7 +1069,7 @@ int tcldom_appendXML (
     Tcl_Obj    *obj
 )
 {
-    char        *xml_string;
+    char        *xml_string, *extResolver = NULL;
     int          xml_string_len;
     domDocument *doc;
     domNode     *nodeToAppend;
@@ -1085,6 +1085,10 @@ int tcldom_appendXML (
 #else
     parser = XML_ParserCreate_MM(NULL, MEM_SUITE, NULL);
 
+    if (node->ownerDocument->extResolver) {
+        extResolver = tdomstrdup (node->ownerDocument->extResolver);
+    }
+
     doc = domReadDocument(parser,
                           xml_string,
                           xml_string_len,
@@ -1094,7 +1098,7 @@ int tcldom_appendXML (
                           0,
                           NULL,
                           NULL,
-                          node->ownerDocument->extResolver,
+                          extResolver,
                           0,
                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS,
                           interp);
@@ -4798,6 +4802,7 @@ int tcldom_parse (
     GetTcldomTSD()
 
     char        *xml_string, *option, *errStr, *channelId, *baseURI = NULL;
+    char        *extResolver = NULL;
     CONST84 char *interpResult;
     int          optionIndex, value, xml_string_len, mode;
     int          ignoreWhiteSpaces   = 1;
@@ -4808,7 +4813,7 @@ int tcldom_parse (
     int          useForeignDTD       = 0;
     int          paramEntityParsing  = (int)XML_PARAM_ENTITY_PARSING_ALWAYS;
     domDocument *doc;
-    Tcl_Obj     *newObjName = NULL, *extResolver = NULL;
+    Tcl_Obj     *newObjName = NULL;
     XML_Parser   parser;
     Tcl_Channel  chan = (Tcl_Channel) NULL;
 
@@ -4914,7 +4919,7 @@ int tcldom_parse (
         case o_externalentitycommand:
             objv++; objc--;
             if (objc > 1) {
-                extResolver = objv[1];
+                extResolver = tdomstrdup (Tcl_GetString (objv[1]));
             } else {
                 SetResult("The \"dom parse\" option \"-externalentitycommand\" "
                           "requires a script as argument.");

@@ -501,7 +501,7 @@ typedef struct domDocument {
     Tcl_HashTable     ids;
     Tcl_HashTable     unparsedEntities;
     Tcl_HashTable     baseURIs;
-    Tcl_Obj          *extResolver;
+    char             *extResolver;
     domDocInfo       *doctype;
     TDomThreaded (
         Tcl_HashTable tagNames;        /* Names of tags found in doc */
@@ -696,7 +696,7 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   int   feedbackAfter,
                                   Tcl_Channel channel,
                                   char *baseurl,
-                                  Tcl_Obj *extResolver,
+                                  char *extResolver,
                                   int   useForeignDTD,
                                   int   paramEntityParsing,
                                   Tcl_Interp *interp);

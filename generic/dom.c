@@ -1678,11 +1678,7 @@ externalEntityRefHandler (
     /*
      * Take a copy of the callback script so that arguments may be appended.
      */
-#ifndef TCL_THREADS    
-    cmdPtr = Tcl_DuplicateObj(info->document->extResolver);
-#else 
-    cmdPtr = Tcl_NewStringObj(Tcl_GetString(info->document->extResolver), -1);
-#endif
+    cmdPtr = Tcl_NewStringObj(info->document->extResolver, -1);
     Tcl_IncrRefCount(cmdPtr);
 
     if (base) {
@@ -1924,7 +1920,7 @@ domReadDocument (
     int         feedbackAfter,
     Tcl_Channel channel,
     char       *baseurl,
-    Tcl_Obj    *extResolver,
+    char       *extResolver,
     int         useForeignDTD,
     int         paramEntityParsing,
     Tcl_Interp *interp
@@ -1942,10 +1938,7 @@ domReadDocument (
 #endif
     domDocument   *doc = domCreateDoc(baseurl, storeLineColumn);
 
-    if (extResolver) {
-        doc->extResolver = extResolver;
-        Tcl_IncrRefCount(extResolver);
-    }
+    doc->extResolver = extResolver;
 
     info.parser               = parser;
     info.document             = doc;
@@ -2593,7 +2586,7 @@ domFreeDocument (
     \-----------------------------------------------------------*/
     entryPtr = Tcl_FirstHashEntry (&doc->unparsedEntities, &search);
     while (entryPtr) {
-        FREE ((char *) Tcl_GetHashValue (entryPtr));
+        FREE (Tcl_GetHashValue (entryPtr));
         entryPtr = Tcl_NextHashEntry (&search);
     }
     Tcl_DeleteHashTable (&doc->unparsedEntities);
@@ -2609,7 +2602,7 @@ domFreeDocument (
     Tcl_DeleteHashTable (&doc->baseURIs);
 
     if (doc->extResolver) {
-        Tcl_DecrRefCount (doc->extResolver);
+        FREE (doc->extResolver);
     }
 
     if (doc->rootNode) {
@@ -4968,8 +4961,8 @@ tdom_initParseProc (
     info->document   = domCreateDoc((char *)XML_GetBase (info->parser), 
                                     info->storeLineColumn);
     if (info->extResolver) {
-        info->document->extResolver = info->extResolver;
-        Tcl_IncrRefCount (info->document->extResolver);
+        info->document->extResolver = 
+            tdomstrdup (Tcl_GetString (info->extResolver));
     }
     info->baseURIstack[0].baseURI = XML_GetBase (info->parser);
     info->baseURIstack[0].depth = 0;
@@ -5194,7 +5187,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         if (strcmp (Tcl_GetString (objv[3]), "") == 0) {
             info->extResolver = NULL;
         } else {
-
             info->extResolver = objv[3];
             Tcl_IncrRefCount (info->extResolver);
         }
