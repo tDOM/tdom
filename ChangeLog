@@ -1,38 +1,46 @@
-2004-12-21  Rolf Ade  <rolf@pointsman.de>
+2005-01-06  Rolf Ade  <rolf@pointsman.de>
+        
+        * tests/dom.test     Added a few tests: related to createNodeCmd
+        * tests/element.test (dom), node text method (domNode), chancing
+        * tests/parser.test  callback from within a callback (element,
+        * tests/xslt.test    parser) and catching of recursive xsl
+                             include/import (xslt).
 
-        * generic/domxslt.c: xsl:key with match expressions, which
-          matches attributes, did not work. Prevent, that a stylesheet
-          import/include itself. Editorial changes.
-
-        * generic/dom.c: domAppendNewElementNode(): Set the namespace
-          of a per xslt transformation generated node wrong under
-          certain circumstances. This fixes
-          http://groups.yahoo.com/group/tdom/message/1008. Removed
-          leftover (former local used) define TNODE.
-
-2004-12-12  Rolf Ade  <rolf@pointsman.de>
-
-        * generic/domxpath.c
-        * tests/xpath.test: xpath expressions ancestor-or-self::node()
-          and parent::node() returned wrong result if the context node
-          is /.
-
-2004-12-10  Rolf Ade  <rolf@pointsman.de>
-
-        * doc/expat.*
-        * generic/tclexpat.c
-        * generic/tclexpat.h
-        * tests/parser.test: Don't allow the methods parse,
-          parsechannel, parsefile, free and reset from within a
-          callback of the parser be used but raise a tcl error.
-    
-2004-10-25  Rolf Ade  <rolf@pointsman.de>
-
-        * doc/domNode.*: Added documentation for the '-namespaces'
-          option of the selectNodes method.
-
-        * doc/dom.*: Added a note to the -externalentitycommand option
-          of the parse method, that the programmer is responsible for
+2004-12-21  Rolf Ade  <rolf@pointsman.de>                                   
+                                                                            
+        * generic/domxslt.c: xsl:key with match expressions, which          
+          matches attributes, did not work. Prevent, that a stylesheet      
+          import/include itself. Editorial changes.                         
+                                                                            
+        * generic/dom.c: domAppendNewElementNode(): Set the namespace       
+          of a per xslt transformation generated node wrong under           
+          certain circumstances. This fixes                                 
+          http://groups.yahoo.com/group/tdom/message/1008. Removed          
+          leftover (former local used) define TNODE.                        
+                                                                            
+2004-12-12  Rolf Ade  <rolf@pointsman.de>                                   
+                                                                            
+        * generic/domxpath.c                                                
+        * tests/xpath.test: xpath expressions ancestor-or-self::node()      
+          and parent::node() returned wrong result if the context node      
+          is /.                                                             
+                                                                            
+2004-12-10  Rolf Ade  <rolf@pointsman.de>                                   
+                                                                            
+        * doc/expat.*                                                       
+        * generic/tclexpat.c                                                
+        * generic/tclexpat.h                                                
+        * tests/parser.test: Don't allow the methods parse,                 
+          parsechannel, parsefile, free and reset from within a             
+          callback of the parser be used but raise a tcl error.             
+                                                                            
+2004-10-25  Rolf Ade  <rolf@pointsman.de>                                   
+                                                                            
+        * doc/domNode.*: Added documentation for the '-namespaces'          
+          option of the selectNodes method.                                 
+                                                                            
+        * doc/dom.*: Added a note to the -externalentitycommand option      
+          of the parse method, that the programmer is responsible for       
           closing the channel, if the resolver script returns a
           channel.      
 
