@@ -470,12 +470,14 @@ void rsCopy ( xpathResultSet *to, xpathResultSet *from ) {
 
     to->type       = from->type;
     to->intvalue   = from->intvalue;
-    to->realvalue  = from->realvalue;
-    if (to->type == StringResult) {
+    if (from->type == RealResult) {
+        to->realvalue  = from->realvalue;
+    } else 
+    if (from->type == StringResult) {
         to->string     = tdomstrdup(from->string);
         to->string_len = from->string_len;
-    }
-    if (to->type == xNodeSetResult) {
+    } else 
+    if (from->type == xNodeSetResult) {
         to->nr_nodes = from->nr_nodes;
         to->nodes = (domNode**)MALLOC(from->nr_nodes * sizeof(domNode*));
         for (i=0; i<from->nr_nodes; i++)
@@ -1648,12 +1650,20 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
 
     switch (a->type) {
         case Literal:
+        case AxisAncestor:
+        case AxisAncestorOrSelf:
         case AxisChild:
         case AxisAttribute:
         case AxisDescendant:
         case AxisDescendantLit:
         case AxisDescendantOrSelf:
         case AxisDescendantOrSelfLit:
+        case AxisFollowing:
+        case AxisFollowingSibling:
+        case AxisNamespace:
+        case AxisParent:
+        case AxisPreceding:
+        case AxisPrecedingSibling:
         case AxisSelf:
         case IsNode:
         case IsComment:
@@ -3720,6 +3730,7 @@ static int xpathEvalStep (
             for (i = tResult.nr_nodes -1; i >= 0; i--) {
                 checkRsAddNode (result, tResult.nodes[i]);
             }
+            xpathRSFree (&tResult);
         } else {
             startingNode = ctxNode;
             if (startingNode->parentNode) {
@@ -4589,10 +4600,6 @@ static int xpathEvalStep (
 
 } /* xpathEvalStep */
 
-
-
-
-
 /*----------------------------------------------------------------------------
 |   xpathEvalPredicate
 |
@@ -4649,7 +4656,6 @@ static int xpathEvalPredicate (
         }
         DBG( fprintf(stderr, "result after Predicate: \n"); )
         DBG( rsPrint( &tmpResult); )
-
         xpathRSFree( stepResult );
         *stepResult = tmpResult;
         steps = steps->next;
@@ -5302,69 +5308,6 @@ int xpathMatches (
     xpathRSFree (&nodeList);
     return 1;
 }
-
-/*----------------------------------------------------------------------------
-|   xpathGetPrioOld
-|
-\---------------------------------------------------------------------------*/
-double xpathGetPrioOld (
-    ast steps
-)
-{
-    double prio, max;
-
-    if (!steps) return 0.0;
-
-    DBG(printAst(0, steps);)
-
-    if ((steps->type == AxisChild) && (steps->next == NULL) ) {
-        if (steps->child->type == IsElement) {
-            if (strcmp(steps->child->strvalue, "*")==0) {
-                return -0.5;
-            } else {
-                return 0.0;
-            }
-        }
-        if ( ( (steps->child->type == IsNode)
-             ||(steps->child->type == IsText)
-             ||(steps->child->type == IsPI)
-             )
-             && (steps->next == NULL)
-        ) {
-            return -0.5;
-        }
-    }
-    if ((steps->type == AxisAttribute) && (steps->next == NULL) ) {
-        if (steps->child->type == IsAttr) {
-            if (strcmp(steps->child->strvalue, "*")==0) {
-                return -0.25;
-            } else {
-                return 0.0;
-            }
-        } else
-        if (steps->child->type == IsNSAttr) {
-            if (strcmp(steps->child->child->strvalue, "*")==0) {
-                return -0.25;
-            } else {
-                return 0.0;
-            }
-        }
-    }
-
-    if (steps->type == CombineSets) {
-        max = -0.5;
-        steps = steps->child;
-        while (steps) {
-            prio = xpathGetPrio(steps);
-            if (prio > max) max = prio;
-            steps = steps->next;
-        }
-        return max;
-    }
-
-    return 0.5;
-
-} /* xpathGetPrioOld */
 
 /*----------------------------------------------------------------------------
 |   xpathGetPrio
