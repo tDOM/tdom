@@ -91,6 +91,10 @@ OL LI {
     list-style: decimal;
 }
 
+DT {
+	padding-top: 	1ex;
+}
+
 DL.toc {
     font: 	normal 12pt/16pt sans-serif;
     margin-left: 10%;
@@ -113,9 +117,6 @@ LI.tocentry,LI.tocheading {
     color:		#005A9C;
     background: 	transparent;
 }
-
-/* ?Q: DD? */
-/* DL { margin-left: 0%; } */
 
 PRE {
     display: 		block;
