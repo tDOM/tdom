@@ -108,7 +108,8 @@ TESTFLAGS       = -constraints longRunning
 
 lib_BINARIES	= $($(PACKAGE)_LIB_FILE) $($(PACKAGE)stub_LIB_FILE)
 bin_BINARIES	= $(TDOMSHELL) 
-BINARIES	= $(lib_BINARIES) $(bin_BINARIES)
+#BINARIES	= $(lib_BINARIES) $(bin_BINARIES)
+BINARIES	= $(lib_BINARIES)
 
 SHELL		= @SHELL@
 
@@ -141,6 +142,7 @@ PACKAGE		= @PACKAGE@
 VERSION		= @VERSION@
 CC		= @CC@
 CFLAGS_DEBUG	= @CFLAGS_DEBUG@
+CFLAGS_WARNING	= @CFLAGS_WARNING@
 CFLAGS_DEFAULT	= @CFLAGS_DEFAULT@
 CFLAGS_OPTIMIZE	= @CFLAGS_OPTIMIZE@
 CLEANFILES	= @CLEANFILES@
@@ -162,9 +164,12 @@ STLIB_LD	= @STLIB_LD@
 TCL_DEFS	= @TCL_DEFS@
 TCL_BIN_DIR	= @TCL_BIN_DIR@
 TCL_SRC_DIR	= @TCL_SRC_DIR@
+TCL_DBGX	= @TCL_DBGX@
+DL_LIBS		= @DL_LIBS@
+MATH_LIBS	= @MATH_LIBS@
 
 # This is necessary for packages that use private Tcl headers
-#TCL_TOP_DIR_NATIVE	= @TCL_TOP_DIR_NATIVE@
+# TCL_TOP_DIR_NATIVE	= @TCL_TOP_DIR_NATIVE@
 
 #========================================================================
 # This is needed so we can link the custom shell
@@ -205,9 +210,9 @@ CONFIG_CLEAN_FILES = Makefile tdomConfig.sh
 
 CPPFLAGS	= @CPPFLAGS@
 LIBS		= @LIBS@
-AR		= ar
+AR		= @AR@
 
-CFLAGS		= @CFLAGS@
+CFLAGS		= @CFLAGS_DEFAULT@ -DTCL_DBGX=$(TCL_DBGX)
 COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 
 #========================================================================
@@ -225,16 +230,14 @@ COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(C
 all: binaries libraries doc
 
 #========================================================================
-# TDOM enabled shell is build only for non AOLserver builds.
+# TDOM enabled shell is build as an extra directive, since non TEA. 
 #========================================================================
 
 $(TDOMSHELL): $(tdomsh_OBJECTS) $(tdom_OBJECTS)
-	if test "x$(AOL_DIR)" = "x"; then\
-	    $(COMPILE) -c `@CYGPATH@ tclAppInit.c`;\
-	      $(CC) @LDFLAGS@ tclAppInit.$(OBJEXT) $(tdom_OBJECTS)\
-	        $(TCL_LIBS) $(TCL_LIB_SPEC) $(LIBS)\
-	          $(TDOM_LD_SEARCH_FLAGS) -o $@;\
-	fi
+	$(COMPILE) -c `@CYGPATH@ tclAppInit.c`
+	$(CC) @LDFLAGS@ -o $@ tclAppInit.$(OBJEXT) $(tdom_OBJECTS) \
+	  $(TCL_LIBS) $(TCL_LIB_SPEC) $(LIBS) $(TDOM_LD_SEARCH_FLAGS)
+	  
 
 #========================================================================
 # The binaries target builds executable programs, Windows .dll's, unix
@@ -370,39 +373,38 @@ pkgIndex.tcl-hand:
 # You may need to tweak this target to make it work correctly.
 #========================================================================
 
-#COMPRESS	= tar cvf $(PKG_DIR).tar $(PKG_DIR); compress $(PKG_DIR).tar
-COMPRESS	= gtar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
-DIST_ROOT	= /tmp/dist
+COMPRESS	= tar zcf $(DIST_FILE) $(PKG_DIR)
+DIST_ROOT	= $(top_builddir)/dist
 DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
+DIST_FILE	= $(PKG_DIR).tar.gz
 
 dist-clean:
-	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
+	@rm -rf $(DIST_ROOT)
 
 dist: dist-clean
-	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/license* \
+	@mkdir -p $(DIST_DIR)/tclconfig
+	@mkdir -p $(DIST_DIR)/unix
+	@mkdir -p $(DIST_DIR)/win
+	@cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/LICENSE \
+	  $(srcdir)/NPL-1_1Final.html $(srcdir)/CHANGES \
+	  $(srcdir)/configure-tcl8.0.5 $(srcdir)/tdom.m4 \
 	  $(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.in \
 	  $(DIST_DIR)/
-	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
-	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.in
-
-	cp -p $(srcdir)/*.[ch] $(DIST_DIR)/
-
-	mkdir $(DIST_DIR)/tclconfig
-	cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
+	@cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
 	  $(DIST_DIR)/tclconfig/
-	chmod 664 $(DIST_DIR)/tclconfig/tcl.m4
-	chmod +x $(DIST_DIR)/tclconfig/install-sh
-
-	list='doc generic tests unix win expat lib apps encodings xe'; \
+	@chmod +x $(DIST_DIR)/tclconfig/install-sh
+	@cp -p $(srcdir)/unix/CONFIG $(srcdir)/unix/tclAppInit.c \
+	  $(DIST_DIR)/unix/
+	@cp -p $(srcdir)/win/config.h $(srcdir)/win/makefile.vc \
+	  $(srcdir)/win/makefile805.vc $(DIST_DIR)/win/
+	@(list='apps doc encodings expat extensions generic lib mac macosx tests xe'; \
 	for p in $$list; do \
 	  if test -d $(srcdir)/$$p ; then \
-	    mkdir $(DIST_DIR)/$$p; \
-	    cp -p $(srcdir)/$$p/*.* $(DIST_DIR)/$$p/; \
+	    cp -pr $(srcdir)/$$p $(DIST_DIR)/; \
 	  fi; \
-	done
-
-	(cd $(DIST_ROOT); $(COMPRESS);)
+	done; \
+	(cd $(DIST_ROOT); $(COMPRESS); rm -rf $(PKG_DIR)))
+	@echo "Distribution file is $(DIST_ROOT)/$(DIST_FILE)"
 
 #========================================================================
 # End of user-definable section
@@ -413,12 +415,13 @@ dist: dist-clean
 # variable in configure.in
 #========================================================================
 
-clean:  
+clean:
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
+	-test -z "$(TDOMSHELL)" || rm -f $(TDOMSHELL)
 	-rm -f *.$(OBJEXT) core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
-distclean: clean
+distclean: clean dist-clean
 	-rm -f *.tab.c
 	-rm -f $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log config.status
