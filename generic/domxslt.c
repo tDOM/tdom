@@ -36,6 +36,10 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.9  2002/03/31 03:22:19  rolf
+|   Closed a memory leak in xsltFreeStats(). Changed xsl:element handling
+|   (work in progress).
+|
 |   Revision 1.8  2002/03/25 01:28:35  rolf
 |   Closed a cuple of memory leaks. A bit Code cleanup.
 |
@@ -2966,9 +2970,6 @@ static int ExecAction (
                                          TEXT_NODE, 0);
                     return 0;
                 } else
-                if (currentNode->nodeType == DOCUMENT_NODE) {
-                    child = ((domDocument*)currentNode)->documentElement;
-                } else
                 if (currentNode->nodeType == ELEMENT_NODE) {
                     child = currentNode->firstChild;
                 } else 
@@ -3376,6 +3377,16 @@ static int ExecAction (
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         nsAT, &ns, errMsg);
                 CHECK_RC;
+            } else {
+                domSplitQName (str2, prefix, &localName);
+                if (prefix[0] != '\0') {
+                    NS = domLookupPrefix (actionNode, prefix);
+                    if (NS) ns = NS->uri;
+                    else {
+                        reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
+                        return -1;
+                    }
+                }
             }
             savedLastNode = xs->lastNode;
             xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, ns);
@@ -4675,6 +4686,7 @@ void xsltFreeState (
     tpl = xs->templates;
     while (tpl) {
        tplsave = tpl;
+       if (tpl->ast) xpathFreeAst (tpl->ast);
        tpl = tpl->next;
        free(tplsave);
     }
