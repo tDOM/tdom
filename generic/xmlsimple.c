@@ -1093,6 +1093,9 @@ XML_SimpleParseDocument (
     rootNode->ownerDocument = doc;
     rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
+#ifdef TDOM_NS
+    rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
+#endif    
     if (baseURI) {
         h = Tcl_CreateHashEntry (&doc->baseURIs, 
                                  (char*)rootNode->nodeNumber,
