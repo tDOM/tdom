@@ -38,6 +38,9 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.10  2002/04/06 00:44:09  rolf
+|   Added a few more rsAddNodeFast and checkRsAddNode.
+|
 |   Revision 1.9  2002/04/01 04:24:13  rolf
 |   Closed a memory leak in not().
 |
@@ -2292,7 +2295,7 @@ static int xpathEvalStep (
         startingNode = ctxNode;
         node = ctxNode->firstChild;
         while (node && node != startingNode) {
-            if (xpathNodeTest(node, exprContext, step)) rsAddNode( result, node);
+            if (xpathNodeTest(node, exprContext, step)) checkRsAddNode( result, node);
             if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
                 node = node->firstChild;
                 continue;
@@ -2395,22 +2398,22 @@ static int xpathEvalStep (
         xpathRSInit (&tResult);
         if (step->type == AxisAncestorOrSelf) {
             if (xpathNodeTest(ctxNode, exprContext, step))
-                rsAddNode(&tResult, ctxNode);
+                rsAddNodeFast(&tResult, ctxNode);
         }
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             ctxNode = ((domAttrNode *)ctxNode)->parentNode;
             if (xpathNodeTest(ctxNode, exprContext, step)) 
-                rsAddNode(&tResult, ctxNode);
+                rsAddNodeFast(&tResult, ctxNode);
         }
         while (ctxNode->parentNode) {
             ctxNode = ctxNode->parentNode;
             if (xpathNodeTest(ctxNode, exprContext, step))
-                rsAddNode(&tResult, ctxNode);
+                rsAddNodeFast(&tResult, ctxNode);
         }
         if (xpathNodeTest (ctxNode->ownerDocument->rootNode, exprContext, step))
             rsAddNode (&tResult, ctxNode->ownerDocument->rootNode);
         for (i = tResult.nr_nodes - 1; i >= 0;  i--) {
-            rsAddNode (result, tResult.nodes[i]);
+            checkRsAddNode (result, tResult.nodes[i]);
         }
         xpathRSFree (&tResult);
         break;
