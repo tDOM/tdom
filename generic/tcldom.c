@@ -261,11 +261,11 @@ static int tcldom_DocObjCmd (ClientData clientData,
 
 static void tcldom_docCmdDeleteProc (ClientData  clientData);
 
-static char * tcldom_docTrace (ClientData clientData,
-                               Tcl_Interp *interp,
-                               char       *name1,
-                               char       *name2,
-                               int        flags);
+static char * tcldom_docTrace (ClientData    clientData,
+                               Tcl_Interp   *interp,
+                               CONST84 char *name1,
+                               CONST84 char *name2,
+                               int           flags);
 
 #ifdef TCL_THREADS
 
