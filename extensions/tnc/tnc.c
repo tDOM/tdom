@@ -178,11 +178,10 @@ TNC_ErrorString (int code)
     return 0;
 }
 
-
 #define UTF8_1BYTE_CHAR(c) ( 0    == ((c) & 0x80))
-#define UTF8_2BYTE_CHAR(c) ( 0xC0 == ((c) & 0xC0))
-#define UTF8_3BYTE_CHAR(c) ( 0xE0 == ((c) & 0xE0))
-#define UTF8_4BYTE_CHAR(c) ( 0xF0 == ((c) & 0xF0))
+#define UTF8_2BYTE_CHAR(c) ( 0xC0 == ((c) & 0xE0))
+#define UTF8_3BYTE_CHAR(c) ( 0xE0 == ((c) & 0xF0))
+#define UTF8_4BYTE_CHAR(c) ( 0xF0 == ((c) & 0xF8))
 
 /* The following 2 defines are out of the expat code */
 

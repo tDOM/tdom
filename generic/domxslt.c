@@ -36,6 +36,9 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.3  2002/02/24 02:31:27  rolf
+|   Fixed UTF-8 char byte length determination
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -395,21 +398,6 @@ static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
 
 
 /*----------------------------------------------------------------------------
-|   UtfCount     
-|
-\---------------------------------------------------------------------------*/
-static int
-UtfCount(
-    int ch
-)
-{
-    if ((ch > 0) && (ch < 0x80)) { return 1; }
-    if (ch <= 0x7FF)             { return 2; }
-    if (ch <= 0xFFFF)            { return 3; } 
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
 |   printXML
 |
 \---------------------------------------------------------------------------*/
@@ -739,7 +727,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
         format->formatStr = p = Tcl_GetHashKey (&(xs->formats), h);
     }
     while (*p) {
-        clen = UtfCount (*p);
+        clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
             *errMsg = 
                 strdup("xsl:number: UTF-8 form of character longer than 3 Byte");
@@ -768,7 +756,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
         format->tokens[nrOfTokens].sepStart = p; \
     }                                            \
     while (*p) {                                 \
-        clen = UtfCount (*p);                    \
+        clen = UTF8_CHAR_LEN(*p);                \
         if (!clen) {                             \
             *errMsg = strdup("xsl:number: UTF-8 form of character longer than 3 Byte"); \
             return NULL;                         \

@@ -29,8 +29,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/24 02:31:27  rolf
+|   Fixed UTF-8 char byte length determination
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -104,6 +107,15 @@
 #define TclOnly8Bits 0
 #endif
 
+#define UTF8_1BYTE_CHAR(c) ( 0    == ((c) & 0x80))
+#define UTF8_2BYTE_CHAR(c) ( 0xC0 == ((c) & 0xE0))
+#define UTF8_3BYTE_CHAR(c) ( 0xE0 == ((c) & 0xF0))
+#define UTF8_4BYTE_CHAR(c) ( 0xF0 == ((c) & 0xF8))
+
+#define UTF8_CHAR_LEN(c) \
+  UTF8_1BYTE_CHAR((c)) ? 1 : \
+   (UTF8_2BYTE_CHAR((c)) ? 2 : \
+     (UTF8_3BYTE_CHAR((c)) ? 3 : 0))
 
 /*--------------------------------------------------------------------------
 |   DOMString
