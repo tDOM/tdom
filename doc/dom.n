@@ -163,6 +163,8 @@ Database Class:	\\fB\\$3\\fR
 dom \- Create an in-memory DOM tree from XML
 .SH SYNOPSIS
 .nf
+package require tdom
+
 \&\fBdom\fP \fImethod\fR ?\fIarg arg ...\fR?
 .fi
 .BE
@@ -272,13 +274,26 @@ of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
 "channel".
-.IP "\fB-useForeignDTD  \fI<boolen>\fP\fR"
-If <boolen> is true and the document does not have
+.IP "\fB-useForeignDTD  \fI<boolean>\fP\fR"
+If <boolean> is true and the document does not have
 an external subset, the parser will call the -externalentitycommand script with
 empty values for the systemId and publicID arguments. Pleace notice, that, if
 the document also doesn't have an internal subset, the
 -startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
-called.
+called. The \fI-useForeignDTD\fR respects
+.IP "\fB-paramentityparsing  \fI<always|never|notstandalone>\fP\fR"
+The \fI-paramentityparsing\fR option controls, if the
+parser tries to resolve the external entities (including the external DTD
+subset) of the document, while building the DOM
+tree. \fI-paramentityparsing\fR requires an argument, which must be either
+"always", "never", or "notstandalone". The value "always" means, that the
+parser tries to resolves (recursively) all external entities of the XML
+source. This is the default, in case \fI-paramentityparsing\fR is omitted. The
+value "never" means, that only the given XML source is parsed and no external
+entity (including the external subset) will be resolved and parsed. The value
+"notstandalone" means, that all external entities will be resolved and parsed,
+with the execption of documents, which explicitly states standalone="yes" in
+their XML declaration.
 .PP
 .RE
 .TP

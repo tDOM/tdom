@@ -12,7 +12,9 @@
   
   -->
   <synopsis>
-    <syntax><cmd>dom</cmd> <m>method</m> ?<m>arg arg ...</m>?</syntax>
+    <syntax>package require tdom
+
+<cmd>dom</cmd> <m>method</m> ?<m>arg arg ...</m>?</syntax>
   </synopsis>
 
   <section>
@@ -136,13 +138,30 @@ of type "string", or the name of a tcl channel, in the case of type
 
               <optdef>
                 <optname>-useForeignDTD</optname>
-                <optarg>&lt;boolen&gt;</optarg>
-                <desc>If &lt;boolen&gt; is true and the document does not have
+                <optarg>&lt;boolean&gt;</optarg>
+                <desc>If &lt;boolean&gt; is true and the document does not have
 an external subset, the parser will call the -externalentitycommand script with
 empty values for the systemId and publicID arguments. Pleace notice, that, if
 the document also doesn't have an internal subset, the
 -startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
-called.</desc>
+called. The <m>-useForeignDTD</m> respects </desc>
+              </optdef>
+
+              <optdef>
+                <optname>-paramentityparsing</optname>
+                <optarg>&lt;always|never|notstandalone&gt;</optarg>
+                <desc>The <m>-paramentityparsing</m> option controls, if the
+parser tries to resolve the external entities (including the external DTD
+subset) of the document, while building the DOM
+tree. <m>-paramentityparsing</m> requires an argument, which must be either
+"always", "never", or "notstandalone". The value "always" means, that the
+parser tries to resolves (recursively) all external entities of the XML
+source. This is the default, in case <m>-paramentityparsing</m> is omitted. The
+value "never" means, that only the given XML source is parsed and no external
+entity (including the external subset) will be resolved and parsed. The value
+"notstandalone" means, that all external entities will be resolved and parsed,
+with the execption of documents, which explicitly states standalone="yes" in
+their XML declaration.</desc>
               </optdef>
 
             </optlist>
