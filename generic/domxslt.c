@@ -5061,8 +5061,16 @@ static int ExecAction (
                 ns->uri = uri;
             } else {
                 ns = domLookupPrefix (xs->lastNode, "");
-                if (ns && (strcmp (ns->uri, "")!=0)) {
-                    domSetAttributeNS (xs->lastNode, "xmlns", "", NULL, 0);
+                if (ns) {
+                    if (strcmp (ns->uri, "")!=0) {
+                        attr = domSetAttributeNS (xs->lastNode, "xmlns", "", 
+                                                  NULL, 1);
+                        if (attr) {
+                            xs->lastNode->namespace = attr->namespace;
+                        }
+                    } else {
+                        xs->lastNode->namespace = ns->index;
+                    }
                 }
             }
 
