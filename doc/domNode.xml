@@ -226,7 +226,8 @@ node. <m>newChild</m> must be in the document fragment list.</desc>
       <commanddef>
         <command><method>insertBefore</method> <m>newChild</m>  <m>refChild</m></command>
         <desc>Insert <m>newChild</m> before the <m>refChild</m> in list of
-children of that node. <m>newChild</m> must be in the document fragment list.</desc>
+children of that node. If <m>refChild</m> is the empty string, insert
+<m>newChild</m> at the end of the child nodes list of that node.</desc>
       </commanddef>
 
       <commanddef>

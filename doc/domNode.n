@@ -332,7 +332,8 @@ node. \fInewChild\fR must be in the document fragment list.
 .TP
 \&\fB\fBinsertBefore\fP \fInewChild\fB  \fIrefChild\fB
 \&\fRInsert \fInewChild\fR before the \fIrefChild\fR in list of
-children of that node. \fInewChild\fR must be in the document fragment list.
+children of that node. If \fIrefChild\fR is the empty string, insert
+\&\fInewChild\fR at the end of the child nodes list of that node.
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
 \&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of children
