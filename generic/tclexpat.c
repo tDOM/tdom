@@ -480,12 +480,13 @@ TclExpatCreateParser(interp, expat)
 {
 
   if (expat->ns_mode) {
-      if (!(expat->parser = XML_ParserCreateNS(NULL,expat->nsSeparator))) {
+      if (!(expat->parser = 
+            XML_ParserCreate_MM(NULL, MEM_SUITE, &expat->nsSeparator))) {
           Tcl_SetResult(interp, "unable to create expat parserNs", NULL);
           return TCL_ERROR;
       }
   } else {
-      if (!(expat->parser = XML_ParserCreate(NULL))) {
+      if (!(expat->parser = XML_ParserCreate_MM(NULL, MEM_SUITE, NULL))) {
           Tcl_SetResult(interp, "unable to create expat parser", NULL);
           return TCL_ERROR;
       }
@@ -572,20 +573,20 @@ TclExpatFreeParser(expat)
 {
   ExpatElemContent *eContent, *eContentSave;
 
-  XML_ParserFree(expat->parser);
-  if (expat->cdata != NULL) {
-      Tcl_DecrRefCount(expat->cdata);
-  }
-  expat->parser = NULL;
-
   eContent = expat->eContents;
   while (eContent) {
-      free(eContent->content); /* This *must* be done with free() */
+      XML_FreeContentModel (expat->parser, eContent->content);
       eContentSave = eContent;
       eContent = eContent->next;
       FREE((char *) eContentSave);
   }
   expat->eContents = NULL;
+
+  XML_ParserFree(expat->parser);
+  if (expat->cdata != NULL) {
+      Tcl_DecrRefCount(expat->cdata);
+  }
+  expat->parser = NULL;
 }
 
 /*
@@ -687,14 +688,6 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
        */
       TclExpatFreeParser(expat);
       TclExpatCreateParser(interp, expat);
-      eContent = expat->eContents;
-      while (eContent) {
-          free(eContent->content); /* This *must* be done with free() */
-          eContentSave = eContent;
-          eContent = eContent->next;
-          FREE((char *) eContentSave);
-      }
-      expat->eContents = NULL;
 
       activeCHandlerSet = expat->firstCHandlerSet;
       while (activeCHandlerSet) {
@@ -3681,7 +3674,7 @@ TclGenExpatEndDoctypeDeclHandler(userData)
 
   eContent = expat->eContents;
   while (eContent) {
-      free(eContent->content); /* This *must* be done with free() */
+      XML_FreeContentModel (expat->parser, eContent->content);
       eContentSave = eContent;
       eContent = eContent->next;
       FREE((char *) eContentSave);
