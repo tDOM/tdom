@@ -136,7 +136,7 @@ domLocksDetach(domDocument *doc)
     Tcl_MutexLock(&lockMutex);
 
     if (dl->doc != doc) {
-        Tcl_Panic("document lock mismatch");
+        domPanic("document lock mismatch");
     }
 
     dl->next = domLocks;
