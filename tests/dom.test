@@ -10,6 +10,8 @@
 #    dom-5.*:  external entities
 #    dom-6.*:  use in slave interpreter
 #    dom-7.*:  setNameCheck, setTextCheck
+#    dom-8.*:  createDocumentNode, documentNodes
+#    dom-9.*:  setObjectCommands
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
 
@@ -101,6 +103,17 @@ test dom-1.14 {createDocument - rename the doc cmd} {
     fooCmd delete
     set result
 } {root}
+
+test dom-1.15 {createDocument - rename the doc cmd} {
+    if {[info commands fooCmd] == "fooCmd"} {
+        rename fooCmd {}
+    }
+    set nrOfCommands [llength [info commands]]
+    set doc [dom createDocument root]
+    rename $doc fooCmd
+    fooCmd delete
+    expr {[llength [info commands]] == $nrOfCommands}
+} {1}
 
 test dom-2.1 {Don't quash white space at start or end of non white space content} {
     set doc [dom parse {<root>
@@ -381,6 +394,43 @@ test dom-2.20 {parse - doc with internal subset parsed with -keepEmpties} {
     $doc delete
     set result
 } {ELEMENT_NODE root}
+
+test dom-2.21 {parse - empty CDATA section} {
+    set doc [dom parse {<doc><![CDATA[]]></doc>}]
+    set root [$doc documentElement]
+    set result [$root hasChildNodes]
+    $doc delete
+    set result
+} {0}
+
+test dom-2.22 {parse - empty comment section} {
+    set doc [dom parse {<doc><!----></doc>}]
+    set root [$doc documentElement]
+    set result [$root hasChildNodes]
+    lappend result [[$root firstChild] nodeValue]
+    $doc delete
+    set result
+} {1 {}}
+
+test dom-2.23 {parse - pi without pivalue} {
+    set doc [dom parse {<doc><?p?></doc>}]
+    set pi [[$doc documentElement] firstChild]
+    set result [list [$pi nodeName] [$pi nodeValue] [$pi target] [$pi data]]
+    $doc delete
+    set result
+} {p {} p {}}
+
+proc 2.24 {args} {
+    error "2.24 external entitiy resolver script error"
+}
+
+test dom-2.24 {parse - script error in -externalentitycommand} {
+    set result [catch {
+        dom parse -externalentitycommand 2.24 {
+            <!DOCTYPE root SYSTEM "data/domCmd2.dtd">
+            <root/>}} errMsg]
+    lappend result $errMsg
+} {1 {2.24 external entitiy resolver script error}}
 
 test dom-3.1 {isName} {
     dom isName ":foo"
@@ -997,6 +1047,103 @@ test dom-7.17 {setTextCheck} {
 } [list 1 "Invalid text value 'foo \u0002'" 0]
 
 $doc delete
+
+test dom-8.1 {createDocumentNode} {
+    set result [catch {dom createDocumentNode foo bar}]
+} {1}
+
+test dom-8.2 {createDocumentNode} {
+    set docNode [dom createDocumentNode]
+    set result [$docNode asXML -indent none]
+    $docNode delete
+    set result
+} {}
+
+test dom-8.3 {createDocumentNode} {
+    dom createDocumentNode docNode
+    set result [$docNode asXML -indent none]
+    $docNode delete
+    set result
+} {}
+
+test dom-8.4 {createDocumentNode} {
+    set docNode [dom createDocumentNode]
+    set result [$docNode nodeType]
+    lappend result [$docNode documentElement]
+    $docNode delete
+    set result
+} {DOCUMENT_NODE {}}
+
+test dom-8.5 {createDocumentNode} {
+    set docNode [dom createDocumentNode]
+    set newNode [$docNode createComment "Comment before the document node"]
+    $docNode appendChild $newNode
+    set result [[$docNode documentElement] nodeType]
+    set newNode [$docNode createElement firstChild]
+    $docNode appendChild $newNode
+    lappend result [[$docNode documentElement] nodeName]
+    set newNode [$docNode createElement secondChild]
+    $docNode appendChild $newNode
+    lappend result [[$docNode documentElement] nodeName]
+    $docNode delete
+    set result
+} {COMMENT_NODE firstChild firstChild}
+
+test dom-8.6 {createDocumentNode} {
+    set docNode [dom createDocumentNode]
+    set doc [dom parse {<root><child1/><child2/>some text<child3/></root>}]
+    set root [$doc documentElement]
+    set listRep [$root asList]
+    $doc delete
+    $docNode appendFromList $listRep
+    set result [$docNode asXML -indent none]
+    $docNode delete
+    set result
+} {<root><child1/><child2/>some text<child3/></root>}
+
+test dom-9.1 {setObjectCommands} {
+    dom setObjectCommands
+} {automatic}
+
+test dom-9.2 {setObjectCommands} {
+    dom setObjectCommands automatic
+} {automatic}
+
+test dom-9.3 {setObjectCommands} {
+    set result [catch {dom setObjectCommands foobar} errMsg]
+    lappend result $errMsg
+} {1 {bad node mode value "foobar": must be automatic, command, or token}}
+
+test dom-9.4 {setObjectCommands} {
+    set nrOfCmds [llength [info commands]]
+    dom setObjectCommands automatic
+    set docNode [dom createDocumentNode]
+    set result [expr {$nrOfCmds + 1 == [llength [info commands]]}]
+    $docNode delete
+    lappend result [expr {$nrOfCmds == [llength [info commands]]}]
+    dom setObjectCommands token
+    set docNode [dom createDocumentNode]
+    lappend result [expr {$nrOfCmds == [llength [info commands]]}]
+    lappend result [domDoc $docNode hasChildNodes]
+    domDoc $docNode delete
+    lappend result [expr {$nrOfCmds == [llength [info commands]]}]
+    # switch back to default
+    dom setObjectCommands automatic
+    set result
+} {1 1 1 0 1}
+
+test dom-9.5 {setObjectCommands} {
+    dom setObjectCommands token
+    set nrOfCmds [llength [info commands]]
+    set doc [dom parse <root><child1/><child2/></root>]
+    set root [domDoc $doc documentElement]
+    set result [expr {$nrOfCmds == [llength [info commands]]}]
+    dom setObjectCommands command
+    set docCmd [domNode $root ownerDocument]
+    lappend result [expr {$nrOfCmds + 1 == [llength [info commands]]}]
+    $docCmd delete
+    set result
+} {1 1}
 
 # cleanup
 ::tcltest::cleanupTests
