@@ -173,7 +173,7 @@ their XML declaration.</desc>
           <command><cmd>dom</cmd> <method>createDocument</method>
 <m>docElemName</m> ?<m>objVar</m>?</command>
           <desc>Creates a new DOM document object with one element node with
-node name <m>docElemName</m>. The <m>objVar</m> controlls the
+node name <m>docElemName</m>. The <m>objVar</m> controls the
 memory handling as explained above.</desc>
         </commanddef>
 
@@ -182,7 +182,7 @@ memory handling as explained above.</desc>
 <m>uri</m> <m>docElemName</m> ?<m>objVar</m>?</command>
           <desc>Creates a new DOM document object with one element node with
 node name <m>docElemName</m>. <m>Uri</m> gives the namespace of the
-document element to create. The <m>objVar</m> controlls the
+document element to create. The <m>objVar</m> controls the
 memory handling as explained above.</desc>
         </commanddef>
 
@@ -190,7 +190,7 @@ memory handling as explained above.</desc>
           <command><cmd>dom</cmd> <method>createDocumentNode</method>
 ?<m>objVar</m>?</command>
           <desc>Creates a new, 'empty' DOM document object without any element
-node. <m>objVar</m> controlls the memory handling as explained above.</desc>
+node. <m>objVar</m> controls the memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
