@@ -249,7 +249,7 @@ domProcessingInstructionNode * coerceToProcessingInstructionNode( domNode *n ) {
 |   domIsNAME
 |
 \--------------------------------------------------------------------------*/
-static int
+int
 domIsNAME (
     char *name
     )
@@ -272,7 +272,7 @@ domIsNAME (
 |   domIsNCNAME
 |
 \--------------------------------------------------------------------------*/
-static int
+int
 domIsNCNAME (
     char *name
     )
@@ -2092,7 +2092,7 @@ domSetAttributeNS (
     Tcl_HashEntry *h;
     int            hnew, isNSAttr = 0;
     domNS         *ns;
-    char          *localName, prefix[MAX_PREFIX_LEN];
+    char          *localName, prefix[MAX_PREFIX_LEN], *newLocalName;
     Tcl_DString    dStr;
     GetTDomTSD();
     
@@ -2131,7 +2131,9 @@ domSetAttributeNS (
                     ns = domGetNamespaceByIndex (node->ownerDocument, 
                                                  attr->namespace);
                     if (strcmp (uri, ns->uri)==0) {
-                        break;
+                        newLocalName = localName;
+                        domSplitQName (attr->nodeName, prefix, &localName);
+                        if (strcmp (newLocalName, localName)==0) break;
                     }
                 }
             }
@@ -2193,13 +2195,28 @@ domSetAttributeNS (
         attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
         strcpy(attr->nodeValue, attributeValue);
 
-        if (node->firstAttr) {
-            lastAttr = node->firstAttr;
-            /* move to the end of the attribute list */
-            while (lastAttr->nextSibling) lastAttr = lastAttr->nextSibling;
-            lastAttr->nextSibling = attr;
+        if (isNSAttr) {
+            if (node->firstAttr && (node->firstAttr->nodeFlags & IS_NS_NODE)) {
+                lastAttr = node->firstAttr;
+                while (lastAttr->nextSibling 
+                       && (lastAttr->nextSibling->nodeFlags & IS_NS_NODE)) {
+                    lastAttr = lastAttr->nextSibling;
+                }
+                attr->nextSibling = lastAttr->nextSibling;
+                lastAttr->nextSibling = attr;
+            } else {
+                attr->nextSibling = node->firstAttr;
+                node->firstAttr = attr;
+            }
         } else {
-            node->firstAttr = attr;
+            if (node->firstAttr) {
+                lastAttr = node->firstAttr;
+                /* move to the end of the attribute list */
+                while (lastAttr->nextSibling) lastAttr = lastAttr->nextSibling;
+                lastAttr->nextSibling = attr;
+            } else {
+                node->firstAttr = attr;
+            }
         }
     }
     MutationEvent();
@@ -3353,10 +3370,17 @@ domCopyTo (
     \-----------------------------------------------------------------*/
     attr = node->firstAttr;
     while (attr != NULL) {
-        nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
-        nattr->nodeFlags = attr->nodeFlags;
         if (attr->nodeFlags & IS_NS_NODE) {
             ns = node->ownerDocument->namespaces[attr->namespace-1];
+            ns1 = domLookupPrefix (n, ns->prefix);
+            if (ns1 && strcmp (ns->uri, ns1->uri)==0) {
+                /* This namespace is already in scope, so we
+                   don't copy the namespace attribute over */
+                attr = attr->nextSibling;
+                continue;
+            }
+            nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
+            nattr->nodeFlags = attr->nodeFlags;
             ns1 = domLookupNamespace (n->ownerDocument, 
                                       ns->prefix, ns->uri);
             if (!ns1) {
@@ -3365,6 +3389,8 @@ domCopyTo (
             }
             nattr->namespace = ns1->index;
         } else {
+            nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
+            nattr->nodeFlags = attr->nodeFlags;
             if (attr->namespace) {
                 ns = node->ownerDocument->namespaces[attr->namespace-1];
                 ns1 = domLookupPrefix (n, ns->prefix);
