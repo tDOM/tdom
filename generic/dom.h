@@ -754,6 +754,7 @@ char *         findBaseURI (domNode *node);
 
 void           tcldom_tolower (char *str, char *str_out, int  len);
 int            domIsNAME (char *name);
+int            domIsQNAME (char *name);
 int            domIsNCNAME (char *name);
 int            domIsChar (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
