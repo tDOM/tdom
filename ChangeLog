@@ -1,3 +1,8 @@
+2003-03-25  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/tcldom.c: Fixed error, which prevents building 0.7.6
+          with -DTCL_THREADS=1. (Arrrg.)
+
 --- Release 0.7.6, 24. Mar. 2003 ---
 
 2003-03-22  Rolf Ade  <rolf@pointsman.de>
