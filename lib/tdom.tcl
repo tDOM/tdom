@@ -32,9 +32,7 @@
 #
 #----------------------------------------------------------------------------
 
-
-package provide tdom 0.7.5
-
+package require tdom 
 
 #----------------------------------------------------------------------------
 #   setup namespaces for additional Tcl level methods, etc.
@@ -98,9 +96,6 @@ proc ::dom::DOMImplementation::load { dom url } {
 
 }
 
-
-
-
 #----------------------------------------------------------------------------
 #   isa (docDoc method, for [incr tcl] compatibility)
 #
@@ -163,11 +158,6 @@ proc ::dom::domDoc::importNode { doc importedNode deep } {
     }
     return $node
 }
-
-
-
-
-
 
 #----------------------------------------------------------------------------
 #   isa (domNode method, for [incr tcl] compatibility)
@@ -235,7 +225,6 @@ proc ::dom::domNode::isWithin { node tagName } {
     return 0
 }
 
-
 #----------------------------------------------------------------------------
 #   tagName (domNode method)
 #
@@ -249,7 +238,6 @@ proc ::dom::domNode::tagName { node } {
     }
     return -code error "NOT_SUPPORTED_ERR not an element!"
 }
-
 
 #----------------------------------------------------------------------------
 #   simpleTranslate (domNode method)
@@ -313,7 +301,6 @@ proc ::dom::domNode::simpleTranslate { node output_var trans_specs } {
     }
 }
 
-
 #----------------------------------------------------------------------------
 #   a DOM conformant 'live' childNodes
 #
@@ -324,7 +311,6 @@ proc ::dom::domNode::childNodesLive { node } {
 
     return $node
 }
-
 
 #----------------------------------------------------------------------------
 #   item method on a 'nodelist' object
@@ -337,7 +323,6 @@ proc ::dom::domNode::item { nodeListNode index } {
     return [lindex [$nodeListNode childNodes] $index]
 }
 
-
 #----------------------------------------------------------------------------
 #   length method on a 'nodelist' object
 #
@@ -348,7 +333,6 @@ proc ::dom::domNode::length { nodeListNode } {
 
     return [llength [$nodeListNode childNodes] $childNodes]
 }
-
 
 #----------------------------------------------------------------------------
 #   appendData on a 'CharacterData' object
@@ -443,7 +427,10 @@ proc ::dom::domNode::substringData { node offset count } {
     return [string range [$node nodeValue] $offset $endOffset]
 }
 
-
+#----------------------------------------------------------------------------
+#   coerce2number
+#
+#----------------------------------------------------------------------------
 proc ::dom::xpathFuncHelper::coerce2number { type value } {
     switch $type {
         empty      { return 0 }
@@ -455,6 +442,10 @@ proc ::dom::xpathFuncHelper::coerce2number { type value } {
     }
 }
 
+#----------------------------------------------------------------------------
+#   coerce2string
+#
+#----------------------------------------------------------------------------
 proc ::dom::xpathFuncHelper::coerce2string { type value } {
     switch $type {
         empty      { return 0 }
@@ -584,7 +575,6 @@ proc ::dom::xpathFunc::element-avaliable { ctxNode pos
     }
 }
 
-
 #----------------------------------------------------------------------------
 #   system-property
 #
@@ -613,7 +603,6 @@ proc ::dom::xpathFunc::system-property { ctxNode pos
     }
 }
 
-
 #----------------------------------------------------------------------------
 #   IANAEncoding2TclEncoding
 #
@@ -633,6 +622,7 @@ proc ::dom::xpathFunc::system-property { ctxNode pos
 # cp857
 # 
 # Just add more mappings (and mail them to the tDOM mailing list, please).
+
 proc tDOM::IANAEncoding2TclEncoding {IANAName} {
     
     # First the most widespread encodings with there
@@ -753,15 +743,15 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
     switch $firstBytes {
         "3c3f786d" {
             # UTF-8, ISO 646, ASCII, some part of ISO 8859, Shift-JIS,
-            # EUC, or any other 7-bit, 8-bit, or mixed-width encoding which ensures
-            # that the characters of ASCII have their normal positions, width, and
-            # values; the actual encoding declaration must be read to detect which
-            # of these applies, but since all of these encodings use the same bit
-            # patterns for the ASCII characters, the encoding declaration itself may
-            # be read reliably
+            # EUC, or any other 7-bit, 8-bit, or mixed-width encoding which 
+            # ensures that the characters of ASCII have their normal positions,
+            # width and values; the actual encoding declaration must be read to
+            # detect which of these applies, but since all of these encodings
+            # use the same bit patterns for the ASCII characters, the encoding
+            # declaration itself be read reliably.
 
             # First 300 bytes should be enough for a XML Declaration
-            # This is of course not 100 percent bullet proove.
+            # This is of course not 100 percent bullet-proof.
             set head [read $fd 296]
 
             # Try to find the end of the XML Declaration
@@ -773,7 +763,8 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
             seek $fd 0 start
             set xmlDeclaration [read $fd [expr {$closeIndex + 5}]]
             # extract the encoding information
-            if {![regexp {encoding=[\x20\x9\xd\xa]*["']([^ ]*)['"]} $head - encStr]} {
+            set pattern {encoding=[\x20\x9\xd\xa]*["']([^ ]*)['"]}
+            if {![regexp $pattern $head - encStr]} {
                 # Probably something like <?xml version="1.0"?>. 
                 # Without encoding declaration this must be UTF-8
                 set encoding utf-8
@@ -829,7 +820,6 @@ proc tDOM::xmlReadFile {filename {encodingString {}}} {
     return $data
 }
 
-
 #----------------------------------------------------------------------------
 #   extRefHandler
 #   
@@ -873,3 +863,4 @@ proc tDOM::baseURL {path} {
     }
 }
 
+# EOF
