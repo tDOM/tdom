@@ -133,7 +133,9 @@ and "channel". The second element of the list has to be the (absolute) base URI
 of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
-"channel".</desc>
+"channel". Note that if the script returns a tcl channel, it will not be closed
+by the processor.  It must be closed separately if it is no longer
+required.</desc>
               </optdef>
 
               <optdef>
@@ -329,7 +331,10 @@ returns the current mode. This method is an experimental interface.</desc>
         <commanddef>
           <command><cmd>dom</cmd> <method>isName</method> <m>name</m></command>
           <desc>Returns 1, if <m>name</m> is a valid XML Name according to
-production 5 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref> recommendation. Otherwise it returns 0.</desc>
+production 5 of the <ref
+            href="http://www.w3.org/TR/2004/REC-xml-20040204/#NT-NameChar">XML
+            1.0</ref> recommendation. This means, that <m>name</m> is a valid
+          XML element or attribute name. Otherwise it returns 0.</desc>
         </commanddef>
 
         <commanddef>
@@ -391,7 +396,7 @@ recommendation. Otherwise it returns 0.</desc>
   <keywords>
     <keyword>XML</keyword>
     <keyword>DOM</keyword>
-    <keyword>Document</keyword>
+    <keyword>document</keyword>
     <keyword>node</keyword>
     <keyword>parsing</keyword>
   </keywords>
