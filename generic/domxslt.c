@@ -221,6 +221,7 @@ typedef struct xsltVariable {
     char           * uri;
     domNode        * node;
     xpathResultSet   rs;
+    int              active;
 
 } xsltVariable;
 
@@ -2191,7 +2192,7 @@ static int xsltSetVar (
     int               currentPos,
     char            * select,
     domNode         * actionNode,
-    int               forTopLevel,
+    int               active,
     char           ** errMsg
 )
 {
@@ -2262,8 +2263,9 @@ static int xsltSetVar (
         var->name = variableName;
     }
     tmpFrame->polluted = 1;
-    var->node  = actionNode;
+    var->node   = actionNode;
     var->rs     = rs;
+    var->active = active;
     DBG(rsPrint(&(var->rs)));
     return 0;
 }
@@ -2309,6 +2311,7 @@ static int xsltVarExists (
                 ) continue;
             if (strcmp((&xs->varStack[i])->name, varName)==0) {
                 found = 1;
+                (&xs->varStack[i])->active = 1;
                 break; /* found the variable */
             }
         }
@@ -2358,6 +2361,7 @@ static int xsltGetVar (
              i < frame->varStartIndex + frame->nrOfVars;
              i++) {
             var = &xs->varStack[i];
+            if (!var->active) continue;
             if ( (varURI && !var->uri)
                  || (!varURI && var->uri)
                  || (varURI && var->uri && (strcmp (varURI, var->uri)!=0))
@@ -2974,7 +2978,9 @@ static int xsltNumber (
                     rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
                     CHECK_RC;
                     if (rc) break;
-                    node = node->parentNode;
+                    if (node->nodeType == ATTRIBUTE_NODE) 
+                        node = ((domAttrNode *)node)->parentNode;
+                    else node = node->parentNode;
                 }
             }
             node = currentNode;
@@ -2982,7 +2988,9 @@ static int xsltNumber (
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
                 CHECK_RC;
                 if (rc) break;
-                node = node->parentNode;
+                if (node->nodeType == ATTRIBUTE_NODE) 
+                    node = ((domAttrNode *)node)->parentNode;
+                else node = node->parentNode;
             }
             if (node == start) {
                 domAppendNewTextNode (xs->lastNode, "", 0, TEXT_NODE, 0);
@@ -3012,7 +3020,9 @@ static int xsltNumber (
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
                 CHECK_RC;
                 if (rc) rsAddNode (&rs, node);
-                node = node->parentNode;
+                if (node->nodeType == ATTRIBUTE_NODE) 
+                    node = ((domAttrNode *)node)->parentNode;
+                else node = node->parentNode;
             }
             if (rs.nr_nodes > 20) {
                 vd = (int *) Tcl_Alloc (sizeof (int) * rs.nr_nodes);
@@ -3925,7 +3935,7 @@ static int ExecAction (
                     select = getAttr(actionNode, "select", a_select);
                     TRACE1("param select='%s'\n", select);
                     rc = xsltSetVar(xs, str, context, currentNode,
-                                    currentPos, select, actionNode, 0, errMsg);
+                                    currentPos, select, actionNode, 1, errMsg);
                     CHECK_RC;
                 }
             } else {
@@ -4016,7 +4026,7 @@ static int ExecAction (
                 select = getAttr(actionNode, "select", a_select);
                 TRACE1("variable select='%s'\n", select);
                 rc = xsltSetVar(xs, str, context, currentNode, currentPos, 
-                                select, actionNode, 0, errMsg);
+                                select, actionNode, 1, errMsg);
                 CHECK_RC;
             } else {
                 reportError (actionNode,
@@ -4788,12 +4798,14 @@ static int processTopLevelVars (
 {
     int                rc, i;
     char              *select;
+    char              *localName, prefix[MAX_PREFIX_LEN];
     xpathResultSet     nodeList, rs;
     Tcl_HashEntry     *entryPtr;
     Tcl_HashSearch     search;
     xsltTopLevelVar   *topLevelVar;
     xsltVarInProcess   varInProcess;
     xsltVariable      *var;
+    domNS             *ns;
     Tcl_DString        dStr;
 
     xpathRSInit (&nodeList);
@@ -4802,7 +4814,27 @@ static int processTopLevelVars (
     if (parameters) {
         i = 0;
         while (parameters[i]) {
-            entryPtr = Tcl_FindHashEntry (&xs->topLevelVars, parameters[i]);
+            domSplitQName (parameters[i], prefix, &localName);
+            ns = NULL;
+            if (prefix[0] != '\0') {
+                ns = domLookupPrefix (xs->xsltDoc->documentElement, prefix);
+                if (!ns) {
+                    Tcl_DStringInit (&dStr);
+                    Tcl_DStringAppend (&dStr, "No namespace bound to prefix (passed parameter \"", -1);
+                    Tcl_DStringAppend (&dStr, parameters[i], -1);
+                    Tcl_DStringAppend (&dStr, "\")", -1);
+                    *errMsg = strdup (Tcl_DStringValue (&dStr));
+                    Tcl_DStringFree (&dStr);
+                    xpathRSFree (&nodeList);
+                    return -1;
+                }
+            }
+            Tcl_DStringInit (&dStr);
+            if (ns) Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, localName, -1);
+            entryPtr = Tcl_FindHashEntry (&xs->topLevelVars,
+                                          Tcl_DStringValue (&dStr));
+            Tcl_DStringFree (&dStr);
             if (!entryPtr) {
                 Tcl_DStringInit (&dStr);
                 Tcl_DStringAppend (&dStr, "There isn't a parameter named \"", -1);
@@ -4844,8 +4876,9 @@ static int processTopLevelVars (
                 xs->varFramesStack->varStartIndex = xs->varStackPtr;
             }
             xs->varFramesStack->nrOfVars++;
-            var->name   = parameters[i];
-            var->uri    = NULL;
+            var->name   = localName;
+            if (ns) var->uri = ns->uri;
+            else    var->uri = NULL;
             var->node   = topLevelVar->node;
             var->rs     = rs;
 
