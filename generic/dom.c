@@ -3892,6 +3892,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
 
     switch ((enum tdomMethod) methodIndex) {
 
+    default:
+        Tcl_SetResult (interp, "unknown method", NULL);
+        return TCL_ERROR;
+
     case m_enable:
         handlerSet = CHandlerSetCreate ("tdom");
         handlerSet->resetProc               = tdom_resetProc;
@@ -3930,7 +3934,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->userData    = info;
 
         CHandlerSetInstall (interp, objv[1], handlerSet);
-        return TCL_OK;
 
     case m_getdoc:
         info = CHandlerSetGetUserData (interp, objv[1], "tdom");
@@ -4010,7 +4013,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
                 info->encoding_8bit = encoding;
             }
         }
-        return TCL_OK;
 
     case m_setStoreLineColumn:
         info = CHandlerSetGetUserData (interp, objv[1], "tdom");
@@ -4023,7 +4025,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_GetBooleanFromObj (interp, objv[3], &bool);
             info->storeLineColumn = bool;
         }
-        return TCL_OK;
 
     case m_remove:
         result = CHandlerSetRemove (interp, objv[1], "tdom");
@@ -4031,7 +4032,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "expat parser obj hasn't a C handler set named \"tdom\"", NULL);
             return TCL_ERROR;
         }
-        return TCL_OK;
+
     case m_setExternalEntityResolver:
         if (objc != 4) {
             Tcl_SetResult (interp, "You must name a tcl command as external entity resolver for setExternalEntityResolver.", NULL);
@@ -4044,7 +4045,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         }
         info->document->extResolver = objv[3];
         Tcl_IncrRefCount (objv[3]);
-        return TCL_OK;
 
     case m_keepEmpties:
         if (objc != 4) {
@@ -4060,12 +4060,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         Tcl_SetIntObj (Tcl_GetObjResult (interp), info->ignoreWhiteSpaces);
         Tcl_GetBooleanFromObj (interp, objv[3], &bool);
         info->ignoreWhiteSpaces = bool;
-        return TCL_OK;
-
-    default:
-        Tcl_SetResult (interp, "unknown method", NULL);
-        return TCL_ERROR;
     }
 
-    return TCL_OK; /* Never reached */
+    return TCL_OK;
 }
