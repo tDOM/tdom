@@ -1,3 +1,9 @@
+2005-03-18  Rolf Ade  <rolf@pointsman.de>
+        
+        Added the 'selectNodesNamespace' to documents, to provide a
+        global XPath prefix / namespace mapping. See the user
+        documentation for details.
+
 2005-01-07  Rolf Ade  <rolf@pointsman.de>
 
         Improved VC++ compiler makefile. Thanks to Pat Thoyts for
