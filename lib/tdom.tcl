@@ -51,7 +51,9 @@ namespace eval ::dom {
     }
 }
 
-namespace eval ::tDOM { }
+namespace eval ::tDOM { 
+    variable extRefHandlerDebug 0
+}
 
 #----------------------------------------------------------------------------
 #   hasFeature (DOMImplementation method)
@@ -843,11 +845,17 @@ proc tDOM::xmlReadFile {filename {encodingString {}}} {
 
 if {![catch {package require uri}]} {
     proc tDOM::extRefHandler {base systemId publicId} {
+        variable extRefHandlerDebug
+        if {$extRefHandlerDebug} {
+            puts stderr "tDOM::extRefHandler called with:"
+            puts stderr "\tbase:     '$base'"
+            puts stderr "\tsystemId: '$systemId'"
+            puts stderr "\tpublicId: '$publicId'"
+        }
         set absolutURI [uri::resolve $base $systemId]
         array set uriData [uri::split $absolutURI]
         switch $uriData(scheme) {
             file {
-                #set fd [open $uriData(path)]
                 return [list string $absolutURI [xmlReadFile $uriData(path)]]
             }
             default {
