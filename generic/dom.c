@@ -871,6 +871,7 @@ startElement(
                    should return this as an error, shouldn't we?*/
             }
         attrNSfound:
+            ;
         }
 #endif
     }
