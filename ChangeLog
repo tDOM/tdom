@@ -1,3 +1,25 @@
+2003-12-30  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in
+        * extensions/tdomhtml/pkgIndex.tcl.in
+        * extensions/tnc/Makefile.in: Doh! Undo the last changes; I
+          fixed this already 2003-10-12.
+
+        * generic/dom.c: Removed superfluous comma from the
+          tdomMethod enum, which bothered the AIX xlc compiler.
+
+        * generic/domxpath.c: Editorial change: Removed some
+          superfluous casts to (char*) from tdomstrdup result - its
+          defined to return char*.
+  
+        * generic/domxpath.h
+        * generic/domxpath.c
+        * tests/xslt.test
+        * generic/domxslt.c: Implemented the special constraints on
+          certain xpath pattern/expr (no current() func in pattern, no
+          var references in template and key match pattern and key use
+          expr, no key() func in key match pattern and use expr.)
+
 2003-12-24  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in
