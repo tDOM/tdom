@@ -4,16 +4,16 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0x80b15b0">NAME</a> · <a href="#SECTid0x80b1628">SYNOPSIS</a> · <a href="#SECTid0x80b16f0">DESCRIPTION </a> · <a href="#SECTid0x80b46e8">SEE ALSO</a> · <a href="#SECTid0x80b4760">KEYWORDS</a>
+<a href="#SECTid0x80b1920">NAME</a> · <a href="#SECTid0x80b1998">SYNOPSIS</a> · <a href="#SECTid0x80b1a60">DESCRIPTION </a> · <a href="#SECTid0x80b4bc0">SEE ALSO</a> · <a href="#SECTid0x80b4c38">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0x80b15b0">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0x80b1920">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTid0x80b1628">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid0x80b1998">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid0x80b16f0">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
+  <h2><a name="SECTid0x80b1a60">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
 methods should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
@@ -177,7 +177,45 @@ given to the method, the system identifier of the document is set to this
 value.</dd>
       
 
+      
+        <dt>
+<b class="method">internalSubset <i class="m">?internalSubset?</i>
+</b>
+        Returns the internal subset of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the internal subset of the document is set to this
+value. Note, that none of the parsing methods preserve the internal subset
+of a document; a freshly parsed document will always have an empty internal
+subset. Also note, that the method doesen't do any syntactical check on a
+given internal subset.
+        </dt>
+      
 
+      
+        <dt>
+<b class="method">cdataSectionElements (?URI:?localname|*) ?&lt;boolean&gt;?</b>
+         This method allows to control, for which element nodes
+the text node childs will be serialized as CDATA sections (this affects only
+serialization with the asXML method, no text node is altered in any
+way by this method). IF the method is called with an element name as
+first argument and a boolean with value true as second argument, every
+text node child of every element node in the document with the same
+name as the first argument will be serialized as CDATA section. If the
+second argument is a boolean with value false, all text nodes of all
+elements with the same name as the first argument will be serialized
+as usual. Namespaced element names have to given in the form
+namespace_URI:localname, not in the otherwise usual prefix:localname
+form. With two arguments called, the method returns the used boolean
+value. If the method is called with only an element name, it will
+return a boolean value, indicating, if the text nodes childs of all
+elements with that name in the document will be serialized as CDATA
+section elements (return value 1) or not (return value 0). If the
+method is called with only one argument and that argument is an
+asterisk ('*'), then the method returns an unordered list of all
+element names of the document, for which the text node childs will be
+serialized as CDATA section nodes.
+        </dt>
+      
 
       
         <dt>
@@ -465,11 +503,11 @@ tried to be executed. This allows quick method additions on Tcl level.</p><p>New
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTid0x80b46e8">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid0x80b4bc0">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTid0x80b4760">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTid0x80b4c38">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
