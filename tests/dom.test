@@ -14,6 +14,9 @@
 #    dom-9.*:  nodeValue  
 #    dom-10.*: setAttribute
 #    dom-11.*: disableOutputEscaping 
+#    dom-12.*: cloneNode
+#    dom-13.*: appendFromScript
+#    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -409,27 +412,27 @@ set doc [dom parse {
 <root>mixed content 
    <elem><b>important</b> more content <b>again important</b></elem>
    <!-- a comment --> 
-   <elem xmlns="defaultNS"><b/></elem>
+   <p:elem xmlns:p="aNS"><b/></p:elem>
 </root>}]
 set root [$doc documentElement]
 
-test dom-7.15 {getElementsByTagName - node method mixed content} {
+test dom-7.16 {getElementsByTagName - node method mixed content} {
     llength [$doc getElementsByTagName elem]
 } {1}
 
-test dom-7.16 {getElementsByTagName - node method mixed content} {
+test dom-7.17 {getElementsByTagName - node method mixed content} {
     llength [$root getElementsByTagName elem]
 } {1}
 
-test dom-7.17 {getElementsByTagName - doc method mixed content} {
+test dom-7.18 {getElementsByTagName - doc method mixed content} {
     llength [$doc getElementsByTagName b]
-} {2}
+} {3}
 
-test dom-7.18 {getElementsByTagName - node method mixed content} {
+test dom-7.19 {getElementsByTagName - node method mixed content} {
     llength [$root getElementsByTagName b]
-} {2}
+} {3}
 
-test dom-7.19 {getElementsByTagName - not a element node} {
+test dom-7.20 {getElementsByTagName - not a element node} {
     set textnode [$root selectNodes {descendant::text()[1]}]
     catch {$textnode getElementsByTagName b} errMsg
     set errMsg
@@ -589,7 +592,7 @@ test dom-8.22 {getElementsByTagName - unset default NS} {
         append result "[$node nodeName] "
     }
     set result
-} {elem1 elem3 }
+} {elem1 elem2 elem3 }
 
 test dom-8.23 {getElementsByTagNameNS - unset default NS} {
     set nodes [$root getElementsByTagNameNS * *]
@@ -608,6 +611,24 @@ test dom-8.24 {getElementsByTagNameNS - unset default NS} {
     }
     set result
 } {root elem1 elem2 elem3 }
+
+test dom-8.25 {getElementsByTagNameNS - unset default NS} {
+    set nodes [$root getElementsByTagNameNS "" *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem1 elem3 }
+
+test dom-8.26 {getElementsByTagNameNS - unset default NS} {
+    set nodes [$doc getElementsByTagNameNS "" *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem1 elem3 }
 
 $doc delete
 
@@ -664,9 +685,8 @@ set root [$doc documentElement]
 
 test dom-10.1 {setAttribute - set multiple attributes at once} {
     $root setAttribute a1 1 a2 2 a3 3 a4 4 a5 5 a6 6 a7 7 a8 8
-    $root asXML
-} {<foo a1="1" a2="2" a3="3" a4="4" a5="5" a6="6" a7="7" a8="8"/>
-}
+    $root asXML -indent none
+} {<foo a1="1" a2="2" a3="3" a4="4" a5="5" a6="6" a7="7" a8="8"/>}
 
 $doc delete
 
@@ -687,9 +707,8 @@ test dom-11.3 {disableOutputEscaping} {
 } {1}
 
 test dom-11.4 {disableOutputEscaping} {
-    $root asXML
-} {<root>&</root>
-}
+    $root asXML -indent none
+} {<root>&</root>}
 
 $doc delete
 
@@ -699,11 +718,10 @@ test dom-11.5 {disableOutputEscaping} {
     $textnode disableOutputEscaping 1
     set root [$doc documentElement]
     $root appendChild $textnode
-    set result [$root asXML]
+    set result [$root asXML -indent none]
     $doc delete
     set result
-} {<root><p>some <b>important</b> text</p></root>
-}
+} {<root><p>some <b>important</b> text</p></root>}
 
 test dom-11.6 {disableOutputEscaping} {
     set doc [dom createDocument root]
@@ -713,11 +731,10 @@ test dom-11.6 {disableOutputEscaping} {
     $root appendChild $textnode
     set textnode [$doc createTextNode "&"]
     $root appendChild $textnode
-    set result [$root asXML]
+    set result [$root asXML -indent none]
     $doc delete
     set result
-} {<root><p>some <b>important</b> text</p>&amp;</root>
-}
+} {<root><p>some <b>important</b> text</p>&amp;</root>}
 
 test dom-11.6 {disableOutputEscaping} {
     set doc [dom createDocument root]
@@ -727,11 +744,257 @@ test dom-11.6 {disableOutputEscaping} {
     set textnode [$doc createTextNode "<p>some <b>important</b> text</p>"]
     $textnode disableOutputEscaping 1
     $root appendChild $textnode
-    set result [$root asXML]
+    set result [$root asXML -indent none]
     $doc delete
     set result
-} {<root>&amp;<p>some <b>important</b> text</p></root>
+} {<root>&amp;<p>some <b>important</b> text</p></root>}
+
+test dom-12.1 {cloneNode} {
+    set doc [dom parse {<root/>}]
+    set root [$doc documentElement]
+    set newNode [$root cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><root/></root>}
+
+test dom-12.2 {cloneNode} {
+    set doc [dom parse {<root><e/>text<!--comment--><?pi foo?></root>}]
+    set root [$doc documentElement]
+    set newNode [$root cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e/>text<!--comment--><?pi foo?><root/></root>}
+
+test dom-12.3 {cloneNode} {
+    set doc [dom parse {<root><e/>text<!--comment--><?pi foo?></root>}]
+    set root [$doc documentElement]
+    set newNode [[$root firstChild] cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e/>text<!--comment--><?pi foo?><e/></root>}
+
+test dom-12.4 {cloneNode} {
+    set doc [dom parse {<root><e/>text<!--comment--><?pi foo?></root>}]
+    set root [$doc documentElement]
+    set newNode [[$root selectNodes {node()[2]}] cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e/>text<!--comment--><?pi foo?>text</root>}
+
+test dom-12.5 {cloneNode} {
+    set doc [dom parse {<root><e/>text<!--comment--><?pi foo?></root>}]
+    set root [$doc documentElement]
+    set newNode [[$root selectNodes {node()[3]}] cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e/>text<!--comment--><?pi foo?><!--comment--></root>}
+
+test dom-12.5 {cloneNode} {
+    set doc [dom parse {<root><e/>text<!--comment--><?pi foo?></root>}]
+    set root [$doc documentElement]
+    set newNode [[$root lastChild] cloneNode]
+    $root appendChild $newNode
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e/>text<!--comment--><?pi foo?><?pi foo?></root>}
+
+test dom-12.6 {cloneNode -deep} {
+    set doc [dom parse {<r><e><a/>text<b><c/></b></e></r>}]
+    set root [$doc documentElement]
+    set result [[[$root firstChild] cloneNode -deep] asXML -indent none]
+    $doc delete
+    set result
+} {<e><a/>text<b><c/></b></e>}
+
+test dom-12.7 {cloneNode -deep} {
+    set doc [dom parse {<r><e><a/>text<b><c/></b></e></r>}]
+    set root [$doc documentElement]
+    $root appendChild [[$root firstChild] cloneNode -deep]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<r><e><a/>text<b><c/></b></e><e><a/>text<b><c/></b></e></r>}
+
+test dom-12.8 {cloneNode -deep} {
+    set doc [dom parse {<r><z/><e><a/>text<b><c/></b></e></r>}]
+    set root [$doc documentElement]
+    set removedNode [$root removeChild [$root firstChild]]
+    $root appendChild [[$root firstChild] cloneNode -deep]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<r><e><a/>text<b><c/></b></e><e><a/>text<b><c/></b></e></r>}
+
+test dom-12.9 {cloneNode -deep} {
+    set doc [dom parse {<r><z/><e><a/>text<b><c/></b></e></r>}]
+    set root [$doc documentElement]
+    set removedNode [$root removeChild [$root firstChild]]
+    $root appendChild [[$root firstChild] cloneNode -deep]
+    unset result
+    lappend result [$removedNode nextSibling]
+    lappend result [$removedNode previousSibling]
+    $doc delete
+    set result
+} {{} {}}
+
+test dom-12.10 {cloneNode -deep} {
+    set doc [dom parse {<r><y/><z/><e><a/>text<b><c/></b></e></r>}]
+    set root [$doc documentElement]
+    $root removeChild [$root firstChild]
+    set removedNode [$root removeChild [$root firstChild]]
+    $root appendChild [[$root firstChild] cloneNode -deep]
+    unset result
+    lappend result [[$removedNode nextSibling] nodeName]
+    lappend result [$removedNode previousSibling]
+    $doc delete
+    set result
+} {y {}}
+
+namespace eval nodeCmds {
+    dom createNodeCmd elementNode e1
+    dom createNodeCmd elementNode e2
+    dom createNodeCmd commentNode c
+    dom createNodeCmd textNode    t
+    dom createNodeCmd cdataNode   cdata
+    dom createNodeCmd piNode      pi
+    dom createNodeCmd parserNode  parser
 }
+
+test dom-13.1 {appendFromScript - elementNode} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    $root appendFromScript nodeCmds::e1
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1/></root>}
+
+test dom-13.2 {appendFromScript - elementNode} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            e1
+            e2
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1/><e2/></root>}
+
+test dom-13.3 {appendFromScript - elementNode} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            e1 {
+                e2 {
+                    e1
+                }
+            }
+            e2
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1><e2><e1/></e2></e1><e2/></root>}
+
+test dom-13.4 {appendFromScript - elementNode with attributes as options} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            e1 -attr1 attr1Value -attr2 "attr 2 Value"
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1 attr1="attr1Value" attr2="attr 2 Value"/></root>}
+
+test dom-13.5 {appendFromScript - elementNode with attributes as list} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    set attlist [list -a1 "some & value" -a2 "another attvalue"]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            e1 $attlist {}
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1 a1="some &amp; value" a2="another attvalue"/></root>}
+
+test dom-13.6 {appendFromScript - textnode, commentnode, cdatanode, pinode} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            t foo
+            c "my comment"
+            cdata {&"<>;} ;# emacs: "
+            pi mypi "some pi data"
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root>foo<!--my comment--><![CDATA[&"<>;]]><?mypi some pi data?></root>}
+
+# emacs: "
+
+test dom-13.7 {appendFromScript - textnode} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            t "<p>Some <b>important</b> stuff</p>"
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root>&lt;p&gt;Some &lt;b&gt;important&lt;/b&gt; stuff&lt;/p&gt;</root>}
+
+test dom-13.8 {appendFromScript - textnode with -disableOutputEscaping} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    namespace eval nodeCmds {
+        $root appendFromScript {
+            t -disableOutputEscaping "<p>Some <b>important</b> stuff</p>"
+        }
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><p>Some <b>important</b> stuff</p></root>}
+
+test dom-999.1 {move nodes from one doc to another} {
+    set doc1 [dom parse {<root/>}]
+    set doc2 [dom parse {<root><e>text</e></root>}]
+    set root1 [$doc1 documentElement]
+    set root2 [$doc2 documentElement]
+    $root1 appendChild [$root2 firstChild]
+    set textNode [[$root1 firstChild] firstChild]
+    if {[$textNode ownerDocument] == $doc1} {set result 1} else {set result 0}
+    $doc1 delete
+    $doc2 delete
+    set result
+} {1}
 
 # cleanup
 ::tcltest::cleanupTests
