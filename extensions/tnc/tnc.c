@@ -2961,11 +2961,11 @@ Tnc_Init (interp)
     }
 #endif
 #ifdef USE_TDOM_STUBS
-    if (Tdom_InitStubs(interp, "0.7", 0) == NULL) {
+    if (Tdom_InitStubs(interp, "0.8", 0) == NULL) {
         return TCL_ERROR;
     }
 #endif
-    Tcl_PkgRequire (interp, "tdom", "0.7.5", 0);
+    Tcl_PkgRequire (interp, "tdom", "0.8.0", 0);
     Tcl_CreateObjCommand (interp, "tnc", TclTncObjCmd, NULL, NULL );
     Tcl_PkgProvide (interp, "tnc", VERSION);
     return TCL_OK;
