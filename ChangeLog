@@ -1,14 +1,18 @@
-2003-03-26  Rolf Ade  <rolf@pointsman.de>
+2004-05-08  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/xmlsimple.c: Removed superfluous arg baseURI from
+          XML_SimpleParse(). 
+
+2004-03-26  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c: Fix of the template priority calculation
           and clearing out of xpathGetPrio().
 
-2003-03-14  Rolf Ade  <rolf@pointsman.de>
+2004-03-14  Rolf Ade  <rolf@pointsman.de>
 
         * generic/xmlsimple.c: Fixed a few simple parser seg faults in
           case of not-wf input. See xmlconf/xmltest/not-wf/sa/022.xml,
           xmlconf/xmltest/not-wf/sa/042.xml for examples.
-    
 
 2003-12-30  Rolf Ade  <rolf@pointsman.de>
 
