@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1884">SEE ALSO</a> · <a href="#SECTnode1893">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1900">SEE ALSO</a> · <a href="#SECTnode1909">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
@@ -484,6 +484,22 @@ tree made later one.</dd>
 
       
         <dt>
+<b class="method">disableOutputEscaping</b> <i class="m">?boolean?</i>
+</dt>
+        <dd>This method works only for text nodes; for every other nodes it
+returns error. Without the optional argument it returns, if disabling output
+escaping is on. The return value 0 means, the characters of the text node will
+be escaped, to gerenerate valid XML, if serialized. This is the default for
+every parsed or created text node. The return value 1 means, that output
+escaping is disabled for this text node. If such a text node is serialized
+(with asXML or asHTML), it is literarily written, without escaping of the
+special XML characters. If the optional boolean value <i class="m">boolean</i> is given,
+the flag is set accordingly. You should not set this flag to 1, until you
+really know, what you do.</dd>
+      
+
+      
+        <dt>
 <b class="method">xslt</b> <b class="option">?-parameters
 parameterList?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
 </dt>
@@ -505,11 +521,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode1884">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode1900">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode1893">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode1909">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
