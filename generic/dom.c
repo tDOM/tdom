@@ -1412,7 +1412,10 @@ domReadDocument (
     }
 
     doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
-    doc->extResolver = extResolver;
+    if (extResolver) {
+        doc->extResolver = extResolver;
+        Tcl_IncrRefCount(extResolver);
+    }
 
     info.parser               = parser;
     info.document             = doc;
