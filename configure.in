@@ -21,6 +21,17 @@ dnl	to configure the system for the local environment.
 
 AC_INIT(generic/tcldom.c)
 
+#-----------------------------------------------------------------------
+# These are needed for the expat compilation. Do this early so we
+# do not step over some CFLAGS which will confuse the compiler.
+#-----------------------------------------------------------------------
+
+AC_CHECK_FUNCS(memmove bcopy)
+
+#-----------------------------------------------------------------------
+# Where is the tcl.m4 and brothers?
+#-----------------------------------------------------------------------
+
 AC_CONFIG_AUX_DIR(tclconfig)
 CONFIGDIR=${srcdir}/tclconfig
 AC_SUBST(CONFIGDIR)
