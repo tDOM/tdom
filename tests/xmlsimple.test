@@ -53,7 +53,7 @@ test simple-2.2 {character entities} {
     set result
 } {AB}
 
-test simple-2.3 {character entities} {
+test simple-2.3 {character entities} {need_i18n} {
     set doc [dom parse -simple {<doc>&#214;&#xC4;&#xc4;</doc>}]
     set root [$doc documentElement]
     set result [$root text]

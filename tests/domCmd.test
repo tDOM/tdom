@@ -278,7 +278,7 @@ set nameStartChars [lsort -command sortCmd \
 # Append stop char needed by the test code to work properly.
 lappend nameStartChars 0x10000
 
-test domCmd-3.8 {isName} {longRunning} {
+test domCmd-3.8 {isName} {longRunning && need_i18n} {
     set ind 0
     set nr 0
     while {$nr < 65536} {
@@ -314,7 +314,7 @@ set nameChars [lsort -command sortCmd \
 # Append stop char needed by the test code to work properly.
 lappend nameChars 0x10000
 
-test domCmd-3.9 {isName} {longRunning} {
+test domCmd-3.9 {isName} {longRunning && need_i18n} {
     set ind 0
     set nr 0
     while {$nr < 65536} {
@@ -410,7 +410,7 @@ set XMLChars {
     0x9 0xA 0xD {0x20 0xD7FF} {0xE000 0xFFFD} {0x10000 0x10FFFF}
 }
 
-test domCmd-3.25 {isCharData} {longRunning} {
+test domCmd-3.25 {isCharData} {longRunning && need_i18n} {
     set ind 0
     set nr 1
     while {$nr < 65536} {
@@ -439,7 +439,7 @@ test domCmd-3.25 {isCharData} {longRunning} {
     set nr
 } {65536}
 
-test domCmd-4.1 {asXML -escapeNonASCII} {
+test domCmd-4.1 {asXML -escapeNonASCII} {need_i18n} {
     set doc [dom parse [tDOM::xmlReadFile \
             [file join [file dir [info script]] data/i18n_1.xml]]]
     set result [$doc asXML -escapeNonASCII]
@@ -448,7 +448,7 @@ test domCmd-4.1 {asXML -escapeNonASCII} {
 } {<test>&#1072;&#1073;&#1074;&#1075;&#1076;&#1077;&#1078;&#1079;&#1080;&#1081;</test>
 }
 
-test domCmd-4.2 {asXML -escapeNonASCII; comments and PI's are not altered} {
+test domCmd-4.2 {asXML -escapeNonASCII; comments and PI's are not altered} {need_i18n} {
     set doc [dom parse [tDOM::xmlReadFile \
             [file join [file dir [info script]] data/i18n_2.xml]]]
     set result [$doc asXML -escapeNonASCII]
@@ -459,7 +459,7 @@ german umlauts: &#228;&#246;&#252;&#223;
 </root>
 }
 
-test domCmd-4.3 {asHTML -escapeNonASCII -htmlEntities} {
+test domCmd-4.3 {asHTML -escapeNonASCII -htmlEntities} {need_i18n} {
     set doc [dom parse {<html><body>&#228;&#xfc;&#8222;&#8223;&#8224;</body></html>}]
     set result [$doc asHTML -escapeNonASCII -htmlEntities]
     $doc delete
