@@ -154,7 +154,7 @@ proc ::dom::domDoc::info { doc subcommand args } {
 #----------------------------------------------------------------------------
 proc ::dom::domDoc::importNode { doc importedNode deep } {
 
-    if {$deep || ($deep == "-deep"} {
+    if {$deep || ($deep == "-deep")} {
         set node [$importedNode cloneNode -deep]
     } else {
         set node [$importedNode cloneNode]
@@ -334,7 +334,7 @@ proc ::dom::domNode::item { nodeListNode index } {
 #----------------------------------------------------------------------------
 proc ::dom::domNode::length { nodeListNode } {
 
-    return [llength [$nodeListNode childNodes] $childNodes]
+    return [llength [$nodeListNode childNodes]]
 }
 
 #----------------------------------------------------------------------------
