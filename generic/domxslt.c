@@ -450,15 +450,15 @@ typedef struct {
 |   Prototypes
 |
 \-------------------------------------------------------------------------*/
-int ApplyTemplates ( xsltState *xs, xpathResultSet *context,
-                     domNode *currentNode, int currentPos,
-                     domNode *actionNode, xpathResultSet *nodeList,
-                     char *mode, char *modeURI, char **errMsg);
+static int ApplyTemplates ( xsltState *xs, xpathResultSet *context,
+                            domNode *currentNode, int currentPos,
+                            domNode *actionNode, xpathResultSet *nodeList,
+                            char *mode, char *modeURI, char **errMsg);
 
-int ApplyTemplate (  xsltState *xs, xpathResultSet *context,
-                     domNode *currentNode, domNode *exprContext,
-                     int currentPos, char *mode, char *modeURI,
-                     char **errMsg);
+static int ApplyTemplate (  xsltState *xs, xpathResultSet *context,
+                            domNode *currentNode, domNode *exprContext,
+                            int currentPos, char *mode, char *modeURI,
+                            char **errMsg);
 
 static int ExecActions (xsltState *xs, xpathResultSet *context,
                         domNode *currentNode, int currentPos,
@@ -816,8 +816,9 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {
         clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
-            *errMsg =
-                tdomstrdup("xsl:number: UTF-8 form of character longer than 3 Byte");
+            reportError (xs->currentXSLTNode,
+                         "xsl:number: UTF-8 form of character longer than 3 Byte", 
+                         errMsg);
             return NULL;
         }
         if (clen > 1) {
@@ -845,7 +846,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {                                 \
         clen = UTF8_CHAR_LEN(*p);                \
         if (!clen) {                             \
-            *errMsg = tdomstrdup("xsl:number: UTF-8 form of character longer than 3 Byte"); \
+            reportError (xs->currentXSLTNode, "xsl:number: UTF-8 form of character longer than 3 Byte", errMsg); \
             return NULL;                         \
         }                                        \
         if (clen > 1) {                          \
@@ -912,7 +913,8 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     return format;
 
  wrongSyntax:
-    *errMsg = tdomstrdup("xsl:number: Wrong syntax in format attribute");
+    reportError (xs->currentXSLTNode, 
+                 "xsl:number: Wrong syntax in format attribute", errMsg);
     return NULL;
 }
 
@@ -1823,7 +1825,7 @@ void sortByDocOrder (
 |   StripXMLSpace
 |
 \---------------------------------------------------------------------------*/
-void StripXMLSpace (
+static void StripXMLSpace (
     xsltState  * xs,
     domNode    * node
 )
@@ -1972,8 +1974,8 @@ static int xsltXPathFuncs (
         \-------------------------------------------------------------------*/
         DBG(fprintf(stderr,"xslt key function called!\n");)
         if (argc != 2) {
-            *errMsg = tdomstrdup("key() needs two arguments!");
-            return 1;
+            reportError (exprContext, "key() needs two arguments!", errMsg);
+            return -1;
         }
         /* check, if there is a key definition with the given name */
         keyId = xpathFuncString(argv[0]);
@@ -1983,9 +1985,11 @@ static int xsltXPathFuncs (
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (exprContext, prefix);
             if (!ns) {
-                *errMsg = tdomstrdup("There isn't a namespace bound to the prefix.");
+                reportError (exprContext, 
+                             "There isn't a namespace bound to the prefix.",
+                             errMsg);
                 FREE(keyId);
-                return 1;
+                return -1;
             }
             Tcl_DStringAppend (&dStr, ns->uri, -1);
         }
@@ -1993,9 +1997,10 @@ static int xsltXPathFuncs (
         FREE(keyId);
         h = Tcl_FindHashEntry (&xs->keyInfos, Tcl_DStringValue (&dStr));
         if (!h) {
-            *errMsg = tdomstrdup("Unknown key in key() function call!");
+            reportError (exprContext, "Unknown key in key() function call!",
+                         errMsg);
             Tcl_DStringFree (&dStr);
-            return 1;
+            return -1;
         }
 
         /* Short cut for empty result sets. */
@@ -2023,7 +2028,7 @@ static int xsltXPathFuncs (
             if (buildKeyInfoForDoc(sdoc, Tcl_DStringValue (&dStr),
                                    &(xs->keyInfos),xs,errMsg)<0) {
                 Tcl_DStringFree (&dStr);
-                return 1;
+                return -1;
             }
             h = Tcl_FindHashEntry (&(sdoc->keyData), Tcl_DStringValue (&dStr));
         }
@@ -2084,7 +2089,7 @@ static int xsltXPathFuncs (
                 if (!ns) {
                     reportError (exprContext, "There isn't a namespace bound to the prefix.", errMsg);
                     FREE(str);
-                    return 1;
+                    return -1;
                 }
             }
             df = xs->decimalFormats->next;
@@ -2102,14 +2107,14 @@ static int xsltXPathFuncs (
             FREE(str);
             if (df == NULL) {
                 reportError (exprContext, "There isn't a decimal format with this name.", errMsg);
-                return 1;
+                return -1;
             }
         } else
         if (argc == 2) {
             df = xs->decimalFormats;
         } else {
             reportError (exprContext, "format-number: wrong # parameters: format-number(number, string, ?string?)!", errMsg);
-            return 1;
+            return -1;
         }
         NaN = 0;
         n   = xpathFuncNumber (argv[0], &NaN);
@@ -2173,16 +2178,6 @@ static int xsltXPathFuncs (
             else {
                 freeStr = 1;
                 str = xpathFuncString (argv[0]);
-                /* TODO. Hack.This could be wrong. document() has to
-                   use the baseURI of the stylesheet node with the
-                   expression with the document() call. This can
-                   clearly be another URI than the URI of the
-                   currentTplRule. OK, the typical user won't spread a
-                   template over different entities, but even then
-                   there is the case of call-template, which doesn't
-                   change currentTplRule. At the end there isn't
-                   another way as to store the current xslt node in xs
-                   (not needed for path expressions). */
                 if (xs->currentXSLTNode) {
                     baseURI = findBaseURI (xs->currentXSLTNode);
                 } else
@@ -2210,8 +2205,10 @@ static int xsltXPathFuncs (
         } else
         if (argc == 2) {
             if (argv[1]->type != xNodeSetResult) {
-                *errMsg = tdomstrdup("second arg of document() has to be a nodeset!");
-                return 1;
+                reportError (exprContext, 
+                             "second arg of document() has to be a nodeset!",
+                             errMsg);
+                return -1;
             }
             if (argv[1]->nodes[0]->nodeType == ATTRIBUTE_NODE) {
                 baseURI = findBaseURI (((domAttrNode*)argv[1]->nodes[0])->parentNode);
@@ -2255,8 +2252,9 @@ static int xsltXPathFuncs (
                 FREE(str);
             }
         } else {
-            *errMsg = tdomstrdup("wrong # of args in document() call!");
-            return 1;
+            reportError (exprContext, "wrong # of args in document() call!",
+                         errMsg);
+            return -1;
         }
         return 0;
      } else {
@@ -3026,7 +3024,7 @@ static int xsltAddTemplate (
 |   ExecUseAttributeSets
 |
 \---------------------------------------------------------------------------*/
-int ExecUseAttributeSets (
+static int ExecUseAttributeSets (
     xsltState         * xs,
     xpathResultSet    * context,
     domNode           * currentNode,
@@ -3919,7 +3917,7 @@ static int ExecAction (
             domSplitQName (str2, prefix, &localName);
             if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                  || !domIsNCNAME (localName)) {
-                reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                reportError (actionNode, "xsl:attribute: Attribute name is not a valid QName.", errMsg);
                 return -1;
             }
             nsStr = NULL;
@@ -4379,6 +4377,10 @@ static int ExecAction (
             DBG(rsPrint( &nodeList ));
             xs->current = currentNode;
             rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
+            if (rc < 0) {
+                xpathRSFree (&nodeList);
+                return rc;
+            }
             CHECK_RC;
             TRACE1("forEach: evalXPath for select = '%s' gave back:\n", select);
             DBG(rsPrint(&rs));
@@ -4524,6 +4526,7 @@ static int ExecAction (
             if (str) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         str, &str2, errMsg);
+                CHECK_RC;
                 /* TODO: no processing of content template? */
                 pc = xpathGetTextValue (actionNode, &len);
                 n = (domNode*)domNewProcessingInstructionNode(
@@ -4792,8 +4795,10 @@ static int ExecAction (
                 attr = attr->nextSibling;
             }
             /* process the children as well */
+            xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             xs->lastNode = savedLastNode;
             return 0;
@@ -4837,7 +4842,7 @@ static int ExecActions (
 |   ApplyTemplate
 |
 \---------------------------------------------------------------------------*/
-int ApplyTemplate (
+static int ApplyTemplate (
     xsltState      * xs,
     xpathResultSet * context,
     domNode        * currentNode,
@@ -4902,7 +4907,7 @@ int ApplyTemplate (
                 TRACE3("find element tpl match='%s' mode='%s' name='%s'\n",
                        tpl->match, tpl->mode, tpl->name);
                 TRACE4("tpl has prio='%f' precedence='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
-                rc = xpathMatches ( tpl->ast, exprContext, currentNode,
+                rc = xpathMatches ( tpl->ast, tpl->content, currentNode,
                                     &(xs->cbs), errMsg);
                 if (rc < 0) {
                     TRACE1("xpathMatches had errors '%s' \n", *errMsg);
@@ -4943,7 +4948,8 @@ int ApplyTemplate (
                 && tpl->content->nodeNumber <= tplChoosen->content->nodeNumber)
                 break;
         }
-        rc = xpathMatches ( tpl->ast, exprContext, currentNode, &(xs->cbs), errMsg);
+        rc = xpathMatches ( tpl->ast, tpl->content, currentNode, &(xs->cbs),
+                            errMsg);
         TRACE1("xpathMatches = %d \n", rc);
         if (rc < 0) {
             TRACE1("xpathMatches had errors '%s' \n", *errMsg);
@@ -5016,7 +5022,7 @@ int ApplyTemplate (
 |   ApplyTemplates
 |
 \---------------------------------------------------------------------------*/
-int ApplyTemplates (
+static int ApplyTemplates (
     xsltState      * xs,
     xpathResultSet * context,
     domNode        * currentNode,
@@ -5073,7 +5079,7 @@ int ApplyTemplates (
 |   fillElementList
 |
 \---------------------------------------------------------------------------*/
-int fillElementList (
+static int fillElementList (
     xsltWSInfo   * wsInfo,
     int            strip,
     double         precedence,
@@ -5171,8 +5177,7 @@ int fillElementList (
 |   StripXSLTSpace
 |
 \---------------------------------------------------------------------------*/
-void StripXSLTSpace (
-    xsltState  * xs,
+static void StripXSLTSpace (
     domNode    * node
 )
 {
@@ -5215,7 +5220,7 @@ void StripXSLTSpace (
         child = node->firstChild;
         while (child) {
             newChild = child->nextSibling;
-            StripXSLTSpace (xs, child);
+            StripXSLTSpace (child);
             child = newChild;
         }
     } else {
@@ -5393,8 +5398,7 @@ getExternalDocument (
     resultType = Tcl_GetStringFromObj (resultTypeObj, NULL);
     if (strcmp (resultType, "string") == 0) {
         result = Tcl_ListObjIndex (interp, resultObj, 2, &xmlstringObj);
-        xmlstring = Tcl_GetStringFromObj (xmlstringObj, NULL);
-        len = strlen (xmlstring);
+        xmlstring = Tcl_GetStringFromObj (xmlstringObj, &len);
         chan = NULL;
     } else if (strcmp (resultType, "channel") == 0) {
         xmlstring = NULL;
@@ -5493,6 +5497,7 @@ getExternalDocument (
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
             return NULL;
         }
+        StripXSLTSpace (doc->rootNode);
     }
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
@@ -6680,6 +6685,7 @@ xsltCompileStylesheet (
             reportError (node, "Strange \"xsl:version\" value, don't know, how to handle.", errMsg);
             goto error;
         }
+        StripXSLTSpace (xsltDoc->rootNode);
         /* According to XSLT rec 2.3 we add the literal result element as
            template, which matches "/" */
         tpl = (xsltTemplate *) MALLOC (sizeof (xsltTemplate));
@@ -6700,6 +6706,7 @@ xsltCompileStylesheet (
         rc = addExclExtNS (sdoc, node, errMsg);
         if (rc < 0) goto error;
         
+        StripXSLTSpace (xsltDoc->rootNode);
         precedence = 1.0;
         precedenceLowBound = 0.0;
         rc = 0;
@@ -6708,14 +6715,6 @@ xsltCompileStylesheet (
         if (rc != 0) goto error;
     }
         
-    /*  strip space, if allowed, from the XSLT documents,
-     */
-    sdoc = xs->subDocs;
-
-    while (sdoc) {
-        StripXSLTSpace (xs, sdoc->doc->documentElement);
-        sdoc = sdoc->next;
-    }
     return xs;
 
  error:
