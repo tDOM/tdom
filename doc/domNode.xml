@@ -456,7 +456,15 @@ tree made later one.</desc>
 
       <commanddef>
         <command><method>getBaseURI</method></command>
-        <desc>Returns the baseURI of the node.</desc>
+        <desc>Returns the baseURI of the node. This method is deprecated in
+          favor of the <m>baseURI</m> method.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>baseURI <m>?URI?</m></method></command>
+        <desc>Returns the present baseURI of the node. If the optional 
+argument URI is given, sets the base URI of the node and of all of its child
+nodes out of the same enitity as node to the given URI.</desc>
       </commanddef>
 
       <commanddef>

@@ -494,7 +494,13 @@ node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one.
 .TP
 \&\fB\fBgetBaseURI\fP
-\&\fRReturns the baseURI of the node.
+\&\fRReturns the baseURI of the node. This method is deprecated in
+favor of the \fIbaseURI\fR method.
+.TP
+\&\fB\fBbaseURI \fI?URI?\fB\fP
+\&\fRReturns the present baseURI of the node. If the optional
+argument URI is given, sets the base URI of the node and of all of its child
+nodes out of the same enitity as node to the given URI.
 .TP
 \&\fB\fBdisableOutputEscaping\fP \fI?boolean?\fB
 \&\fRThis method works only for text nodes; for every other nodes it
