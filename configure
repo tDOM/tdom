@@ -1571,7 +1571,7 @@ EOF
 tdom_SRC_DIR=`cd ${srcdir}; pwd`
 
 pkglibdir="${exec_prefix}/lib/${PACKAGE}${VERSION}"
-tdomstub_LIB_FLAG="-ltdomstub${VERSION}\${TCL_DBGX}"
+tdomstub_LIB_FLAG="-ltdomstub${VERSION}${TCL_DBGX}"
 
 tdomstub_BUILD_SPEC="-L`pwd` ${tdomstub_LIB_FLAG}"
 tdomstub_FILE_SPEC="-L${pkglibdir} ${tdomstub_LIB_FLAG}"
