@@ -680,6 +680,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
        */
       TclExpatFreeParser(expat);
       TclExpatCreateParser(interp, expat);
+      expat->eContents = NULL;
 
       break;
 
@@ -3283,6 +3284,11 @@ TclGenExpatElementDeclHandler(userData, name, model)
 
   TclExpatDispatchPCDATA(expat);
 
+  eContent = (ExpatElemContent *) Tcl_Alloc (sizeof (ExpatElemContent));
+  eContent->content = model;
+  eContent->next = expat->eContents;
+  expat->eContents = eContent;
+
   if (expat->status != TCL_OK) {
       return;
   }
@@ -3332,10 +3338,6 @@ TclGenExpatElementDeclHandler(userData, name, model)
       }
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
   }
-  eContent = (ExpatElemContent *) Tcl_Alloc (sizeof (ExpatElemContent));
-  eContent->content = model;
-  eContent->next = expat->eContents;
-  expat->eContents = eContent;
 
   return;
 }
@@ -3614,6 +3616,7 @@ TclGenExpatEndDoctypeDeclHandler(userData)
       eContent = eContent->next;
       Tcl_Free ((char *) eContentSave);
   }
+  expat->eContents;
   return;
 }
 
