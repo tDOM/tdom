@@ -62,7 +62,7 @@
 #ifdef DEBUG
 # define DBG(x) x
 #else
-# define DBG(x)
+# define DBG(x) 
 #endif
 
 
@@ -578,7 +578,8 @@ int tcldom_returnDocumentObj (
     Tcl_Interp  *interp,
     domDocument *document,
     int          setVariable,
-    Tcl_Obj     *var_name
+    Tcl_Obj     *var_name,
+    int          trace
 )
 {
     char objCmdName[40], *objVar;
@@ -636,10 +637,11 @@ int tcldom_returnDocumentObj (
         dinfo->traceVarName = tdomstrdup(objVar);
         Tcl_UnsetVar (interp, objVar, 0);
         Tcl_SetVar   (interp, objVar, objCmdName, 0);
-        Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES |
-                                      TCL_TRACE_UNSETS,
-                                      (Tcl_VarTraceProc*)tcldom_docTrace,
-                                      (ClientData) dinfo);
+        if (trace) {
+            Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+                          (Tcl_VarTraceProc*)tcldom_docTrace,
+                          (ClientData) dinfo);
+        }
     }
     SetResult ( objCmdName);
     return TCL_OK;
@@ -1466,10 +1468,11 @@ int tcldom_appendFromTclList (
     Tcl_Obj    *obj
 )
 {
-    int     i, rc, length, valueLength, attrLength, attrValueLength, childListLength;
-    Tcl_Obj *lnode, *tagNameObj, *valueObj,
+    int      i, rc, length, valueLength, attrLength, attrValueLength;
+    int      childListLength;
+    Tcl_Obj *lnode, *tagNameObj, *piNameObj, *valueObj,
             *attrListObj, *attrObj, *childListObj, *childObj;
-    char    *tag_name, *value, *attrName, *attrValue;
+    char    *tag_name, *pi_name, *value, *attrName, *attrValue;
     domNode *newnode;
 
 
@@ -1493,9 +1496,11 @@ int tcldom_appendFromTclList (
     }
     tag_name = Tcl_GetStringFromObj (tagNameObj, NULL);
 
-    if ((strcmp(tag_name,"#cdata")==0) || (strcmp(tag_name,"#text")==0)) {
+    if (   (strcmp(tag_name,"#cdata")==0) 
+        || (strcmp(tag_name,"#text")==0)
+        || (strcmp(tag_name,"#comment")==0) ) {
         if (length != 2) {
-            SetResult ( "invalid text node list format!");
+            SetResult ( "invalid text or comment node list format!");
             return TCL_ERROR;
         }
         /*----------------------------------------------------------------------
@@ -1505,11 +1510,41 @@ int tcldom_appendFromTclList (
             return rc;
         }
         value = Tcl_GetStringFromObj (valueObj, &valueLength);
-        newnode = (domNode*)domNewTextNode(node->ownerDocument, value, valueLength, TEXT_NODE);
+        if (strcmp(tag_name, "#comment")==0) {
+            newnode = (domNode*)domNewTextNode(node->ownerDocument, value,
+                                               valueLength, COMMENT_NODE);
+        } else {
+            newnode = (domNode*)domNewTextNode(node->ownerDocument, value,
+                                               valueLength, TEXT_NODE);
+        }
         domAppendChild (node, newnode);
         return TCL_OK;
     }
 
+    if (strcmp(tag_name,"#pi")==0) {
+        if (length != 3) {
+            SetResult ( "invalid PI node list format!");
+            return TCL_ERROR;
+        }
+        /*-------------------------------------------------------------------------
+        |   create processing instruction node
+        \------------------------------------------------------------------------*/
+        if ((rc = Tcl_ListObjIndex (interp, lnode, 1, &piNameObj)) != TCL_OK) {
+            return rc;
+        }
+        if ((rc = Tcl_ListObjIndex (interp, lnode, 2, &valueObj)) != TCL_OK) {
+            return rc;
+        }
+        pi_name = Tcl_GetStringFromObj (piNameObj, &length);
+        value   = Tcl_GetStringFromObj (valueObj, &valueLength);
+        newnode = (domNode*)domNewProcessingInstructionNode(node->ownerDocument,
+                                                            pi_name, length,
+                                                            value, valueLength);
+        
+        domAppendChild (node, newnode);
+        return TCL_OK;
+    }
+    
     /*-------------------------------------------------------------------------
     |   create element node
     \------------------------------------------------------------------------*/
@@ -1590,13 +1625,33 @@ Tcl_Obj * tcldom_treeAsTclList (
 
 
 
-    if ((node->nodeType == TEXT_NODE) || (node->nodeType == CDATA_SECTION_NODE)) {
+    if (   (node->nodeType == TEXT_NODE) 
+        || (node->nodeType == CDATA_SECTION_NODE)) {
 
-        value  = Tcl_NewStringObj ( ((domTextNode*)node)->nodeValue,
-                                    ((domTextNode*)node)->valueLength);
+        value   = Tcl_NewStringObj ( ((domTextNode*)node)->nodeValue,
+                                     ((domTextNode*)node)->valueLength);
         objv[0] = Tcl_NewStringObj ("#text", -1);
         objv[1] = value;
         return Tcl_NewListObj (2, objv);
+    }
+
+    if (node->nodeType == COMMENT_NODE) {
+        value   = Tcl_NewStringObj ( ((domTextNode*)node)->nodeValue,
+                                     ((domTextNode*)node)->valueLength);
+        objv[0] = Tcl_NewStringObj ("#comment", -1);
+        objv[1] = value;
+        return Tcl_NewListObj (2, objv);
+    }
+
+    if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
+        name    = Tcl_NewStringObj (((domProcessingInstructionNode*)node)->targetValue,
+                                    ((domProcessingInstructionNode*)node)->targetLength);
+        value   = Tcl_NewStringObj (((domProcessingInstructionNode*)node)->dataValue,
+                                    ((domProcessingInstructionNode*)node)->dataLength);
+        objv[0] = Tcl_NewStringObj ("#pi", -1);
+        objv[1] = name;
+        objv[2] = value;
+        return Tcl_NewListObj (3, objv);
     }
 
     name = Tcl_NewStringObj (node->nodeName, -1);
@@ -1667,7 +1722,8 @@ void tcldom_AppendEscaped (
     while (   (value_length == -1 && *pc)
            || (value_length != -1 && pc != pEnd)
     ) {
-        if (*pc == '"') { AP('&') AP('q') AP('u') AP('o') AP('t') AP(';')
+        if (forAttr && (*pc == '"')) { 
+            AP('&') AP('q') AP('u') AP('o') AP('t') AP(';')
         } else
         if (*pc == '&') { AP('&') AP('a') AP('m') AP('p') AP(';')
         } else
@@ -2623,7 +2679,7 @@ static int applyXSLT (
         Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
     }
     return tcldom_returnDocumentObj (interp, resultDoc, (objc == 2),
-                                     (objc == 2) ? objv[1] : NULL);
+                                     (objc == 2) ? objv[1] : NULL, 1);
             
  applyXSLTCleanUP:
     if (localListPtr) {
@@ -3505,8 +3561,9 @@ int tcldom_NodeObjCmd (
 
         case m_ownerDocument:
             CheckArgs (2,3,2,"?docObjVar?");
-            return tcldom_returnDocumentObj(interp, node->ownerDocument, (objc == 3),
-                                            (objc == 3) ? objv[2] : NULL);
+            return tcldom_returnDocumentObj(interp, node->ownerDocument,
+                                            (objc == 3),
+                                            (objc == 3) ? objv[2] : NULL, 0);
 
         case m_target:
             CheckArgs (2,2,2,"");
@@ -3893,9 +3950,7 @@ int tcldom_createDocument (
     doc = domCreateDocument ( interp, NULL,
                               Tcl_GetStringFromObj (objv[1], NULL) );
     if (!doc) return TCL_ERROR;
-    return tcldom_returnDocumentObj(
-                 interp, doc, setVariable, newObjName
-    );
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
 }
 
 /*----------------------------------------------------------------------------
@@ -3924,9 +3979,7 @@ int tcldom_createDocumentNS (
     doc = domCreateDocument ( interp, Tcl_GetStringFromObj (objv[1], NULL),
                               Tcl_GetStringFromObj (objv[2], NULL) );
     if (!doc) return TCL_ERROR;
-    return tcldom_returnDocumentObj(
-                 interp, doc, setVariable, newObjName
-    );
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
 }
 
 
@@ -4140,7 +4193,7 @@ int tcldom_parse (
             return TCL_ERROR;
         }
         return tcldom_returnDocumentObj(
-                interp, doc, setVariable, newObjName
+            interp, doc, setVariable, newObjName, 1
         );
     }
 
@@ -4195,7 +4248,7 @@ int tcldom_parse (
     XML_ParserFree(parser);
 
     return tcldom_returnDocumentObj(
-               interp, doc, setVariable, newObjName
+        interp, doc, setVariable, newObjName, 1
     );
 #endif
 
@@ -4308,7 +4361,8 @@ int tcldom_domCmd (
                     return TCL_ERROR;
                 }
                 return tcldom_returnDocumentObj(interp, doc, (objc == 4),
-                                                (objc == 4) ? objv[3] : NULL);
+                                                (objc == 4) ? objv[3] : NULL,
+                                                1);
             }
             break;
 #endif
@@ -4613,4 +4667,3 @@ int tcldom_unknownCmd (
 }
 
 #endif
-
