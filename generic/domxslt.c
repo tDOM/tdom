@@ -4356,8 +4356,7 @@ static int ExecAction (
             break;
 
         case comment:
-            fragmentNode = domNewElementNode(xs->resultDoc, "",
-                                             ELEMENT_NODE);
+            fragmentNode = domNewElementNode(xs->resultDoc, "", ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
             xsltPushVarFrame (xs);
@@ -4375,25 +4374,11 @@ static int ExecAction (
                 child = child->nextSibling;
             }
             str = xpathGetStringValue (fragmentNode, &len);
-            pc = str;
-            i = 0;
-            while (i < len) {
-                if (*pc == '-') {
-                    if (i == len - 1) {
-                        reportError (actionNode, "The text produced by xsl:comment must not end with the '-' character.", errMsg);
-                        domDeleteNode (fragmentNode, NULL, NULL);
-                        FREE(str);
-                        return -1;
-                    }
-                    pc++; i++;
-                    if (*pc == '-') {
-                        reportError (actionNode, "The text produced by xsl:comment must not contain the string \"--\"", errMsg);
-                        domDeleteNode (fragmentNode, NULL, NULL);
-                        FREE(str);
-                        return -1;
-                    }
-                }
-                pc++; i++;
+            if (!domIsComment (str)) {
+                reportError (actionNode, "Invalide comment value", errMsg);
+                domDeleteNode (fragmentNode, NULL, NULL);
+                FREE(str);
+                return -1;
             }
             xs->lastNode = savedLastNode;
             domAppendNewTextNode(xs->lastNode, str, len, COMMENT_NODE, 0);
@@ -4713,8 +4698,6 @@ static int ExecAction (
                 rc = evalXPath(xs, context, currentNode, currentPos, str,
                                &rs, errMsg);
                 CHECK_RC;
-/*                fprintf (stderr, "xsltif, result node set: \n");
-                  rsPrint (&rs); */
                 b = xpathFuncBoolean( &rs );
                 xpathRSFree( &rs );
                 if (b) {
@@ -4803,7 +4786,9 @@ static int ExecAction (
                     TRACE1("setting param '%s': yes \n", str);
                     select = getAttr(actionNode, "select", a_select);
                     if (select && actionNode->firstChild) {
-                        reportError (actionNode, "An xsl:parameter element with a select attribute must be empty", errMsg);
+                        reportError (actionNode, "An xsl:parameter element "
+                                     "with a select attribute must be empty",
+                                     errMsg);
                         return -1;
                     }
                     TRACE1("param select='%s'\n", select);
@@ -4812,7 +4797,8 @@ static int ExecAction (
                     CHECK_RC;
                 } 
             } else {
-                reportError (actionNode, "xsl:param: missing mandatory attribute \"name\".", errMsg);
+                reportError (actionNode, "xsl:param: missing mandatory "
+                             "attribute \"name\".", errMsg);
                 return -1;
             }
             break;
@@ -4825,17 +4811,54 @@ static int ExecAction (
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         str, &str2, errMsg);
                 CHECK_RC;
-                /* TODO: no processing of content template? */
-                pc = xpathGetStringValue (actionNode, &len);
-                n = (domNode*)domNewProcessingInstructionNode(
-                                 xs->resultDoc, str2, strlen(str), pc, len);
-                domAppendChild(xs->lastNode, n);
-                FREE(str2);
-                FREE(pc);
+                if (!domIsPINAME (str2) || !domIsNCNAME(str2)) {
+                    reportError (actionNode, "xsl:processing-instruction: "
+                                 "Processing instruction name is invalid.",
+                                 errMsg);
+                    FREE(str2);
+                    return -1;
+                }
             } else {
                 reportError (actionNode, "xsl:processing-instruction: missing mandatory attribute \"name\".", errMsg);
                 return -1;
             }
+            fragmentNode = domNewElementNode(xs->resultDoc, "", ELEMENT_NODE);
+            savedLastNode = xs->lastNode;
+            xs->lastNode = fragmentNode;
+            xsltPushVarFrame (xs);
+            rc = ExecActions(xs, context, currentNode, currentPos,
+                             actionNode->firstChild, errMsg);
+            xsltPopVarFrame (xs);
+            CHECK_RC;
+            child = fragmentNode->firstChild;
+            while (child) {
+                if (child->nodeType != TEXT_NODE) {
+                    domDeleteNode (fragmentNode, NULL, NULL);
+                    reportError (actionNode, "xsl:processing-instruction must "
+                                 "not create nodes other than text nodes.",
+                                 errMsg);
+                    FREE(str2);
+                    return -1;
+                }
+                child = child->nextSibling;
+            }
+            str = xpathGetStringValue (fragmentNode, &len);
+            if (!domIsPIValue (str)) {
+                reportError (actionNode, "Invalide processing instruction "
+                             "value", errMsg);
+                domDeleteNode (fragmentNode, NULL, NULL);
+                FREE(str);
+                FREE(str2);
+                return -1;
+            }
+            xs->lastNode = savedLastNode;
+            
+            n = (domNode*)domNewProcessingInstructionNode( 
+                xs->resultDoc, str2, strlen(str2), str, len);
+            domAppendChild(xs->lastNode, n);
+            domDeleteNode (fragmentNode, NULL, NULL);
+            FREE(str2);
+            FREE(str);
             break;
 
         case sort:
