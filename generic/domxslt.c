@@ -6286,8 +6286,12 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         tpl = (xsltTemplate *) Tcl_GetHashValue (entryPtr);
-        if (tpl->freeAst) xpathFreeAst (tpl->freeAst);        
-        FREE((char*)tpl);
+        while (tpl) {
+            if (tpl->freeAst) xpathFreeAst (tpl->freeAst);        
+            tplsave = tpl;
+            tpl = tpl->next;
+            FREE((char*)tplsave);
+        }
     }
     Tcl_DeleteHashTable (&xs->isElementTpls);
 
