@@ -192,7 +192,9 @@ namespace eval ::dom::domHTML {
 # Note: script is evaluated in the context of ::dom::domHTML namespace.
 #-----------------------------------------------------------------------------
 
-proc ::dom::domHTML::newdoc {script} {
+proc ::dom::domHTML::newdoc {script {upvars {}}} {
+
+    foreach name $upvars { upvar $name $name }
 
     set doc [dom createDocument html]
     [$doc documentElement] appendFromScript $script
