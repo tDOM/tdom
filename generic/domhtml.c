@@ -119,8 +119,11 @@ struct Er {
 |   character entity references known to the system.
 |
 \---------------------------------------------------------------------------*/
-#define ER_HASH_SIZE 7
-
+#if TclOnly8Bits
+#define ER_HASH_SIZE 107
+#else
+#define ER_HASH_SIZE 257
+#endif
 
 /*----------------------------------------------------------------------------
 |   The following flag is TRUE if entity reference hash table needs
