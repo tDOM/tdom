@@ -267,7 +267,8 @@ static char doc_usage[] =
     "    appendFromScript script                 \n"        
     "    insertBeforeFromScript script ref       \n"
     "    appendXML xmlString                     \n"
-    "    selectNodes ?-namespaces prefixUriList? xpathQuery ?typeVar? \n"
+    "    selectNodesNamespaces ?prefixUriList?   \n" 
+    "    selectNodes ?-namespaces prefixUriList? ?-cache <boolean>? xpathQuery ?typeVar? \n"
     TDomThreaded(
     "    readlock                                \n"
     "    writelock                               \n"
@@ -333,7 +334,7 @@ static char node_usage[] =
     "    appendFromScript script      \n"
     "    insertBeforeFromScript script ref \n"
     "    appendXML xmlString          \n"
-    "    selectNodes ?-namespaces prefixUriList? xpathQuery ?typeVar? \n"
+    "    selectNodes ?-namespaces prefixUriList? ?-cache <boolean>? xpathQuery ?typeVar? \n"
     "    toXPath                      \n"
     "    disableOutputEscaping ?boolean? \n"
     "    precedes node                \n"
@@ -1477,7 +1478,7 @@ int tcldom_selectNodes (
 {
     char          *xpathQuery, *typeVar, *option;
     char          *errMsg = NULL, **mappings = NULL;
-    int            rc, i, len, optionIndex, cache = 0;
+    int            rc, i, len, optionIndex, localmapping, cache = 0;
     xpathResultSet rs;
     Tcl_Obj       *type, *objPtr;
     xpathCBs       cbs;
@@ -1564,6 +1565,12 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
+    if (mappings == NULL) {
+        mappings = node->ownerDocument->prefixNSMappings;
+        localmapping = 0;
+    } else {
+        localmapping = 1;
+    }
     if (cache) {
         if (!node->ownerDocument->xpathCache) {
             node->ownerDocument->xpathCache = MALLOC (sizeof (Tcl_HashTable));
@@ -1584,7 +1591,7 @@ int tcldom_selectNodes (
         if (errMsg) {
             FREE(errMsg);
         }
-        if (mappings) {
+        if (localmapping && mappings) {
             FREE(mappings);
         }
         return TCL_ERROR;
@@ -1607,7 +1614,7 @@ int tcldom_selectNodes (
     Tcl_DecrRefCount(type);
 
     xpathRSFree( &rs );
-    if (mappings) {
+    if (localmapping && mappings) {
         FREE (mappings);
     }
     return TCL_OK;
@@ -3141,6 +3148,61 @@ static int cdataSectionElements (
     return TCL_OK;
 }
 
+/*----------------------------------------------------------------------------
+|   selectNodesNamespaces
+|
+\---------------------------------------------------------------------------*/
+static int selectNodesNamespaces (
+    domDocument *doc,
+    Tcl_Interp  *interp,
+    int          objc,
+    Tcl_Obj     *CONST objv[] 
+    )
+{
+    int      len, i, result;
+    Tcl_Obj *objPtr, *listPtr;
+
+    CheckArgs (2,3,2, "?prefixUriList?");
+    if (objc == 3) {
+        result = Tcl_ListObjLength (interp, objv[2], &len);
+        if (result != TCL_OK || (len % 2) != 0) {
+            SetResult ("The optional argument to the selectNodesNamespaces"
+                       " method must be a 'prefix namespace' pairs list");
+            return TCL_ERROR;
+        }
+        i = 0;
+        if (doc->prefixNSMappings) {
+            while (doc->prefixNSMappings[i]) {
+                FREE (doc->prefixNSMappings[i]);
+                i++;
+                FREE (doc->prefixNSMappings[i]);
+                i++;
+            }
+        }
+        if (i < len + 1) {
+            FREE (doc->prefixNSMappings);
+            doc->prefixNSMappings = MALLOC (sizeof (char*)*(len+1));
+        }
+        for (i = 0; i < len; i++) {
+            Tcl_ListObjIndex (interp, objv[2], i, &objPtr);
+            doc->prefixNSMappings[i] = tdomstrdup (Tcl_GetString (objPtr));
+        }
+        doc->prefixNSMappings[len] = NULL;
+        Tcl_SetObjResult (interp, objv[2]);
+    } else {
+        listPtr = Tcl_NewListObj (0, NULL);
+        i = 0;
+        if (doc->prefixNSMappings) {
+            while (doc->prefixNSMappings[i]) {
+                objPtr = Tcl_NewStringObj (doc->prefixNSMappings[i], -1);
+                Tcl_ListObjAppendElement (interp, listPtr, objPtr);
+                i++;
+            }
+        }
+        Tcl_SetObjResult (interp, listPtr);
+    }
+    return TCL_OK;
+}
 
 /*----------------------------------------------------------------------------
 |   applyXSLT
@@ -4445,6 +4507,7 @@ int tcldom_DocObjCmd (
         "indent",          "omit-xml-declaration",       "encoding",
         "standalone",      "mediaType",                  "nodeType",
         "cdataSectionElements",
+        "selectNodesNamespaces",
         "getElementById",  "firstChild",                 "lastChild",
         "appendChild",     "removeChild",                "hasChildNodes",
         "childNodes",      "ownerDocument",              "insertBefore",
@@ -4467,6 +4530,7 @@ int tcldom_DocObjCmd (
         m_indent,           m_omitXMLDeclaration,         m_encoding,
         m_standalone,       m_mediaType,                  m_nodeType,
         m_cdataSectionElements,
+        m_selectNodesNamespaces,
         /* The following methods will be dispatched to tcldom_NodeObjCmd */
         m_getElementById,   m_firstChild,                 m_lastChild,
         m_appendChild,      m_removeChild,                m_hasChildNodes,
@@ -4868,6 +4932,9 @@ int tcldom_DocObjCmd (
         case m_cdataSectionElements:
             return cdataSectionElements (doc, interp, objc, objv);
 
+        case m_selectNodesNamespaces:
+            return selectNodesNamespaces (doc, interp, objc, objv);
+                
         case m_appendChild:
         case m_removeChild:
         case m_insertBefore:
