@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1980">SEE ALSO</a> · <a href="#SECTid1989">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1983">SEE ALSO</a> · <a href="#SECTid1992">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
@@ -252,7 +252,8 @@ node. <i class="m">newChild</i> must be in the document fragment list.</dd>
 <b class="method">insertBefore</b> <i class="m">newChild</i>  <i class="m">refChild</i>
 </dt>
         <dd>Insert <i class="m">newChild</i> before the <i class="m">refChild</i> in list of
-children of that node. <i class="m">newChild</i> must be in the document fragment list.</dd>
+children of that node. If <i class="m">refChild</i> is the empty string, insert
+<i class="m">newChild</i> at the end of the child nodes list of that node.</dd>
       
 
       
@@ -573,11 +574,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid1980">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTid1983">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTid1989">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid1992">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
