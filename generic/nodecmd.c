@@ -159,6 +159,8 @@ StackPop ()
     element = tsdPtr->currentSlot->element;
     if (tsdPtr->currentSlot->prevPtr) {
         tsdPtr->currentSlot = tsdPtr->currentSlot->prevPtr;
+    } else {
+        tsdPtr->currentSlot->element = NULL;
     }
 
     return element;

@@ -1063,6 +1063,41 @@ test dom-7.17 {setTextCheck} {
 
 $doc delete
 
+test dom-7.18 {setTextCheck and appendFromScript} {
+    set doc [dom createDocumentNode]
+    dom setTextCheck 0
+    namespace eval nodeCmds {
+        dom createNodeCmd elementNode doc
+        dom createNodeCmd textNode t
+    }
+    $doc appendFromScript {
+        nodeCmds::doc {
+            nodeCmds::t "foo\u0003bar"
+        }
+    }
+    dom setTextCheck 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} "<doc>foo\u0003bar</doc>"
+
+test dom-7.19 {setTextCheck and appendFromScript - setTextCheck state at create time is crucial} {
+    set doc [dom createDocumentNode]
+    namespace eval nodeCmds {
+        dom createNodeCmd elementNode doc
+        dom createNodeCmd textNode t
+    }
+    dom setTextCheck 0
+    set result [catch {$doc appendFromScript {
+        nodeCmds::doc {
+            nodeCmds::t "foo\u0003bar"
+        }
+    }} errMsg]
+    dom setTextCheck 1
+    $doc delete
+    lappend result $errMsg
+} [list 1 "Invalid text value 'foo\u0003bar'"]
+
 test dom-8.1 {createDocumentNode} {
     set result [catch {dom createDocumentNode foo bar}]
 } {1}
@@ -1189,6 +1224,45 @@ namespace eval nodeCmds {
 test dom-10.2 {createNodeCmd} {
     llength [info commands nodeCmds::*]
 } {0}
+
+namespace eval nodeCmds {
+    dom createNodeCmd elementNode e1
+    dom createNodeCmd textNode    t
+}
+
+test dom-10.3 {node creating command called outside domNode context} {
+    set result [catch {nodeCmds::t "some text"} errMsg]
+    lappend result $errMsg
+} {1 {called outside domNode context}}
+
+test dom-10.4 {node creating command called outside domNode context} {
+    dom createDocument docRoot doc
+    $doc documentElement root
+    $root appendFromScript {
+        nodeCmds::t "Some text"
+    }
+    set result [list [$doc asXML -indent none]]
+    $doc delete
+    lappend result [catch {nodeCmds::t "Some text"} errMsg]
+    lappend result $errMsg
+} {{<docRoot>Some text</docRoot>} 1 {called outside domNode context}}
+
+test dom-10.5 {node creating command called outside domNode context} {
+    dom createDocument docRoot doc
+    $doc documentElement root
+    $root appendFromScript {
+        nodeCmds::e1 {
+            nodeCmds::t "Some text"
+        }
+    }
+    set result [list [$doc asXML -indent none]]
+    $doc delete
+    lappend result [catch {
+        nodeCmds::e1 {
+            nodeCmds::t "Some text"
+        }} errMsg]
+    lappend result $errMsg
+} {{<docRoot><e1>Some text</e1></docRoot>} 1 {called outside domNode context}}
 
 namespace delete nodeCmds
 
