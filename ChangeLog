@@ -1,9 +1,39 @@
+2002-10-30  Rolf Ade  <rolf@pointsman.de>
+        
+        * extensions/tnc/test.tcl: Updated to use new tDOM
+          features. Made more usable.    
+
+        * apps/xslt.tcl: Updated to using domDoc xslt method,
+          -escapeNonASCII for asXML and as HTML and additionally
+          -htmlEntities for asHTML.
+
+	* generic/domxslt.c: Implemented "Forwards-Compatible
+          rocessing" (XSLT rec 2.5), with limitations: xsl:version
+          attributes on literal result elements are not
+          supported. Fixed a bug in XPath func
+          format-number(). XsltProcess now accepts also a
+          domDoc. Improved the setting of the documentElement of the
+          resultDoc.
+
+2002-10-29  Rolf Ade  <rolf@pointsman.de>
+
+	* generic/tcldom.c:
+        * doc/domDoc.*
+        * doc/domNode.*: Added -escapeNonASCII as option to the asXML
+          and asHTML methods and -htmlEntities as option to the asHTML
+          method. Added "xslt" method to domDoc commands.
+
+	* generic/dom.c: Better error reporting in case of parsing
+          errors in external entities.
+
+        * doc/expat.*: Fixed a documentation bug.
+  
 2002-10-29 Zoran Vasiljevic <zoran@archiware.com>
 
-	* dom/tcldom.c
-	* dom/nodecmd.c
-	* dom/nodecmd.h: modified "dom createNodeCmd" to accept the
-	"-returnNodeCmd" optional argument. All commands created
+	* generic/tcldom.c
+	* generic/nodecmd.c
+	* generic/nodecmd.h: modified "dom createNodeCmd" to accept the
+        -returnNodeCmd" optional argument. All commands created
 	with this option willreturn the dom object command for accessing 
 	the generated node.
 	
