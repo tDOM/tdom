@@ -1,5 +1,9 @@
 2004-07-13  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/domxslt.c: Ensure, that the first element node of
+          the result tree is the documentElement of the generated
+          document.  
+
         * tests/xmlsimple.test
         * generic/xmlsimple.c: Empty CDATA sections should not create
           a node.
