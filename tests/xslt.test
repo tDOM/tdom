@@ -1,9 +1,10 @@
 # Features covered: XSLT transformation
 #
 # This file contains a collection of tests for the XSLT engine of
-# tDOM. It is focused mainly on the tcl interface of the engine; the
-# vaste majority of xslt compliance tests are done outside the tcltest
-# framework.
+# tDOM. It is focused mainly on the tcl interface of the engine and on
+# verification, that the created result tree behaves as if it would
+# have benn parsed from an according XML source; the vaste majority of
+# xslt compliance tests are done outside the tcltest framework.
 #
 # Tested commands and object commands:
 #    xslt-1.*: xpath Lexer/parser tests
@@ -969,6 +970,55 @@ test xslt-7.8 {namespaces in the result doc} {
     $xsltdoc delete
     set result
 } {my:element my:foo}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      xmlns:my="http://my.uri">
+      
+    <xsl:template match="/">
+      <xsl:element name="outroot"/>
+    </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-7.9 {parent of the result doc documentElement} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set resultRoot [$resultDoc documentElement]
+    set result [list [$resultDoc asXML -indent none] [$resultRoot parentNode]]
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {<outroot/> {}}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      xmlns:my="http://my.uri">
+      
+    <xsl:template match="/">
+      <xsl:element name="e1"/>
+      <xsl:element name="e1"/>
+    </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-7.10 {parent of the result doc documentElement} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set result [list [$resultDoc asXML -indent none]]
+    foreach toplevelNode [$resultDoc childNodes] {
+        lappend result [$toplevelNode parentNode]
+    }
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {<e1/><e1/> {} {}}
 
 set xslt {
     <xsl:stylesheet
