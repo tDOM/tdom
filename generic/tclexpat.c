@@ -622,7 +622,6 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
   char *data;
   int len = 0, optionIndex, result = TCL_OK;
   CHandlerSet *activeCHandlerSet;
-  ExpatElemContent *eContent, *eContentSave;
 
   static CONST84 char *options[] = {
       "configure", "cget", "free", "get",
