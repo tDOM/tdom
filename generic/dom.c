@@ -1806,21 +1806,7 @@ domFreeNode (
             Tcl_Free (attr->nodeValue);
             domFree ((void*)attr);
         }
-        return;
-    }
- /*****
-    /unlink it from the (fragment) list/
-    if (node->nextSibling != NULL) {
-        node->nextSibling->previousSibling = node->previousSibling;
-    }
-    if (node->previousSibling != NULL) {
-        node->previousSibling->nextSibling = node->nextSibling;
-    }
-    if (node->ownerDocument->fragments == node) {
-        node->ownerDocument->fragments = node->nextSibling;
-    }
-****/
-    if (node->nodeType == ELEMENT_NODE) {
+    } else if (node->nodeType == ELEMENT_NODE) {
         child = node->lastChild;
         while (child) {
             ctemp = child->previousSibling;
@@ -1838,10 +1824,13 @@ domFreeNode (
             Tcl_Free (atemp->nodeValue);
             domFree ((void*)atemp);
         }
+        domFree ((void*)node);
+
     } else if (node->nodeType == PROCESSING_INSTRUCTION_NODE && !shared) {
         Tcl_Free (((domProcessingInstructionNode*)node)->dataValue);
         Tcl_Free (((domProcessingInstructionNode*)node)->targetValue);
         domFree ((void*)node);
+
     } else if (!shared) {
         Tcl_Free (((domTextNode*)node)->nodeValue);
         domFree ((void*)node);
@@ -1916,15 +1905,12 @@ domFreeDocument (
     void            * clientData
 )
 {
-    int shared = 0;
     domNode      *node, *next;
     domNS        *ns;
     int           i;
     Tcl_HashEntry *entryPtr;
     Tcl_HashSearch search;
 
-    TDomThreaded(shared = doc->refCount > 0;)
-        
     /*-----------------------------------------------------------
     |   delete main trees, including top level PIs, etc.
     \-----------------------------------------------------------*/
