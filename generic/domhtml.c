@@ -77,7 +77,7 @@
 |   Defines
 |
 \---------------------------------------------------------------------------*/
-#define DBG(x)
+#define DBG(x)          
 #define RetError(m,p)   *errStr = strdup(m); *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 #define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') )
@@ -417,6 +417,23 @@ static void TranslateEntityRefs (
 \---------------------------------------------------------------------------*/
 
 
+
+DBG(
+/*----------------------------------------------------------------------------
+|   getDeep
+|
+\---------------------------------------------------------------------------*/
+static int getDeep (domNode *n) {
+    int d;
+    d = 0;
+    while (n->parentNode != NULL) {
+        d++;
+        n  = n->parentNode;
+    }
+    return d;
+}
+)
+
 /*----------------------------------------------------------------------------
 |   HTML_SimpleParse (non recursive)
 |
@@ -438,14 +455,14 @@ HTML_SimpleParse (
     register char *x, *start, *piSep;
     int            saved;
     int            hasContent;
-    domNode        *pnode, *saved_node, *toplevel;
+    domNode        *pnode, *toplevel;
     domNode       *node = NULL, *parent_node = NULL;
     domTextNode   *tnode;
     domAttrNode   *attrnode, *lastAttr;
     int            ampersandSeen = 0;
     int            only_whites   = 0;
     int            hnew, autoclose, ignore;
-    char           tmp[250];
+    char           tmp[250], *y = NULL;
 /**
  #define LATE_CLOSE_DEEPNESS 100
     char          *lateClose[LATE_CLOSE_DEEPNESS];
@@ -465,6 +482,7 @@ HTML_SimpleParse (
             |   read text between tags
             |
             \---------------------------------------------------------------*/
+          readText:
             ampersandSeen = 0;
             only_whites = 1;
             if (c=='<') x++;
@@ -524,24 +542,50 @@ HTML_SimpleParse (
             }
             *x = '\0'; /* temporarily terminate the string */
 
+
             /*----------------------------------------------------------------------
-            |   look for a corresponding opening tag the way up the tag hierarchy
+            |   check for tags which could optional be close 
+            |   like <option>...</option>
             \---------------------------------------------------------------------*/
-            pnode = parent_node;
-            while (pnode != NULL) {
-                if (!strcmp(start+2,pnode->nodeName)) break;
-                pnode = pnode->parentNode;
+            ignore = 0;
+            pnode = NULL;
+            if (parent_node->lastChild && parent_node->lastChild->nodeType == ELEMENT_NODE) {
+                pnode = parent_node->lastChild;
+            } else 
+            if (parent_node->lastChild && parent_node->lastChild->previousSibling &&
+                parent_node->lastChild->previousSibling->nodeType == ELEMENT_NODE)
+            {
+                pnode = parent_node->lastChild->previousSibling;
             }
-            if (pnode == NULL) {
-                /* begining tag was not found the way up the tag hierarchy
-                   -> ignore the tag */
-                DBG(fprintf(stderr,"ignoring closing '%s' \n", start+2);)
+            if (pnode) {
+                DBG(fprintf(stderr, "'%s' closing with last empty tag '%s' ?\n", start+2, pnode->nodeName);)
+                if (strcmp(start+2,pnode->nodeName)==0)  {
+                    switch (*(start+2)) {
+                        case 'o': if (!strcmp(start+2,"option")) ignore = 1; break;
+                    }
+                }
+            } 
 
-            } else {
+            if (!ignore) {
+                /*----------------------------------------------------------------------
+                |   look for a corresponding opening tag the way up the tag hierarchy
+                \---------------------------------------------------------------------*/
+                pnode = parent_node;
+                while (pnode != NULL) {
+                    DBG(fprintf(stderr, "checking '%s' to top hierarchy: '%s' \n", start+2,pnode->nodeName);)
+                    if (!strcmp(start+2,pnode->nodeName)) break;
+                    pnode = pnode->parentNode;
+                }
+                if (pnode == NULL) {
+                    /* begining tag was not found the way up the tag hierarchy
+                       -> ignore the tag */
+                    DBG(fprintf(stderr,"ignoring closing '%s' \n", start+2);)
+                    ignore = 1;
+                }
+            }            
+            if (!ignore) {
 
-                saved_node = node = parent_node;
-                parent_node = node->parentNode;
-                pn = (char*)node->nodeName;
+                pn = (char*)parent_node->nodeName;                        
 
                 while (1) {
                     DBG(fprintf(stderr, "comparing '%s' with pn='%s' \n", start+2, pn);)
@@ -557,11 +601,11 @@ HTML_SimpleParse (
                         ) {
                             ignore = 1;
                         }
-
                         if (ignore) {
                             parent_node = node->parentNode;
                             break;
                         }
+
 
                         /*---------------------------------------------------------------
                         |   check for tags for which end tag can be omitted
@@ -606,7 +650,7 @@ HTML_SimpleParse (
                                 node = parent_node;
                                 parent_node = node->parentNode;
                                 pn = (char*)node->nodeName;
-                                continue;
+                                break; 
                             }
                         }
                         sprintf(tmp, "Unterminated element '%s' (within '%s')", start+2, pn);
@@ -615,17 +659,27 @@ HTML_SimpleParse (
                     }
                     break;
                 }
+                
+                /* move up */
+                node = parent_node;
+                parent_node = NULL;
+                if (node) parent_node = node->parentNode;
             }
             *x = c;  /* remove temporarily termination */
 
+                     
             while (SPACE(*x)) {
                 x++;
             }
             if (*x=='>') {
                 x++;
             } else {
-                RetError("Missing \">\"",(x - html)-1);
-            }
+                if (*x == '<') {
+                    /* start of new tag, ends closing tag */
+                } else {
+                    RetError("Missing \">\"",(x - html)-1);
+                }
+            }            
             if (parent_node == NULL) {
                 /* we return to main node and so finished parsing */
                 return TCL_OK;
@@ -841,17 +895,19 @@ HTML_SimpleParse (
             |   new tag/element
             |
             \---------------------------------------------------------------*/
-            hasContent = 1;
             while ((c=*x)!=0 && c!='/' && c!='>' && c!='<' && !SPACE(c) ) {
+                if (!isalpha(c)) goto readText;
                 *x = tolower(c);
                 x++;
             }
+            hasContent = 1;
             if (c==0) {
                 RetError("Missing \">\"",(start-html) );
             }
             if ( (x-start)==1) {
                 RetError("Null markup name",(start-html) );
             }
+            DBG(fprintf(stderr, "\nnew tag '%70.70s...' \n", start);)
             *x = '\0'; /* temporarily terminate the string */
 
 
@@ -860,7 +916,7 @@ HTML_SimpleParse (
             |   currently open one
             \----------------------------------------------------------*/
             e = start+1;
-            pn = ""; if (parent_node) { pn = (char*)node->nodeName; }
+            pn = ""; if (parent_node) { pn = (char*)parent_node->nodeName; }
             autoclose = 0;
             switch (*e) {
                 case 'a': if(!strcmp(e,"a")&&!strcmp(pn,"a")) autoclose=1;
@@ -871,6 +927,7 @@ HTML_SimpleParse (
                           break;
             }
             if (autoclose) {
+                DBG(fprintf(stderr, "autoclose '%s' because of new '%s' \n", pn, e);)
                 node = parent_node;
                 parent_node = node->parentNode;
             }
@@ -919,7 +976,7 @@ HTML_SimpleParse (
             |   read attribute name-value pairs
             \----------------------------------------------------------*/
             lastAttr = NULL;
-            while ( (c=*x) && (c!='/') && (c!='>') ) {
+            while ( (c=*x) && (c!='/') && (c!='>') && (c!='<') ) {
                 char *ArgName = x;
                 int nArgName;
                 char *ArgVal = NULL;
@@ -929,50 +986,51 @@ HTML_SimpleParse (
                     x++;
                 }
                 nArgName = x - ArgName;
-                while (SPACE(*x)) {
+                
+                if (*x == '=') {
+                
+                    /* attribute with value, like width="1234" */
+                    
                     x++;
-                }
-                if (*x=='=') {
-                    x++;
-                }
-                saved = *(ArgName + nArgName);
-                *(ArgName + nArgName) = '\0'; /* terminate arg name */
+                    saved = *(ArgName + nArgName);
+                    *(ArgName + nArgName) = '\0'; /* terminate arg name */
 
-                while (SPACE(*x)) {
-                    x++;
-                }
-                if (*x=='>' || *x==0) {
-                    ArgVal = ArgName;
-                    nArgVal = nArgName;
-                } else if ((c=*x)=='\"' || c=='\'') {
-                    register int cDelim = c;
-                    x++;
-                    ArgVal = x;
-                    ampersandSeen = 0;
-                    while ((c=*x)!=0 && c!=cDelim) {
-                        if (c=='&') {
-                            ampersandSeen = 1;
+                    if (*x=='>' || *x==0) {
+                        ArgVal = ArgName;
+                        nArgVal = nArgName;
+                    } else if ((c=*x)=='\"' || c=='\'') {
+                        register int cDelim = c;
+                        x++;
+                        ArgVal = x;
+                        ampersandSeen = 0;
+                        while ((c=*x)!=0 && c!=cDelim) {
+                            if (c=='&') ampersandSeen = 1;
+                            x++;
                         }
-                        x++;
-                    }
-                    nArgVal = x - ArgVal;
-                    if (c==0) {
-                        RetError("Unterminated string",(ArgVal - html - 1) );
-                    } else {
-                        x++;
-                    }
-                } else if (c!=0 && c!='>') {
-                    ArgVal = x;
-                    while ((c=*x)!=0 && c!='>' && !SPACE(c)) {
-                        if (c=='&') {
-                            ampersandSeen = 1;
+                        nArgVal = x - ArgVal;
+                        if (c==0) {
+                            RetError("Unterminated string",(ArgVal - html - 1) );
+                        } else {
+                            x++;
                         }
-                        x++;
+                    } else if (c!=0 && c!='>') {
+                        ArgVal = x;
+                        while ((c=*x)!=0 && c!='>' && !SPACE(c)) {
+                            if (c=='&') ampersandSeen = 1;
+                            x++;
+                        }
+                        if (c==0) {
+                            RetError("Missing \">\"",(start-html));
+                        }
+                        nArgVal = x - ArgVal;
                     }
-                    if (c==0) {
-                        RetError("Missing \">\"",(start-html));
-                    }
-                    nArgVal = x - ArgVal;
+                } else {
+                    /* attribute without value, like 'nowrap' */
+                    x++;
+                    saved = *(ArgName + nArgName);
+                    *(ArgName + nArgName) = '\0'; /* terminate arg name */
+                    ArgVal = "1"; /* current hack */
+                    nArgVal = 1;                
                 }
 
                 /*--------------------------------------------------
@@ -1038,7 +1096,7 @@ HTML_SimpleParse (
             if (*x=='>') {
                 x++;
             }
-            DBG(fprintf(stderr, "new node '%s' hasContent=%d \n", node->nodeName, hasContent);)
+            DBG(fprintf(stderr, "%d: new node '%s' hasContent=%d \n", getDeep(node), node->nodeName, hasContent);)
 
             if ((strcmp(node->nodeName,"style" )==0) ||
                 (strcmp(node->nodeName,"script")==0)
@@ -1048,8 +1106,26 @@ HTML_SimpleParse (
                 \----------------------------------------------------------*/
                 hasContent = 1;
                 start = x;
-                while ( (*x!=0) && ((*x!='<') || (x[1]!='/'))) {
-                    x++;
+                while (1) {
+                    while ( (*x!=0) && ((*x!='<') || (x[1]!='/'))) {
+                        x++;
+                    }
+                    if (!*x) break;
+                    y = x + 2;
+                    while (*y!=0 && SPACE(*y)) y++;
+                    if (TU(y[0]) == 'S' && 
+                        TU(y[1]) == 'C' &&
+                        TU(y[2]) == 'R' &&
+                        TU(y[3]) == 'I' &&
+                        TU(y[4]) == 'P' &&
+                        TU(y[5]) == 'T' )  break;
+                         
+                    if (TU(y[0]) == 'S' && 
+                        TU(y[1]) == 'T' &&
+                        TU(y[2]) == 'Y' &&
+                        TU(y[3]) == 'L' &&
+                        TU(y[4]) == 'E' ) break;
+                    x++;                                      
                 }
                 if (*x) {
                     /*----------------------------------------------------
@@ -1082,6 +1158,7 @@ HTML_SimpleParse (
                 \-----------------------------------------------------------*/
                 parent_node = node;
             }
+            DBG(fprintf(stderr, "%d: after node '%s' \n", getDeep(node), node->nodeName);)
         }
     }
 
@@ -1092,7 +1169,7 @@ HTML_SimpleParse (
         /*---------------------------------------------------------------
         |   check for tags for which end tag can be omitted
         \--------------------------------------------------------------*/
-        autoclose = 0;
+        autoclose = 1;
         switch (pn[0]) {
             case 'b': if (!strcmp(pn,"body"))     autoclose = 1; break;
             case 'c': if (!strcmp(pn,"colgroup")) autoclose = 1; break;
