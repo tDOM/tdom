@@ -1,6 +1,5 @@
 # Features covered:  Document Type Declaration
 #
-# This file contains a collection of tests for the TclXML parser.
 # This file tests the parser's performance on Document Type Declarations.
 # Sourcing this file into Tcl runs the tests and generates output
 # for errors.  No output means no errors were found.
@@ -17,8 +16,8 @@ if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
     set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
 }
 
-if {[catch {package require expat 2.0}]} {
-    catch {puts stderr "Cannot load expat 2.0 package"}
+if {[catch {package require tdom}]} {
+    catch {puts stderr "Cannot load tDOM package"}
     return
 }
 

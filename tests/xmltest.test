@@ -1,6 +1,5 @@
 # Features covered:  Conformance
 #
-# This file contains a collection of tests for the TclXML parser.
 # This file tests the parser's performance on conformance to the 
 # XML specification.  As such it is crude and does not test callback
 # features.
@@ -20,8 +19,8 @@ if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
     set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
 }
 
-if {[catch {package require expat 2.0}]} {
-    catch {puts stderr "Cannot load expat 2.0 package"}
+if {[catch {package require tdom}]} {
+    catch {puts stderr "Cannot load tDOM package"}
     return
 }
 
