@@ -18,12 +18,12 @@ o TMML
   get TMML CVS HEAD could be found at
   http://sourceforge.net/cvs/?group_id=16386 
 
-  You only need to check out the actuall version of TMML, to futher
+  You only need to check out the actual version of TMML, no further
   installation or modification is needed.
 
 o tcllib
   
-  The tmml tools uses a module out of tcllib. Any recent distribution
+  The TMML tools uses a module out of tcllib. Any recent distribution
   should do. If you really don't have it already, it's worth to
   install it, regardless of this TMML stuff.  Installation should be
   completely painless. Find it at
@@ -43,14 +43,9 @@ The next command creates the HTML pages:
 This creates the HTML pages in the html sub dir (also, will be
 created, if needed).
 
-If you need, do 
+And you may do 
 
   tclsh path/to/your/tmml/tools/tmml.tcl navpages
 
 This will create an index.html, the category-index.html and the
-keyword-index.html for the HTML fo the documentation, in the html
-directory.
-
-
-
-
+keyword-index.html for the HTML version of the documentation.
