@@ -340,6 +340,71 @@ are neither adjacent Text nodes nor empty Text nodes. If the option
 \&\fI-forXPath\fR is given, all CDATA sections in the nodes are
 converted to text nodes, as a first step before the
 normalization.
+.TP
+\&\fB\fBnodeType\fP
+\&\fRReturns the node type of the document node. This is always
+DOCUMENT_NODE.
+.TP
+\&\fB\fBgetElementById\fP \fIid\fB
+\&\fRReturns the node having a id attribute with value
+\&\fIid\fR or the emtpy string, if no node has an id attribute with that value.
+.TP
+\&\fB\fBfirstChild\fP \fB?objVar?\fP
+\&\fRReturns the first top level node of the document.
+.TP
+\&\fB\fBlastChild\fP \fB?objVar?\fP
+\&\fRReturns the last top level node of the document.
+.TP
+\&\fB\fBappendChild\fP \fInewChild\fB
+\&\fRAppend \fInewChild\fR to the end of the list of top level nodes
+of the document.
+.TP
+\&\fB\fBremoveChild\fP \fIchild\fB
+\&\fRRemoves \fIchild\fR from the list of top level nodes of the
+document. \fIchild\fR will be part of the document fragment list
+after this operation. It is not physically deleted.
+.TP
+\&\fB\fBhasChildNodes\fP
+\&\fRReturns 1 if the document has any nodes in the tree. Otherwise 0 is returned.
+.TP
+\&\fB\fBchildNodes\fP
+\&\fRReturns a list of the top level nodes of the document.
+.TP
+\&\fB\fBownerDocument\fP \fB?domObjVar?\fP
+\&\fRReturns the document itself.
+.TP
+\&\fB\fBinsertBefore\fP \fInewChild\fB  \fIrefChild\fB
+\&\fRInsert \fInewChild\fR before the \fIrefChild\fR into the list of
+top level nodes of the document. If \fIrefChild\fR is the empty string, insert
+\&\fInewChild\fR at the end of the top level nodes.
+.TP
+\&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
+\&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of top level
+nodes of the document. \fIoldChild\fR will be part of the document fragment
+list after this operation.
+.TP
+\&\fB\fBappendFromList\fP \fIlist\fB
+\&\fRParses \fIlist\fR , creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.
+.TP
+\&\fB\fBappendXML\fP \fIXMLstring\fB
+\&\fRParses \fIXMLstring\fR, creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.
+.TP
+\&\fB\fBbaseURI \fI?URI?\fB\fP
+\&\fRReturns the present baseURI of the document. If the optional
+argument URI is given, sets the base URI of the document to the given URI.
+.TP
+\&\fB\fBappendFromScript\fP \fItclScript\fB
+\&\fRAppends the nodes created by the \fItclScript\fR by
+Tcl functions, which have been built using \fIdom createNodeCmd\fR, at the end
+of the current list of top level nodes of the document.
+.TP
+\&\fB\fBinsertBeforeFromScript\fP \fItclScript\fB \fIrefChild\fB
+\&\fRInserts the nodes created in the \fItclScript\fR by
+Tcl functions, which have been built using \fIdom createNodeCmd\fR, before the
+\&\fIrefChild\fR into to the list of top level nodes of the document. If \fIrefChild\fR is
+the empty string, the new nodes will be appended.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is
