@@ -1008,7 +1008,8 @@ TclExpatConfigure (interp, expat, objc, objv)
   static CONST84 char *paramEntityParsingValues[] = {
       "always",
       "never",
-      "notstandalone"
+      "notstandalone",
+      (char *) NULL
   };
   enum paramEntityParsingValues {
       EXPAT_PARAMENTITYPARSINGALWAYS,
