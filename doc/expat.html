@@ -4,22 +4,22 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode10042">NAME</a> · <a href="#SECTnode10053">SYNOPSIS</a> · <a href="#SECTnode10086">DESCRIPTION</a> · <a href="#SECTnode10110">COMMAND OPTIONS</a> · <a href="#SECTnode10599"> COMMAND METHODS </a> · <a href="#SECTnode10798">Callback Command Return Codes</a> · <a href="#SECTnode10816">SEE ALSO</a> · <a href="#SECTnode10825">KEYWORDS</a>
+<a href="#SECTnode10735">NAME</a> · <a href="#SECTnode10746">SYNOPSIS</a> · <a href="#SECTnode10779">DESCRIPTION</a> · <a href="#SECTnode10803">COMMAND OPTIONS</a> · <a href="#SECTnode11292"> COMMAND METHODS </a> · <a href="#SECTnode11491">Callback Command Return Codes</a> · <a href="#SECTnode11509">SEE ALSO</a> · <a href="#SECTnode11518">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTnode10042">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTnode10735">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTnode10053">SYNOPSIS</a></h2><pre class="syntax">
+    <h2><a name="SECTnode10746">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require expat</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml:parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-    <h2><a name="SECTnode10086">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTnode10779">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
@@ -36,7 +36,7 @@ in memory &quot;tDOM&quot; DOM tree, while the parser is parsing the input.</p><
 and C level handlers for most of the events. If the event occurs, the are
 called in turn.</p>
 
-    <h2><a name="SECTnode10110">COMMAND OPTIONS</a></h2><dl class="optlist">
+    <h2><a name="SECTnode10803">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -266,7 +266,7 @@ an error.</p>
         return -code error \
                 -errorinfo &quot;Failed to open external entity $systemId&quot;
     }
-    return [list channel $fd $systemId]
+    return [list channel $systemId $fd]
 }
 
 set parser [expat -externalentitycommand externalEntityRefHandler \
@@ -598,7 +598,7 @@ default handler.</p>
             </dd>
         
       </dl>
-    <h2><a name="SECTnode10599"> COMMAND METHODS </a></h2><dl class="commandlist">
+    <h2><a name="SECTnode11292"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -714,7 +714,7 @@ document.</p></dd>
         
       </dl>
 
-    <h2><a name="SECTnode10798">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTnode11491">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
 than &quot;ok&quot; or &quot;error&quot;. All callbacks may in addition return
 &quot;break&quot; or &quot;continue&quot;.</p><p>If a callback script returns an &quot;error&quot; error code then
@@ -727,11 +727,11 @@ processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    <h2><a name="SECTnode10816">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode11509">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTnode10825">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+    <h2><a name="SECTnode11518">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
   </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
 	<a class="navaid" href="index.html">Table of Contents</a>

@@ -412,7 +412,7 @@ proc externalEntityRefHandler {base systemId publicId} {
         return -code error \e
                 -errorinfo "Failed to open external entity $systemId"
     }
-    return [list channel $fd $systemId]
+    return [list channel $systemId $fd]
 }
 
 set parser [expat -externalentitycommand externalEntityRefHandler \e
