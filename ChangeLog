@@ -1,3 +1,13 @@
+2003-10-24  Rolf Ade  <rolf@pointsman.de>
+
+        * domxslt.c: Bug fix for document() func, if called with 2
+          args and first arg evaluates to the empty string. Improved
+          error reporting, if an XSLT variable is tried to reset,
+          although there is already such a variable in scope: now the
+          name of the var is also reported in the error msg.
+
+        * apps/xslt.tcl: Updated to use the new asText option.
+
 2003-10-23  Rolf Ade  <rolf@pointsman.de>
 
         * expat/*
