@@ -281,7 +281,7 @@ domLookupNamespace (
     int i;
 
     if (prefix==NULL) return NULL;
-    for (i = 0; i < doc->nsptr; i++) {
+    for (i = 0; i <= doc->nsptr; i++) {
         ns = doc->namespaces[i];
         if (   (ns->prefix != NULL)
             && (strcmp(prefix,ns->prefix)==0)
