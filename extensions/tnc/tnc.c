@@ -52,6 +52,7 @@ typedef struct TNC_data
     int               ignoreWhiteCDATAs;
     int               ignorePCDATA;
     Tcl_HashTable    *tagNames;
+    int               elemContentsRewriten;
     Tcl_HashTable    *attDefsTables;
     Tcl_HashTable    *entityDecls;
     Tcl_HashTable    *notationDecls;
@@ -168,7 +169,7 @@ TNC_ErrorString (int code)
         "Attribute default is not one of the allowed values",
         "Attribute hasn't one of the allowed values.",
         "Attribute value has to be a NMTOKEN.",
-        "Atrribute value has to be a Name.",
+        "Attribute value has to be a Name.",
         "Element is not allowed here.",
         "Element can not end here (required element(s) missing).",
         "Can only handle UTF8 chars up to 3 bytes length."
@@ -373,14 +374,13 @@ TncFreeTncModel (tmodel)
  * TncRewriteModel --
  *
  *	This helper procedure creates recursively a TNC_Content from
- *      a XML_Content and frees the XML_Content (TODO).
+ *      a XML_Content.
  *
  * Results:
  *	None.
  *
  * Side effects:
- *	Allocates memory for the TNC_Content  models and frees
- *      the XML_Content models (TODO).
+ *	Allocates memory for the TNC_Content  models.
  *
  *----------------------------------------------------------------------------
  */
@@ -397,9 +397,10 @@ TncRewriteModel (emodel, tmodel, tagNames)
     tmodel->type = emodel->type;
     tmodel->quant = emodel->quant;
     tmodel->numchildren = emodel->numchildren;
+    tmodel->children = NULL;
+    tmodel->nameId = NULL;
     switch (emodel->type) {
     case XML_CTYPE_MIXED:
-        tmodel->nameId = NULL;
         if (emodel->quant == XML_CQUANT_REP) {
             tmodel->children = (TNC_Content *)
                 Tcl_Alloc (sizeof (TNC_Content) * emodel->numchildren);
@@ -407,18 +408,14 @@ TncRewriteModel (emodel, tmodel, tagNames)
                 TncRewriteModel (&emodel->children[i], &tmodel->children[i],
                                  tagNames);
             }
-        } else {
-            tmodel->children = NULL;
         }
         break;
     case XML_CTYPE_ANY:
     case XML_CTYPE_EMPTY:
-        tmodel->nameId = NULL;
-        tmodel->children = NULL;
+        /* do nothing */
         break;
     case XML_CTYPE_SEQ:
     case XML_CTYPE_CHOICE:
-        tmodel->nameId = NULL;
         tmodel->children = (TNC_Content *)
             Tcl_Alloc (sizeof (TNC_Content) * emodel->numchildren);
         for (i = 0; i < emodel->numchildren; i++) {
@@ -440,9 +437,7 @@ TncRewriteModel (emodel, tmodel, tagNames)
            This would be the appropriated place to omit the
            warning. */
         tmodel->nameId = entryPtr;
-        tmodel->children = NULL;
     }
-    /* TODO: free XML_Content model. */
 }
 
 
@@ -461,7 +456,7 @@ TncRewriteModel (emodel, tmodel, tagNames)
  *
  * Side effects:
  *	Rewrites the XML_Content models to TNC_Content
- *      models and frees the XML_Content models.
+ *      models.
  *
  *----------------------------------------------------------------------------
  */
@@ -476,12 +471,6 @@ TncEndDoctypeDeclHandler (userData)
     XML_Content   *emodel;
     TNC_Content   *tmodel = NULL;
 
-#ifdef TNC_DEBUG
-printf ("'zero' pointer %p\n", &zero);
-printf ("'one' pointer %p\n", &one);
-#endif
-
-
     entryPtr = Tcl_FirstHashEntry (tncdata->tagNames, &search);
     while (entryPtr != NULL) {
 #ifdef TNC_DEBUG
@@ -493,9 +482,9 @@ printf ("'one' pointer %p\n", &one);
         tmodel = (TNC_Content*) Tcl_Alloc (sizeof (TNC_Content));
         TncRewriteModel (emodel, tmodel, tncdata->tagNames);
         Tcl_SetHashValue (entryPtr, tmodel);
-/*          free (emodel); */
         entryPtr = Tcl_NextHashEntry (&search);
     }
+    tncdata->elemContentsRewriten = 1;
     /* Checks, if every used notation name is in deed declared */
     entryPtr = Tcl_FirstHashEntry (tncdata->notationDecls, &search);
     while (entryPtr != NULL) {
@@ -504,7 +493,7 @@ printf ("'one' pointer %p\n", &one);
                 Tcl_GetHashKey (tncdata->notationDecls, entryPtr));
         printf ("value %p\n", Tcl_GetHashValue (entryPtr));
 #endif
-        if (Tcl_GetHashValue (entryPtr) != &one) {
+        if (!Tcl_GetHashValue (entryPtr)) {
             signalNotValid (userData, TNC_ERROR_NOTATION_MUST_BE_DECLARED);
             return;
         }
@@ -513,7 +502,7 @@ printf ("'one' pointer %p\n", &one);
     /* Checks, if every used entity name is indeed declared */
     entryPtr = Tcl_FirstHashEntry (tncdata->entityDecls, &search);
     while (entryPtr != NULL) {
-        if (Tcl_GetHashValue (entryPtr) == &zero) {
+        if (!Tcl_GetHashValue (entryPtr)) {
             signalNotValid (userData,
                             TNC_ERROR_ATT_ENTITY_DEFAULT_MUST_BE_DECLARED);
             return;
@@ -571,8 +560,8 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
         /* Eventually, an attribute declaration with type ENTITY or ENTITIES
            has used this (up to the attribute declaration undeclared) ENTITY
            within his default value. In this case, the hash value have to
-           be &zero and the entity must be a unparsed entity. */
-        if (Tcl_GetHashValue (entryPtr) == &zero) {
+           be NULL and the entity must be a unparsed entity. */
+        if (!Tcl_GetHashValue (entryPtr)) {
             if (notationName == NULL) {
                 signalNotValid (userData,
                                 TNC_ERROR_ATT_ENTITY_DEFAULT_MUST_BE_DECLARED);
@@ -587,9 +576,6 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
             entityInfo->is_notation = 1;
             entryPtr1 = Tcl_CreateHashEntry (tncdata->notationDecls,
                                              notationName, &newPtr);
-            if (newPtr) {
-                Tcl_SetHashValue (entryPtr1, &zero);
-            }
             entityInfo->notationName = strdup (notationName);
         }
         else {
@@ -634,7 +620,7 @@ TncNotationDeclHandler (userData, notationName, base, systemId, publicId)
 #ifdef TNC_DEBUG
     printf ("Notation %s declared\n", notationName);
 #endif
-    Tcl_SetHashValue (entryPtr, &one);
+    Tcl_SetHashValue (entryPtr, (char *) 1);
 }
 
 
@@ -802,16 +788,11 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                                                     &copy[start], &newPtr);
                     entryPtr1 = Tcl_CreateHashEntry (tncdata->notationDecls,
                                                     &copy[start], &newPtr);
+#ifdef TNC_DEBUG
                     if (newPtr) {
-#ifdef TNC_DEBUG
                         printf ("up to now unknown NOTATION\n");
-#endif
-                        Tcl_SetHashValue (entryPtr1, &zero);
-                    }
-#ifdef TNC_DEBUG
-                    else {
-                        printf ("NOTATION already known, value %p\n",
-                                Tcl_GetHashValue (entryPtr1));
+                    } else {
+                        printf ("NOTATION already known\n");
                     }
 #endif
                     free (copy);
@@ -827,16 +808,11 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                                                     &copy[start], &newPtr);
                     entryPtr1 = Tcl_CreateHashEntry (tncdata->notationDecls,
                                                     &copy[start], &newPtr);
+#ifdef TNC_DEBUG
                     if (newPtr) {
-#ifdef TNC_DEBUG
                         printf ("up to now unknown NOTATION\n");
-#endif
-                        Tcl_SetHashValue (entryPtr1, &zero);
-                    }
-#ifdef TNC_DEBUG
-                    else {
-                        printf ("NOTATION already known, value %p\n",
-                                Tcl_GetHashValue (entryPtr1));
+                    } else {
+                        printf ("NOTATION already known\n");
                     }
 #endif
                     start = ++i;
@@ -912,9 +888,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                 if (attDecl->att_type == TNC_ATTTYPE_ENTITY) {
                     entryPtr1 = Tcl_CreateHashEntry (tncdata->entityDecls,
                                                      dflt, &newPtr);
-                    if (newPtr) {
-                        Tcl_SetHashValue (entryPtr1, &zero);
-                    } else {
+                    if (!newPtr) {
                         entityInfo =
                             (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr1);
                         if (!entityInfo->is_notation) {
@@ -963,9 +937,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                         entryPtr1 = Tcl_CreateHashEntry (tncdata->entityDecls,
                                                          &copy[start],
                                                          &newPtr);
-                        if (newPtr) {
-                            Tcl_SetHashValue (entryPtr1, &zero);
-                        } else {
+                        if (!newPtr) {
                             entityInfo =
                                 (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr1);
                             if (!entityInfo->is_notation) {
@@ -1645,13 +1617,13 @@ TncElementStartCommand (userData, name, atts)
                 }
                 entryPtr = Tcl_CreateHashEntry (tncdata->ids, atPtr[1], &i);
                 if (!i) {
-                    if (Tcl_GetHashValue (entryPtr) == &one) {
+                    if (Tcl_GetHashValue (entryPtr)) {
                         signalNotValid (userData,
                                         TNC_ERROR_DUPLICATE_ID_VALUE);
                         return;
                     }
                 }
-                Tcl_SetHashValue (entryPtr, &one);
+                Tcl_SetHashValue (entryPtr, (char *) 1);
                 break;
             case TNC_ATTTYPE_IDREF:
                 /* Name type constraint "implicit" checked. If the
@@ -1659,9 +1631,6 @@ TncElementStartCommand (userData, name, atts)
                    type of the ID's within the document are checked.
                    If there isn't such an ID, it's an error anyway. */
                 entryPtr = Tcl_CreateHashEntry (tncdata->ids, atPtr[1], &i);
-                if (i) {
-                    Tcl_SetHashValue (entryPtr, &zero);
-                }
                 break;
             case TNC_ATTTYPE_IDREFS:
                 copy = strdup (atPtr[1]);
@@ -1670,9 +1639,6 @@ TncElementStartCommand (userData, name, atts)
                     if (copy[i] == '\0') {
                         entryPtr = Tcl_CreateHashEntry (tncdata->ids,
                                                         &copy[start], &result);
-                        if (result) {
-                            Tcl_SetHashValue (entryPtr, &zero);
-                        }
                         free (copy);
                         break;
                     }
@@ -1680,9 +1646,6 @@ TncElementStartCommand (userData, name, atts)
                         copy[i] = '\0';
                         entryPtr = Tcl_CreateHashEntry (tncdata->ids,
                                                         &copy[start], &result);
-                        if (result) {
-                            Tcl_SetHashValue (entryPtr, &zero);
-                        }
                         start = ++i;
                         continue;
                     }
@@ -2044,7 +2007,7 @@ TncElementEndCommand (userData, name)
                     Tcl_GetHashKey (tncdata->ids, entryPtr));
             printf ("value %p\n", Tcl_GetHashValue (entryPtr));
 #endif
-            if (Tcl_GetHashValue (entryPtr) != &one) {
+            if (!Tcl_GetHashValue (entryPtr)) {
                 signalNotValid (userData, TNC_ERROR_UNKOWN_ID_REFERRED);
                 return;
             }
@@ -2153,29 +2116,39 @@ FreeTncData (tncdata)
     TNC_EntityInfo *entityInfo;
     TNC_AttDecl *attDecl;
 
-    entryPtr = Tcl_FirstHashEntry (tncdata->tagNames, &search);
-    while (entryPtr) {
-        model = Tcl_GetHashValue (entryPtr);
-        TncFreeTncModel (model);
-        Tcl_Free ((char *) model);
-        entryPtr = Tcl_NextHashEntry (&search);
+    if (tncdata->elemContentsRewriten) {
+        entryPtr = Tcl_FirstHashEntry (tncdata->tagNames, &search);
+        while (entryPtr) {
+            model = Tcl_GetHashValue (entryPtr);
+            if (model) {
+                TncFreeTncModel (model);
+                Tcl_Free ((char *) model);
+            }
+            entryPtr = Tcl_NextHashEntry (&search);
+        }
     }
     Tcl_DeleteHashTable (tncdata->tagNames);
     entryPtr = Tcl_FirstHashEntry (tncdata->attDefsTables, &search);
     while (entryPtr) {
         elemAttInfo = Tcl_GetHashValue (entryPtr);
+        if (!elemAttInfo) {
+            entryPtr = Tcl_NextHashEntry (&search);
+            continue;
+        }
         attentryPtr = Tcl_FirstHashEntry (elemAttInfo->attributes, &attsearch);
         while (attentryPtr) {
             attDecl = Tcl_GetHashValue (attentryPtr);
-            if (attDecl->att_type == TNC_ATTTYPE_NOTATION ||
-                attDecl->att_type == TNC_ATTTYPE_ENUMERATION) {
-                Tcl_DeleteHashTable (attDecl->lookupTable);
-                Tcl_Free ((char *) attDecl->lookupTable);
+            if (attDecl) {
+                if (attDecl->att_type == TNC_ATTTYPE_NOTATION ||
+                    attDecl->att_type == TNC_ATTTYPE_ENUMERATION) {
+                    Tcl_DeleteHashTable (attDecl->lookupTable);
+                    Tcl_Free ((char *) attDecl->lookupTable);
+                }
+                if (attDecl->dflt) {
+                    free (attDecl->dflt);
+                }
+                Tcl_Free ((char *) attDecl);
             }
-            if (attDecl->dflt) {
-                free (attDecl->dflt);
-            }
-            Tcl_Free ((char *) attDecl);
             attentryPtr = Tcl_NextHashEntry (&attsearch);
         }
         Tcl_DeleteHashTable (elemAttInfo->attributes);
@@ -2187,10 +2160,12 @@ FreeTncData (tncdata)
     entryPtr = Tcl_FirstHashEntry (tncdata->entityDecls, &search);
     while (entryPtr) {
         entityInfo = Tcl_GetHashValue (entryPtr);
-        if (entityInfo->is_notation) {
-            free (entityInfo->notationName);
+        if (entityInfo) {
+            if (entityInfo->is_notation) {
+                free (entityInfo->notationName);
+            }
+            Tcl_Free ((char *) entityInfo);
         }
-        Tcl_Free ((char *) entityInfo);
         entryPtr = Tcl_NextHashEntry (&search);
     }
     Tcl_DeleteHashTable (tncdata->entityDecls);
@@ -2228,6 +2203,7 @@ TncResetProc (interp, userData)
 
     FreeTncData (tncdata);
     Tcl_InitHashTable (tncdata->tagNames, TCL_STRING_KEYS);
+    tncdata->elemContentsRewriten = 0;
     Tcl_InitHashTable (tncdata->attDefsTables, TCL_STRING_KEYS);
     Tcl_InitHashTable (tncdata->entityDecls, TCL_STRING_KEYS);
     Tcl_InitHashTable (tncdata->notationDecls, TCL_STRING_KEYS);
@@ -2337,6 +2313,7 @@ TclTncObjCmd(dummy, interp, objc, objv)
         tncdata->tagNames =
             (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (tncdata->tagNames, TCL_STRING_KEYS);
+        tncdata->elemContentsRewriten = 0;
         tncdata->attDefsTables =
             (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (tncdata->attDefsTables, TCL_STRING_KEYS);
