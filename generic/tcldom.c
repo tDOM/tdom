@@ -181,6 +181,11 @@ static char doc_usage[] =
     "    publicId ?publicId?                     \n"
     "    systemId ?systemId?                     \n"
     "    internalSubset ?internalSubset?         \n"
+    "    indent ?boolean?                        \n"
+    "    omit-xml-declaration ?boolean?          \n"
+    "    encoding ?value?                        \n"
+    "    standalone ?boolean?                    \n"
+    "    mediaType ?value?                       \n"
     "    delete                                  \n"
     "    xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
     "    toXSLTcmd                               \n"
@@ -414,17 +419,18 @@ void tcldom_nodeCmdDeleteProc (
     domDeleteInfo *dinfo = (domDeleteInfo *)clientData;
     char          *var   = dinfo->traceVarName;
 
-    DBG(fprintf (stderr, "--> tcldom_nodeCmdDeleteProc node %p\n", node));
+    DBG(fprintf (stderr, "--> tcldom_nodeCmdDeleteProc node %p\n", 
+                 dinfo->node));
 
     if (var) {
-        DBG(fprintf(stderr, "--> tcldom_nodeCmdDeleteProc calls "
+         DBG(fprintf(stderr, "--> tcldom_nodeCmdDeleteProc calls "
                     "Tcl_UntraceVar for \"%s\"\n", var));
-        Tcl_UntraceVar(dinfo->interp, var, TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
+        Tcl_UntraceVar(dinfo->interp, var, 
+                       TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
                        tcldom_nodeTrace, clientData);
         FREE(var);
         dinfo->traceVarName = NULL;
     }
-
     FREE((void*)dinfo);
 }
 
@@ -478,7 +484,7 @@ char * tcldom_nodeTrace (
 )
 {
     domDeleteInfo *dinfo = (domDeleteInfo*)clientData;
-    domNode       *node  = dinfo->node;
+    domNode       *node = dinfo->node;
     char           objCmdName[40];
 
     DBG(fprintf(stderr, "--> tcldom_nodeTrace %x %p\n", flags, node));
@@ -492,9 +498,9 @@ char * tcldom_nodeTrace (
     if (flags & TCL_TRACE_UNSETS) {
         NODE_CMD(objCmdName, node);
         DBG(fprintf(stderr, "--> tcldom_nodeTrace delete node %p\n", node));
-        Tcl_DeleteCommand(interp, objCmdName);
         Tcl_UntraceVar(interp, name1, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
                        tcldom_nodeTrace, clientData);
+        Tcl_DeleteCommand(interp, objCmdName);
         node->nodeFlags &= ~VISIBLE_IN_TCL;
     }
 
@@ -512,12 +518,17 @@ void tcldom_createNodeObj (
     char       * objCmdName
 )
 {
+    Tcl_CmdInfo     cmdInfo;
     GetTcldomTSD()
 
     NODE_CMD(objCmdName, node);
 
     if (TSD(dontCreateObjCommands) == 0) {
+        if (node->nodeFlags & VISIBLE_IN_TCL) {
+            return;
+        }
         DBG(fprintf(stderr,"--> creating node %s\n", objCmdName));
+        
         Tcl_CreateObjCommand(interp, objCmdName,
                              (Tcl_ObjCmdProc *)  tcldom_NodeObjCmd,
                              (ClientData)        node,
@@ -561,30 +572,33 @@ int tcldom_returnNodeObj (
         }
     } else {
         if (setVariable) {
-            dinfo = (domDeleteInfo*)MALLOC(sizeof(domDeleteInfo));
-            dinfo->interp       = interp;
-            dinfo->node         = node;
-            dinfo->traceVarName = NULL;
             objVar = Tcl_GetString(var_name);
             Tcl_UnsetVar(interp, objVar, 0);
             Tcl_SetVar  (interp, objVar, objCmdName, 0);
-            Tcl_TraceVar(interp, objVar, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-                         (Tcl_VarTraceProc*)tcldom_nodeTrace,
-                         (ClientData)dinfo);
-            dinfo->traceVarName = tdomstrdup(objVar);
-
-            /* Patch node object command to remove above trace on teardown */
             Tcl_GetCommandInfo(interp, objCmdName, &cmdInfo);
-            cmdInfo.deleteData = (ClientData)dinfo;
-            cmdInfo.deleteProc = tcldom_nodeCmdDeleteProc;
-            Tcl_SetCommandInfo(interp, objCmdName, &cmdInfo);
+            if (0) {
+                dinfo = (domDeleteInfo*)MALLOC(sizeof(domDeleteInfo));
+                dinfo->interp       = interp;
+                dinfo->node         = node;
+                dinfo->traceVarName = NULL;
+                Tcl_TraceVar(interp, objVar, 
+                             TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+                             (Tcl_VarTraceProc*)tcldom_nodeTrace,
+                             (ClientData)dinfo);
+                dinfo->traceVarName = tdomstrdup(objVar);
+
+                /* Patch node object command to remove above trace 
+                   on teardown */
+                cmdInfo.deleteData = (ClientData)dinfo;
+                cmdInfo.deleteProc = tcldom_nodeCmdDeleteProc;
+                Tcl_SetCommandInfo(interp, objCmdName, &cmdInfo);
+            }
         }
     }
 
     SetResult(objCmdName);
     return TCL_OK;
 }
-
 
 /*----------------------------------------------------------------------------
 |   tcldom_returnDocumentObj
@@ -2779,10 +2793,6 @@ static int applyXSLT (
             objc -= 2;
             objv += 2;
             break;
-            
-        default:
-            SetResult("Unknown option");
-            goto applyXSLTCleanUP;
         }
     }
     if (objc > 2 || objc < 1) {SetResult(usage); goto applyXSLTCleanUP;}
@@ -3806,9 +3816,8 @@ int tcldom_NodeObjCmd (
             SetIntResult(
                 (((node->nodeFlags & DISABLE_OUTPUT_ESCAPING) == 0) ? 0 : 1));
             if (objc == 3) {
-                result = Tcl_GetBooleanFromObj(interp, objv[2], &bool);
-                if (result != TCL_OK) {
-                    SetResult("second arg must be a boolean value1");
+                if (Tcl_GetBooleanFromObj(interp, objv[2], &bool) != TCL_OK) {
+                    return TCL_ERROR;
                 }
                 if (bool) {
                     node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
@@ -3899,7 +3908,7 @@ int tcldom_DocObjCmd (
     char                * method, *tag, *data, *target, *uri, tmp[100];
     char                  objCmdName[40], *str, *docName, *errMsg;
     int                   methodIndex, result, data_length, target_length, i;
-    int                   nsIndex, forXPath;
+    int                   nsIndex, forXPath, bool;
     domNode             * n;
     Tcl_CmdInfo           cmdInfo;
     Tcl_Obj             * mobjv[MAX_REWRITE_ARGS];
@@ -3912,6 +3921,8 @@ int tcldom_DocObjCmd (
         "asHTML",          "getElementsByTagNameNS",     "xslt", 
         "publicId",        "systemId",                   "internalSubset",
         "toXSLTcmd",       "asText",                     "normalize",
+        "indent",          "omit-xml-declaration",       "encoding",
+        "standalone",      "mediaType",
 #ifdef TCL_THREADS
         "readlock",        "writelock",                  "renumber",
 #endif
@@ -3924,7 +3935,9 @@ int tcldom_DocObjCmd (
         m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
         m_asHTML,           m_getElementsByTagNameNS,     m_xslt,
         m_publicId,         m_systemId,                   m_internalSubset,
-        m_toXSLTcmd,        m_asText,                     m_normalize
+        m_toXSLTcmd,        m_asText,                     m_normalize,
+        m_indent,           m_omitXMLDeclaration,         m_encoding,
+        m_standalone,       m_mediaType
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock,                  m_renumber
 #endif
@@ -4096,19 +4109,10 @@ int tcldom_DocObjCmd (
 
         case m_getdefaultoutputmethod:
             CheckArgs(2,2,2,"");
-            if (doc->nodeFlags & OUTPUT_DEFAULT_XML) {
-                SetResult("xml");
-            } else
-            if (doc->nodeFlags & OUTPUT_DEFAULT_HTML) {
-                SetResult("html");
-            } else
-            if (doc->nodeFlags & OUTPUT_DEFAULT_TEXT) {
-                SetResult("text");
-            } else
-            if (doc->nodeFlags & OUTPUT_DEFAULT_UNKNOWN) {
-                SetResult("unknown");
+            if (doc->doctype && doc->doctype->method) {
+                SetResult (doc->doctype->method);
             } else {
-                SetResult("none");
+                SetResult("xml");
             }
             return TCL_OK;
 
@@ -4140,19 +4144,17 @@ int tcldom_DocObjCmd (
             
         case m_publicId:
             CheckArgs(2,3,2, "?publicID?");
-            if (   !doc->doctype 
-                || !doc->doctype->publicId 
-                || doc->doctype->publicId[0] == '\0') {
-                SetResult("");
-            } else {
+            if (doc->doctype && doc->doctype->publicId) {
                 SetResult(doc->doctype->publicId);
+            } else {
+                SetResult("");
             }
             if (objc == 3) {
                 if (!doc->doctype) {
-                    doc->doctype = (domDoctype *)MALLOC(sizeof(domDoctype));
-                    memset(doc->doctype, 0,(sizeof(domDoctype)));
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
                 } else if (doc->doctype->publicId) {
-                    FREE((char*) doc->doctype->publicId);
+                    FREE(doc->doctype->publicId);
                 }
                 doc->doctype->publicId = tdomstrdup(Tcl_GetString(objv[2]));
             }
@@ -4160,19 +4162,17 @@ int tcldom_DocObjCmd (
             
         case m_systemId:
             CheckArgs(2,3,2, "?systemID?");
-            if (   !doc->doctype 
-                || !doc->doctype->systemId
-                || doc->doctype->systemId[0] == '\0') {
-                SetResult("");
-            } else {
+            if (doc->doctype && doc->doctype->systemId) {
                 SetResult(doc->doctype->systemId);
+            } else {
+                SetResult("");
             }
             if (objc == 3) {
                 if (!doc->doctype) {
-                    doc->doctype = (domDoctype *)MALLOC(sizeof(domDoctype));
-                    memset(doc->doctype, 0,(sizeof(domDoctype)));
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
                 } else if (doc->doctype->systemId) {
-                    FREE((char*) doc->doctype->systemId);
+                    FREE(doc->doctype->systemId);
                 }
                 doc->doctype->systemId = 
                     tdomstrdup(Tcl_GetString(objv[2]));
@@ -4181,23 +4181,118 @@ int tcldom_DocObjCmd (
 
         case m_internalSubset:
             CheckArgs(2,3,2, "?internalSubset?");
-            if (!doc->doctype || !doc->doctype->internalSubset) {
-                SetResult("");
-            } else {
+            if (doc->doctype && doc->doctype->internalSubset) {
                 SetResult(doc->doctype->internalSubset);
+            } else {
+                SetResult("");
             }
             if (objc == 3) {
                 if (!doc->doctype) {
-                    doc->doctype = (domDoctype *)MALLOC(sizeof(domDoctype));
-                    memset(doc->doctype, 0,(sizeof(domDoctype)));
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
                 } else if (doc->doctype->systemId) {
-                    FREE((char*) doc->doctype->systemId);
+                    FREE(doc->doctype->systemId);
                 }
                 doc->doctype->internalSubset = 
                     tdomstrdup(Tcl_GetString(objv[2]));
             }
             return TCL_OK;
             
+        case m_indent:
+            CheckArgs(2,3,2, "?boolean?");
+            if (doc->nodeFlags & OUTPUT_DEFAULT_INDENT) {
+                SetBooleanResult (1);
+            } else {
+                SetBooleanResult(0);
+            }
+            if (objc == 3) {
+                if (Tcl_GetBooleanFromObj (interp, objv[2], &bool) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+                if (bool) {
+                    doc->nodeFlags |= OUTPUT_DEFAULT_INDENT;
+                } else {
+                    doc->nodeFlags &= ~OUTPUT_DEFAULT_INDENT;
+                }
+            }
+            return TCL_OK;
+            
+        case m_omitXMLDeclaration:
+            CheckArgs(2,3,2, "?boolean?");
+            if (doc->doctype) {
+                SetBooleanResult (doc->doctype->omitXMLDeclaration);
+            } else {
+                SetBooleanResult (1);
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
+                }
+                if (Tcl_GetBooleanFromObj (
+                        interp, objv[2], &(doc->doctype->omitXMLDeclaration)
+                        ) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+            }
+            return TCL_OK;
+
+        case m_encoding:
+            CheckArgs(2,3,2, "?value?");
+            if (doc->doctype && doc->doctype->encoding) {
+                SetResult (doc->doctype->encoding);
+            } else {
+                SetResult ("");
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
+                } else {
+                    if (doc->doctype->encoding) FREE (doc->doctype->encoding);
+                }
+                doc->doctype->encoding = tdomstrdup (Tcl_GetString (objv[2]));
+            }
+            return TCL_OK;
+                    
+        case m_standalone:
+            CheckArgs(2,3,2, "?boolean?");
+            if (doc->doctype) {
+                SetBooleanResult (doc->doctype->standalone);
+            } else {
+                SetBooleanResult (0);
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
+                }
+                if (Tcl_GetBooleanFromObj (
+                        interp, objv[2], &(doc->doctype->standalone)
+                        ) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+            }
+            return TCL_OK;
+
+        case m_mediaType:
+            CheckArgs(2,3,2, "?value?");
+            if (doc->doctype && doc->doctype->mediaType) {
+                SetResult (doc->doctype->mediaType);
+            } else {
+                SetResult ("");
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                    memset(doc->doctype, 0,(sizeof(domDocInfo)));
+                } else {
+                    if (doc->doctype->mediaType) FREE(doc->doctype->mediaType);
+                }
+                doc->doctype->mediaType = tdomstrdup (Tcl_GetString (objv[2]));
+            }
+            return TCL_OK;
+                    
         case m_asText:
             CheckArgs (2,2,2,"");
             data = xpathGetStringValue (doc->rootNode, &data_length);
@@ -4492,7 +4587,7 @@ int tcldom_parse (
             }
             if ((mode & TCL_READABLE) == 0) {
                 Tcl_AppendResult(interp, "channel \"", channelId,
-                                 "\" wasn't opened for reading", (char *) NULL);
+                                "\" wasn't opened for reading", (char *) NULL);
                 return TCL_ERROR;
             }
             objv++; objc--;
@@ -4515,7 +4610,6 @@ int tcldom_parse (
             objv++; objc--;
             if (objc > 1) {
                 extResolver = objv[1];
-                Tcl_IncrRefCount(objv[1]);
             } else {
                 SetResult("The \"dom parse\" option \"-externalentitycommand\" "
                           "requires a script as argument.");
@@ -4529,7 +4623,6 @@ int tcldom_parse (
             if (objc > 1) {
                 if (Tcl_GetBooleanFromObj(interp, objv[1], &useForeignDTD)
                     != TCL_OK) {
-                    SetResult("-useForeignDTD must have a boolean arg");
                     return TCL_ERROR;
                 }
             } else {
@@ -4668,6 +4761,11 @@ int tcldom_parse (
 
         interpResult = Tcl_GetStringResult(interp);
         if (interpResult[0] == '\0') {
+            /* If the interp result isn't empty, then there was an error
+               in an enternal entity and the interp result has already the
+               error msg. If we don't got a document, but interp result is
+               empty, the error occured in the main document and we
+               build the error msg as follows. */
             sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
             Tcl_AppendResult(interp, "error \"", 
                              XML_ErrorString(XML_GetErrorCode(parser)),
@@ -4693,8 +4791,8 @@ int tcldom_parse (
                 }
                 Tcl_AppendResult(interp, "\"",NULL);
             }
-            XML_ParserFree(parser);
         }
+        XML_ParserFree(parser);
         return TCL_ERROR;
     }
     XML_ParserFree(parser);
@@ -4854,7 +4952,9 @@ int tcldom_DomObjCmd (
         case m_setStoreLineColumn:
             SetIntResult(TSD(storeLineColumn));
             if (objc == 3) {
-                Tcl_GetBooleanFromObj(interp, objv[2], &bool);
+                if (Tcl_GetBooleanFromObj(interp, objv[2], &bool) != TCL_OK) {
+                    return TCL_ERROR;
+                }
                 TSD(storeLineColumn) = bool;
             }
             return TCL_OK;
@@ -5010,7 +5110,7 @@ int tcldom_CheckDocShared (
     Tcl_MutexUnlock(&tableMutex);
 
     if (found && doc != tabDoc) {
-        Tcl_Panic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
+        domPanic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
     }
 
     return found;
