@@ -1,6 +1,10 @@
 #----------------------------------------------------------------------------
 #   This is derivated from the tcl8.3 win makefile and surely not
 #   perfect. It works for me. 
+#   The compiler ommits some warnings. Ignore them.
+#   Linking against tclstub83 is hardcoded, sorry. If you want to
+#   link against another tcl version, simply replace tclstub83 with
+#   the according lib name (it's one place).
 #   rolf ade, 2001 (rolf@pointsman.de)
 #   
 #
