@@ -3303,7 +3303,6 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
               goto wrongScriptResult;
           }
           if (!(mode & TCL_READABLE)) {
-              Tcl_DecrRefCount (resultObj);
               Tcl_UnregisterChannel (expat->interp, chan);
               Tcl_ResetResult (expat->interp);
               Tcl_AppendResult (expat->interp, "channel \"", dataStr,
@@ -3311,6 +3310,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
                                 "wasn't opened for reading", (char *) NULL);
               TclExpatHandlerResult (expat, activeTclHandlerSet,
                                      ERROR_IN_EXTREFHANDLER);
+              Tcl_DecrRefCount (resultObj);
               XML_ParserFree (extparser);
               expat->parser = oldparser;
               return 0;
@@ -3330,10 +3330,12 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
       case EXPAT_INPUT_FILENAME:
           fd = open(dataStr, O_BINARY|O_RDONLY);
           if (fd < 0) {
-              Tcl_DecrRefCount (resultObj);
               Tcl_ResetResult (expat->interp);
               Tcl_AppendResult (expat->interp, "error opening file \"",
                                 dataStr, "\"", (char *) NULL);
+              TclExpatHandlerResult (expat, activeTclHandlerSet,
+                                     ERROR_IN_EXTREFHANDLER);
+              Tcl_DecrRefCount (resultObj);
               XML_ParserFree (extparser);
               expat->parser = oldparser;
               return 0;
@@ -3346,7 +3348,9 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
                   close (fd);
                   Tcl_ResetResult (expat->interp);
                   Tcl_SetResult (expat->interp, "Out of memory\n", NULL);
-                  return TCL_ERROR;
+                  TclExpatHandlerResult (expat, activeTclHandlerSet,
+                                         ERROR_IN_EXTREFHANDLER);
+                  return 0;
               }
               nread = read(fd, fbuf, READ_SIZE);
               if (nread < 0) {
@@ -3355,7 +3359,9 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
                   Tcl_AppendResult (expat->interp,
                                     "error reading from file \"",
                                     dataStr, "\"", (char *) NULL);
-                  return TCL_ERROR;
+                  TclExpatHandlerResult (expat, activeTclHandlerSet,
+                                         ERROR_IN_EXTREFHANDLER);
+                  return 0;
               }
               if (!XML_ParseBuffer (extparser, nread, nread == 0)) {
                   close (fd);
@@ -3386,6 +3392,11 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
                                 ERROR_IN_EXTREFHANDLER);
           return 0;
       }
+      
+      /* The last node in the external entity may be a text node. To call 
+         TclExpatDispatchPCDATA, before switching back to the old parser
+         ensures, that that last text node has the right base URI. */
+      TclExpatDispatchPCDATA(expat);
 
       XML_ParserFree (extparser);
       expat->parser = oldparser;
@@ -3427,8 +3438,10 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
   if (oldparser) {
       expat->parser = oldparser;
   }
-  Tcl_AppendResult (expat->interp, "The -externalentitycommand script has to return a Tcl list with 3 elements.\n",
-               "Synatx: {string|channel|filename <baseurl> <data>}\n", NULL);
+  Tcl_AppendResult (expat->interp, "The -externalentitycommand script has",
+                    " to return a Tcl list with 3 elements.\n",
+                    "Synatx: {string|channel|filename <baseurl> <data>}\n",
+                    NULL);
   TclExpatHandlerResult (expat, activeTclHandlerSet,
                          ERROR_IN_EXTREFHANDLER);
   return 0;
