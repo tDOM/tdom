@@ -732,7 +732,12 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
     # XML Recomendation, Appendix F
 
     fconfigure $fd -encoding binary
-    binary scan [read $fd 4] "H8" firstBytes
+    if {![binary scan [read $fd 4] "H8" firstBytes]} {
+        # very short (< 4 Bytes) file
+        seek $fd 0 start
+        set encString UTF-8
+        return $fd
+    }
     
     # First check for BOM
     switch [string range $firstBytes 0 3] {
