@@ -87,10 +87,7 @@ static void * StackPop   _ANSI_ARGS_((void));
 static void * StackTop   _ANSI_ARGS_((void));
 static int    NodeObjCmd _ANSI_ARGS_((ClientData,Tcl_Interp*,int,Tcl_Obj *CONST o[]));
 static void  domAppendChild1(domNode*, domNode *);
-
-#ifdef TCL_THREADS
 static void   StackFinalize _ANSI_ARGS_((ClientData));
-#endif
 
 extern int tcldom_appendXML (Tcl_Interp*, domNode*, Tcl_Obj*);
 
@@ -125,8 +122,11 @@ StackPush (element)
 
     if (tsdPtr->elementStack == NULL) {
         tsdPtr->elementStack = newElement;
-        TDomThreaded(Tcl_CreateThreadExitHandler(StackFinalize, 
-                                                 tsdPtr->elementStack);)
+#ifdef TCL_THREADS
+        Tcl_CreateThreadExitHandler(StackFinalize, tsdPtr->elementStack);
+#else
+        Tcl_CreateExitHandler (StackFinalize, tsdPtr->elementStack);
+#endif
     } else {
         tsdPtr->currentSlot->nextPtr = newElement;
         newElement->prevPtr = tsdPtr->currentSlot;
@@ -173,7 +173,6 @@ StackTop ()
 }
 
 
-#ifdef TCL_THREADS
 /*----------------------------------------------------------------------------
 |   StackFinalize - reclaims stack memory (slots only, not elements)
 |
@@ -190,7 +189,6 @@ StackFinalize (clientData)
         stack = tmp;
     }
 }
-#endif
 
 /*----------------------------------------------------------------------------
 |   NodeObjCmd
