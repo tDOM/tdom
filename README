@@ -1,0 +1,68 @@
+
+		tDOM - a XML/DOM/XPath implementation for Tcl
+		(Version 0.7.5 / July 31, 2002)
+
+		Jochen Loewer	 (loewerj@hotmail.com)
+        
+                      with the little help of:
+
+                Rolf Ade         (rolf@pointsman.de)
+                Zoran Vasiljevic (zoran@archiware.com)
+
+
+This directory contains a freely distributable (under the Mozilla Public 
+License) thread-safe extension to Tcl/Tk called tDOM.
+
+
+tDOM contains:
+
+    *  the newest version of Expat, the XML parser from James Clark,
+       including namesspace and DTD support.
+
+    *  a modified version of Steve Ball's Tclexpat, the Tcl interface to 
+       expat, for event-like (SAX-like) XML parsing. The modifications
+       are for performance improvements and to make the newest Expat
+       features (XML namespace) available.
+
+    *  a (partial) DOM implementation in C for maximum performance and
+       minimum memory need following the W3C DOM Core Level 1 
+       recommendation using a OO-like syntax.
+
+    *  a XPath implementation in C following the November 99 W3C
+       recommendation.
+
+    *  a (partial) implementation in C of the XPointer (97) navigational 
+       functions.
+
+    *  UTF-8 to 8 bit encoding back conversion functionality to support
+       Tcl version < 8.1x
+
+    *  additional convinience methods
+ 
+    *  documentation in TMML, HTML and nroff format
+
+
+COMPILING/USING tDOM
+
+    Depending on your platform, (unix or win) go to the corresponding
+    directory and invoke the configure script:
+
+        ../configure
+        make 
+        make test
+        make install
+
+    tDOM is TEA-compatible so you should be able to build the package
+    using the MinGW build environment for Windows. There is also the
+    MSVC nmake file so you can compile the package with Microsoft tools.
+
+
+PLATFORMS
+    HP-UX-10.20  with Tcl8.0.5   (both ansi cc and gcc)
+    HP-UX-9.x
+    Linux 2.2.5                  (egcs 2.91.66, Suse 6.1)
+    Solaris 2.5.1+               (both gcc and SunWorks compilers)
+
+    Other machines and OS's are not tested but should work too. 
+
+-EOF
