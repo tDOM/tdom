@@ -175,14 +175,11 @@ into a DOM tree. \fImethod\fR indicates a specific subcommand.
 The valid methods are:
 .TP
 \&\fB\fBdom\fP \fBparse\fP ?\fIoptions\fB? ?\fIdata\fB?
-\&\fR
-.RS
-.PP
-Parses the XML information and builds up the DOM tree in memory
+\&\fRParses the XML information and builds up the DOM tree in memory
 providing a Tcl object command to this DOM document object. Example:
 
-
       
+.RS
 .CS
 
 dom parse $xml doc
@@ -227,9 +224,14 @@ The valid options are:
 .IP "\fB-simple\fR"
 If \fI-simple\fR is
 specified, a simple but fast parser is used (conforms not fully to XML
-recommendation). That should double parsing and DOM generation speed. UTF-8 is
-not generated internally with that parser. Currently this parser does not
-handle namespaces.
+recommendation). That should double parsing and DOM generation speed. The
+encoding of the data is not transformed inside the parser. The simple parser
+does not respect any encoding information in the XML declaration. It skips over
+the internal DTD subset and ignores any information in it. Therefor it doesn't
+include defaulted attribute values into the tree, even if the according
+attribute declaration is in the internal subset. It also doesn't expand
+internal or external entity references other than the predefined entities and
+character references.
 .IP "\fB-html\fR"
 If \fI-html\fR is specified, a fast HTML parser is
 used, which tries to even parse badly formed HTML into a DOM tree.
@@ -274,29 +276,18 @@ of type "string", or the name of a tcl channel, in the case of type
 .RE
 .TP
 \&\fB\fBdom\fP \fBcreateDocument\fP \fIdocElemName\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates a new DOM document object with one element node with
+\&\fRCreates a new DOM document object with one element node with
 node name \fBdocElemName\fR. The \fBobjVar\fR controlls the
 memory handling as explained above.
-.RE
 .TP
 \&\fB\fBdom\fP \fBcreateDocumentNS\fP \fIdocElemName\fB \fIuri\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates a new DOM document object with one element node with
+\&\fRCreates a new DOM document object with one element node with
 node name \fBdocElemName\fR. \fBUri\fR gives the namespace of the
 document element to create. The \fBobjVar\fR controlls the
 memory handling as explained above.
-.RE
 .TP
 \&\fB\fBdom\fP \fBsetResultEncoding\fP ?\fIencodingName\fB?
-\&\fR
-.RS
-.PP
-If \fBencodingName\fR is not given the current global
+\&\fRIf \fBencodingName\fR is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
 \&\fBencodingName\fR.  All character data, attribute values, etc. will
 then be converted from UTF-8, which is delivered from the Expat XML parser, to
@@ -304,21 +295,117 @@ the given 8 bit encoding at XML/DOM parse time.  Valid values for
 \&\fBencodingName\fR are: utf-8, ascii, cp1250, cp1251, cp1252, cp1253,
 cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
 iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.
-.RE
 .TP
 \&\fB\fBdom\fP \fBcreateNodeCmd\fP \fI(element|comment|text|cdata|pi)Node\fB \fIcommandName\fB
-\&\fR
+\&\fRThis method creates Tcl commands, which creates tDOM nodes, if
+invoked. However this commands are only avaliable inside a script given to the
+domNode method \fIappendFromScript\fR. If a command, created with
+\&\fIcreateNodeCmd\fR is invoked in any other context, it returns error.  The
+created command \fIcommandName\fR replaces any existend command or procedure
+there may have been by that name. If the \fIcommandName\fR includes any
+namespace qualifiers, the command is created in the specified namespace.
 .RS
 .PP
-\&...todo...
+If such a command is invoked inside a script, which was given as argument to
+the domNode method \fIappendFromScript\fR, the command creates a new node and
+appends this node at the end of the childlist of the invoking element
+node. Each command creates always the same type of node. Which type of node is
+created by the command is determined by the the first argument to the
+\&\fIcreateNodeCmd\fR. The synax of the created command depends on type of node,
+that it creates.
+.PP
+If the first argument of the method is \fIelementNode\fR, the created
+command will create an element node, if invoked. The tag name of the created
+node is \fIcommandName\fR without namespace qualifiers, if there any. The
+syntax of the created command is:
+
+
+
+.CS
+
+\&\fBelementNodeCmd\fP \fI?attributeName attributeValue ...? ?script?\fR
+\&\fBelementNodeCmd\fP \fI?-attributeName attributeValue ...? ?script?\fR
+\&\fBelementNodeCmd\fP \fIname_value_list script\fR
+
+.CE
+.PP
+The command syntax allows three different ways, to specify the attributes of
+the resulting element. They could be specified with \fIattributeName
+attributeValue\fR argument pairs, or in an "option style" way with
+\&\fI-attriubteName attributeValue\fR argument pairs (the '-' character is only
+syntactical sugar and will be stripped) or with a tcl list, which elements are
+interpreted successive as attribute name and the according attribute value. The
+attribute name elements in the list may have a leading '-' character, which
+will be stripped.
+.PP
+Every \fIelementNodeCmd\fR accepts an optional tcl script as last
+argument. This script is evaluated as recursive \fIappendFromScript\fR script,
+with the node, created by the \fIelementNodeCmd\fR as parent of the nodes,
+created with the script. This allows, to create an element node and its content
+at once.
+.PP
+If the first argument of the method is \fItextNode\fR, the command will create a text node, if invoked. The syntax of the created command
+is
+
+
+
+.CS
+
+\&\fBtextNodeCmd\fP ?-disableOutputEscaping? \fIdata\fR
+
+.CE
+.PP
+If the optional flag \fI-disableOutputEscaping\fR is given then the
+escaping of the ampersand character (&) and the left angle bracket (<)
+inside the data is disabled, if the text node is serialized. You should not use
+this flag until you really know, what you do.
+.PP
+If the first argument of the method is \fItextNode\fR, or \fIcdataNode\fR,
+the command will create accordingly a comment node or CDATA section node, if
+invoked. The syntax of the created command is
+
+
+
+.CS
+
+\&\fBnodeCmd\fP \fIdata\fR
+
+.CE
+.PP
+If the first argument of the method is \fIpiNode\fR, the command will
+create a processing instruction node, if invoked. The syntax of the created
+command is
+
+
+
+.CS
+
+\&\fBpiNodeCmd\fP \fItarget data\fR
+
+.CE
 .RE
 .TP
 \&\fB\fBdom\fP \fBsetStoreLineColumn\fP \fI?boolean\fB
-\&\fR
-.RS
-.PP
-If switched on, the DOM nodes will contain line and column
+\&\fRIf switched on, the DOM nodes will contain line and column
 position information for the original XML document after parsing.
-.RE
+.TP
+\&\fB\fBdom\fP \fBisName\fP \fIname\fB
+\&\fRReturns 1, if the \fIname\fR is a valid XML Name according to
+production 5 of the XML 1.0 recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBisNCName\fP \fIname\fB
+\&\fRReturns 1, if the \fIname\fR is a valid NCName according
+to production 4 of the of the Namespaces in XML recommendation. Otherwise it returns
+0.
+.TP
+\&\fB\fBdom\fP \fBisQName\fP \fIname\fB
+\&\fRReturns 1, if the \fIname\fR is a valid QName according
+to production 6 of the of the Namespaces in XML recommendation. Otherwise it returns
+0.
+.TP
+\&\fB\fBdom\fP \fBisCharData\fP \fIstring\fB
+\&\fRReturns 1, if every character in \fIstring\fR is
+a valid XML Char according to production 2 of the XML 1.0
+recommendation. Otherwise it returns 0.
 .SH KEYWORDS
 XML, DOM, Document, node, parsing

@@ -27,9 +27,8 @@ into a DOM tree. <m>method</m> indicates a specific subcommand. </p>
       <commandlist>
         <commanddef>
           <command><cmd>dom</cmd> <method>parse</method> ?<m>options</m>? ?<m>data</m>?</command>
-          <desc>
-            <p>Parses the XML information and builds up the DOM tree in memory
-providing a Tcl object command to this DOM document object. Example:</p>
+          <desc>Parses the XML information and builds up the DOM tree in memory
+providing a Tcl object command to this DOM document object. Example:
 
       <example>
 dom parse $xml doc
@@ -63,9 +62,14 @@ rename $document ""</example>
                 <optname>-simple</optname> 
                 <desc>If <m>-simple</m> is
 specified, a simple but fast parser is used (conforms not fully to XML
-recommendation). That should double parsing and DOM generation speed. UTF-8 is
-not generated internally with that parser. Currently this parser does not
-handle namespaces.</desc>
+recommendation). That should double parsing and DOM generation speed. The
+encoding of the data is not transformed inside the parser. The simple parser
+does not respect any encoding information in the XML declaration. It skips over
+the internal DTD subset and ignores any information in it. Therefor it doesn't
+include defaulted attribute values into the tree, even if the according
+attribute declaration is in the internal subset. It also doesn't expand
+internal or external entity references other than the predefined entities and
+character references.</desc>
               </optdef>
 
               <optdef>
@@ -85,7 +89,6 @@ text nodes are removed at parsing time.</desc>
               <optdef>
                 <optname>-channel</optname>
                 <optarg>&lt;channel-ID&gt;</optarg>
-
                 <desc>If <m>-channel &lt;channel-ID&gt;</m> is specified, the
 input to be parsed is read from the specified channel. The encoding setting of
 the channel (via fconfigure -encoding) is respected, ie the data read from the
@@ -96,7 +99,6 @@ data is parsed.</desc>
               <optdef>
                 <optname>-baseurl</optname>
                 <optarg>&lt;baseURI&gt;</optarg>
-                
                 <desc>If <m>-baseurl &lt;baseURI&gt;</m> is specified, the
 baseURI is used as the base URI of the document. External entities referenced
 in the document are resolved relative to this base URI. This base URI is also
@@ -106,7 +108,6 @@ stored within the DOM tree.</desc>
               <optdef>
                 <optname>-feedbackAfter</optname>
                 <optarg>&lt;#bytes&gt;</optarg>
-
                 <desc>If <m>-feedbackAfter &lt;#bytes&gt;</m> is specified, the
 tcl command ::dom::domParseFeedback is evaluated after parsing every #bytes. If
 you use this option, you have to create a tcl proc named
@@ -118,7 +119,6 @@ always at the first element start after every #bytes.</desc>
               <optdef>
                 <optname>-externalentitycommand</optname>
                 <optarg>&lt;script&gt;</optarg>
-
                 <desc>If <m>-externalentitycommand &lt;script&gt;</m> is
 specified, the specified tcl script is called to resolve any external entities
 of the document. The actual evaluated command consists of this option followed
@@ -141,51 +141,143 @@ of type "string", or the name of a tcl channel, in the case of type
         <commanddef>
           <command><cmd>dom</cmd> <method>createDocument</method>
 <m>docElemName</m> ?<m>objVar</m>?</command>
-
-          <desc><p>Creates a new DOM document object with one element node with
+          <desc>Creates a new DOM document object with one element node with
 node name <samp>docElemName</samp>. The <samp>objVar</samp> controlls the
-memory handling as explained above.</p>
-</desc>
+memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>createDocumentNS</method>
 <m>docElemName</m> <m>uri</m> ?<m>objVar</m>?</command>
-
-          <desc><p>Creates a new DOM document object with one element node with
+          <desc>Creates a new DOM document object with one element node with
 node name <samp>docElemName</samp>. <samp>Uri</samp> gives the namespace of the
 document element to create. The <samp>objVar</samp> controlls the
-memory handling as explained above.</p>
-</desc>
+memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>setResultEncoding</method> ?<m>encodingName</m>?</command>
-
-          <desc><p>If <samp>encodingName</samp> is not given the current global
+          <desc>If <samp>encodingName</samp> is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
 <samp>encodingName</samp>.  All character data, attribute values, etc. will
 then be converted from UTF-8, which is delivered from the Expat XML parser, to
 the given 8 bit encoding at XML/DOM parse time.  Valid values for
 <samp>encodingName</samp> are: utf-8, ascii, cp1250, cp1251, cp1252, cp1253,
 cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
-iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</p>
-</desc>
+iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>createNodeCmd</method>
 <m>(element|comment|text|cdata|pi)Node</m> <m>commandName</m></command>
-          <desc><p>...todo...</p></desc>
+          <desc>This method creates Tcl commands, which creates tDOM nodes, if
+invoked. However this commands are only avaliable inside a script given to the
+domNode method <m>appendFromScript</m>. If a command, created with
+<m>createNodeCmd</m> is invoked in any other context, it returns error.  The
+created command <m>commandName</m> replaces any existend command or procedure
+there may have been by that name. If the <m>commandName</m> includes any
+namespace qualifiers, the command is created in the specified namespace.
+
+<p>If such a command is invoked inside a script, which was given as argument to
+the domNode method <m>appendFromScript</m>, the command creates a new node and
+appends this node at the end of the childlist of the invoking element
+node. Each command creates always the same type of node. Which type of node is
+created by the command is determined by the the first argument to the
+<m>createNodeCmd</m>. The synax of the created command depends on type of node,
+that it creates.</p>
+
+<p>If the first argument of the method is <m>elementNode</m>, the created
+command will create an element node, if invoked. The tag name of the created
+node is <m>commandName</m> without namespace qualifiers, if there any. The
+syntax of the created command is:</p>
+
+<syntax>
+<cmd>elementNodeCmd</cmd> <m>?attributeName attributeValue ...? ?script?</m>
+<cmd>elementNodeCmd</cmd> <m>?-attributeName attributeValue ...? ?script?</m>
+<cmd>elementNodeCmd</cmd> <m>name_value_list script</m>
+</syntax>
+
+<p>The command syntax allows three different ways, to specify the attributes of
+the resulting element. They could be specified with <m>attributeName
+attributeValue</m> argument pairs, or in an "option style" way with
+<m>-attriubteName attributeValue</m> argument pairs (the '-' character is only
+syntactical sugar and will be stripped) or with a tcl list, which elements are
+interpreted successive as attribute name and the according attribute value. The
+attribute name elements in the list may have a leading '-' character, which
+will be stripped.</p>
+
+<p>Every <m>elementNodeCmd</m> accepts an optional tcl script as last
+argument. This script is evaluated as recursive <m>appendFromScript</m> script,
+with the node, created by the <m>elementNodeCmd</m> as parent of the nodes,
+created with the script. This allows, to create an element node and its content
+at once.</p>
+
+<p>If the first argument of the method is <m>textNode</m>, the command will create a text node, if invoked. The syntax of the created command
+is</p>
+
+<syntax>
+<cmd>textNodeCmd</cmd> ?-disableOutputEscaping? <m>data</m>
+</syntax>
+
+<p>If the optional flag <m>-disableOutputEscaping</m> is given then the
+escaping of the ampersand character (&amp;) and the left angle bracket (&lt;)
+inside the data is disabled, if the text node is serialized. You should not use
+this flag until you really know, what you do.</p>
+
+<p>If the first argument of the method is <m>textNode</m>, or <m>cdataNode</m>,
+the command will create accordingly a comment node or CDATA section node, if
+invoked. The syntax of the created command is</p>
+
+<syntax>
+<cmd>nodeCmd</cmd> <m>data</m>
+</syntax>
+
+<p>If the first argument of the method is <m>piNode</m>, the command will
+create a processing instruction node, if invoked. The syntax of the created
+command is</p>
+
+<syntax>
+<cmd>piNodeCmd</cmd> <m>target data</m>
+</syntax>
+
+</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>setStoreLineColumn</method> <m>?boolean</m></command>
 
-          <desc><p>If switched on, the DOM nodes will contain line and column
-position information for the original XML document after parsing.</p></desc>
+          <desc>If switched on, the DOM nodes will contain line and column
+position information for the original XML document after parsing.</desc>
         </commanddef>
 
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isName</method> <m>name</m></command>
+          <desc>Returns 1, if the <m>name</m> is a valid XML Name according to
+production 5 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref> recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isNCName</method> <m>name</m></command>
+          <desc>Returns 1, if the <m>name</m> is a valid NCName according
+to production 4 of the of the <ref href="http://www.w3.org/TR/1999/REC-xml-names-19990114">Namespaces in XML</ref> recommendation. Otherwise it returns
+0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isQName</method> <m>name</m></command>
+          <desc>Returns 1, if the <m>name</m> is a valid QName according
+to production 6 of the of the <ref href="http://www.w3.org/TR/1999/REC-xml-names-19990114">Namespaces in XML</ref> recommendation. Otherwise it returns
+0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isCharData</method>
+<m>string</m></command>
+          <desc>Returns 1, if every character in <m>string</m> is
+a valid XML Char according to production 2 of the <ref
+href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
 
       </commandlist>
   </section>
