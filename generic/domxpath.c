@@ -3198,8 +3198,8 @@ xpathEvalFunction (
                    nextStep = nextStep->next;
                }
                rc = (cbs->funcCB) (cbs->funcClientData, step->strvalue,
-                                   ctxNode, position, nodeList, argc, args,
-                                   result, errMsg);
+                                   ctxNode, position, nodeList, exprContext,
+                                   argc, args, result, errMsg);
                argc = 0;
                while ( args[argc] != NULL) {
                    xpathRSFree( args[argc++] );
@@ -4937,7 +4937,6 @@ int xpathMatches2 (
 {
     int rc;
 
-    fprintf(stderr, "xpathMatches: ");
     printNodePath(nodeToMatch); 
     rc = xpathMatches2(steps,nodeToMatch,cbs,errMsg);
     fprintf(stderr, " = %d \n", rc);
