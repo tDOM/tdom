@@ -645,19 +645,24 @@ tcldom_getElementsByTagName (
        nsIndex == -2 ==> more than one namespace in the document with the 
                          requested namespace, we have to strcmp the URI
                          with the namespace uri of every node
-       nsIndex == -3 ==> NS wildcard '*' */
+       nsIndex == -3 ==> NS wildcard '*'
+       nsIndex == -4 ==> special handled case uri == "", i.e. all
+                         nodes not in a namespace */
 
     while (node) {
         if (node->nodeType != ELEMENT_NODE) {
             node = node->nextSibling;
             continue;
         }
-        if ( (nsIndex == -1 && !node->namespace) 
+        if ( (nsIndex == -1)
              || (nsIndex == node->namespace)
              || (nsIndex == -3)
              || (nsIndex == -2 
                  && node->namespace 
-                 && strcmp (uri, domNamespaceURI (node))==0) )
+                 && strcmp (uri, domNamespaceURI (node))==0)
+             || (nsIndex == -4
+                 && (!node->namespace 
+                     || strcmp ("", domNamespaceURI (node))==0)) )
         {
             char prefix[MAX_PREFIX_LEN], *localName;
             if (nsIndex == -1) {
@@ -2768,18 +2773,14 @@ int tcldom_NodeObjCmd (
                 SetResult ("Node must be an element node.");
                 return TCL_ERROR;
             }
-            Tcl_ResetResult (interp);
             uri = Tcl_GetStringFromObj (objv[2], NULL);
             str = Tcl_GetStringFromObj (objv[3], NULL);
             nsIndex = -1;
             if (uri[0] == '*' && uri[1] == '\0') {
                 nsIndex = -3;
             } else if (uri[0] == '\0') {
-                /* all elements not in a namespace i.e. 
-                   getElementsByTagName */
-                return tcldom_getElementsByTagName (interp, str, 
-                                                    node->firstChild, -1, 
-                                                    NULL);
+                /* all elements not in a namespace */
+                nsIndex = -4;
             } else {
                 for (i = 0; i <= node->ownerDocument->nsptr; i++) {
                     if (strcmp (node->ownerDocument->namespaces[i]->uri,
@@ -2796,8 +2797,11 @@ int tcldom_NodeObjCmd (
                 }
             }
             if (nsIndex == -1) {
-                SetResult ("There isn't such a namespace declared in this document");
-                return TCL_ERROR;
+                /* There isn't such a namespace declared in this document.
+                   Since getElementsByTagNameNS doesn't raise an execption
+                   short cut: return empty result */
+                Tcl_ResetResult (interp);
+                return TCL_OK;
             }
             return tcldom_getElementsByTagName (interp, str, node->firstChild,
                                                 nsIndex, uri);
@@ -3128,11 +3132,8 @@ int tcldom_DocObjCmd (
             if (uri[0] == '*' && uri[1] == '\0') {
                 nsIndex = -3;
             } else if (uri[0] == '\0') {
-                /* all elements not in a namespace i.e. 
-                   getElementsByTagName */
-                return tcldom_getElementsByTagName (interp, str,
-                                                    doc->documentElement, -1,
-                                                    NULL);
+                /* all elements not in a namespace i.e. */
+                nsIndex = -4;
             } else {
                 for (i = 0; i <= doc->nsptr; i++) {
                     if (strcmp (doc->namespaces[i]->uri, uri)==0) {
@@ -3148,8 +3149,11 @@ int tcldom_DocObjCmd (
                 }
             }
             if (nsIndex == -1) {
-                SetResult ("There isn't such a namespace declared in this document");
-                return TCL_ERROR;
+                /* There isn't such a namespace declared in this document.
+                   Since getElementsByTagNameNS doesn't raise an execption
+                   short cut: return empty result */
+                Tcl_ResetResult (interp);
+                return TCL_OK;
             }
             return tcldom_getElementsByTagName (interp, str, 
                                                 doc->documentElement, nsIndex,
@@ -3271,8 +3275,6 @@ int tcldom_createDocument (
                  interp, doc, setVariable, newObjName
     );
 }
-
-
 
 /*----------------------------------------------------------------------------
 |   tcldom_createDocumentNS
