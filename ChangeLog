@@ -1,3 +1,12 @@
+2003-11-28  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Switched back to Tcl_Panic() in one case,
+          to make MT builds work.
+
+        * generic/domxslt.c
+        * generic/dom.c: With MT tDOM, a domDoc extRefHandler
+          script may be used within another thread.
+
 2003-11-27  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c
