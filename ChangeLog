@@ -1,3 +1,8 @@
+2003-10-08  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Fixed the preliminary (and MT only) method
+          renumber.
+
 2003-10-07  Rolf Ade  <rolf@pointsman.de>
 
         * generic/nodecmd.c
