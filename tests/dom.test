@@ -561,7 +561,7 @@ test dom-9.1 {nodeValue - TEXT_NODE} {
 } {text node}
 
 test dom-9.2 {nodeValue - COMMENT_NODE} {
-    $root firstChild firstChild
+    set firstChild [$root firstChild]
     set commentNode [$firstChild nextSibling]
     $commentNode nodeValue
 } {comment node}
@@ -1443,6 +1443,7 @@ test dom-29.1 {ownerDocument} {
     $doc delete
     set result
 } {<document><foo1/><foo2/></document>}
+
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]

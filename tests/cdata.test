@@ -284,7 +284,7 @@ test cdata-5.1 {CDATA section whiteCDATAs} {
     set parser [xml::parser cdata-5.1 \
             -ignorewhitecdata 1 \
             -characterdatacommand pcdata]
-    $parser parse {<root>
+    $parser parse {<root>       
 <test>foo</test>
 </root>}
     list $::result

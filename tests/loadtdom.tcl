@@ -20,7 +20,7 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 if {[catch {package present tdom}]} {
     package require tdom 0.7.5
 } else {
-    if {[lsearch [namespace children] ::tdom] == -1} {
+    if {[lsearch [namespace children] ::tDOM] == -1} {
         # tcldomsh without the script library. Source the lib.
         source [file join [file dir [info script]] ../lib tdom.tcl]
     }
