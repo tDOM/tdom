@@ -1488,7 +1488,7 @@ static int IsStepPredOptimizable (ast a) {
     case LessOrEq:
         b = a->child;
         if (b->type != ExecFunction 
-            || strcmp (b->strvalue, "position")!=0) return 0;
+            || b->intvalue != f_position) return 0;
         b = b->next;
         if (b->type != Int) return 0;
         if (a->type == Less) return b->intvalue;
@@ -1500,16 +1500,16 @@ static int IsStepPredOptimizable (ast a) {
         left = b->intvalue;
         b = b->next;
         if (b->type != ExecFunction 
-            || strcmp (b->strvalue, "position")!=0) return 0;
+            || b->intvalue != f_position) return 0;
         if (a->type == Greater) return left;
         else                    return left + 1;
     case Equal:
         b = a->child;
         if (b->type == Int
             && b->next->type == ExecFunction
-            && strcmp (b->next->strvalue, "position")==0) return b->intvalue;
+            && b->next->intvalue == f_position) return b->intvalue;
         if (b->type == ExecFunction
-            && strcmp (b->strvalue, "position")==0
+            && b->intvalue == f_position
             && b->next->type == Int) return b->next->intvalue;
         return 0;
     default: return 0;
@@ -1642,7 +1642,8 @@ static int usesPositionInformation ( ast a) {
     return 0;
 }
 
-static int checkStepPatternPredOptimizability ( ast a ) {
+static int checkStepPatternPredOptimizability ( ast a , int *max) {
+    ast b;
 
     switch (a->type) {
         case Literal:
@@ -1660,42 +1661,85 @@ static int checkStepPatternPredOptimizability ( ast a ) {
         case IsSpecificPI:
         case IsElement:
         case GetContextNode: 
+        case GetParentNode:
             break;
             
         case And:
         case Or:
+            if (usesPositionInformation(a->child)) return 0;
+            return 1;
         case Less:
         case LessOrEq:
+            b = a->child;
+            if (b->type == ExecFunction
+                && b->intvalue == f_position
+                && b->next->type == Int) {
+                if (a->type == Less) *max = b->next->intvalue;
+                else *max = b->next->intvalue + 1;
+                return 0;
+            }
+            if (usesPositionInformation(a->child)) return 0;
+            return 1;            
         case Greater:
         case GreaterOrEq:
-        case Equal:
-        case NotEqual:
-            a = a->child;
-            while (a) {
-                if (usesPositionInformation(a)) return 0;
-                a = a->next;
+            b = a->child;
+            if (b->type == Int 
+                && b->next->type == ExecFunction
+                && b->next->intvalue == f_position) {
+                if (a->type == Greater) *max = b->intvalue;
+                else *max = b->intvalue + 1;
+                return 0;
             }
+            if (usesPositionInformation(a->child)) return 0;
+            return 1;            
+        case Equal:
+            b = a->child;
+            if (b->type == Int
+                && b->next->type == ExecFunction
+                && b->next->intvalue == f_position) {
+                *max = b->intvalue;
+                return 0;
+            }
+            if (b->type == ExecFunction 
+                && b->intvalue == f_position
+                && b->next->type == Int) {
+                *max = b->next->intvalue;
+                return 0;
+            }
+            if (usesPositionInformation(a->child)) return 0;
+            return 1;
+        case NotEqual:
+            if (usesPositionInformation(a->child)) return 0;
             return 1;
 
+        case Int:
+            *max = a->intvalue;
+            return 0;
+
+        case ExecFunction:
+            return !usesPositionInformation(a);
+            
         default: 
             return 0;
     }
     a = a->child;
     while (a) {
-        if (!checkStepPatternPredOptimizability(a)) return 0;
+        if (!checkStepPatternPredOptimizability(a, max)) return 0;
         a = a->next;
     } 
     return 1;
 }
 
-static int IsStepPatternPredOptimizable ( ast a ) {
+static int IsStepPatternPredOptimizable ( ast a, int *max ) {
     int f;
-    f = checkStepPatternPredOptimizability(a);
+
+    *max = 0;
+    f = checkStepPatternPredOptimizability(a, max);
     DBG(
         if (f) {
             fprintf(stderr, "\nStepPattern Pred is optimizable:\n");
         } else {
-            fprintf(stderr, "\nStepPattern Pred is not optimizable:\n");
+            fprintf(stderr, "\nStepPattern Pred is not optimizable, max = %d:\n", *max);
         }
         printAst(0,a);
     )
@@ -1739,14 +1783,16 @@ Production(StepPattern)
     }
     {
         ast b, c;
-        int stepIsOptimizable = 1, isFirst = 1;
+        int stepIsOptimizable = 1, isFirst = 1, max, savedmax;
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
             if (!b) return NULL;
             if (stepIsOptimizable) {
-                if (!IsStepPatternPredOptimizable(b)) stepIsOptimizable = 0;
+                if (!IsStepPatternPredOptimizable(b, &max)) 
+                    stepIsOptimizable = 0;
             }
             if (isFirst) {
+                savedmax = max;
                 c = New1WithEvalSteps( Pred, b);
                 isFirst = 0;
             } else {
@@ -1776,7 +1822,10 @@ Production(StepPattern)
                     aCopyChild->realvalue = a->child->realvalue;
                     aCopy->child = aCopyChild;
                 }
-                Append( a, New1( FillNodeList, aCopy));
+                b = New1( FillNodeList, aCopy);
+                b->intvalue = savedmax;
+                Append( a, b);
+/*                  Append( a, New1( FillNodeList, aCopy)); */
             }
             Append (a, c);
         }
@@ -2500,7 +2549,7 @@ static int xpathArityCheck (
 \---------------------------------------------------------------------------*/
 int xpathRound (double r) {
     if (r < 0.0) {
-        return floor (r + 0.5);
+        return (int)floor (r + 0.5);
     } else {
         return (int)(r + 0.5);
     }
@@ -3055,12 +3104,12 @@ xpathEvalFunction (
                len = strlen(leftStr) - from;
            }
 
-           if (from >= strlen(leftStr)) {
+           if (from >= (int) strlen(leftStr)) {
                rsSetString (result, "");
                FREE(leftStr);
                return XPATH_OK;
            } else {
-               if ( (len == INT_MAX) || ((from + len) > strlen(leftStr)) ) {
+               if ( (len == INT_MAX) || ((from + len) > (int) strlen(leftStr)) ) {
                    len =  strlen(leftStr) - from;
                }
            }
@@ -3918,8 +3967,22 @@ static int xpathEvalStep (
         DBG( fprintf(stderr,"right:\n");
              rsPrint(&rightResult);
         )
-        dLeft  = xpathFuncNumber(&leftResult, &NaN);
-        dRight = xpathFuncNumber(&rightResult, &NaN1);
+        if ((&leftResult)->type == RealResult) {
+            dLeft = (&leftResult)->realvalue;
+            NaN = 0;
+            if (IS_NAN(dLeft)) NaN = 2;
+            else if (IS_INF(dLeft)!=0) NaN = IS_INF(dLeft);
+        } else {
+            dLeft  = xpathFuncNumber(&leftResult, &NaN);
+        }
+        if ((&rightResult)->type == RealResult) {
+            dRight = (&rightResult)->realvalue;
+            NaN1 = 0;
+            if (IS_NAN(dRight)) NaN1= 2;
+            else if (IS_INF(dRight) !=0) NaN1 = IS_INF(dRight);
+        } else {
+            dRight = xpathFuncNumber(&rightResult, &NaN1);
+        }
         if (NaN || NaN1) {
             if ((NaN == 2) || (NaN1 == 2)) {
                 rsSetNaN (result);
@@ -5094,6 +5157,7 @@ int xpathMatches (
                         checkRsAddNode( &nodeList, child);
                         if (child == nodeToMatch) currentPos = i;
                         i++;
+                        if (steps->intvalue && i >= steps->intvalue) break;
                     }
                     if (child->nodeType == ATTRIBUTE_NODE) {
                         child = (domNode*) ((domAttrNode*)child)->nextSibling;
