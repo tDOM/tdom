@@ -113,7 +113,7 @@ style) <m>name</m>.</desc>
 
       <commanddef>
         <command><method>getElementsByTagNameNS</method> <m>uri</m> <m>name</m></command>
-        <desc> ...todo...  Returns a list of all elements in the subtree
+        <desc> Returns a list of all elements in the subtree
 matching (glob style) <m>name</m> and having the given namespace
 <m>uri</m>.</desc>
       </commanddef>
@@ -151,7 +151,7 @@ before.</desc>
 
       <commanddef>
         <command><method>hasAttributeNS</method> <m>uri</m> <m>attributeName</m></command>
-        <desc> ...todo...  Returns 1 if the object node contains an attribute
+        <desc>Returns 1 if the object node contains an attribute
 with name <m>attributeName</m> and a namespace URI <m>uri</m>.  Otherwise 0 is
 returned.</desc>
       </commanddef>
@@ -159,7 +159,7 @@ returned.</desc>
       <commanddef>
         <command><method>getAttributeNS</method> <m>uri</m> <m>attributeName</m>
 <option>defaultValue</option></command>
-        <desc> ...todo...  Returns the value of the attribute
+        <desc>Returns the value of the attribute
 <m>attributeName</m> having the URI <m>uri</m>. If attribute is not available
 <m>defaultValue</m> is returned.</desc>
       </commanddef>
@@ -167,7 +167,7 @@ returned.</desc>
       <commanddef>
         <command><method>setAttributeNS</method> <m>uri</m> <m>attributeName</m>
 <m>newValue</m></command>
-        <desc> ...todo...  Sets the value for an attribute <m>attributeName</m>
+        <desc>Sets the value for an attribute <m>attributeName</m>
 with the namespace URI <m>uri</m> to <m>newValue</m>. This will create a new
 attribute, if it wasn't avialble before.
         </desc>
@@ -175,7 +175,7 @@ attribute, if it wasn't avialble before.
 
       <commanddef>
         <command><method>removeAttributeNS</method> <m>uri</m> <m>attributeName</m></command>
-        <desc> ...todo...  Removes the attribute <m>attributeName</m> having
+        <desc>Removes the attribute <m>attributeName</m> having
 the namespace URI <m>uri</m>.</desc>
       </commanddef>
 
@@ -215,7 +215,7 @@ operation. It is not physically deleted.</desc>
 
       <commanddef>
         <command><method>delete</method></command>
-        <desc> ...todo...  Deletes the given node and its complete child tree
+        <desc>Deletes the given node and its complete child tree
 and frees the complete internal memory. The affected nodes are not accessible
 through the document fragment list.</desc>
       </commanddef>
@@ -344,7 +344,7 @@ nested Tcl list.</desc>
       <commanddef>
         <command><method>asXML</method> <option>-indent none/1..8</option>
 <option>-channel channelId</option></command>
-        <desc> ...todo...  Returns the DOM substree starting form the current
+        <desc>Returns the DOM substree starting form the current
 node as an indented XML string or sends the output directly to the given
 channelId in order to save memory.</desc>
       </commanddef>
@@ -357,7 +357,7 @@ appends this subtree to the current node.</desc>
 
       <commanddef>
         <command><method>appendFromScript</method> <m>tclScript</m></command>
-        <desc> ...todo...  Appends the nodes created in the <m>tclScript</m> by
+        <desc>Appends the nodes created in the <m>tclScript</m> by
 Tcl functions, which have been built using <m>dom createNodeCmd</m>, to the
 given node.</desc>
       </commanddef>
@@ -379,20 +379,25 @@ mode.</desc>
 
       <commanddef>
         <command><method>toXPath</method></command>
-        <desc> ...todo...  Returns a XPath, which exactly addresses the given
+        <desc>Returns a XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>xslt</method></command>
-        <desc> ...todo...  Applies a XSLT transformation on the whole document
-of the node object using the XSLT document of the given node. Returns a
-document object containing the result document of that transformation.</desc>
+        <command><method>xslt</method> <option>?-parameters
+parameterList?</option> <m>stylesheet</m> <m>?outputVar?</m></command>
+
+        <desc>Applies a XSLT transformation on the whole document of the node
+object using the XSLT <m>stylesheet</m> (given as domDoc). Returns a document
+object containing the result document of that transformation and stores it in
+optional <m>outputVar</m>. The optional <m>-parameters</m> option sets top
+level &lt;xsl:param&gt; to string values. The <m>parameterList</m> has to be a
+tcl list consisting of parameter name and value pairs.</desc>
       </commanddef>
 
       <commanddef>
-        <command><m>attrName</m></command>
+        <command><m>@attrName</m></command>
         <desc> Returns the value of the attribute <m>attrName</m>.  Short cut
 for <m>getAttribute</m>.</desc>
       </commanddef>
