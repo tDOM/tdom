@@ -6,6 +6,7 @@
 #    xslt-1.*: xpath Lexer/parser tests
 #    xslt-2.*: xslt method command variants, -parameters option
 #    xslt-3.*: xslt vars, scope, parameters
+#    xslt-4.*: xslt transformations on modified/created from the scratch docs
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -488,6 +489,26 @@ test xslt-3.1 {xslt variable scope} {
     $xslt delete
     set errMsg
 } {Variable "main" has not been declared.}
+
+test xslt-4.1 {xslt transformation of a source which was modifed after parsing} {
+    dom parse -baseurl file:///tmp/abc.xml {<test/>} doc
+    $doc documentElement root
+    $root appendXML <child/>
+    dom parse {<xsl:stylesheet 
+    version="1.0" 
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <xsl:template match="/">
+    <xsl:copy-of select="."/>
+    </xsl:template>
+    </xsl:stylesheet>} xslDoc
+    
+    $root xslt $xslDoc newDoc
+    set result [$newDoc asXML -indent none]
+    $doc delete
+    $xslDoc delete
+    $newDoc delete
+    set result
+} {<test><child/></test>}
 
 # cleanup
 ::tcltest::cleanupTests

@@ -2380,7 +2380,7 @@ char *findBaseURI (
     do {
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
-                                          (char*)node->nodeNumber);
+                                          (char*)node);
             baseURI = (char *)Tcl_GetHashValue (entryPtr);
             break;
         }
@@ -2395,7 +2395,7 @@ char *findBaseURI (
         node = orgNode->ownerDocument->rootNode;
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
-                                          (char*)node->nodeNumber);
+                                          (char*)node);
             baseURI = (char *)Tcl_GetHashValue (entryPtr);
         }
     }

@@ -745,7 +745,7 @@ startElement(
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                 (char*) node->nodeNumber,
+                                 (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
@@ -1073,7 +1073,7 @@ characterDataHandler (
         if (info->baseURI != XML_GetBase (info->parser)) {
             info->baseURI  = XML_GetBase (info->parser);
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*) node->nodeNumber, &hnew);
+                                     (char*) node, &hnew);
             Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
             node->nodeFlags |= HAS_BASEURI;
         }
@@ -1145,7 +1145,7 @@ commentHandler (
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                 (char*) node->nodeNumber,
+                                 (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
@@ -1222,7 +1222,7 @@ processingInstructionHandler(
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                 (char*) node->nodeNumber,
+                                 (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
         node->nodeFlags |= HAS_BASEURI;
@@ -1556,10 +1556,6 @@ domReadDocument (
         domModuleInitialize();
     }
 
-#ifndef TCL_THREADS
-    domUniqueNodeNr = 0;
-#endif
-    
     doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
     if (extResolver) {
         doc->extResolver = extResolver;
@@ -1625,7 +1621,7 @@ domReadDocument (
         lc->column       = -1;
     }
     if (XML_GetBase (info.parser) != NULL) {
-        h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode->nodeNumber,
+        h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info.parser)));
         rootNode->nodeFlags |= HAS_BASEURI;
@@ -1934,9 +1930,10 @@ domFreeNode (
     int               dontfree
 )
 {
-    int shared = 0;
-    domNode     *child, *ctemp;
-    domAttrNode *atemp, *attr, *aprev;
+    int            shared = 0;
+    domNode       *child, *ctemp;
+    domAttrNode   *atemp, *attr, *aprev;
+    Tcl_HashEntry *entryPtr;
 
     if (node == NULL) {
         DBG(fprintf (stderr, "null ptr in domFreeNode (dom.c) !\n");)
@@ -1995,6 +1992,12 @@ domFreeNode (
             attr = attr->nextSibling;
             FREE (atemp->nodeValue);
             domFree ((void*)atemp);
+        }
+        if (node->nodeFlags & HAS_BASEURI) {
+            entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
+                                          (char*)node);
+            FREE ((char *) Tcl_GetHashValue (entryPtr));
+            Tcl_DeleteHashEntry (entryPtr);
         }
         domFree ((void*)node);
 
@@ -4243,7 +4246,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         }
         if (XML_GetBase (info->parser) != NULL) {
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*)rootNode->nodeNumber,
+                                     (char*)rootNode,
                                      &hnew);
             Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
             rootNode->nodeFlags |= HAS_BASEURI;

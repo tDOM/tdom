@@ -1082,10 +1082,6 @@ XML_SimpleParseDocument (
     domNode       *rootNode;
     domDocument   *doc = domCreateEmptyDoc();
 
-#ifndef TCL_THREADS
-    domUniqueNodeNr = 0;
-#endif
-
     if (extResolver) {
         doc->extResolver = extResolver;
         Tcl_IncrRefCount(extResolver);
