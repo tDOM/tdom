@@ -4,22 +4,22 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80ab028">NAME</a> · <a href="#SECTid80ab0a0">SYNOPSIS</a> · <a href="#SECTid80ab258">DESCRIPTION</a> · <a href="#SECTid80ab398">COMMAND OPTIONS</a> · <a href="#SECTid80acfe0"> COMMAND METHODS </a> · <a href="#SECTid80add78">Callback Command Return Codes</a> · <a href="#SECTid80ade68">SEE ALSO</a> · <a href="#SECTid80adee0">KEYWORDS</a>
+<a href="#SECTid80acb10">NAME</a> · <a href="#SECTid80acb88">SYNOPSIS</a> · <a href="#SECTid80acd40">DESCRIPTION</a> · <a href="#SECTid80ace80">COMMAND OPTIONS</a> · <a href="#SECTid80aeac8"> COMMAND METHODS </a> · <a href="#SECTid80af860">Callback Command Return Codes</a> · <a href="#SECTid80af950">SEE ALSO</a> · <a href="#SECTid80af9c8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTid80ab028">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTid80acb10">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTid80ab0a0">SYNOPSIS</a></h2><pre class="syntax">
+    <h2><a name="SECTid80acb88">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require tdom</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml::parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-    <h2><a name="SECTid80ab258">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTid80acd40">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
@@ -36,7 +36,7 @@ in memory "tDOM" DOM tree, while the parser is parsing the input.</p><p>It is po
 and C level handlers for most of the events. If the event occurs, they are
 called in turn.</p>
 
-    <h2><a name="SECTid80ab398">COMMAND OPTIONS</a></h2><dl class="optlist">
+    <h2><a name="SECTid80ace80">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -616,7 +616,7 @@ enddoctypedeclcommand scripts, if set, are not called.</dd>
         
 
       </dl>
-    <h2><a name="SECTid80acfe0"> COMMAND METHODS </a></h2><dl class="commandlist">
+    <h2><a name="SECTid80aeac8"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -645,7 +645,9 @@ named handler set is returned.</p>
 <b class="cmd">parser</b> <b class="method">free</b>
 </dt>
 
-          <dd><p>Deletes the parser and the parser command.</p></dd>
+          <dd><p>Deletes the parser and the parser command. A parser cannot
+be freed from within one of its handler callbacks (neither directly nor
+indirectly) and will raise a tcl error in this case.</p></dd>
         
 
         
@@ -711,7 +713,9 @@ location.</p></dd>
 </dt>
 
           <dd><p>Parses the XML string <i class="m">data</i>. The event callback
-scripts will be called, as there triggering events happens.</p></dd>
+scripts will be called, as there triggering events happens. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.</p></dd>
         
 
         
@@ -722,7 +726,9 @@ scripts will be called, as there triggering events happens.</p></dd>
 (starting at the current access position, without any seek) up to the end of
 file condition and parses that data. The channel encoding is respected. Use the
 helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
-you want to use this method.</p></dd>
+you want to use this method. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.</p></dd>
         
 
         
@@ -732,8 +738,10 @@ you want to use this method.</p></dd>
 
           <dd><p>Reads the XML data directly out of the file with the
 filename <i class="m">filename</i> and parses that data. This is done with low level file
-operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
-applicable, this is the fastest way, to parse XML data.</p></dd>
+operations. The XML data must be in US-ASCII, ISO-8859-1, UTF-8 or UTF-16
+encoding. If applicable, this is the fastest way, to parse XML data. This
+method cannot be used from within a callback (neither directly nor indirectly)
+of the parser to be used and will raise an error in this case.</p></dd>
         
 
         
@@ -742,11 +750,13 @@ applicable, this is the fastest way, to parse XML data.</p></dd>
 </dt>
 
           <dd><p>Resets the parser in preparation for parsing another
-document.</p></dd>
+document. A parser cannot be reseted from within one of its handler callbacks
+(neither directly nor indirectly) and will raise a tcl error in this
+cases.</p></dd>
         
       </dl>
 
-    <h2><a name="SECTid80add78">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTid80af860">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
 than "ok" or "error". All callbacks may in addition return
 "break" or "continue".</p><p>If a callback script returns an "error" error code then
@@ -759,13 +769,13 @@ processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    <h2><a name="SECTid80ade68">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid80af950">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTid80adee0">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+    <h2><a name="SECTid80af9c8">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
   </div><hr class="navsep"><div class="navbar" align="center">
-<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
+<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

@@ -590,7 +590,9 @@ named handler set is returned.</p>
         <commanddef>
           <command><cmd>parser</cmd> <method>free</method></command>
 
-          <desc><p>Deletes the parser and the parser command.</p></desc>
+          <desc><p>Deletes the parser and the parser command. A parser cannot
+be freed from within one of its handler callbacks (neither directly nor
+indirectly) and will raise a tcl error in this case.</p></desc>
         </commanddef>
 
         <commanddef>
@@ -652,7 +654,9 @@ location.</p></desc>
           <command><cmd>parser</cmd> <method>parse</method> <m>data</m></command>
 
           <desc><p>Parses the XML string <m>data</m>. The event callback
-scripts will be called, as there triggering events happens.</p></desc>
+scripts will be called, as there triggering events happens. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.</p></desc>
         </commanddef>
 
         <commanddef>
@@ -661,7 +665,9 @@ scripts will be called, as there triggering events happens.</p></desc>
 (starting at the current access position, without any seek) up to the end of
 file condition and parses that data. The channel encoding is respected. Use the
 helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
-you want to use this method.</p></desc>
+you want to use this method. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.</p></desc>
         </commanddef>
 
         <commanddef>
@@ -669,15 +675,19 @@ you want to use this method.</p></desc>
 
           <desc><p>Reads the XML data directly out of the file with the
 filename <m>filename</m> and parses that data. This is done with low level file
-operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
-applicable, this is the fastest way, to parse XML data.</p></desc>
+operations. The XML data must be in US-ASCII, ISO-8859-1, UTF-8 or UTF-16
+encoding. If applicable, this is the fastest way, to parse XML data. This
+method cannot be used from within a callback (neither directly nor indirectly)
+of the parser to be used and will raise an error in this case.</p></desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>parser</cmd> <method>reset</method></command>
 
           <desc><p>Resets the parser in preparation for parsing another
-document.</p></desc>
+document. A parser cannot be reseted from within one of its handler callbacks
+(neither directly nor indirectly) and will raise a tcl error in this
+cases.</p></desc>
         </commanddef>
       </commandlist>
     </section>
