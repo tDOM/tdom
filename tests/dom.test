@@ -4,8 +4,15 @@
 # tDOM.
 # Tested commands and object commands:
 # dom:
-#    dom-1.*: createDocument, createDocumentNS
-#    dom-2.*: parse
+#    dom-1.*:  createDocument, createDocumentNS
+#    dom-2.*:  dom parse
+#    dom-3.*:  documentElement
+#    dom-4.*:  parsing/creating docs with NSes, setAttributeNS
+#    dom-6.*:  appendChild
+#    dom-7.*:  getElementsByTagName
+#    dom-8.*:  getElementsByTagNameNS
+#    dom-9.*:  nodeValue  
+#    dom-10.*: setAttribute
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -272,6 +279,16 @@ test dom-4.15 {setAttributeNS - use as setAttribute} {
     set result
 } {attr1}
 
+test dom-4.16 {setAttributeNS - set multiple Attributes at once} {
+    set doc [dom createDocumentNS uri1 "p1:root"]
+    set root [$doc documentElement]
+    $root setAttributeNS "" xmlns:p2 uri2
+    $root setAttributeNS uri1 p1:a1 1 uri1 p1:a2 2 uri2 p2:a3 3 "" a4 4
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<p1:root xmlns:p1="uri1" xmlns:p2="uri2" p1:a1="1" p1:a2="2" p2:a3="3" a4="4"/>
+}
 
 test dom-5.1 {insert FQ Element} {
     set doc [dom parse {<root xmlns:p="uri1"/>}]
@@ -545,10 +562,112 @@ test dom-8.20 {getElementsByTagNameNS - not a element node} {
 
 $doc delete
 
+set doc [dom parse {
+<root xmlns="defaultNS1">
+  <elem1 xmlns="">
+    <elem2 xmlns="defaultNS2">
+      <elem3 xmlns=""/>
+    </elem2>
+  </elem1>
+</root>}]
+set root [$doc documentElement]
+
+test dom-8.21 {getElementsByTagNameNS - unset default NS} {
+    set nodes [$root getElementsByTagNameNS "" *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem1 elem3 }
+   
+test dom-8.22 {getElementsByTagName - unset default NS} {
+    set nodes [$root getElementsByTagName *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem1 elem3 }
+
+test dom-8.23 {getElementsByTagNameNS - unset default NS} {
+    set nodes [$root getElementsByTagNameNS * *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem1 elem2 elem3 }
+
+test dom-8.24 {getElementsByTagNameNS - unset default NS} {
+    set nodes [$doc getElementsByTagNameNS * *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {root elem1 elem2 elem3 }
+
+$doc delete
+
+set doc [dom parse {
+<root>text node<!--comment node--><?mytarget PI node?></root>}]
+set root [$doc documentElement]
+
+test dom-9.1 {nodeValue - TEXT_NODE} {
+    [$root firstChild] nodeValue
+} {text node}
+
+test dom-9.2 {nodeValue - COMMENT_NODE} {
+    $root firstChild firstChild
+    $firstChild nextSibling commentNode
+    $commentNode nodeValue
+} {comment node}
+
+test dom-9.3 {nodeValue - PROCESSING_INSTRUCTION_NODE} {
+    [$root lastChild] nodeValue
+} {PI node}
+
+test dom-9.4 {nodeValue - CDATA_SECTION_NODE} {
+    set cdNode [$doc createCDATASection "cdata section node"]
+    $root appendChild $cdNode
+    [$root lastChild] nodeValue
+} {cdata section node}
+
+test dom-9.5 {nodeValue with set - TEXT_NODE} {
+    set result [[$root firstChild] nodeValue "new text value"]
+    append result "/" [[$root firstChild] nodeValue]
+} {text node/new text value}
+
+test dom-9.6 {nodeValue with set - COMMENT_NODE} {
+    set textNode [$root firstChild]
+    set node [$textNode nextSibling]
+    set result [$node nodeValue  "new comment text"]
+    append result "/" [$commentNode nodeValue]
+} {comment node/new comment text}
+
+test dom-9.7 {nodeValue - PROCESSING_INSTRUCTION_NODE does not allow setting} {
+    set piNode [$root selectNodes processing-instruction('mytarget')]
+    catch {$piNode nodeValue "new pi value"}
+} {1}
+
+test dom-9.8 {nodeValue - CDATA_SECTION_NODE} {
+    set result [[$root lastChild] nodeValue "new text"]
+    append result "/" [[$root lastChild] nodeValue]
+} {cdata section node/new text}
+
+$doc delete
+
+set doc [dom parse <foo/>]
+set root [$doc documentElement]
+
+test dom-10.1 {setAttribute - set multiple attributes at once} {
+    $root setAttribute a1 1 a2 2 a3 3 a4 4 a5 5 a6 6 a7 7 a8 8
+    $root asXML
+} {<foo a1="1" a2="2" a3="3" a4="4" a5="5" a6="6" a7="7" a8="8"/>
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return
-
-
-
 
