@@ -29,6 +29,7 @@
 #    dom-27.*: target, data
 #    dom-28.*: getAttributeNS
 #    dom-29.*: ownerDocument 
+#    dom-30.*: startBefore
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
@@ -924,6 +925,17 @@ test dom-13.8 {appendFromScript - textnode with -disableOutputEscaping} {
     set result
 } {<root><p>Some <b>important</b> stuff</p></root>}
 
+test dom-13.9 {appendFromScript while fragment list isn't empty (leaks memory)} {knownBug} {
+    set doc [dom parse <root>text</root>]
+    set root [$doc documentElement]
+    $root removeChild [$root firstChild]
+    $root appendFromScript {
+        nodeCmds::t "another text"
+    }
+    set result [llength [$root childNodes]]
+    $doc delete
+    set result
+} {1}
 
 test dom-14.1 {appendFromList} {
     set doc [dom createDocument root]
@@ -1465,6 +1477,66 @@ test dom-29.1 {ownerDocument} {
     set result
 } {<document><foo1/><foo2/></document>}
 
+set doc [dom parse {<root><e/>text<!-- comment --><e><e/></e></root>}]
+set root [$doc documentElement]
+
+test dom-30.1 {startBefore} {
+    catch {$root startBefore} 
+} {1}
+
+test dom-30.2 {startBefore} {
+    set firstChild [$root firstChild]
+    catch {$root start $firstChild foo}
+} {1}
+
+test dom-30.3 {startBefore} {
+    set result [catch {$root startBefore notaNode} errMsg]
+    lappend result $errMsg
+} {1 {parameter not a domNode!}}
+
+test dom-30.4 {startBefore} {
+    set firstChild [$root firstChild]
+    $root startBefore $firstChild
+} {1}
+
+test dom-30.5 {startBefore} {
+    set firstChild [$root firstChild]
+    $root startBefore $firstChild
+} {1}
+
+test dom-30.6 {startBefore} {
+    set firstChild [$root firstChild]
+    $firstChild startBefore $root
+} {-1}
+
+test dom-30.7 {startBefore} {
+    set firstChild [$root firstChild]
+    $firstChild startBefore $firstChild
+} {0}
+
+test dom-30.8 {startBefore} {
+    set doc1 [dom parse <root/>]
+    set root1 [$doc1 documentElement]
+    set result [catch {$root startBefore $root1} errMsg]
+    lappend result $errMsg
+    $doc1 delete
+    set result
+} {1 {Cannot compare the relative order of nodes out of different documents.}}
+
+test dom-30.9 {startBefore} {
+    set firstChild [$root firstChild]
+    set newNode [$doc createElement newNode]
+    $root insertBefore $newNode $firstChild
+    $newNode startBefore $firstChild
+} {1}
+
+test dom-30.10 {startBefore} {
+    set newNode [$doc createTextNode "new text node"]
+    set result [catch {$root startBefore $newNode} errMsg]
+    lappend result $errMsg
+} {1 {Cannot compare the relative order of a node with a node out of the fragment list.}}
+
+$doc delete
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
