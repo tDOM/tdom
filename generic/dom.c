@@ -1868,7 +1868,8 @@ void
 domFreeNode (
     domNode         * node,
     domFreeCallback   freeCB,
-    void            * clientData
+    void            * clientData,
+    int               dontfree
 )
 {
     int shared = 0;
@@ -1880,8 +1881,23 @@ domFreeNode (
         return;
     }
     TDomThreaded (
-        shared = node->ownerDocument && node->ownerDocument->refCount > 0;
+        shared = node->ownerDocument && node->ownerDocument->refCount > 1;
     )
+ 
+    /*----------------------------------------------------------------
+    |   dontfree instruct us to walk the node tree and apply the 
+    |   user-supplied callback, *w/o* actually deleting nodes.
+    |   This is normally done when a thread detaches from the
+    |   shared DOM tree and wants to garbage-collect all nodecmds
+    |   in it's interpreter which attached to the tree nodes.
+    \---------------------------------------------------------------*/
+
+    if (dontfree) {
+        shared = 1;
+    } else {
+        node->nodeFlags |= IS_DELETED;
+    }
+
     if (node->nodeType == ATTRIBUTE_NODE && !shared) {
         attr = ((domAttrNode*)node)->parentNode->firstAttr;
         aprev = NULL;
@@ -1902,8 +1918,10 @@ domFreeNode (
         child = node->lastChild;
         while (child) {
             ctemp = child->previousSibling;
-            if (freeCB) freeCB(child, clientData);
-            domFreeNode (child, freeCB, clientData);
+            if (freeCB) {
+                freeCB(child, clientData);
+            }
+            domFreeNode (child, freeCB, clientData, dontfree);
             child = ctemp;
         }
         if (shared) {
@@ -1942,19 +1960,26 @@ domDeleteNode (
     void            * clientData
 )
 {
+    int shared = 0;
     domDocument *doc;
 
     if (node->nodeType == ATTRIBUTE_NODE) {
         panic("domDeleteNode on ATTRIBUTE_NODE not supported!");
     }
-
+    TDomThreaded (
+        shared = node->ownerDocument->refCount > 1;
+    )
+    doc = node->ownerDocument;
     if (node->parentNode == node->ownerDocument->rootNode) {
-        doc = node->ownerDocument;
-        if (freeCB) freeCB(node, clientData);
-        domFreeNode(node, freeCB, clientData);
-        doc->rootNode->firstChild = NULL;
         MutationEvent3(DOMNodeRemoved, childToRemove, node);
         MutationEvent2(DOMSubtreeModified, node);
+        if (freeCB) {
+            freeCB(node, clientData);
+        }
+        if (shared == 0) {
+            domFreeNode(node, freeCB, clientData, 0);
+        }
+        doc->rootNode->firstChild = NULL;
         return OK;
     }
 
@@ -1975,13 +2000,32 @@ domDeleteNode (
             node->parentNode->lastChild = node->previousSibling;
         }
     }
-    if (node->ownerDocument->fragments == node) {
-        node->ownerDocument->fragments = node->nextSibling;
+    if (doc->fragments == node) {
+        doc->fragments = node->nextSibling;
     }
-    if (freeCB) freeCB(node, clientData);
-    domFreeNode(node, freeCB, clientData);
+
+    /*----------------------------------------------------------------
+    |   for shared docs, append node to the delete nodes list
+    |   otherwise delete the node physically
+    \---------------------------------------------------------------*/
+    if (freeCB) {
+        freeCB(node, clientData);
+    }
+    TDomThreaded (    
+        if (shared) {
+            if (doc->deletedNodes) {
+                doc->deletedNodes->nextDeleted = node;
+            } else {
+                doc->deletedNodes = node;
+            }
+            node->nodeFlags |= IS_DELETED;
+            node->nextDeleted = NULL;
+        }
+    )
     MutationEvent3(DOMNodeRemoved, childToRemove, node);
     MutationEvent2(DOMSubtreeModified, node);
+    domFreeNode(node, freeCB, clientData, 0);
+
     return OK;
 }
 
@@ -2016,8 +2060,10 @@ domFreeDocument (
     }
     while (node) {
         next = node->nextSibling;
-        if (freeCB) freeCB(node, clientData);
-        domFreeNode (node, freeCB, clientData);
+        if (freeCB) {
+            freeCB(node, clientData);
+        }
+        domFreeNode (node, freeCB, clientData, 0);
         node = next;
     }
 
@@ -2027,8 +2073,10 @@ domFreeDocument (
     node = doc->fragments;
     while (node) {
         next = node->nextSibling;
-        if (freeCB) freeCB(node, clientData);
-        domFreeNode (node, freeCB, clientData);
+        if (freeCB) {
+            freeCB(node, clientData);
+        }
+        domFreeNode (node, freeCB, clientData, 0);
         node = next;
     }
 
@@ -2098,6 +2146,12 @@ domFreeDocument (
             }
             Tcl_DeleteHashTable(&doc->attrNames);
             domLocksDetach(doc);
+            node = doc->deletedNodes;
+            while (node) {
+                next = node->nextSibling;
+                domFreeNode (node, freeCB, clientData, 0);
+                node = next;
+            }
         }
     )
 

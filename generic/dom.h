@@ -380,6 +380,7 @@ typedef int domNodeFlags;
 
 #define HAS_LINE_COLUMN           1
 #define VISIBLE_IN_TCL            2
+#define IS_DELETED                4
 #define HAS_BASEURI               8
 #define DISABLE_OUTPUT_ESCAPING  16
 
@@ -439,6 +440,9 @@ typedef struct domDocument {
     unsigned int      documentNumber;
     struct domNode   *documentElement;
     struct domNode   *fragments;
+#ifdef TCL_THREADS
+    struct domNode   *deletedNodes;
+#endif
     struct domNS    **namespaces;
     int               nsptr;
     int               nslen;
@@ -530,6 +534,9 @@ typedef struct domNode {
     domString           nodeName;  /* now the element node specific fields */
     struct domNode     *firstChild;
     struct domNode     *lastChild;
+#ifdef TCL_THREADS
+    struct domNode     *nextDeleted;
+#endif
     struct domAttrNode *firstAttr;
 
 } domNode;
@@ -632,7 +639,7 @@ domDocument *  domReadDocument (XML_Parser parser,
                                 Tcl_Interp *interp);
 
 void           domFreeDocument (domDocument *doc, domFreeCallback freeCB, void * clientData);
-void           domFreeNode (domNode *node, domFreeCallback freeCB, void *clientData);
+void           domFreeNode (domNode *node, domFreeCallback freeCB, void *clientData, int dontfree);
 
 domTextNode *  domNewTextNode (domDocument *doc,
                                char        *value,
