@@ -2,10 +2,10 @@
 |   Copyright (c) 2000 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
-|   A (partial) XSLT implementation for tDOM, according to the W3C
+|   A XSLT implementation for tDOM, according to the W3C
 |   recommendation (16 Nov 1999).
 |   See http://www.w3.org/TR/1999/REC-xslt-19991116 for details.
 |
@@ -157,6 +157,7 @@ typedef struct xsltSubDoc
     xsltExclExtNS      * extensionNS;
     int                  fwCmpProcessing;
     int                  isStylesheet;
+    int                  fixedXMLSource;
     int                  mustFree;
     
     struct xsltSubDoc  * next;
@@ -466,8 +467,8 @@ static int ExecActions (xsltState *xs, xpathResultSet *context,
 
 static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
                                           domDocument *xsltDoc, char *baseURI,
-                                          char *href, int isXSLTdoc,
-                                          char **errMsg);
+                                          char *href, int isStylesheet,
+                                          int fixedXMLSource, char **errMsg);
 
 
 /*----------------------------------------------------------------------------
@@ -744,6 +745,7 @@ static int xsltAddExternalDocument (
     xsltState       * xs,
     char            * baseURI,
     char            * str,
+    int               fixedXMLSource,
     xpathResultSet  * result,
     char           ** errMsg
 )
@@ -771,7 +773,8 @@ static int xsltAddExternalDocument (
         }
         extDocument = getExternalDocument (
                          (Tcl_Interp*)xs->orig_funcClientData,
-                         xs, xs->xsltDoc, baseURI, str, 0, errMsg);
+                         xs, xs->xsltDoc, baseURI, str, 0, fixedXMLSource,
+                         errMsg);
         if (extDocument) {
             rsAddNode (result, extDocument->rootNode);
         } else {
@@ -2204,7 +2207,7 @@ static int xsltXPathFuncs (
                         }
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str,
+                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2232,7 +2235,7 @@ static int xsltXPathFuncs (
                     str = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
-                if (xsltAddExternalDocument(xs, baseURI, str,
+                if (xsltAddExternalDocument(xs, baseURI, str, 1,
                                             result, errMsg) < 0) {
                     if (freeStr) FREE(str);
                     return -1;
@@ -2269,7 +2272,7 @@ static int xsltXPathFuncs (
                         freeStr = 0;
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str,
+                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2281,7 +2284,7 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
-                if (xsltAddExternalDocument(xs, baseURI, str,
+                if (xsltAddExternalDocument(xs, baseURI, str, 0,
                                             result, errMsg) < 0) {
                     FREE(str);
                     return -1;
@@ -5556,6 +5559,7 @@ getExternalDocument (
     char        *baseURI,
     char        *href,
     int          isStylesheet,
+    int          fixedXMLSource,
     char       **errMsg
     )
 {
@@ -5707,6 +5711,7 @@ getExternalDocument (
     sdoc->fwCmpProcessing = 0;
     sdoc->mustFree = 1;
     sdoc->isStylesheet = isStylesheet;
+    sdoc->fixedXMLSource = fixedXMLSource;
     if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
             Tcl_DeleteHashTable (&(sdoc->keyData));
@@ -6178,7 +6183,8 @@ static int processTopLevel (
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                      node->ownerDocument,
-                                                     baseURI, href, 1, errMsg);
+                                                     baseURI, href, 1, 0, 
+                                                     errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -6211,7 +6217,8 @@ static int processTopLevel (
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                      node->ownerDocument,
-                                                     baseURI, href, 1, errMsg);
+                                                     baseURI, href, 1, 0,
+                                                     errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -6771,7 +6778,7 @@ xsltResetState (
            and the already parsed XSLT documents information is
            preserved, therefor we don't touch extensionNS and extensionNS
            information */
-        if (sdsave->isStylesheet) {
+        if (sdsave->isStylesheet || sdsave->fixedXMLSource) {
             
             if (lastSubDoc) {
                 lastSubDoc->next = sdsave;
@@ -6917,6 +6924,7 @@ xsltCompileStylesheet (
     sdoc->isStylesheet = 1;
     sdoc->next = xs->subDocs;
     sdoc->mustFree = !guardXSLTTree;
+    sdoc->fixedXMLSource = 0;
     xs->subDocs = sdoc;
 
     xs->currentSubDoc = sdoc;
@@ -7067,6 +7075,7 @@ int xsltProcess (
     sdoc->fwCmpProcessing = 0;
     sdoc->isStylesheet = 0;
     sdoc->mustFree = 0;
+    sdoc->fixedXMLSource = 0;
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
 
