@@ -3940,6 +3940,7 @@ int tcldom_parse (
         }
     } else {
         xml_string = NULL;
+        xml_string_len = 0;
         if (takeSimpleParser || takeHTMLParser) {
             Tcl_AppendResult(interp,
                 "simple and/or HTML parser(s) don't support channel reading", NULL);
