@@ -464,6 +464,7 @@ typedef struct TclGenExpatInfo {
     CHandlerSet *firstCHandlerSet;
 } TclGenExpatInfo;
 
+#include "dom.h"
 #include "tdomDecls.h"
 
 
