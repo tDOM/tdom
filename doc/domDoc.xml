@@ -227,6 +227,18 @@ document of the transformation and stores it in the optional <m>outputVar</m>,
 if that was given.</p>
  </desc>
       </commanddef>
+
+      <commanddef>
+        <command><method>normalize</method> <m>?-forXPath?</m></command>
+        <desc>Puts all Text nodes in the document
+into a "normal" form where only structure (e.g., elements,
+comments, processing instructions and CDATA
+sections) separates Text nodes, i.e., there
+are neither adjacent Text nodes nor empty Text nodes. If the option
+<m>-forXPath</m> is given, all CDATA sections in the nodes are
+converted to text nodes, as a first step before the
+normalization. </desc>
+      </commanddef>
       </commandlist>
 
       <p>Otherwise, if an unknown method name is given, the command with the

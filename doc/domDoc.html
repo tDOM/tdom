@@ -4,16 +4,16 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid908">DESCRIPTION </a> · <a href="#SECTid1362">SEE ALSO</a> · <a href="#SECTid1371">KEYWORDS</a>
+<a href="#SECTid80aace8">NAME</a> · <a href="#SECTid80aad60">SYNOPSIS</a> · <a href="#SECTid80aae28">DESCRIPTION </a> · <a href="#SECTid80ac818">SEE ALSO</a> · <a href="#SECTid80ac890">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80aace8">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid80aad60">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid908">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
+  <h2><a name="SECTid80aae28">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
 methods should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
@@ -232,17 +232,31 @@ document of the transformation and stores it in the optional <i class="m">output
 if that was given.</p>
  </dd>
       
+
+      
+        <dt>
+<b class="method">normalize</b> <i class="m">?-forXPath?</i>
+</dt>
+        <dd>Puts all Text nodes in the document
+into a "normal" form where only structure (e.g., elements,
+comments, processing instructions and CDATA
+sections) separates Text nodes, i.e., there
+are neither adjacent Text nodes nor empty Text nodes. If the option
+<i class="m">-forXPath</i> is given, all CDATA sections in the nodes are
+converted to text nodes, as a first step before the
+normalization. </dd>
+      
       </dl><p>Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace <tt class="samp">::dom::domDoc</tt> is
 tried to be executed. This allows quick method additions on Tcl level.</p><p>Newly created nodes are appended to a hidden fragment list. If there
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTid1362">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid80ac818">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTid1371">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTid80ac890">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
