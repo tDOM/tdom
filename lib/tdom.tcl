@@ -2,7 +2,7 @@
 #   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 #----------------------------------------------------------------------------
 #
-#   $Header$
+#   $Id$
 #
 #
 #   The higher level functions of tDOM written in plain Tcl.
@@ -54,6 +54,8 @@ namespace eval ::dom {
 namespace eval ::tDOM { 
     variable extRefHandlerDebug 0
     variable useForeignDTD ""
+
+    namespace export xmlOpenFile xmlReadFile extRefHandler baseURL
 }
 
 #----------------------------------------------------------------------------
@@ -675,10 +677,19 @@ proc tDOM::IANAEncoding2TclEncoding {IANAName} {
         "gb2312"      {return gb2312}
         "big5"        {return big5}
         "cp866"       {return cp866}
+        "cp1250"      {return cp1250}
+        "cp1253"      {return cp1253}
+        "cp1254"      {return cp1254}
+        "cp1255"      {return cp1255}
+        "cp1256"      {return cp1256}
+        "cp1257"      {return cp1257}
 
         "windows-1251" -
         "cp1251"      {return cp1251}
-        
+
+        "windows-1252" -
+        "cp1252"      {return cp1252}    
+
         "iso_8859-1:1987" -
         "iso-ir-100" -
         "iso_8859-1" -
