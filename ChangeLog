@@ -1,3 +1,8 @@
+2003-12-08  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc
+        * win/makefile805.vc: Also updated to verson nr. 0.8.0.
+
 2003-11-28  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Switched back to Tcl_Panic() in one case,
