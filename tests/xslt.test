@@ -866,11 +866,11 @@ Parsed symbols:
 # xslt identity transformation and returns the result tree of that
 # transformation. This is used to test, that the result tree of an xslt
 # transformation could be used as any 'ordinary' tree created with
-# [dom parse]. It is here, because I didn't want to hold them seperated.
+# [dom parse]. It is here, because I didn't want to hold it seperated.
 # It is commented out, because some of the tests in the sourced test files
-# need line/column or basURI Information, to work correctly, and this
+# need line/column or baseURI information, to work correctly, and this
 # information is not preserved by an xslt identity transformation and
-# I was up to now to lazy, to trick around this few tests with some
+# I was up to now too lazy, to trick around this few tests with some
 # test constraints.
 # 
 # set identityTransformation [dom parse {<xsl:stylesheet version="1.0"
