@@ -175,26 +175,26 @@ iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</dd>
 <b class="cmd">dom</b> <b class="method">createNodeCmd</b>
 <i class="m">(element|comment|text|cdata|pi)Node</i> <i class="m">commandName</i>
 </dt>
-          <dd>This method creates Tcl commands, which creates tDOM nodes, if
-invoked. However this commands are only avaliable inside a script given to the
-domNode method <i class="m">appendFromScript</i>. If a command, created with
-<i class="m">createNodeCmd</i> is invoked in any other context, it returns error.  The
-created command <i class="m">commandName</i> replaces any existend command or procedure
-there may have been by that name. If the <i class="m">commandName</i> includes any
-namespace qualifiers, the command is created in the specified namespace.
+          <dd>This method creates Tcl commands, which in turn create tDOM nodes.
+Tcl commands created by this command are only avaliable inside a script given to the
+domNode method <i class="m">appendFromScript</i>. If a command created with
+<i class="m">createNodeCmd</i> is invoked in any other context, it will return error. The
+created command <i class="m">commandName</i> replaces any existing command or procedure
+with that name. If the <i class="m">commandName</i> includes any namespace qualifiers, 
+it is created in the specified namespace.
 
-<p>If such a command is invoked inside a script, which was given as argument to
-the domNode method <i class="m">appendFromScript</i>, the command creates a new node and
-appends this node at the end of the childlist of the invoking element
-node. Each command creates always the same type of node. Which type of node is
-created by the command is determined by the the first argument to the
-<i class="m">createNodeCmd</i>. The synax of the created command depends on type of node,
-that it creates.</p>
+<p>If such command is invoked inside a script given as argument to
+the domNode method <i class="m">appendFromScript</i>, it creates a new node and
+appends this node at the end of the child list of the invoking element
+node. Each command creates always the same type of node. Which type of 
+node is created by the command is determined by the first argument to the
+<i class="m">createNodeCmd</i>. The syntax of the created command depends on the 
+type of the node it creates.</p>
 
 <p>If the first argument of the method is <i class="m">elementNode</i>, the created
-command will create an element node, if invoked. The tag name of the created
-node is <i class="m">commandName</i> without namespace qualifiers, if there any. The
-syntax of the created command is:</p>
+command will create an element node. The tag name of the created
+node is <i class="m">commandName</i> without namespace qualifiers. The syntax of the 
+created command is:</p>
 
 <pre class="syntax">
 <b class="cmd">elementNodeCmd</b> <i class="m">?attributeName attributeValue ...? ?script?</i>
@@ -202,44 +202,42 @@ syntax of the created command is:</p>
 <b class="cmd">elementNodeCmd</b> <i class="m">name_value_list script</i>
 </pre>
 
-<p>The command syntax allows three different ways, to specify the attributes of
-the resulting element. They could be specified with <i class="m">attributeName
-attributeValue</i> argument pairs, or in an &quot;option style&quot; way with
+<p>The command syntax allows three different ways to specify the attributes of
+the resulting element. These could be specified with <i class="m">attributeName
+attributeValue</i> argument pairs, in an &quot;option style&quot; way with
 <i class="m">-attriubteName attributeValue</i> argument pairs (the '-' character is only
-syntactical sugar and will be stripped) or with a tcl list, which elements are
-interpreted successive as attribute name and the according attribute value. The
-attribute name elements in the list may have a leading '-' character, which
-will be stripped.</p>
+syntactical sugar and will be stripped off) or as a Tcl list with elements
+interpreted as attribute name and the corresponding attribute value.
+The attribute name elements in the list may have a leading '-' character, which
+will be stripped off.</p>
 
-<p>Every <i class="m">elementNodeCmd</i> accepts an optional tcl script as last
-argument. This script is evaluated as recursive <i class="m">appendFromScript</i> script,
-with the node, created by the <i class="m">elementNodeCmd</i> as parent of the nodes,
-created with the script. This allows, to create an element node and its content
-at once.</p>
+<p>Every <i class="m">elementNodeCmd</i> accepts an optional Tcl script as last
+argument. This script is evaluated as recursive <i class="m">appendFromScript</i> script
+with the node created by the <i class="m">elementNodeCmd</i> as parent of all nodes
+created by the script.</p>
 
-<p>If the first argument of the method is <i class="m">textNode</i>, the command will create a text node, if invoked. The syntax of the created command
-is</p>
+<p>If the first argument of the method is <i class="m">textNode</i>, the command will create
+a text node. The syntax of the created command is:</p>
 
 <pre class="syntax">
 <b class="cmd">textNodeCmd</b> ?-disableOutputEscaping? <i class="m">data</i>
 </pre>
 
-<p>If the optional flag <i class="m">-disableOutputEscaping</i> is given then the
+<p>If the optional flag <i class="m">-disableOutputEscaping</i> is given, the
 escaping of the ampersand character (&amp;) and the left angle bracket (&lt;)
-inside the data is disabled, if the text node is serialized. You should not use
-this flag until you really know, what you do.</p>
+inside the data is disabled. You should use this flag carefully.</p>
 
 <p>If the first argument of the method is <i class="m">textNode</i>, or <i class="m">cdataNode</i>,
-the command will create accordingly a comment node or CDATA section node, if
-invoked. The syntax of the created command is</p>
+the command will create an comment node or CDATA section node. The syntax of 
+the created command is:</p>
 
 <pre class="syntax">
 <b class="cmd">nodeCmd</b> <i class="m">data</i>
 </pre>
 
 <p>If the first argument of the method is <i class="m">piNode</i>, the command will
-create a processing instruction node, if invoked. The syntax of the created
-command is</p>
+create a processing instruction node. The syntax of the created
+command is:</p>
 
 <pre class="syntax">
 <b class="cmd">piNodeCmd</b> <i class="m">target data</i>
