@@ -73,6 +73,55 @@ test element-1.2 {distinct elements} {
     list [parray ::started] [parray ::ended]
 } {{Child1 1 Child2 1 Test 1} {Child1 1 Child2 1 Test 1}}
 
+proc esh-2.1 {parsername name attlist} {
+    if {$parsername == "element-2.1"} {
+        set ::result 1
+    } else {
+        set ::result 0
+    }
+}
+
+test element-2.1 {handler script} {
+    set ::result 0
+    set p [expat element-2.1 -elementstartcommand [list esh-2.1 element-2.1]]
+    $p parse <root/> 
+    $p free
+    set ::result
+} {1}
+
+proc eeh-2.2 {parsername name} {
+    if {$parsername == "element-2.2"} {
+        set ::result 1
+    } else {
+        set ::result 0
+    }
+}
+
+test element-2.2 {handler script} {
+    set ::result 0
+    set p [expat element-2.2]
+    $p configure -elementendcommand [list eeh-2.2 element-2.2]
+    $p parse <root/> 
+    $p free
+    set ::result
+} {1}
+
+test element-2.3 {declare handler proc later} {
+    set ::eshcounter 0
+    set ::eehcounter 0
+    catch {rename esh-2.3 {}}
+    catch {rename eeh-2.3 {}}
+    set p [expat -elementstartcommand esh-2.3 -elementendcommand eeh-2.3]
+    proc esh-2.3 {args} {
+        incr ::eshcounter
+    }
+    proc eeh-2.3 {args} {
+        incr ::eehcounter
+    }
+    $p parse {<root><a/><b/></root>}
+    $p free
+    list $::eshcounter $::eehcounter
+} {3 3}
 
 foreach parser [info commands element-*] {
     $parser free
