@@ -1,3 +1,12 @@
+# Features covered: XPath capabilities
+#
+# This file contains a collection of tests for the XPath engine of
+# tDOM.
+# Tested commands and object commands:
+#    xpath-1.*: Function tests
+#    xpath-2.*: i18n
+#
+# Copyright (c) 2002 Rolf Ade.
 
 test xpath-1.1 {function normalize-space} {
     set doc [dom createDocument foo]
@@ -5,6 +14,14 @@ test xpath-1.1 {function normalize-space} {
     set r [$root selectNodes {normalize-space('f  ')}]
     $doc delete
     string length $r
+} {1}
+
+test xpath-2.1 {non ASCII chars in element names} {
+     set doc [dom parse "<\u00e4\u00f6\u00fc\u00df/>"]
+     set root [$doc documentElement]
+     set nodes [$root selectNodes /\u00e4\u00f6\u00fc\u00df]
+     $doc delete
+     llength $nodes
 } {1}
 
 # cleanup
