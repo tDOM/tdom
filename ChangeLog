@@ -1,3 +1,10 @@
+2003-05-19  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/dom.*: Corrected the documentation of the
+          createDocumentNS method: the args uri and docElementName
+          were documented in the wrong order (reported by Vico
+          Klump). Minor markup changes.
+
 2003-05-16  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/dom.h 
