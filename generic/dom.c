@@ -2095,7 +2095,7 @@ domSetAttributeNS (
 {
     domAttrNode   *attr, *lastAttr;
     Tcl_HashEntry *h;
-    int            hnew, isNSAttr = 0, isDftNS = 0;
+    int            hnew, hasUri = 1, isNSAttr = 0, isDftNS = 0;
     domNS         *ns;
     char          *localName, prefix[MAX_PREFIX_LEN], *newLocalName;
     Tcl_DString    dStr;
@@ -2106,25 +2106,33 @@ domSetAttributeNS (
     }
 
     domSplitQName (attributeName, prefix, &localName);
-    if (!uri) {
-        if ((prefix[0] == '\0' && strcmp (localName, "xmlns")==0)
-            || (strcmp (prefix, "xmlns")==0)) {
+    if (!uri || uri[0]=='\0') hasUri = 0;
+    if (hasUri && (prefix[0] == '\0')) return NULL;
+    if ((prefix[0] == '\0' && strcmp (localName, "xmlns")==0)
+        || (strcmp (prefix, "xmlns")==0)) {
+        if (!hasUri) {
             uri = attributeValue;
             isNSAttr = 1;
+            hasUri = 1;
             if (strcmp (localName, "xmlns")==0) isDftNS = 0;
+        } else {
+            return NULL;
         }
     }
-    if (!uri || uri[0]=='\0') {
+    if (!hasUri) {
         if (prefix[0] != '\0' && strcmp (prefix, "xml")==0) {
             uri = "http://www.w3.org/XML/1998/namespace";
+            hasUri = 1;
         }
     }
+    if (!hasUri && prefix[0] != '\0') return NULL;
+
     /*----------------------------------------------------
     |   try to find an existing attribute
     \---------------------------------------------------*/
     attr = node->firstAttr;
     while (attr) {
-        if (uri) {
+        if (hasUri) {
             if (attr->nodeFlags & IS_NS_NODE) {
                 if (isNSAttr) {
                     if (strcmp (attributeName, attr->nodeName)==0) {
@@ -2164,7 +2172,7 @@ domSetAttributeNS (
         h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,attrNames),
                                 attributeName, &hnew);
         attr->nodeType = ATTRIBUTE_NODE;
-        if (uri) {
+        if (hasUri) {
             if (isNSAttr) {
                 if (isDftNS) {
                     ns = domLookupNamespace (node->ownerDocument, "", uri);
@@ -2183,9 +2191,8 @@ domSetAttributeNS (
                         ns = domNewNamespace (node->ownerDocument, localName, uri);
                     }
                 } else {
+                    ns = domNewNamespace (node->ownerDocument, prefix, uri);
                     if (createNSIfNeeded) {
-                        ns = domNewNamespace (node->ownerDocument, prefix,
-                                              uri);
                         if (prefix[0] == '\0') {
                             domSetAttributeNS (node, "xmlns", uri, NULL, 0);
                         } else {
