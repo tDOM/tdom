@@ -636,7 +636,7 @@ domNode *      domCloneNode (domNode *node, int deep);
 domTextNode *  domAppendNewTextNode (domNode *parent, char *value, int length, domNodeType nodeType, int disableOutputEscaping);
 domNode *      domAppendNewElementNode (domNode *parent, char *tagName, char *uri);
 domNode *      domAppendLiteralNode (domNode *parent, domNode *node);
-void           domAddNSToNode (domNode *node, domNS *nsToAdd);
+domNS *        domAddNSToNode (domNode *node, domNS *nsToAdd);
 char *         domNamespacePrefix (domNode *node);
 char *         domNamespaceURI    (domNode *node);
 char *         domGetLocalName    (char *nodeName);
