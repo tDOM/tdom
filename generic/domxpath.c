@@ -2014,7 +2014,12 @@ int checkPatternConstraints (
     char        **errMsg
     )
 {
+    DBG(
+        fprintf(stderr, "checkPatternConstraints starrt:\n");
+        printAst (0, t);
+        )
     while (t) {
+        DBG(printAst (4, t);)
         if (type != XPATH_KEY_USE_EXPR) {
             /* 12.4: "It is an error to use the current function in a
                pattern." */
@@ -2040,7 +2045,6 @@ int checkPatternConstraints (
                 return 0;
             }
             if (t->type == GetVar || t->type == GetFQVar) {
-                return 0;
                 *errMsg = tdomstrdup(
                     "Variable references are not allowed in the use and match attribute of xsl:key."
                     );
@@ -5601,65 +5605,62 @@ static void nodeToXPath (
 
     parent = node->parentNode;
     if (parent == NULL) {
-
-        sprintf(step, "/%s", node->nodeName);
-
+        parent = node->ownerDocument->rootNode;
     } else {
-
         nodeToXPath (parent, xpath, xpathLen, xpathAllocated);
+    }
 
-        step[0] = '\0';
-        switch (node->nodeType) {
+    step[0] = '\0';
+    switch (node->nodeType) {
 
-            case ELEMENT_NODE:
-                nodeIndex = 0;
-                sameNodes = 0;
-                child = parent->firstChild;
-                while (child) {
-                    if (strcmp(child->nodeName, node->nodeName)==0) {
-                        sameNodes++;
-                        if (node == child) nodeIndex = sameNodes;
-                        if ((nodeIndex != 0) && (sameNodes > 2)) break;
-                    }
-                    child = child->nextSibling;
-                }
-                if (sameNodes == 1) {
-                    sprintf(step, "/%s", node->nodeName);
-                } else {
-                    sprintf(step, "/%s[%d]", node->nodeName, nodeIndex);
-                }
-                break;
-
-            case TEXT_NODE:
-            case COMMENT_NODE:
-            case PROCESSING_INSTRUCTION_NODE:
-                nodeIndex = 0;
-                sameNodes = 0;
-                child = parent->firstChild;
-                while (child) {
-                    if (child->nodeType == node->nodeType) {
-                        sameNodes++;
-                        if (node == child) nodeIndex = sameNodes;
-                        if ((nodeIndex != 0) && (sameNodes > 2)) break;
-                    }
-                    child = child->nextSibling;
-                }
-                switch (node->nodeType) {
-                    case TEXT_NODE:                   nTest = "text()";  break;
-                    case COMMENT_NODE:                nTest = "comment"; break;
-                    case PROCESSING_INSTRUCTION_NODE: nTest = "processing-instruction"; break;
-                    default:                          nTest = "unknownNodeType()";
-                }
-                if (sameNodes == 1) {
-                    sprintf(step, "/child::%s", nTest);
-                } else {
-                    sprintf(step, "/child::%s[%d]", nTest, nodeIndex);
-                }
-                break;
-
-            default:
-                break;
+    case ELEMENT_NODE:
+        nodeIndex = 0;
+        sameNodes = 0;
+        child = parent->firstChild;
+        while (child) {
+            if (strcmp(child->nodeName, node->nodeName)==0) {
+                sameNodes++;
+                if (node == child) nodeIndex = sameNodes;
+                if ((nodeIndex != 0) && (sameNodes > 2)) break;
+            }
+            child = child->nextSibling;
         }
+        if (sameNodes == 1) {
+            sprintf(step, "/%s", node->nodeName);
+        } else {
+            sprintf(step, "/%s[%d]", node->nodeName, nodeIndex);
+        }
+        break;
+
+    case TEXT_NODE:
+    case COMMENT_NODE:
+    case PROCESSING_INSTRUCTION_NODE:
+        nodeIndex = 0;
+        sameNodes = 0;
+        child = parent->firstChild;
+        while (child) {
+            if (child->nodeType == node->nodeType) {
+                sameNodes++;
+                if (node == child) nodeIndex = sameNodes;
+                if ((nodeIndex != 0) && (sameNodes > 2)) break;
+            }
+            child = child->nextSibling;
+        }
+        switch (node->nodeType) {
+        case TEXT_NODE:                   nTest = "text()";  break;
+        case COMMENT_NODE:                nTest = "comment()"; break;
+        case PROCESSING_INSTRUCTION_NODE: nTest = "processing-instruction()"; break;
+        default:                          nTest = "unknownNodeType()";
+        }
+        if (sameNodes == 1) {
+            sprintf(step, "/%s", nTest);
+        } else {
+            sprintf(step, "/%s[%d]", nTest, nodeIndex);
+        }
+        break;
+
+    default:
+        break;
     }
     len = strlen(step);
     if ( (len + *xpathLen) > *xpathAllocated ) {

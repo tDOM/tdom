@@ -39,7 +39,8 @@
 #    domNode-34.*: getBaseURI
 #    domNode-35.*: objCmd traces
 #    domNode-36.*: nodeName
-#    domNode-37.*: baseURI 
+#    domNode-37.*: baseURI
+#    domNode-38.*: toXPath
 #    domNode-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
@@ -3019,6 +3020,29 @@ test domNode-37.7 {baseURI} {
     $doc delete
     set result
 } {file://base/2 file://base/2 file://base/2 file://base/1 file://base/1}
+
+test domNode-38.1 {toXPath - comment node} {
+    set doc [dom parse {
+        <root><!--comment 1-->foo<e/></root>}]
+    set root [$doc documentElement]
+    set result {}
+    foreach comment [$root selectNodes comment()] {
+        lappend result [$comment toXPath]
+    }
+    $doc delete
+    set result
+} {/root/comment()}
+
+test domNode-38.2 {toXPath - top level comment} {
+    set doc [dom parse {
+        <!--comment 1--><!--comment 2--><root>foo<e/></root><!--comment 3-->}]
+    set result {}
+    foreach toplevelcomment [$doc selectNodes /comment()] {
+        lappend result [$toplevelcomment toXPath]
+    }
+    $doc delete
+    set result
+} [list {/comment()[1]} {/comment()[2]} {/comment()[3]}]
 
 test domNode-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
