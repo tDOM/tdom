@@ -32,6 +32,7 @@
 #    dom-29.*: ownerDocument 
 #    dom-30.*: precedes
 #    dom-31.*: insertBefore
+#    dom-32.*: asText
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003 Rolf Ade.
@@ -2134,6 +2135,84 @@ test dom-31.30 {insertBefore - ref node not a node child, equal to new node} {
     $doc delete
     set result
 } {1 NOT_FOUND_ERR}
+
+test dom-32.1 {asText - syntax check} {
+    dom parse <root/> doc
+    $doc documentElement root
+    set result [catch {$root asText foo}]
+    $doc delete
+    set result
+} {1}
+
+test dom-32.2 {asText} {
+    dom parse {<!-- comment before document element -->
+        <root>pcdata <child>foo bar grill</child></root>
+        <!-- comment after document element -->
+    } doc
+    $doc documentElement root
+    set result [$root asText]
+    $doc delete
+    set result
+} {pcdata foo bar grill}
+
+test dom-32.3 {asText} {
+    dom parse {<root>pcdata <![CDATA[<greeting>Hello, world!</greeting>]]>
+        more pcdata</root>} doc
+    $doc documentElement root
+    set result [$root asText]
+    $doc delete
+    set result
+} {pcdata <greeting>Hello, world!</greeting>
+        more pcdata}
+
+test dom-32.4 {asText} {
+    dom parse {<root>pcdata</root>} doc
+    $doc documentElement root
+    set newCDATAnode \
+        [$doc createCDATASection "<greeting>Hello, world!</greeting>"]
+    $root appendChild $newCDATAnode
+    set result [$root asText]
+    $doc delete
+    set result
+} {pcdata}
+
+set xml {
+    <root>
+        <child>some text</child>
+        <!-- A comment -->
+        <?testPI this is the testPI data    ?>
+    </root>
+}
+
+dom parse $xml doc
+$doc documentElement root
+
+test dom-32.5 {asText} {
+    $root asText
+} {some text}
+
+test dom-32.6 {asText} {
+    set result {}
+    foreach child [$root childNodes] {
+        lappend result [$child asText]
+    }
+    set result
+} {{some text} { A comment } {this is the testPI data    }}
+
+$doc delete
+
+dom parse -keepEmpties $xml doc
+$doc documentElement root
+
+test dom-32.7 {asText} {
+    $root asText
+} {
+        some text
+        
+        
+    }
+
+$doc delete
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
