@@ -513,6 +513,9 @@ TclExpatInitializeParser(interp, expat, resetOptions)
         Tcl_DecrRefCount (expat->result);
         expat->result             = NULL;
     }
+    if (expat->cdata) {
+        Tcl_DecrRefCount (expat->cdata);
+    }
     expat->cdata                  = NULL;
     eContent = expat->eContents;
     while (eContent) {
@@ -2044,6 +2047,8 @@ TclGenExpatElementStartHandler(userData, name, atts)
       return;
   }
 
+  TclExpatDispatchPCDATA(expat);
+
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
       switch (activeTclHandlerSet->status) {
@@ -2176,6 +2181,8 @@ TclGenExpatElementEndHandler(userData, name)
   if (expat->status != TCL_OK) {
       return;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
@@ -2517,18 +2524,56 @@ TclGenExpatCharacterDataHandler(userData, s, len)
      int len;
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) userData;
-  int result, onlyWhiteSpace = 0;
-  Tcl_Obj *vector[2];
-  TclHandlerSet *activeTclHandlerSet;
-  CHandlerSet *activeCHandlerSet;
-  Tcl_Obj* cmdPtr;
 
   if (expat->status != TCL_OK) {
       return;
   }
 
+  if (!expat->cdata) {
+      expat->cdata = Tcl_NewObj();
+      Tcl_IncrRefCount (expat->cdata);
+  }
+  Tcl_AppendToObj (expat->cdata, s, len);
+  return;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ *
+ * TclExpatDispatchPCDATA --
+ *
+ *	Called to check whether any accumulated character data
+ *	exists, and if so invoke the callback.
+ *
+ * Results:
+ *	None.
+ *
+ * Side Effects:
+ *	Callback script evaluated.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static void
+TclExpatDispatchPCDATA(expat)
+     TclGenExpatInfo *expat;
+{
+  int len, result, onlyWhiteSpace = 0;
+  Tcl_Obj *vector[2];
+  TclHandlerSet *activeTclHandlerSet;
+  CHandlerSet *activeCHandlerSet;
+  Tcl_Obj* cmdPtr;
+  char *s;
+
+  if (expat->cdata       == NULL ||
+      expat->status      != TCL_OK
+  ) {
+    return;
+  }
+
+  s = Tcl_GetStringFromObj (expat->cdata, &len);
   if (expat->needWSCheck) {
-      onlyWhiteSpace = TclExpatCheckWhiteData ((char*)s, len);
+      onlyWhiteSpace = TclExpatCheckWhiteData (s, len);
   }
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
@@ -2558,21 +2603,24 @@ TclGenExpatCharacterDataHandler(userData, s, len)
           vector[0] = activeTclHandlerSet->datacommand;
           vector[1] = Tcl_NewStringObj ((char *)s, len);
           Tcl_Preserve((ClientData) expat->interp);
-          result = activeTclHandlerSet->datacommandObjProc(activeTclHandlerSet->datacommandclientData, expat->interp, 2, vector);
+          result = activeTclHandlerSet->datacommandObjProc(
+              activeTclHandlerSet->datacommandclientData, expat->interp,
+              2, vector);
           Tcl_Release((ClientData) expat->interp);
 
           TclExpatHandlerResult(expat, activeTclHandlerSet, result);
       } else {
 
           /*
-           * Take a copy of the callback script so that arguments may be appended.
+           * Take a copy of the callback script so that arguments may
+           * be appended.
            */
           cmdPtr = Tcl_DuplicateObj(activeTclHandlerSet->datacommand);
           Tcl_IncrRefCount(cmdPtr);
           Tcl_Preserve((ClientData) expat->interp);
 
           Tcl_ListObjAppendElement(expat->interp, cmdPtr,
-                                       Tcl_NewStringObj((char *)s, len));
+                                   Tcl_NewStringObj((char *)s, len));
 
           /*
            * It would be desirable to be able to terminate parsing
@@ -2607,77 +2655,8 @@ TclGenExpatCharacterDataHandler(userData, s, len)
       }
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
   }
-  return;
-}
-
-
-
-/*
- *----------------------------------------------------------------------------
- *
- * TclExpatDispatchPCDATA --
- *
- *	Called to check whether any accumulated character data
- *	exists, and if so invoke the callback.
- *
- * Results:
- *	None.
- *
- * Side Effects:
- *	Callback script evaluated.
- *
- *----------------------------------------------------------------------------
- */
-
-/* de: HAS TO BE FINISHED */
-static void
-TclExpatDispatchPCDATA(expat)
-     TclGenExpatInfo *expat;
-{
-  Tcl_Obj *cmdPtr;
-  char *cd;
-  int result, len, onlyWhiteSpace;
-  TclHandlerSet *activeTclHandlerSet;
-
-  if (expat->cdata       == NULL ||
-      expat->status      != TCL_OK
-  ) {
-    return;
-  }
-
-  /*
-   * Optionally ignore white-space-only PCDATA
-   */
-  cd = Tcl_GetStringFromObj(expat->cdata, &len);
-  onlyWhiteSpace = TclExpatCheckWhiteData (cd, len);
-
-  activeTclHandlerSet = expat->firstTclHandlerSet;
-  while (activeTclHandlerSet) {
-      /*
-       * Take a copy of the callback script so that arguments may be appended.
-       */
-
-      cmdPtr = Tcl_DuplicateObj(activeTclHandlerSet->datacommand);
-      Tcl_IncrRefCount(cmdPtr);
-      Tcl_Preserve((ClientData) expat->interp);
-
-      if (Tcl_ListObjAppendElement(expat->interp, cmdPtr, expat->cdata) != TCL_OK) {
-          expat->status = TCL_ERROR;
-          return;
-      }
-
-      /*
-       * It would be desirable to be able to terminate parsing
-       * if the return result is TCL_ERROR or TCL_BREAK.
-       */
-      result = Tcl_GlobalEvalObj(expat->interp, cmdPtr);
-
-      Tcl_DecrRefCount(cmdPtr);
-      Tcl_Release((ClientData) expat->interp);
-
-      TclExpatHandlerResult(expat, activeTclHandlerSet, result);
-      activeTclHandlerSet = activeTclHandlerSet->nextHandlerSet;
-  }
+  Tcl_DecrRefCount (expat->cdata);
+  expat->cdata = 0;
   return;
 }
 
@@ -2710,11 +2689,11 @@ TclGenExpatProcessingInstructionHandler(userData, target, data)
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
 
-  TclExpatDispatchPCDATA(expat);
-
   if (expat->status != TCL_OK) {
       return;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
@@ -3176,11 +3155,11 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
   Tcl_Channel chan = (Tcl_Channel) NULL;
 
 
-  TclExpatDispatchPCDATA(expat);
-
   if (expat->status != TCL_OK) {
       return 1;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
@@ -3483,11 +3462,11 @@ TclGenExpatCommentHandler(userData, data)
   CHandlerSet *activeCHandlerSet;
 
 
-  TclExpatDispatchPCDATA(expat);
-
   if (expat->status != TCL_OK) {
       return;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
@@ -3642,11 +3621,11 @@ TclGenExpatStartCdataSectionHandler(userData)
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
 
-  TclExpatDispatchPCDATA(expat);
-
   if (expat->status != TCL_OK) {
       return;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
@@ -3722,11 +3701,11 @@ TclGenExpatEndCdataSectionHandler(userData)
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
 
-  TclExpatDispatchPCDATA(expat);
-
   if (expat->status != TCL_OK) {
       return;
   }
+
+  TclExpatDispatchPCDATA(expat);
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
   while (activeTclHandlerSet) {
