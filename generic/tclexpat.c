@@ -46,9 +46,6 @@
 #include <unistd.h>
 #endif
 
-#undef  TCL_STORAGE_CLASS
-#define TCL_STORAGE_CLASS DLLEXPORT
-
 /* Used internal als status, like TCL_OK, TCL_ERROR etc.  As a
    consequent, application specific error codes must be at least
    greater than 5 */
@@ -603,7 +600,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) clientData;
   char *data;
-  int len, optionIndex, result = TCL_OK;
+  int len = 0, optionIndex, result = TCL_OK;
   CHandlerSet *activeCHandlerSet;
 
   static char *options[] = {
@@ -3197,7 +3194,7 @@ generateModel (interp, rep, model)
     XML_Content *model;
 {
     Tcl_Obj *cp, *detail;
-    int      i;
+    unsigned int      i;
 
 
     switch (model->type) {

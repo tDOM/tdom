@@ -38,8 +38,11 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -209,7 +212,9 @@ DeclProduction(AbsoluteLocationPath);
 
 char *xpathFuncString (xpathResultSet  *rs );
 
-
+#ifndef isnan
+int isnan(double number) { return (!(number == number)); }
+#endif
 
 /*----------------------------------------------------------------------------
 |   xpath result set functions
@@ -2229,7 +2234,7 @@ static int xpathEvalStep (
 {
     xpathResultSet   leftResult, rightResult, replaceResult;
     xpathResultSet   pleftResult, prightResult, tResult;
-    int              i, j, k, rc, res, pwhite, from, len,  NaN;
+    int              i, j, k, rc, res, pwhite, len,  NaN;
     char             *replaceStr, *pfrom, *pto, tmp[80], tmp1[80], *uri;
     domNode          *node, *child, *startingNode, *ancestor;
     domDocument      *doc;
@@ -2240,7 +2245,7 @@ static int xpathEvalStep (
     xpathResultSets *args;
     xpathResultSet  *arg;
     Tcl_HashEntry   *entryPtr;
-    unsigned int     leftNodeNr, rightNodeNr;
+    unsigned int     from, leftNodeNr, rightNodeNr;
     int              left = 0, right = 0;
     double           dLeft = 0.0, dRight = 0.0;
     char             *leftStr = NULL, *rightStr = NULL;
