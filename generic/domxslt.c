@@ -53,6 +53,7 @@
 #include <math.h>
 #include <limits.h>
 #include <ctype.h>
+/*  #include <locale.h> */
 #include <dom.h>
 #include <domxpath.h>
 #include <domxslt.h>
@@ -82,7 +83,7 @@
 #define TRACE5(x,a,b,c,d,e) DBG(fprintf(stderr,(x),(a),(b),(c),(d),(e)))
 
 #define CHECK_RC            if (rc < 0) return rc
-#define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}
+#define CHECK_RC1(x)        if (rc < 0) {free((x)); return rc;}
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
 #define SETSCOPESTART       xs->varFramesStack[xs->varFramesStackPtr].stop=1
 #define SETPARAMDEF         xs->varFramesStack[xs->varFramesStackPtr].stop=2
@@ -276,6 +277,7 @@ typedef struct xsltTopLevelVar
 {
 
     domNode                 * node;
+    char                    * name;
     int                       isParameter;
     double                    precedence;
 
@@ -303,6 +305,7 @@ typedef struct xsltVarInProcess
 typedef struct xsltDecimalFormat
 {
     char   * name;
+    char   * uri;
     char     decimalSeparator;
     char     groupingSeparator;
     char   * infinity;
@@ -310,6 +313,7 @@ typedef struct xsltDecimalFormat
     char   * NaN;
     char     percent;
     char     zeroDigit;
+    char     digit;
     char     patternSeparator;
 
     struct xsltDecimalFormat * next;
@@ -1072,36 +1076,39 @@ static void formatValue (
 |
 \---------------------------------------------------------------------------*/
 static int xsltFormatNumber (
-    double            number,
-    char            * formatStr,
-    char           ** resultStr,
-    int             * resultLen,
-    char           ** errMsg
+    double              number,
+    char              * formatStr,
+    xsltDecimalFormat * df,
+    char             ** resultStr,
+    int               * resultLen,
+    char             ** errMsg
 )
 {
     char *p, prefix[80], suffix[80], s[240], n[80], f[80];
+    char *negformat = NULL, save = '\0', save1;
     int i, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
+/*      struct lconv *lc; */
 
     DBG(fprintf(stderr, "\nformatStr='%s' \n", formatStr);)
+    if (number < 0.0) {
+        isNeg = 1;
+        number *= -1.0;
+    } else {
+        isNeg = 0;
+    }
     p = formatStr;
     while (*p) {
-        if (*p=='\'') {
-            if (*(p+1)!='\0') p++;
+        if (*p == df->patternSeparator) {
+            *p = '\0';
+            negformat = ++p;
+            break;
         }
-        if (*p==';') break;
         p++;
     }
-    if ((number < 0.0) && (*p==';')) {
-        p++;
-        number = -1.0 * number;
-    } else {
-        p = formatStr;
-    }
+    p = formatStr;
+
     i = 0;
-    while (*p && (*p!='0') && (*p!='#') && (*p!='.') && (*p!=',')) {
-        if (*p=='\'') {
-            if (*(p+1)!='\0') p++;
-        }
+    while (*p && (*p!=df->zeroDigit) && (*p!=df->digit) && (*p!=df->groupingSeparator) && (*p!=df->decimalSeparator)) {
         if (i<79) { prefix[i++] = *p; }
         p++;
     }
@@ -1109,39 +1116,98 @@ static int xsltFormatNumber (
     nHash = nZero = fHash = fZero = 0;
     gLen = -2222;
     while (*p) {
-             if (*p=='#') { nHash++; }
-        else if (*p=='0') { nZero++; }
-        else if (*p==',') { gLen=-1; }
+             if (*p==df->digit) { nHash++; }
+        else if (*p==df->zeroDigit) { nZero++; }
+        else if (*p==df->groupingSeparator) { gLen=-1; }
         else break;
         p++; gLen++;
     }
-    if (*p && (*p=='.')) {
+    if (*p && (*p==df->decimalSeparator)) {
         p++;
-        while (*p && (*p=='0')) { p++; fZero++; }
-        while (*p && (*p=='#')) { p++; fHash++; }
+        while (*p && (*p==df->zeroDigit)) { p++; fZero++; }
+        while (*p && (*p==df->digit)) { p++; fHash++; }
     }
     i = 0;
     while (*p) {
-        if (*p=='\'') {
-            if (*(p+1)!='\0') p++;
-        }
         if (i<79) { suffix[i++] = *p; }
         p++;
     }
     suffix[i] = '\0';
-    i = number;
+    if (save) *p = save;
 
+    if (isNeg && negformat) {
+        /* Only prefix and suffix are taken from the second format string */
+        p++;
+        i = 0;
+        while (*p && *p!=df->zeroDigit && *p!=df->digit && *p!=df->groupingSeparator && *p!=df->decimalSeparator) {
+            if (i<79) { prefix[i++] = *p; }
+            p++;
+        }
+        while (*p && ((*p==df->zeroDigit) || (*p==df->digit) || (*p==df->groupingSeparator) || (*p==df->decimalSeparator))) p++;
+        i = 0;
+        while (*p) {
+            if (i<79) { suffix[i++] = *p; }
+            p++;
+        }
+        suffix[i] = '\0';
+    }
+
+    if (isNeg) {
+        if (negformat) {
+            if (prefix[0]=='\0' && suffix[0]=='\0') {
+                prefix[0] = df->minusSign;
+                prefix[1] = '\0';
+            }
+        } else {
+            i = 0;
+            save = prefix[0];
+            prefix[0] = df->minusSign;
+            while (i < 79) {
+                i++;
+                if (save == '\0') {
+                    prefix[i] = save;
+                    break;
+                }
+                save1 = prefix[i];
+                prefix[i] = save;
+                save = save1;
+            }
+            if (i == 79) prefix[79] = '\0';
+        }
+    }
+    if (prefix[0]=='\xc2' && prefix[1]=='\xa4') {
+/*          lc = localeconv(); */
+/*          if (strlen (lc->currency_symbol) > 79 */
+/*              || lc->currency_symbol[0] == '\0') { */
+            prefix[0] = '$';
+            prefix[1] = '\0';
+/*          } else { */
+/*              strcpy (prefix, lc->currency_symbol); */
+/*          } */
+    }
+
+    if (suffix[0] == df->percent) {
+        number *= 100.0;
+    } else 
+    if (suffix[0]=='\xe2' && suffix[1]=='\x80' && suffix[2]=='\xb0') {
+        number *= 1000.0;
+    }
+    
+    if (fHash + fZero == 0) {
+        i = (int) (number+0.5);
+    } else {
+        i = (int) number;
+    }
     DBG(fprintf(stderr,"normal part nZero=%d i=%d glen=%d\n", nZero, i, gLen);)
-
     /* fill in grouping char */
     if (gLen > 0) {
-        if (i < 0.0) isNeg = 1;
+        if (i < 0.0) {isNeg = 1; i *= -1;}
         else isNeg = 0;
         sprintf(s,"%0*d", nZero, i);
         l = strlen(s);
         /* if (l > (nHash+nZero)) { l = nHash+nZero; } */
         DBG(fprintf(stderr,"s='%s isNeg=%d'\n", s, isNeg);)
-        zl = l + ((l-1-isNeg) / gLen);
+        zl = l + ((l-1) / gLen);
         DBG(fprintf(stderr, "l=%d zl=%d \n", l, zl);)
         n[zl--] = '\0';
         p = s + strlen(s) -1;
@@ -1149,8 +1215,8 @@ static int xsltFormatNumber (
         while (zl>=0) {
             g++;
             n[zl--] = *p--;
-            if ((g == gLen) && (zl>=1+isNeg)) {
-                n[zl--] = ',';
+            if ((g == gLen) && (zl>=1)) {
+                n[zl--] = df->groupingSeparator;
                 g = 0;
             }
         }
@@ -1163,7 +1229,7 @@ static int xsltFormatNumber (
 
     DBG(fprintf(stderr, "number=%f Hash=%d fZero=%d \n", number, fHash, fZero);)
     if ((fHash+fZero) > 0) {
-
+        i = (int) number;
         /* format fraction part */
         if (number >= 0.0) {
             sprintf(f,"%0.*f", fZero+fHash, number -i);
@@ -1179,7 +1245,7 @@ static int xsltFormatNumber (
             }
         }
         DBG(fprintf(stderr, "f='%s'\n", f);)
-        sprintf(s,"%s%s.%s%s", prefix, n, &(f[2]), suffix);
+        sprintf(s,"%s%s%c%s%s", prefix, n, df->decimalSeparator, &(f[2]), suffix);
     } else {
         sprintf(s,"%s%s%s", prefix, n, suffix);
     }
@@ -1526,18 +1592,19 @@ static int xsltXPathFuncs (
     char           ** errMsg
 )
 {
-    xsltState     * xs = clientData;
-    char          * keyId, *filterValue, *str, *baseURI, tmp[5];
-    char          * localName, prefix[MAX_PREFIX_LEN];
-    int             rc, i, len, NaN, freeStr;
-    double          n;
-    xsltKeyValue  * value;
-    xsltKeyValues * keyValues;
-    Tcl_HashEntry * h;
-    Tcl_HashTable * docKeyData;
-    xsltSubDoc    * sdoc;
-    Tcl_DString     dStr;
-    domNS         * ns;
+    xsltState         * xs = clientData;
+    char              * keyId, *filterValue, *str, *baseURI, tmp[5];
+    char              * localName, prefix[MAX_PREFIX_LEN];
+    int                 rc, i, len, NaN, freeStr;
+    double              n;
+    xsltKeyValue      * value;
+    xsltKeyValues     * keyValues;
+    Tcl_HashEntry     * h;
+    Tcl_HashTable     * docKeyData;
+    xsltSubDoc        * sdoc;
+    Tcl_DString         dStr;
+    domNS             * ns;
+    xsltDecimalFormat * df;
 
     DBG ( fprintf(stderr,"xsltXPathFuncs funcName='%s'\n",funcName); )
 
@@ -1558,7 +1625,7 @@ static int xsltXPathFuncs (
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (exprContext, prefix);
             if (!ns) {
-                *errMsg = strdup("There is not namespace bound to the prefix.");
+                *errMsg = strdup("There isn't a namespace bound to the prefix.");
                 free (keyId);
                 return 1;
             }
@@ -1643,31 +1710,65 @@ static int xsltXPathFuncs (
         \-------------------------------------------------------------------*/
         DBG(fprintf(stderr, "before format-number argc=%d \n", argc);)
         if (argc == 3) {
-            *errMsg = strdup("format-number with decimal-format (third paramater) is not yet supported!");
-            return 1;
-        }
-        if (argc != 2) {
-            *errMsg = strdup("format-number: wrong # parameters: format-number(number, string, ?string?)!");
+            str = xpathFuncString (argv[2]);
+            domSplitQName (str, prefix, &localName);
+            ns = NULL;
+            if (prefix[0] != '\0') {
+                ns = domLookupPrefix (exprContext, prefix);
+                if (!ns) {
+                    reportError (exprContext, "There isn't a namespace bound to the prefix.", errMsg);
+                    free (str);
+                    return 1;
+                }
+            }
+            df = xs->decimalFormats->next;
+            while (df) {
+                if (strcmp(df->name, str)==0
+                    && ((df->uri == NULL && ns == NULL)
+                        || (df->uri != NULL 
+                            && ns != NULL
+                            && (strcmp (df->uri, ns->uri)==0)))) {
+                    /* already existing, override it */
+                    break;
+                }
+                df = df->next;
+            }
+            free (str);
+            if (df == NULL) {
+                reportError (exprContext, "There isn't a decimal format with this name.", errMsg);
+                return 1;
+            }
+        } else
+        if (argc == 2) {
+            df = xs->decimalFormats;
+        } else {
+            reportError (exprContext, "format-number: wrong # parameters: format-number(number, string, ?string?)!", errMsg);
             return 1;
         }
         NaN = 0;
         n   = xpathFuncNumber (argv[0], &NaN);
         if (NaN) {
             sprintf(tmp, "%f", n);
-            if (strcmp(tmp,"nan")==0)  rsSetString (result, "NaN");
-            else if (strcmp(tmp,"inf")==0)  rsSetString (result, "Infinity");
-            else if (strcmp(tmp,"-inf")==0) rsSetString (result, "-Infinity");
-            else *errMsg = strdup("format-number: unrecognized NaN!!! - Please report!");
+            if (strcmp(tmp,"nan")==0)  rsSetString (result, df->NaN);
+            else if (strcmp(tmp,"inf")==0)  rsSetString (result, df->infinity);
+            else if (strcmp(tmp,"-inf")==0) {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, "-", 1);
+                Tcl_DStringAppend (&dStr, df->infinity, -1);
+                rsSetString (result, Tcl_DStringValue (&dStr));
+            }
+            else reportError (exprContext, "format-number: unrecognized NaN!!! - Please report!", errMsg);
             return 0;
         }
         str = xpathFuncString (argv[1]);
         DBG(fprintf(stderr, "1 str='%s' \n", str);)
         result->type = StringResult;
-        rc = xsltFormatNumber(n,str,&(result->string), &(result->string_len), errMsg);
-        CHECK_RC;
+        rc = xsltFormatNumber(n, str, df, &(result->string),
+                              &(result->string_len), errMsg);
         free (str);
-        return 0;
+        CHECK_RC;
         DBG(fprintf(stderr, "after format-number \n");)
+        return 0;
     } else
     if (strcmp (funcName, "document")==0) {
         /*--------------------------------------------------------------------
@@ -2525,7 +2626,7 @@ static int evalAttrTemplates (
                 rc = evalXPath (xs, context, currentNode, currentPos,
                                 tplStart, &rs, errMsg);
                 *str = '}';
-                CHECK_RC;
+                CHECK_RC1(out);
                 tplResult = xpathFuncString( &rs );
                 DBG(fprintf(stderr, "attrTpl tplResult='%s' \n", tplResult);)
                 xpathRSFree( &rs );
@@ -2821,44 +2922,38 @@ static int xsltNumber (
                 Tcl_SetHashValue (h, t_count);
             }
         } else {
+            Tcl_DStringInit (&dStr);
             if (currentNode->nodeType == ELEMENT_NODE) {
                 /* TODO: This is wrong. Instead this should use the
                    "expanded-name" of the current node. */
-                rc = xpathParse (currentNode->nodeName, errMsg, &t_count, 1);
-                CHECK_RC;
-            } else
+                Tcl_DStringAppend (&dStr, currentNode->nodeName, -1);
+            } else 
             if (currentNode->nodeType == ATTRIBUTE_NODE) {
-                /* TODO: This is wrong. Instead this should use the
-                   "expanded-name" of the current node. */
-                Tcl_DStringInit (&dStr);
                 Tcl_DStringAppend (&dStr, "@", 1);
                 Tcl_DStringAppend (&dStr, currentNode->nodeName, -1);
-                rc = xpathParse (Tcl_DStringValue(&dStr), errMsg, &t_count, 1);
-                Tcl_DStringFree (&dStr);
-                CHECK_RC;
-            } else
-            /* XPathTokens don't allow the xpath to be a CONST char* */
+            } else 
             if (currentNode->nodeType == COMMENT_NODE) {
-                str = strdup ("comment()");
-                rc = xpathParse (str, errMsg, &t_count, 1);
-                free (str);
-                CHECK_RC;
+                Tcl_DStringAppend (&dStr, "comment()", -1);
             } else
             if (currentNode->nodeType == TEXT_NODE) {
-                str = strdup ("text()");
-                rc = xpathParse (str, errMsg, &t_count, 1);
-                free (str);
-                CHECK_RC;
-            } else
+                Tcl_DStringAppend (&dStr, "text()", -1);
+            } else 
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
-                str = strdup ("processing-instruction()");
-                rc = xpathParse (str, errMsg, &t_count, 1);
-                free (str);
-                CHECK_RC;
+                Tcl_DStringAppend (&dStr, "processing-instruction()", -1);
             } else {
                 reportError (actionNode, "unknown node type!!!", errMsg);
                 return -1;
             }
+            h = Tcl_CreateHashEntry (&(xs->pattern), Tcl_DStringValue(&dStr),
+                                     &hnew);
+            if (!hnew) {
+                t_count = (ast) Tcl_GetHashValue (h);
+            } else {
+                rc = xpathParse (Tcl_DStringValue (&dStr), errMsg, &t_count, 1);
+                CHECK_RC;
+                Tcl_SetHashValue (h, t_count);
+            }
+            Tcl_DStringFree (&dStr);
         }
         if (from) {
             h = Tcl_CreateHashEntry (&(xs->pattern), from, &hnew);
@@ -3321,7 +3416,9 @@ static int ExecAction (
             free(str2);
             break;
 
-        case attributeSet: return 0;
+        case attributeSet: 
+            reportError (actionNode, "xsl:attribute-set is only allowed at top-level.", errMsg);
+            return -1;
 
         case callTemplate:
             tplChoosen = NULL;
@@ -3611,7 +3708,9 @@ static int ExecAction (
             xpathRSFree( &rs );
             break;
 
-        case decimalFormat: return 0;
+        case decimalFormat: 
+            reportError (actionNode, "xsl:decimal-format is only allowed at toplevel.", errMsg);
+            return -1;
 
         case element:
             nsAT = getAttr(actionNode, "namespace", a_namespace);
@@ -3626,6 +3725,7 @@ static int ExecAction (
             CHECK_RC;
             if (!domIsNAME (str2)) {
                 reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                free (str2);
                 return -1;
             }
             nsStr = NULL;
@@ -3638,6 +3738,7 @@ static int ExecAction (
                 if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                     || !domIsNCNAME (localName)) {
                     reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                    free (str2);
                     return -1;
                 }
                 ns = domLookupPrefix (actionNode, prefix);
@@ -3645,13 +3746,15 @@ static int ExecAction (
                 else {
                     if (prefix[0] != '\0') {
                         reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
+                        free (str2);
                         return -1;
                     }
                 }
             }
             savedLastNode = xs->lastNode;
             xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, nsStr);
-            free(str2);
+            free (str2);
+            if (nsAT) free (nsStr);
             str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
             if (str) {
                 TRACE1("use-attribute-sets = '%s' \n", str);
@@ -3763,9 +3866,14 @@ static int ExecAction (
             break;
 
         case import:
+            reportError (actionNode, "xsl:import is only allowed at toplevel.", errMsg);
+            return -1;
         case include:
+            reportError (actionNode, "xsl:include is only allowed at toplevel.", errMsg);
+            return -1;
         case key:
-            return 0;
+            reportError (actionNode, "xsl:key is only allowed at toplevel.", errMsg);
+            return -1;
 
         case message:
             str  = getAttr(actionNode,"terminate", a_terminate);
@@ -3790,7 +3898,9 @@ static int ExecAction (
             }
             return 0;
 
-        case namespaceAlias: return 0;
+        case namespaceAlias: 
+            reportError (actionNode, "xsl:namespaceAlias is only allowed at toplevel.", errMsg);
+            return -1;
 
         case number:
             if (actionNode->firstChild) {
@@ -4677,7 +4787,7 @@ static int processTopLevelVars (
     )
 {
     int                rc, i;
-    char              *select, *str;
+    char              *select;
     xpathResultSet     nodeList, rs;
     Tcl_HashEntry     *entryPtr;
     Tcl_HashSearch     search;
@@ -4746,17 +4856,16 @@ static int processTopLevelVars (
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
         topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (entryPtr);
-        str = Tcl_GetHashKey (&xs->topLevelVars, entryPtr);
-        if (xsltVarExists (xs, str, topLevelVar->node)) {
+        if (xsltVarExists (xs, topLevelVar->name, topLevelVar->node)) {
             continue;
         }
-        varInProcess.name = str;
+        varInProcess.name = topLevelVar->name;
         varInProcess.next = NULL;
         xs->varsInProcess = &varInProcess;
 
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
-        rc = xsltSetVar(xs, str, &nodeList, xmlNode, 0, select,
+        rc = xsltSetVar(xs, topLevelVar->name, &nodeList, xmlNode, 0, select,
                         topLevelVar->node, 1, errMsg);
         CHECK_RC;
     }
@@ -4786,6 +4895,7 @@ static int processTopLevel (
     double             childPrecedence, childLowBound;
     char              *str, *name, *match, *use, *baseURI, *href;
     char              *localName, prefix[MAX_PREFIX_LEN];
+    xsltTag            tag;
     xsltAttrSet       *attrSet;
     xsltKeyInfo       *keyInfo;
     xpathResultSet     nodeList;
@@ -4802,7 +4912,8 @@ static int processTopLevel (
     DBG(fprintf (stderr, "start processTopLevel. precedence: %f precedenceLowBound %f\n", precedence, *precedenceLowBound););
     node = xsltDocumentElement->firstChild;
     while (node) {
-        switch ( getTag(node) ) {
+        tag = getTag (node);
+        switch ( tag ) {
 
             case attributeSet:
                 str = getAttr(node, "name", a_name);
@@ -4811,6 +4922,10 @@ static int processTopLevel (
                     ns = NULL;
                     if (prefix[0] != '\0') {
                         ns = domLookupPrefix (node, prefix);
+                        if (!ns) {
+                            reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                            return -1;
+                        }
                     }
                     if (xs->attrSets) {
                         attrSet = xs->attrSets;
@@ -4835,35 +4950,6 @@ static int processTopLevel (
                 }
                 break;
 
-            case param:
-                str = getAttr(node, "name", a_name);
-                if (!str) {
-                    reportError (node, "xsl:param: missing mandatory attribute \"name\".",
-                                 errMsg);
-                    return -1;
-                }
-                h = Tcl_CreateHashEntry (&(xs->topLevelVars), str, &hnew);
-                if (!hnew) {
-                    topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (h);
-                    /* Since imported stylesheets are processed at the
-                       point at which they encounters the definitions are
-                       already in increasing order of import precedence.
-                       Therefor we have only to check, if there is a
-                       top level var or parm with the same precedence */
-                    if (topLevelVar->precedence == precedence) {
-                        reportError (node, "There is already a variable or parameter with this name with the same import precedence.", errMsg);
-                        return -1;
-                    }
-                } else {
-                    topLevelVar = malloc (sizeof (xsltTopLevelVar));
-                    Tcl_SetHashValue (h, topLevelVar);
-                }
-                topLevelVar->node = node;
-                topLevelVar->isParameter = 1;
-                topLevelVar->precedence = precedence;
-
-                break;
-
             case decimalFormat:
                 if (node->firstChild) {
                     reportError (node, "xsl:decimal-format has to be empty.", errMsg);
@@ -4871,10 +4957,23 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "name", a_name);
                 if (str) {
+                    domSplitQName (str, prefix, &localName);
+                    ns = NULL;
+                    if (prefix[0] != '\0') {
+                        ns = domLookupPrefix (node, prefix);
+                        if (!ns) {
+                            reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                            return -1;
+                        }
+                    }
                     /* a named decimal format */
                     df = xs->decimalFormats->next;
                     while (df) {
-                        if (strcmp(df->name, str)==0) {
+                        if (strcmp(df->name, str)==0
+                            && ((df->uri == NULL && ns == NULL)
+                                || (df->uri != NULL 
+                                    && ns != NULL
+                                    && (strcmp (df->uri, ns->uri)==0)))) {
                             /* already existing, override it */
                             break;
                         }
@@ -4883,7 +4982,20 @@ static int processTopLevel (
                     if (df == NULL) {
                         df = malloc(sizeof(xsltDecimalFormat));
                         memset (df, 0, sizeof (xsltDecimalFormat));
+                        /* initialize to defaults */
+                        df->decimalSeparator  = '.';
+                        df->groupingSeparator = ',';
+                        df->infinity          = "Infinity";
+                        df->minusSign         = '-';
+                        df->NaN               = "NaN";
+                        df->percent           = '%';
+                        df->zeroDigit         = '0';
+                        df->digit             = '#';
+                        df->patternSeparator  = ';';
+
                         df->name = strdup(str);
+                        if (ns) df->uri = strdup(ns->uri);
+                        else df->uri = NULL;
                         /* prepend into list of decimal format
                            after the default one */
                         df->next = xs->decimalFormats->next;
@@ -4894,15 +5006,79 @@ static int processTopLevel (
                     df = xs->decimalFormats;
                 }
                 str = getAttr(node, "decimal-separator",  a_decimalSeparator);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "decimal-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->decimalSeparator = str[0];
+                }
+                
+                /*    This should really be something like this:  */
+                /*    clen = UTF8_CHAR_LEN (str[0]); */
+                /*    if (str[clen+1] != '\0') { */
+                /*        reportError (node, "decimal-separator has to be a single char", errMsg); */
+                /*    } */
+                /*    But that needs an i18n aware xsltFormatNumber() and  */
+                /*    #if TclOnly8Bits ... #else for tcl8.0.5. Next time. */
+
                 str = getAttr(node, "grouping-separator", a_groupingSeparator);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "grouping-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->groupingSeparator = str[0];
+                }
                 str = getAttr(node, "infinity",           a_infinity);
+                if (str) df->infinity = str;
                 str = getAttr(node, "minus-sign",         a_minusSign);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "minus-sign has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->minusSign = str[0];
+                }
                 str = getAttr(node, "NaN",                a_nan);
+                if (str) df->NaN = str;
                 str = getAttr(node, "percent",            a_percent);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "percent has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->percent = str[0];
+                }
                 str = getAttr(node, "per-mille",          a_perMille);
+                if (str) {
+                    reportError (node, "User defined per-mille sign not supported yet, sorry.", errMsg);
+                    return -1;
+                }
                 str = getAttr(node, "zero-digit",         a_zeroDigit);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "zeroDigit has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->zeroDigit = str[0];
+                }
                 str = getAttr(node, "digit",              a_digit);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "digit has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->digit = str[0];
+                }
                 str = getAttr(node, "pattern-separator",  a_patternSeparator);
+                if (str) {
+                    if (str[1] != '\0') {
+                        reportError (node, "pattern-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        return -1;
+                    }
+                    df->patternSeparator = str[0];
+                }
                 break;
 
             case import:
@@ -4990,7 +5166,7 @@ static int processTopLevel (
                     return -1;
                 }
 
-                keyInfo = (xsltKeyInfo *) ckalloc(sizeof(xsltKeyInfo));
+                keyInfo = (xsltKeyInfo *) malloc(sizeof(xsltKeyInfo));
                 keyInfo->node = node;
                 rc = xpathParse (match, errMsg, &(keyInfo->matchAst), 1);
                 CHECK_RC1(keyInfo);
@@ -5002,8 +5178,8 @@ static int processTopLevel (
                 if (prefix[0] != '\0') {
                     ns = domLookupPrefix (node, prefix);
                     if (!ns) {
-                        reportError (node, "There is not namespace bound to the prefix.", errMsg);
-                        ckfree ((char*) keyInfo);
+                        reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                        free (keyInfo);
                         return -1;
                     }
                     Tcl_DStringAppend (&dStr, ns->uri, -1);
@@ -5084,11 +5260,20 @@ static int processTopLevel (
                     return -1;
                 }
                 str = getAttr(node, "method", a_method);
-                if (str) { xs->outputMethod    = strdup(str); }
+                if (str) { 
+                    if (xs->outputMethod) free (xs->outputMethod);
+                    xs->outputMethod    = strdup(str);
+                }
                 str = getAttr(node, "encoding", a_encoding);
-                if (str) { xs->outputEncoding  = strdup(str); }
+                if (str) {
+                    if (xs->outputEncoding) free (xs->outputEncoding);
+                    xs->outputEncoding  = strdup(str);
+                }
                 str = getAttr(node, "media-type", a_mediaType);
-                if (str) { xs->outputMediaType = strdup(str); }
+                if (str) { 
+                    if (xs->outputMediaType) free (xs->outputMediaType);
+                    xs->outputMediaType = strdup(str); 
+                }
                 str = getAttr(node, "doctype-public", a_doctypePublic);
                 str = getAttr(node, "doctype-system", a_doctypeSystem);
                 break;
@@ -5130,14 +5315,30 @@ static int processTopLevel (
                 CHECK_RC;
                 break;
 
+            case param:
             case variable:
                 str = getAttr(node, "name", a_name);
                 if (!str) {
-                    reportError (node, "xsl:variable must have a \"name\" attribute.",
-                                 errMsg);
+                    reportError (node, "xsl:variable and xsl:param elements must have a \"name\" attribute.",
+                                     errMsg);
                     return -1;
                 }
-                h = Tcl_CreateHashEntry (&(xs->topLevelVars), str, &hnew);
+                domSplitQName (str, prefix, &localName);
+                ns = NULL;
+                if (prefix[0] != '\0') {
+                    ns = domLookupPrefix (node, prefix);
+                    if (!ns) {
+                        reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                        return -1;
+                    }
+                }
+                Tcl_DStringInit (&dStr);
+                if (ns) {
+                    Tcl_DStringAppend (&dStr, ns->uri, -1);
+                }
+                Tcl_DStringAppend (&dStr, localName, -1);
+                h = Tcl_CreateHashEntry (&(xs->topLevelVars),
+                                         Tcl_DStringValue (&dStr), &hnew);
                 if (!hnew) {
                     topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (h);
                     /* Since imported stylesheets are processed at the
@@ -5154,7 +5355,12 @@ static int processTopLevel (
                     Tcl_SetHashValue (h, topLevelVar);
                 }
                 topLevelVar->node = node;
-                topLevelVar->isParameter = 0;
+                topLevelVar->name = str;
+                if (tag == param) {
+                    topLevelVar->isParameter = 1;
+                } else {
+                    topLevelVar->isParameter = 0;
+                }
                 topLevelVar->precedence = precedence;
 
                 break;
@@ -5247,7 +5453,9 @@ xsltFreeState (
         while (ki) {
             kisave = ki;
             ki = ki->next;
-            ckfree ((char*)kisave);
+            xpathFreeAst (kisave->matchAst);
+            xpathFreeAst (kisave->useAst);
+            free (kisave);
         }
     }
     Tcl_DeleteHashTable (&xs->keyInfos);
@@ -5306,8 +5514,7 @@ xsltFreeState (
         dfsave = df;
         df = df->next;
         if (dfsave->name) free(dfsave->name);
-        if (dfsave->infinity) free(dfsave->infinity);
-        if (dfsave->NaN) free(dfsave->NaN);
+        if (dfsave->uri) free(dfsave->uri);
         free(dfsave);
     }
 
@@ -5453,13 +5660,15 @@ int xsltProcess (
     Tcl_InitHashTable ( &(xs.topLevelVars), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.keyInfos), TCL_STRING_KEYS);
     xs.decimalFormats->name              = NULL;
+    xs.decimalFormats->uri               = NULL;
     xs.decimalFormats->decimalSeparator  = '.';
     xs.decimalFormats->groupingSeparator = ',';
-    xs.decimalFormats->infinity          = strdup("inf");
+    xs.decimalFormats->infinity          = "Infinity";
     xs.decimalFormats->minusSign         = '-';
-    xs.decimalFormats->NaN               = strdup("NaN");
+    xs.decimalFormats->NaN               = "NaN";
     xs.decimalFormats->percent           = '%';
     xs.decimalFormats->zeroDigit         = '0';
+    xs.decimalFormats->digit             = '#';
     xs.decimalFormats->patternSeparator  = ';';
     xs.decimalFormats->next              = NULL;
     
