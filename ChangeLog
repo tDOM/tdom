@@ -1,3 +1,7 @@
+2003-12-20  Rolf Ade  <rolf@pointsman.de>
+
+        * win/pkgIndex.tcl: Also updated to new version nr 0.8.0.
+    
 2003-12-17  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domNode.*
