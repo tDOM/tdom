@@ -4,8 +4,8 @@
 |
 |   $Header$
 |
-| 
-|   A (partial) XSLT implementation for tDOM, according to the W3C 
+|
+|   A (partial) XSLT implementation for tDOM, according to the W3C
 |   recommendation (16 Nov 1999).
 |   See http://www.w3.org/TR/1999/REC-xslt-19991116 for details.
 |
@@ -73,7 +73,7 @@
 |   Macros
 |
 \---------------------------------------------------------------------------*/
-#define DBG(x)              
+#define DBG(x)
 #define TRACE(x)            DBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)         DBG(fprintf(stderr,(x),(a)))
 #define TRACE2(x,a,b)       DBG(fprintf(stderr,(x),(a),(b)))
@@ -82,7 +82,7 @@
 #define TRACE5(x,a,b,c,d,e) DBG(fprintf(stderr,(x),(a),(b),(c),(d),(e)))
 
 #define CHECK_RC            if (rc < 0) return rc
-#define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}       
+#define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
 #define SETSCOPESTART       xs->varFramesStack[xs->varFramesStackPtr].stop=1
 #define SETPARAMDEF         xs->varFramesStack[xs->varFramesStackPtr].stop=2
@@ -102,7 +102,7 @@ extern void printAst (int depth, ast t);
 typedef enum {
 
     unknown = 1,
-    applyImports, applyTemplates, attribute, attributeSet, callTemplate, 
+    applyImports, applyTemplates, attribute, attributeSet, callTemplate,
     choose, comment, copy, copyOf, decimalFormat, element, fallback, forEach,
     xsltIf, import,
     include, key, message, namespaceAlias, number, output, otherwise,
@@ -119,14 +119,14 @@ typedef enum {
 \-------------------------------------------------------------------------*/
 typedef enum {
 
-    a_caseorder = 1, 
+    a_caseorder = 1,
     a_count, a_dataType, a_disableOutputEscaping,
     a_doctypePublic, a_doctypeSystem, a_elements, a_encoding,
     a_format, a_from, a_href, a_lang, a_level, a_match, a_mediaType, a_method,
     a_mode, a_name, a_namespace, a_order, a_prio, a_select, a_space,
-    a_terminate, a_test, a_use, a_useAttributeSets, a_value, 
-    a_groupingSeparator, a_groupingSize,    
-    a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent, 
+    a_terminate, a_test, a_use, a_useAttributeSets, a_value,
+    a_groupingSeparator, a_groupingSize,
+    a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent,
     a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version,
     a_excludeResultPrefixes, a_extensionElementPrefixes,
     a_stylesheetPrefix, a_resultPrefix
@@ -150,9 +150,9 @@ typedef struct xsltTemplate {
     double    prio;
     domNode * content;
     double    precedence;
-        
+
     struct xsltTemplate *next;
-    
+
 } xsltTemplate;
 
 
@@ -165,9 +165,9 @@ typedef struct xsltAttrSet {
     char    * name;
     char    * uri;
     domNode * content;
-        
+
     struct xsltAttrSet *next;
-    
+
 } xsltAttrSet;
 
 /*--------------------------------------------------------------------------
@@ -179,7 +179,7 @@ typedef struct xsltKeyValue {
     domNode       * node;
 
     struct xsltKeyValue * next;
-    
+
 } xsltKeyValue;
 
 /*--------------------------------------------------------------------------
@@ -205,9 +205,9 @@ typedef struct xsltKeyInfo {
     ast             matchAst;
     char          * use;
     ast             useAst;
-    
+
     struct xsltKeyInfo * next;
-    
+
 } xsltKeyInfo;
 
 /*--------------------------------------------------------------------------
@@ -220,7 +220,7 @@ typedef struct xsltVariable {
     char           * uri;
     domNode        * node;
     xpathResultSet   rs;
-    
+
 } xsltVariable;
 
 
@@ -256,7 +256,7 @@ typedef struct xsltExcludeNS
 |   xsltSubDocs
 |
 \-------------------------------------------------------------------------*/
-typedef struct xsltSubDoc 
+typedef struct xsltSubDoc
 {
     domDocument        * doc;
     char               * baseURI;
@@ -276,7 +276,7 @@ typedef struct xsltTopLevelVar
 {
 
     domNode                 * node;
-    int                       isParameter; 
+    int                       isParameter;
     double                    precedence;
 
 } xsltTopLevelVar;
@@ -311,9 +311,9 @@ typedef struct xsltDecimalFormat
     char     percent;
     char     zeroDigit;
     char     patternSeparator;
-    
+
     struct xsltDecimalFormat * next;
-    
+
 } xsltDecimalFormat;
 
 
@@ -335,13 +335,13 @@ typedef struct xsltWSInfo
 
 typedef struct xsltNSAlias
 {
-    
+
     char    *fromUri;
     char    *toUri;
     double   precedence;
-    
+
     struct xsltNSAlias *next;
-    
+
 } xsltNSAlias;
 
 
@@ -390,7 +390,7 @@ typedef struct {
 
 
 typedef enum {
-    latin_number, latin_upper, latin_lower, 
+    latin_number, latin_upper, latin_lower,
     roman_upper, roman_lower
 } xsltNumberingType;
 
@@ -429,18 +429,18 @@ typedef struct {
 |   Prototypes
 |
 \-------------------------------------------------------------------------*/
-int ApplyTemplates ( xsltState *xs, xpathResultSet *context, 
+int ApplyTemplates ( xsltState *xs, xpathResultSet *context,
                      domNode *currentNode, int currentPos,
-                     domNode *actionNode, xpathResultSet *nodeList, 
+                     domNode *actionNode, xpathResultSet *nodeList,
                      char *mode, char *modeURI, char **errMsg);
 
 int ApplyTemplate (  xsltState *xs, xpathResultSet *context,
                      domNode *currentNode, domNode *exprContext,
-                     int currentPos, char *mode, char *modeURI, 
+                     int currentPos, char *mode, char *modeURI,
                      char **errMsg);
-                     
+
 static int ExecActions (xsltState *xs, xpathResultSet *context,
-                        domNode *currentNode, int currentPos, 
+                        domNode *currentNode, int currentPos,
                         domNode *actionNode,  char **errMsg);
 
 static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
@@ -458,7 +458,7 @@ static void printXML (domNode *node, int level, int maxlevel) {
     domProcessingInstructionNode *pi;
     char tmp[80];
     int  i, l, n;
-    
+
     n = 0;
     while (node) {
 
@@ -526,13 +526,13 @@ static void printXML (domNode *node, int level, int maxlevel) {
 static void
 reportError (
     domNode * node,
-    char    * str, 
+    char    * str,
     char   ** errMsg)
 {
     Tcl_DString dStr;
     char *v, *baseURI, buffer[1024];
     domLineColumn  *lc;
-    
+
     Tcl_DStringInit (&dStr);
     baseURI = findBaseURI (node);
     if (baseURI) {
@@ -565,10 +565,10 @@ static char * getAttr (
 )
 {
     domAttrNode *attr;
-    
-    attr = node->firstAttr; 
+
+    attr = node->firstAttr;
     while (attr) {
-    
+
         if (attr->info == attrTypeNo) {
             return attr->nodeValue;
         } else if (attr->info == 0) {
@@ -592,7 +592,7 @@ static xsltTag getTag (
 )
 {
     char *name;
-  
+
     if (node->nodeType != ELEMENT_NODE) {
         return unknown;
     }
@@ -603,7 +603,7 @@ static xsltTag getTag (
     if ((name == NULL) || (strcmp(name, XSLT_NAMESPACE)!=0)) {
        node->info = (int)unknown;
        return unknown;
-    }    
+    }
     name = domGetLocalName(node->nodeName);
 
     switch (*name) {
@@ -657,9 +657,9 @@ static xsltTag getTag (
         case 'w': SET_TAG(node,name,"when",           when);
                   SET_TAG(node,name,"with-param",     withParam);
                   break;
-    } 
+    }
     node->info = (int)unknown;
-    return unknown;    
+    return unknown;
 }
 
 
@@ -673,7 +673,6 @@ static void xsltPopVarFrame (
 {
     int             i;
     xsltVarFrame   *frame;
-
 
     if (xs->varFramesStackPtr >= 0) {    
         frame = &xs->varFramesStack[xs->varFramesStackPtr];
@@ -712,7 +711,6 @@ static void xsltPushVarFrame (
     frame->nrOfVars = 0;
     frame->varStartIndex = -1;
     frame->stop = 0;
-
 }
 
 
@@ -728,10 +726,10 @@ static int xsltAddExternalDocument (
     char           ** errMsg
 )
 {
-    xsltSubDoc  * sdoc;    
+    xsltSubDoc  * sdoc;
     domDocument * extDocument;
     int           found;
-    
+
     found = 0;
     sdoc = xs->subDocs;
     while (sdoc) {
@@ -774,7 +772,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     int               hnew, clen, nrOfTokens = 0;
     Tcl_HashEntry    *h;
     xsltNumberFormat *format;
-    
+
     /* TODO: make it l18n aware. */
 
     h = Tcl_CreateHashEntry (&xs->formats, formatStr, &hnew);
@@ -783,7 +781,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     } else {
         format = (xsltNumberFormat *) Tcl_Alloc (sizeof (xsltNumberFormat));
         memset (format, 0 , sizeof (xsltNumberFormat));
-        format->tokens = (xsltNumberFormatToken *) 
+        format->tokens = (xsltNumberFormatToken *)
             Tcl_Alloc (sizeof (xsltNumberFormatToken) * 20);
         memset (format->tokens, 0, sizeof (xsltNumberFormatToken) * 20);
         format->maxtokens = 20;
@@ -793,7 +791,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {
         clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
-            *errMsg = 
+            *errMsg =
                 strdup("xsl:number: UTF-8 form of character longer than 3 Byte");
             return NULL;
         }
@@ -844,7 +842,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
         format->maxtokens *= 2;                  \
     }                                            \
     format->tokens[nrOfTokens].minlength = 1;    \
-    continue;             
+    continue;
 
     while (*p) {
         if (*p == '0') {
@@ -887,7 +885,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     format->epilogLen = format->tokens[nrOfTokens-1].sepLen;
     format->tokens[nrOfTokens-1].sepLen = 0;
     return format;
-    
+
  wrongSyntax:
     *errMsg = strdup("xsl:number: Wrong syntax in format attribute");
     return NULL;
@@ -912,7 +910,7 @@ static void formatValue (
     Tcl_DString tmp1;
     static struct { char *digit; char *ldigit; int value; } RomanDigit[] = {
           { "M" , "m" , 1000, },
-          { "CM", "cm",  900, }, 
+          { "CM", "cm",  900, },
           { "D" , "d" ,  500, },
           { "CD", "cd",  400, },
           { "C" , "c" ,  100, },
@@ -977,7 +975,7 @@ static void formatValue (
            faster / more clever. */
 
         if (value == 0) {
-            /* Hm, zero can't be expressed with letter sequences... 
+            /* Hm, zero can't be expressed with letter sequences...
                What to do? One of the several cases, not mentioned
                by the spec. */
             return;
@@ -1021,7 +1019,7 @@ static void formatValue (
         /* Side note: There exists a rarely used roman notation
            to express figures up to a few millions. Does somebody
            really need this? */
-               
+
         if (value > 3999) {
             /* fall back to latin numbers */
             sprintf (tmp, "%d", value);
@@ -1040,7 +1038,7 @@ static void formatValue (
                 value -= RomanDigit[v].value;
             }
             v++;
-        }  
+        }
         break;
 
     default:
@@ -1065,7 +1063,7 @@ static void formatValue (
             }
         }
     }
-    
+
     return;
 }
 
@@ -1083,7 +1081,7 @@ static int xsltFormatNumber (
 {
     char *p, prefix[80], suffix[80], s[240], n[80], f[80];
     int i, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
-      
+
     DBG(fprintf(stderr, "\nformatStr='%s' \n", formatStr);)
     p = formatStr;
     while (*p) {
@@ -1121,7 +1119,7 @@ static int xsltFormatNumber (
         p++;
         while (*p && (*p=='0')) { p++; fZero++; }
         while (*p && (*p=='#')) { p++; fHash++; }
-    }    
+    }
     i = 0;
     while (*p) {
         if (*p=='\'') {
@@ -1139,7 +1137,7 @@ static int xsltFormatNumber (
     if (gLen > 0) {
         if (i < 0.0) isNeg = 1;
         else isNeg = 0;
-        sprintf(s,"%0*d", nZero, i);    
+        sprintf(s,"%0*d", nZero, i);
         l = strlen(s);
         /* if (l > (nHash+nZero)) { l = nHash+nZero; } */
         DBG(fprintf(stderr,"s='%s isNeg=%d'\n", s, isNeg);)
@@ -1157,7 +1155,7 @@ static int xsltFormatNumber (
             }
         }
         DBG(fprintf(stderr,"s='%s' --> n='%s'\n", s, n);)
-        
+
     } else {
         sprintf(n,"%0*d", nZero, i);
         DBG(fprintf(stderr,"n='%s'\n", n);)
@@ -1165,7 +1163,7 @@ static int xsltFormatNumber (
 
     DBG(fprintf(stderr, "number=%f Hash=%d fZero=%d \n", number, fHash, fZero);)
     if ((fHash+fZero) > 0) {
- 
+
         /* format fraction part */
         if (number >= 0.0) {
             sprintf(f,"%0.*f", fZero+fHash, number -i);
@@ -1208,17 +1206,17 @@ static int buildKeyInfoForDoc (
     xsltKeyInfo    *kinfo, *kinfoStart;
     xsltKeyValues  *keyValues;
     xsltKeyValue   *keyValue;
-    
+
     h = Tcl_FindHashEntry (keyInfos, keyId);
     /* key must exist, this is already checked */
     kinfoStart = (xsltKeyInfo *) Tcl_GetHashValue (h);
-    
+
     /* this must be a new entry, no check for hnew==1 needed */
     h = Tcl_CreateHashEntry (&(sd->keyData), keyId, &hnew);
     valueTable = (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (valueTable, TCL_STRING_KEYS);
     Tcl_SetHashValue (h, valueTable);
-    
+
     node = sd->doc->rootNode;
     while (node) {
         kinfo = kinfoStart;
@@ -1248,13 +1246,13 @@ static int buildKeyInfoForDoc (
                     for (i = 0; i < rs.nr_nodes; i++) {
                         useValue = xpathFuncStringForNode (rs.nodes[i]);
                         TRACE1("use value = '%s'\n", useValue);
-                        keyValue = 
+                        keyValue =
                             (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
                         keyValue->node = node;
                         keyValue->next = NULL;
                         h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                         if (hnew) {
-                            keyValues = 
+                            keyValues =
                                 (xsltKeyValues*)Tcl_Alloc(sizeof (xsltKeyValues));
                             Tcl_SetHashValue (h, keyValues);
                             keyValues->value = keyValue;
@@ -1274,7 +1272,7 @@ static int buildKeyInfoForDoc (
                     keyValue->next = NULL;
                     h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                     if (hnew) {
-                        keyValues = 
+                        keyValues =
                             (xsltKeyValues*)Tcl_Alloc (sizeof (xsltKeyValues));
                         Tcl_SetHashValue (h, keyValues);
                         keyValues->value = keyValue;
@@ -1286,7 +1284,7 @@ static int buildKeyInfoForDoc (
                     free (useValue);
                 }
                 xpathRSFree( &context );
-                xpathRSFree( &rs );                   
+                xpathRSFree( &rs );
             }
             kinfo = kinfo->next;
         }
@@ -1318,7 +1316,7 @@ static int buildKeyInfoForDoc (
 |
 \---------------------------------------------------------------------------*/
 static void sortNodeSetByNodeNumber(
-    domNode *nodes[], 
+    domNode *nodes[],
     int      n
 )
 {
@@ -1347,7 +1345,7 @@ static void sortNodeSetByNodeNumber(
         }
     }
 }
-        
+
 /*----------------------------------------------------------------------------
 |   sortByDocOrder
 |
@@ -1376,12 +1374,12 @@ void StripXMLSpace (
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
 
-    
+
     if (node->nodeType == TEXT_NODE) {
         p = ((domTextNode*)node)->nodeValue;
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
-        for (i=0; i<len; i++) {           
+        for (i=0; i<len; i++) {
             if ((*p!=' ') && (*p!='\n') && (*p!='\r') && (*p!='\t')) {
                 onlySpace = 0;
                 break;
@@ -1390,7 +1388,7 @@ void StripXMLSpace (
         }
         if (onlySpace) {
             parent = node->parentNode;
-            while (parent) {                
+            while (parent) {
                 p = getAttr(parent,"xml:space", a_space);
                 if (p!=NULL) {
                     if (strcmp(p,"preserve")==0) return;
@@ -1401,7 +1399,7 @@ void StripXMLSpace (
             DBG(fprintf(stderr, "removing %d(len %d) under '%s' \n", node->nodeNumber, len, node->parentNode->nodeName);)
                 domDeleteNode (node, NULL, NULL);
         }
-    } else 
+    } else
     if (node->nodeType == ELEMENT_NODE) {
         if (node->firstChild == NULL) return;
         strip = 0;
@@ -1470,7 +1468,7 @@ void StripXMLSpace (
                             f = (double *)Tcl_GetHashValue (h);
                             if (*f > stripPrecedence) {
                                 strip = 0;
-                            } else 
+                            } else
                             if (*f == stripPrecedence && stripPrio < -0.25) {
                                 strip = 0;
                             }
@@ -1483,7 +1481,7 @@ void StripXMLSpace (
                         f = (double *)Tcl_GetHashValue (h);
                         if (*f > stripPrecedence) {
                             strip = 0;
-                        } else 
+                        } else
                         if (*f == stripPrecedence && stripPrio < 0.0) {
                             strip = 0;
                         }
@@ -1521,7 +1519,7 @@ static int xsltXPathFuncs (
     domNode         * ctxNode,
     int               ctxPos,
     xpathResultSet  * ctx,
-    domNode         * exprContext, 
+    domNode         * exprContext,
     int               argc,
     xpathResultSets * argv,
     xpathResultSet  * result,
@@ -1530,7 +1528,7 @@ static int xsltXPathFuncs (
 {
     xsltState     * xs = clientData;
     char          * keyId, *filterValue, *str, *baseURI, tmp[5];
-    char          * localName, prefix[MAX_PREFIX_LEN]; 
+    char          * localName, prefix[MAX_PREFIX_LEN];
     int             rc, i, len, NaN, freeStr;
     double          n;
     xsltKeyValue  * value;
@@ -1542,7 +1540,7 @@ static int xsltXPathFuncs (
     domNS         * ns;
 
     DBG ( fprintf(stderr,"xsltXPathFuncs funcName='%s'\n",funcName); )
- 
+
     if (strcmp(funcName, "key")==0) {
         /*--------------------------------------------------------------------
         |   'key' function
@@ -1585,7 +1583,7 @@ static int xsltXPathFuncs (
         }
         DBG(if (!sdoc) fprintf (stderr, "key() function: ctxNode doesn't belong to a doc out of subDocs!!! This could not happen!. ERROR\n");
             else (fprintf (stderr, "key() function: ctxNode belongs to doc %s\n", sdoc->baseURI));)
-        
+
         h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         if (!h) {
             if (buildKeyInfoForDoc(sdoc,keyId,&(xs->keyInfos),xs,errMsg)<0) {
@@ -1595,13 +1593,13 @@ static int xsltXPathFuncs (
             h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         }
         free (keyId);
-        
+
         docKeyData = (Tcl_HashTable *) Tcl_GetHashValue (h);
 
         if (argv[1]->type == xNodeSetResult) {
             for (i = 0; i < argv[1]->nr_nodes; i++) {
                 filterValue = xpathFuncStringForNode (argv[1]->nodes[i]);
-                TRACE1("filterValue='%s' \n", filterValue); 
+                TRACE1("filterValue='%s' \n", filterValue);
                 h = Tcl_FindHashEntry (docKeyData, filterValue);
                 if (h) {
                     keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
@@ -1617,7 +1615,7 @@ static int xsltXPathFuncs (
             return 0;
         } else {
            filterValue = xpathFuncString(argv[1]);
-           TRACE1("filterValue='%s' \n", filterValue); 
+           TRACE1("filterValue='%s' \n", filterValue);
            h = Tcl_FindHashEntry (docKeyData, filterValue);
            if (h) {
                keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
@@ -1638,7 +1636,7 @@ static int xsltXPathFuncs (
         DBG(fprintf(stderr, "xsltXPathFuncs 'current' = '%d' \n", xs->current->nodeNumber);)
         rsAddNode(result, xs->current);
         return 0;
-    } else 
+    } else
     if (strcmp (funcName, "format-number")==0) {
         /*--------------------------------------------------------------------
         |   'format-number' function
@@ -1646,11 +1644,11 @@ static int xsltXPathFuncs (
         DBG(fprintf(stderr, "before format-number argc=%d \n", argc);)
         if (argc == 3) {
             *errMsg = strdup("format-number with decimal-format (third paramater) is not yet supported!");
-            return 1;  
+            return 1;
         }
         if (argc != 2) {
             *errMsg = strdup("format-number: wrong # parameters: format-number(number, string, ?string?)!");
-            return 1;  
+            return 1;
         }
         NaN = 0;
         n   = xpathFuncNumber (argv[0], &NaN);
@@ -1670,7 +1668,7 @@ static int xsltXPathFuncs (
         free (str);
         return 0;
         DBG(fprintf(stderr, "after format-number \n");)
-    } else 
+    } else
     if (strcmp (funcName, "document")==0) {
         /*--------------------------------------------------------------------
         |   'document' function
@@ -1696,7 +1694,7 @@ static int xsltXPathFuncs (
                         }
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 
+                    if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
                         if (freeStr) free (str);
                         return -1;
@@ -1706,7 +1704,7 @@ static int xsltXPathFuncs (
                     }
                     if (freeStr) free (str);
                 }
-            }  
+            }
             else {
                 freeStr = 1;
                 str = xpathFuncString (argv[0]);
@@ -1722,7 +1720,7 @@ static int xsltXPathFuncs (
                    (not needed for path expressions). */
                 if (xs->currentXSLTNode) {
                     baseURI = findBaseURI (xs->currentXSLTNode);
-                } else 
+                } else
                 if (xs->currentTplRule) {
                     baseURI = findBaseURI (xs->currentTplRule->content);
                 } else {
@@ -1734,7 +1732,7 @@ static int xsltXPathFuncs (
                     str = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
-                if (xsltAddExternalDocument(xs, baseURI, str, 
+                if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
                     if (freeStr) free (str);
                     return -1;
@@ -1768,7 +1766,7 @@ static int xsltXPathFuncs (
                         freeStr = 0;
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 
+                    if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
                         if (freeStr) free (str);
                         return -1;
@@ -1780,7 +1778,7 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
-                if (xsltAddExternalDocument(xs, baseURI, str, 
+                if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
                     free (str);
                     return -1;
@@ -1799,11 +1797,11 @@ static int xsltXPathFuncs (
         /* chain back to original callback */
         if (xs->orig_funcCB) {
             return (xs->orig_funcCB)(xs->orig_funcClientData, funcName,
-                                     ctxNode, ctxPos, ctx, exprContext, 
+                                     ctxNode, ctxPos, ctx, exprContext,
                                      argc, argv, result, errMsg);
         }
     }
-    return 0;    
+    return 0;
 }
 
 
@@ -1817,7 +1815,7 @@ static int evalXPath (
     xpathResultSet  * context,
     domNode         * currentNode,
     int               currentPos,
-    char            * xpath,    
+    char            * xpath,
     xpathResultSet  * rs,
     char           ** errMsg
 )
@@ -1829,7 +1827,7 @@ static int evalXPath (
     h = Tcl_CreateHashEntry (&(xs->xpaths), xpath, &hnew);
     if (!hnew) {
         t = (ast)Tcl_GetHashValue(h);
-    } else {     
+    } else {
         rc = xpathParse(xpath, errMsg, &t, 0);
         CHECK_RC;
         Tcl_SetHashValue(h, t);
@@ -1839,10 +1837,10 @@ static int evalXPath (
     DBG(fprintf (stderr, "evalXPath evaluating xpath:\n");)
     DBG(printAst(3,t);)
     rc = xpathEvalSteps( t, context, currentNode, xs->currentXSLTNode, currentPos,
-                         &docOrder, &(xs->cbs), rs, errMsg); 
+                         &docOrder, &(xs->cbs), rs, errMsg);
     if (rc != XPATH_OK) {
         xpathRSFree( rs );
-    } 
+    }
 
     return rc;
 }
@@ -1884,7 +1882,7 @@ static int nodeGreater (
             }
         }
 DBG(   fprintf(stderr, "nodeGreater %d <-- strA='%s' strB='%s'\n", rc, strA, strB);)
-#else    
+#else
         lenA = Tcl_NumUtfChars (strA, -1);
         lenB = Tcl_NumUtfChars (strB, -1);
         len = (lenA < lenB ? lenA : lenB);
@@ -1932,9 +1930,9 @@ DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
                 }
             }
         } else {
-            if (asc) *greater = (realA > realB); 
-            else *greater = (realA < realB);        
-        } 
+            if (asc) *greater = (realA > realB);
+            else *greater = (realA < realB);
+        }
     }
     return 0;
 }
@@ -1958,7 +1956,7 @@ static int fastMergeSort (
     int tmpPos, lptr, rptr, middle, i, j, gt, rc;
     char    *tmpVs;
     double   tmpVd;
-    
+
     if (size < 10) {
           /* use simple and fast insertion for small sizes ! */
         for (i = 1; i < size; i++) {
@@ -1966,12 +1964,12 @@ static int fastMergeSort (
             tmpPos = posa [i];
             tmpVs  = vs   [i];
             tmpVd  = vd   [i];
-            j = i; 
+            j = i;
             if (j>0) {
                 rc = nodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
                                    vd[j-1], tmpVd, &gt);
                 CHECK_RC;
-            }            
+            }
             while ( j > 0 && gt) {
                 a   [j] = a   [j-1];
                 posa[j] = posa[j-1];
@@ -1992,7 +1990,7 @@ static int fastMergeSort (
         return 0;
     }
     middle = size/2;
- 
+
     rc = fastMergeSort(txt, asc, upperFirst, a, posa, b, posb, vs, vd,
                          vstmp, vdtmp, middle, errMsg);
     CHECK_RC;
@@ -2000,10 +1998,10 @@ static int fastMergeSort (
                          posb+middle, vs+middle, vd+middle, vstmp+middle,
                          vdtmp+middle, size-middle, errMsg);
     CHECK_RC;
- 
+
     lptr = 0;
     rptr = middle;
- 
+
     for (i = 0; i < size; i++) {
         if (lptr == middle) {
             b    [i] = a   [rptr  ];
@@ -2012,7 +2010,7 @@ static int fastMergeSort (
             vdtmp[i] = vd  [rptr++];
         } else if (rptr < size) {
             rc = nodeGreater(txt, asc, upperFirst, vs[lptr], vs[rptr],
-                             vd[lptr], vd[rptr], &gt); 
+                             vd[lptr], vd[rptr], &gt);
             if (gt) {
                 b    [i] = a   [rptr  ];
                 posb [i] = posa[rptr  ];
@@ -2029,8 +2027,8 @@ static int fastMergeSort (
             posb [i] = posa[lptr  ];
             vstmp[i] = vs  [lptr  ];
             vdtmp[i] = vd  [lptr++];
-        } 
-    } 
+        }
+    }
     memcpy(a,    b,     size*sizeof(domNode*));
     memcpy(posa, posb,  size*sizeof(int*));
     memcpy(vs,   vstmp, size*sizeof(char*));
@@ -2043,7 +2041,7 @@ static int sortNodeSetFastMerge(
     int         txt,
     int         asc,
     int         upperFirst,
-    domNode   * nodes[], 
+    domNode   * nodes[],
     int         n,
     char     ** vs,
     double    * vd,
@@ -2069,8 +2067,8 @@ static int sortNodeSetFastMerge(
     }
     vstmp = (char **) malloc (sizeof (char *) * n);
     vdtmp = (double *)malloc (sizeof (double) * n);
-    
-    rc = fastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd, 
+
+    rc = fastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd,
                          vstmp, vdtmp, n, errMsg);
     free (posb);
     free (b);
@@ -2108,7 +2106,7 @@ static int xsltSetVar (
     if (select!=NULL) {
         TRACE2("xsltSetVar variableName='%s' select='%s'\n", variableName, select);
         savedCurrent = xs->current;
-        xs->current = currentNode;    
+        xs->current = currentNode;
         rc = evalXPath (xs, context, currentNode, currentPos, select, &rs,
                         errMsg);
         xs->current = savedCurrent;
@@ -2118,13 +2116,13 @@ static int xsltSetVar (
             xpathRSInit (&rs);
             rsSetString (&rs, "");
         } else {
-            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)", 
+            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
             /* process the children as well */
             xsltPushVarFrame (xs);
-            rc = ExecActions(xs, context, currentNode, currentPos, 
+            rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
             xsltPopVarFrame (xs);
             CHECK_RC;
@@ -2137,7 +2135,7 @@ static int xsltSetVar (
     
     xs->varStackPtr++;
     if (xs->varStackPtr >= xs->varStackLen) {
-        xs->varStack = (xsltVariable *) realloc (xs->varStack, 
+        xs->varStack = (xsltVariable *) realloc (xs->varStack,
                                                  sizeof (xsltVariable)
                                                  * 2 * xs->varStackLen);
         xs->varStackLen *= 2;
@@ -2185,7 +2183,6 @@ static int xsltVarExists (
     domNS        *ns;
     xsltVarFrame *frame;
 
-    
     domSplitQName (variableName, prefix, &localName);
     if (prefix[0]) {
         ns = domLookupPrefix (exprContext, prefix);
@@ -2199,7 +2196,6 @@ static int xsltVarExists (
         uri = NULL;
         varName = variableName;
     }
-        
     frameIndex = xs->varFramesStackPtr;
     while (frameIndex >= 0) {
         frame = &xs->varFramesStack[frameIndex];
@@ -2247,7 +2243,7 @@ static int xsltGetVar (
     xpathResultSet    nodeList;
     domNode          *savedCurrentXSLTNode;
     Tcl_DString       dErrMsg;
-    
+
     TRACE1("xsltGetVar variableName='%s' \n", variableName);
     frameIndex = xs->varFramesStackPtr;
     while (frameIndex >= 0) {
@@ -2296,7 +2292,7 @@ static int xsltGetVar (
             xs->varsInProcess = &thisVarInProcess;
 
             xpathRSInit( &nodeList );
-            rsAddNode( &nodeList, xs->xmlRootNode); 
+            rsAddNode( &nodeList, xs->xmlRootNode);
             savedCurrentXSLTNode = xs->currentXSLTNode;
             xs->currentXSLTNode = topLevelVar->node;
             select = getAttr (topLevelVar->node, "select", a_select);
@@ -2334,7 +2330,7 @@ static int xsltGetVar (
 |
 \---------------------------------------------------------------------------*/
 static int xsltAddTemplate (
-    xsltState *xs,    
+    xsltState *xs,
     domNode   *node,
     double     precedence,
     char     **errMsg
@@ -2344,9 +2340,9 @@ static int xsltAddTemplate (
     char         *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
     int           rc;
     domNS        *ns;
-    
+
     tpl = malloc(sizeof(xsltTemplate));
-    
+
     tpl->match      = getAttr(node,"match", a_match);
     str = getAttr(node, "name", a_name);
     tpl->name       = NULL;
@@ -2388,10 +2384,10 @@ static int xsltAddTemplate (
     if (prioStr) {
         tpl->prio = (double)atof(prioStr);
     }
-    
+
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        rc = xpathParse(tpl->match, errMsg, &(tpl->ast), 1); 
+        rc = xpathParse(tpl->match, errMsg, &(tpl->ast), 1);
         CHECK_RC;
         if (!prioStr) {
             tpl->prio = xpathGetPrio(tpl->ast);
@@ -2413,7 +2409,7 @@ static int xsltAddTemplate (
         xs->lastTemplate->next = tpl;
         xs->lastTemplate = tpl;
     }
-    return 0;           
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -2434,11 +2430,11 @@ int ExecUseAttributeSets (
     char        *pc, *aSet, save, *str, prefix[MAX_PREFIX_LEN], *localName;
     int          rc;
     domNS       *ns;
-        
+
     pc = styles;
     while (*pc == ' ') pc++;
     aSet = pc;
-                    
+
     while (*pc) {
         while (*pc && (*pc != ' ')) pc++;
         save = *pc;
@@ -2448,7 +2444,7 @@ int ExecUseAttributeSets (
         while (attrSet) {
             TRACE2("use-Attr: '%s' == '%s' ? \n", attrSet->name, aSet);
             rc = 0;
-            if (!attrSet->uri) { 
+            if (!attrSet->uri) {
                 if (strcmp(attrSet->name, aSet)==0) rc = 1;
             }
             else {
@@ -2467,22 +2463,22 @@ int ExecUseAttributeSets (
                                a_useAttributeSets);
                 if (str) {
                     rc = ExecUseAttributeSets (xs, context, currentNode,
-                                               currentPos, attrSet->content, 
+                                               currentPos, attrSet->content,
                                                str, errMsg);
                     CHECK_RC;
                 }
-                rc = ExecActions(xs, context, currentNode, currentPos, 
+                rc = ExecActions(xs, context, currentNode, currentPos,
                                  attrSet->content->firstChild, errMsg);
                 CHECK_RC;
                 /*  break; */
-            }  
+            }
             attrSet = attrSet->next;
         }
         *pc = save;
         while (*pc == ' ') pc++;
         aSet = pc;
     }
-    return 0; 
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -2502,7 +2498,7 @@ static int evalAttrTemplates (
     xpathResultSet  rs;
     char           *tplStart = NULL, *tplResult, *pc, literalChar;
     int             rc, aLen, inTpl = 0, p = 0, inLiteral;
-    
+
     aLen = 500;
     *out = malloc(aLen);
     while (*str) {
@@ -2511,7 +2507,7 @@ static int evalAttrTemplates (
                 if (*str == '\'') {
                     inLiteral = 1;
                     literalChar = '\'';
-                } else 
+                } else
                 if (*str == '"') {
                     inLiteral = 1;
                     literalChar = '"';
@@ -2522,10 +2518,10 @@ static int evalAttrTemplates (
                 }
             }
             if (*str == '}' && !inLiteral) {
-            
+
                 *str = '\0';
                 TRACE1("attrTpl: '%s' \n", tplStart);
-                xs->current = currentNode;    
+                xs->current = currentNode;
                 rc = evalXPath (xs, context, currentNode, currentPos,
                                 tplStart, &rs, errMsg);
                 *str = '}';
@@ -2605,7 +2601,7 @@ static int setParamVars (
     domNode *child;
     char    *str, *select;
     int      rc;
-    
+
     child = actionNode->firstChild;
     while (child) {
         if (child->nodeType == ELEMENT_NODE) {
@@ -2643,7 +2639,7 @@ static int doSortActions (
     xpathResultSet  * context,
     domNode         * currentNode,
     int               currentPos,
-    char           ** errMsg    
+    char           ** errMsg
 )
 {
     domNode       *child;
@@ -2652,7 +2648,7 @@ static int doSortActions (
     double        *vd = NULL;
     int            rc = 0, typeText, ascending, upperFirst, *pos = NULL, i, NaN;
     xpathResultSet rs;
-    
+
     child = actionNode->lastChild; /* do it backwards, so that multiple sort
                                       levels are correctly processed */
     while (child) {
@@ -2695,16 +2691,16 @@ static int doSortActions (
                 }
                 /* jcl: TODO */
                 lang = getAttr(child, "lang", a_lang);
-                
-                TRACE4("sorting with '%s' typeText %d ascending %d nodeSetLen=%d\n", 
+
+                TRACE4("sorting with '%s' typeText %d ascending %d nodeSetLen=%d\n",
                        select, typeText, ascending, nodelist->nr_nodes);
                 CHECK_RC;
-                if (!pos) 
+                if (!pos)
                     pos = (int*) malloc( sizeof(int) * nodelist->nr_nodes);
                 for (i=0; i<nodelist->nr_nodes;i++) pos[i] = i;
 
                 xs->currentXSLTNode = child;
-                
+
                 if (!vs) {
                     vs = (char **) malloc (sizeof (char *) * nodelist->nr_nodes);
                     for (i=0; i<nodelist->nr_nodes;i++) vs[i] = NULL;
@@ -2714,9 +2710,9 @@ static int doSortActions (
                     xpathRSInit (&rs);
                     rc = evalXPath (xs, nodelist, nodelist->nodes[i], i,
                                     select, &rs, errMsg);
-                    if (rc < 0) 
+                    if (rc < 0)
                         goto doSortActionCleanUp;
-                    
+
                     if (typeText) {
                         vs[i] = xpathFuncString (&rs);
                     } else {
@@ -2763,7 +2759,7 @@ static int xsltNumber (
     xpathResultSet    rs;
     int               rc, vs[20], NaN, hnew, i, useFormatToken, vVals = 0;
     int              *v, *vd = NULL;
-    long              groupingSize = 0; 
+    long              groupingSize = 0;
     char             *value, *level, *count, *from, *str, *format;
     char             *groupingSeparator, *groupingSizeStr;
     ast               t_count, t_from;
@@ -2771,7 +2767,7 @@ static int xsltNumber (
     Tcl_HashEntry    *h;
     xsltNumberFormat *f;
     Tcl_DString       dStr;
-    
+
     v = vs;
     value = getAttr(actionNode, "value",  a_value);
     str   = getAttr(actionNode, "format", a_format); if (!str) str = "1";
@@ -2784,7 +2780,7 @@ static int xsltNumber (
         free (format);
         return -1;
     }
-    groupingSeparator = getAttr(actionNode, "grouping-separator", 
+    groupingSeparator = getAttr(actionNode, "grouping-separator",
                                 a_groupingSeparator);
     if (groupingSeparator) {
         groupingSizeStr = getAttr(actionNode, "grouping-size", a_groupingSize);
@@ -2798,7 +2794,7 @@ static int xsltNumber (
             groupingSeparator = NULL;
         }
     }
-    
+
     if (value) {
         TRACE2("xsltNumber value='%s' format='%s' \n", value, format);
         xs->current = currentNode;
@@ -2808,9 +2804,9 @@ static int xsltNumber (
         vVals = 1;
         v[0] = xpathRound(xpathFuncNumber( &rs, &NaN ));
         if (NaN) v[0] = 0;
-        xpathRSFree( &rs );     
+        xpathRSFree( &rs );
     } else {
-        level = getAttr(actionNode, "level",  a_level); 
+        level = getAttr(actionNode, "level",  a_level);
         if (!level) level = "single";
         count = getAttr(actionNode, "count",  a_count);
         from  = getAttr(actionNode, "from",   a_from);
@@ -2830,7 +2826,7 @@ static int xsltNumber (
                    "expanded-name" of the current node. */
                 rc = xpathParse (currentNode->nodeName, errMsg, &t_count, 1);
                 CHECK_RC;
-            } else 
+            } else
             if (currentNode->nodeType == ATTRIBUTE_NODE) {
                 /* TODO: This is wrong. Instead this should use the
                    "expanded-name" of the current node. */
@@ -2847,13 +2843,13 @@ static int xsltNumber (
                 rc = xpathParse (str, errMsg, &t_count, 1);
                 free (str);
                 CHECK_RC;
-            } else 
+            } else
             if (currentNode->nodeType == TEXT_NODE) {
                 str = strdup ("text()");
                 rc = xpathParse (str, errMsg, &t_count, 1);
                 free (str);
                 CHECK_RC;
-            } else 
+            } else
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
                 str = strdup ("processing-instruction()");
                 rc = xpathParse (str, errMsg, &t_count, 1);
@@ -2908,7 +2904,7 @@ static int xsltNumber (
                     node = node->previousSibling;
                 }
             }
-        } else 
+        } else
         if (strcmp (level, "multiple")==0) {
             xpathRSInit (&rs);
             node = currentNode;
@@ -2940,7 +2936,7 @@ static int xsltNumber (
                 }
             }
             xpathRSFree (&rs);
-        } else 
+        } else
         if (strcmp (level, "any")==0) {
             v[0] = 0;
             vVals = 1;
@@ -2954,10 +2950,10 @@ static int xsltNumber (
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
                 CHECK_RC;
                 if (rc) v[0]++;
-                    
+
                 if (node->previousSibling) {
                     node = node->previousSibling;
-                    while ((node->nodeType == ELEMENT_NODE) 
+                    while ((node->nodeType == ELEMENT_NODE)
                            && node->lastChild) {
                         node = node->lastChild;
                     }
@@ -3063,7 +3059,7 @@ static int ExecAction (
     xsltExcludeNS  *excludeNS;
     xsltNSAlias    *nsAlias;
     Tcl_DString     dStr;
-    domProcessingInstructionNode *pi;      
+    domProcessingInstructionNode *pi;
     xpathResultSet  rs, nodeList;
     char           *str, *str2, *mode, *modeURI, *select, *pc;
     char           *nsAT, *nsStr;
@@ -3072,7 +3068,7 @@ static int ExecAction (
     double          currentPrio, currentPrec;
 
     if (actionNode->nodeType == TEXT_NODE) {
-        domAppendNewTextNode(xs->lastNode, 
+        domAppendNewTextNode(xs->lastNode,
                              ((domTextNode*)actionNode)->nodeValue,
                              ((domTextNode*)actionNode)->valueLength,
                              TEXT_NODE, 0);
@@ -3084,7 +3080,7 @@ static int ExecAction (
     DBG (printXML (currentNode, 3, 5);)
     xs->currentXSLTNode = actionNode;
     switch ( getTag(actionNode) ) {
-    
+
         case applyImports:
             if (actionNode->firstChild) {
                 reportError(actionNode, "xsl:apply-imports has to be empty!", errMsg);
@@ -3103,7 +3099,7 @@ static int ExecAction (
             for (tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
                 TRACE4("find tpl match='%s' mode='%s' modeURI='%s' name='%s'\n",
                        tpl->match, tpl->mode, tpl->modeURI, tpl->name);
-                /* exclude those, which don't match the current mode 
+                /* exclude those, which don't match the current mode
                    and the currentTplRule */
                 if (   ( mode && !tpl->mode)
                        || (!mode &&  tpl->mode)
@@ -3114,12 +3110,12 @@ static int ExecAction (
                        || (tpl == xs->currentTplRule)
                     ) {
                     TRACE("doesn't match mode\n");
-                    continue; 
+                    continue;
                 }
                 TRACE4("tpl has prio='%f' precedence='%f', currentPrio='%f', currentPrec='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
                 if (tpl->match && tpl->precedence < xs->currentTplRule->precedence
                     && tpl->precedence >= currentPrec) {
-                    if (tpl->precedence > currentPrec 
+                    if (tpl->precedence > currentPrec
                         || tpl->prio >= currentPrio) {
                         rc = xpathMatches (tpl->ast, actionNode, currentNode,
                                            &(xs->cbs), errMsg);
@@ -3136,20 +3132,20 @@ static int ExecAction (
             if (tplChoosen == NULL) {
 
                 TRACE("nothing matches -> execute built-in template \n");
-                
+
                 /*--------------------------------------------------------------------
                 |   execute built-in template
                 \-------------------------------------------------------------------*/
                 if (currentNode->nodeType == TEXT_NODE) {
                     domAppendNewTextNode(xs->lastNode,
                                          ((domTextNode*)currentNode)->nodeValue,
-                                         ((domTextNode*)currentNode)->valueLength, 
+                                         ((domTextNode*)currentNode)->valueLength,
                                          TEXT_NODE, 0);
                     return 0;
                 } else
                 if (currentNode->nodeType == ELEMENT_NODE) {
                     child = currentNode->firstChild;
-                } else 
+                } else
                 if (currentNode->nodeType == ATTRIBUTE_NODE) {
                     domAppendNewTextNode (xs->lastNode,
                                           ((domAttrNode*)currentNode)->nodeValue,
@@ -3160,9 +3156,9 @@ static int ExecAction (
                     return 0; /* for all other node we don't have to recurse deeper */
                 }
                 xpathRSInit( &rs );
-                while (child) {    
+                while (child) {
                     rsAddNodeFast ( &rs, child);
-                    child = child->nextSibling; 
+                    child = child->nextSibling;
                 }
                 rc = ApplyTemplates (xs, context, currentNode, currentPos,
                                 actionNode, &rs, mode, modeURI, errMsg);
@@ -3171,18 +3167,18 @@ static int ExecAction (
 
                 break;
             }
-            
+
             xsltPushVarFrame (xs);
             SETSCOPESTART;
             currentTplRule = xs->currentTplRule;
             xs->currentTplRule = tplChoosen;
-            rc = ExecActions(xs, context, currentNode, currentPos, 
+            rc = ExecActions(xs, context, currentNode, currentPos,
                              tplChoosen->content->firstChild, errMsg);
             xsltPopVarFrame (xs);
             CHECK_RC;
             xs->currentTplRule = currentTplRule;
             break;
-            
+
         case applyTemplates:
             mode    = NULL;
             modeURI = NULL;
@@ -3200,7 +3196,7 @@ static int ExecAction (
                 mode = localName;
             }
             select  = getAttr(actionNode, "select", a_select);
-            if (!select) { 
+            if (!select) {
                 xpathRSInit (&rs);
                 if (currentNode->nodeType == ELEMENT_NODE) {
                     child = currentNode->firstChild;
@@ -3216,28 +3212,28 @@ static int ExecAction (
                 TRACE2("applyTemplates: select = '%s' mode='%s'\n", select, mode);
                 xs->current = currentNode;
                 rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
-                xpathRSFree( &nodeList ); 
+                xpathRSFree( &nodeList );
                 CHECK_RC;
                 TRACE1("applyTemplates: evalXPath for select = '%s' gave back:\n", select);
                 DBG(rsPrint(&rs));
             }
-            
+
             rc = doSortActions (xs, &rs, actionNode, context, currentNode,
                                 currentPos, errMsg);
             CHECK_RC;
             /* should not be necessary, because every node set is
                returned already in doc Order */
             /*  if (!sorted) sortByDocOrder(&rs); */
-            
+
             TRACE1("                evalXPath for select = '%s': (SORTED)\n", select);
             DBG(rsPrint(&rs));
 
             rc = ApplyTemplates(xs, context, currentNode, currentPos,
-                                actionNode, &rs, mode, modeURI, errMsg); 
+                                actionNode, &rs, mode, modeURI, errMsg);
             CHECK_RC;
-            xpathRSFree( &rs ); 
+            xpathRSFree( &rs );
             break;
-            
+
         case attribute:
             if (xs->lastNode->firstChild) {
                 /* Adding an Attribute to an element after
@@ -3251,7 +3247,7 @@ static int ExecAction (
                 reportError (actionNode, "xsl:attribute: missing mandatory attribute \"name\".", errMsg);
                 return -1;
             }
-            
+
             rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                     str, &str2, errMsg);
             CHECK_RC;
@@ -3300,12 +3296,12 @@ static int ExecAction (
                     ns = domLookupPrefix (actionNode, prefix);
                     if (ns) nsStr = strdup (ns->uri);
                     else goto ignoreAttribute;
-                } 
+                }
                 Tcl_DStringAppend (&dStr, str2, -1);
             }
-                
+
             savedLastNode = xs->lastNode;
-            xs->lastNode  = domNewElementNode (xs->resultDoc,  
+            xs->lastNode  = domNewElementNode (xs->resultDoc,
                                                "container", ELEMENT_NODE);
             xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
@@ -3324,9 +3320,9 @@ static int ExecAction (
             if (nsStr) free (nsStr);
             free(str2);
             break;
-            
+
         case attributeSet: return 0;
-            
+
         case callTemplate:
             tplChoosen = NULL;
             currentPrec = INT_MIN;
@@ -3382,7 +3378,7 @@ static int ExecAction (
                 CHECK_RC;    
                 DBG(printXML(xs->lastNode, 0, 2);)
             } else {
-                reportError (actionNode, 
+                reportError (actionNode,
                              "xsl:call-template has called a non existend template!",
                              errMsg);
                 return -1;
@@ -3391,7 +3387,7 @@ static int ExecAction (
 
        case choose:
             for( child = actionNode->firstChild;  child != NULL;
-                 child = child->nextSibling) 
+                 child = child->nextSibling)
             {
                 if (child->nodeType != ELEMENT_NODE) continue;
                 switch (getTag(child)) {
@@ -3404,7 +3400,7 @@ static int ExecAction (
                                            str, &rs, errMsg);
                             CHECK_RC;
                             b = xpathFuncBoolean( &rs );
-                            xpathRSFree( &rs ); 
+                            xpathRSFree( &rs );
                             if (b) {
                                 TRACE("test is true!\n");
                                 /* process the children as well */
@@ -3415,13 +3411,13 @@ static int ExecAction (
                                 xsltPopVarFrame (xs);
                                 CHECK_RC;
                                 return 0;
-                            }                            
+                            }
                         } else {
                             reportError (child, "xsl:when: missing mandatory attribute \"test\".", errMsg);
                             return -1;
                         }
                         break;
-                        
+
                     case otherwise:
                         /* process the children as well */
                         xsltPushVarFrame (xs);
@@ -3430,7 +3426,7 @@ static int ExecAction (
                         xsltPopVarFrame (xs);
                         CHECK_RC;
                         return 0;
-                        
+
                     default:
                         reportError (actionNode,
                                      "only otherwise or when allowed in choose!",
@@ -3440,7 +3436,7 @@ static int ExecAction (
             }
 
             break;
-            
+
         case comment:
             fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
                                              ELEMENT_NODE);
@@ -3486,7 +3482,7 @@ static int ExecAction (
             domDeleteNode (fragmentNode, NULL, NULL);
             free (str);
             break;
-            
+
         case copy:
             DBG(if (currentNode->nodeType == ATTRIBUTE_NODE) {
                     fprintf(stderr, "copy '%s' \n", ((domAttrNode*)currentNode)->nodeName);
@@ -3497,7 +3493,7 @@ static int ExecAction (
                 DBG(fprintf(stderr, "node is TEXT_NODE \n");)
                 tnode = (domTextNode*)currentNode;
                 n = (domNode*)
-                    domAppendNewTextNode(xs->lastNode, 
+                    domAppendNewTextNode(xs->lastNode,
                                          tnode->nodeValue,
                                          tnode->valueLength,
                                          TEXT_NODE, 0);
@@ -3505,7 +3501,7 @@ static int ExecAction (
             if (currentNode->nodeType == ELEMENT_NODE) {
                 DBG(fprintf(stderr, "node is ELEMENT_NODE \n");)
                 if (currentNode != currentNode->ownerDocument->rootNode) {
-                    n = domAppendNewElementNode(xs->lastNode, 
+                    n = domAppendNewElementNode(xs->lastNode,
                                                 currentNode->nodeName,
                                                 domNamespaceURI(currentNode) );
                     savedLastNode = xs->lastNode;
@@ -3515,23 +3511,23 @@ static int ExecAction (
                     copyNS (currentNode, xs->lastNode);
                     if (str) {
                         rc = ExecUseAttributeSets (xs, context, currentNode,
-                                                   currentPos, actionNode, 
+                                                   currentPos, actionNode,
                                                    str, errMsg);
                         CHECK_RC;
                     }
                 }
-            } else 
+            } else
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
                 pi = (domProcessingInstructionNode*)currentNode;
                 n = (domNode*)
                     domNewProcessingInstructionNode (xs->lastNode->ownerDocument,
                                                      pi->targetValue,
-                                                     pi->targetLength, 
+                                                     pi->targetLength,
                                                      pi->dataValue,
                                                      pi->dataLength);
                 domAppendChild (xs->lastNode, n);
-                
-            } else 
+
+            } else
             if (currentNode->nodeType == COMMENT_NODE) {
                 DBG(fprintf(stderr, "node is COMMENT_NODE \n");)
                 tnode = (domTextNode *)currentNode;
@@ -3539,7 +3535,7 @@ static int ExecAction (
                                                       tnode->nodeValue,
                                                       tnode->valueLength,
                                                       COMMENT_NODE, 0);
-            } else 
+            } else
             if (currentNode->nodeType == ATTRIBUTE_NODE) {
                 DBG(fprintf(stderr, "node is ATTRIBUTE_NODE \n");)
                 if (xs->lastNode->firstChild) {
@@ -3550,7 +3546,7 @@ static int ExecAction (
                 }
                 attr = (domAttrNode *)currentNode;
                 domSetAttributeNS (xs->lastNode, attr->nodeName,
-                                   attr->nodeValue, 
+                                   attr->nodeValue,
                                    domNamespaceURI (currentNode), 1);
             }
 
@@ -3564,8 +3560,8 @@ static int ExecAction (
                 xs->lastNode = savedLastNode;
             }
             break;
-            
-        case copyOf:            
+
+        case copyOf:
             if (actionNode->firstChild) {
                 reportError (actionNode, "xsl:copy-of has to be empty.", errMsg);
                 return -1;
@@ -3575,15 +3571,15 @@ static int ExecAction (
                 reportError (actionNode, "xsl:copy-of: missing mandatory attribute \"select\".", errMsg);
                 return -1;
             }
-            
+
             xs->current = currentNode;
             rc = evalXPath(xs, context, currentNode, currentPos, select,
                            &rs, errMsg);
-            CHECK_RC;            
+            CHECK_RC;
             TRACE1(" copyOf select='%s':\n", select);
             DBG(rsPrint(&rs));
             if (rs.type == xNodeSetResult) {
-                for (i=0; i<rs.nr_nodes; i++) { 
+                for (i=0; i<rs.nr_nodes; i++) {
                     if (rs.nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         attr = (domAttrNode*)rs.nodes[i];
                         ns = domGetNamespaceByIndex (attr->parentNode->ownerDocument, attr->namespace);
@@ -3612,11 +3608,11 @@ static int ExecAction (
                                      TEXT_NODE, 0);
                 free(str);
             }
-            xpathRSFree( &rs );               
+            xpathRSFree( &rs );
             break;
-            
+
         case decimalFormat: return 0;
-        
+
         case element:
             nsAT = getAttr(actionNode, "namespace", a_namespace);
             str  = getAttr(actionNode, "name", a_name);
@@ -3624,7 +3620,7 @@ static int ExecAction (
                 reportError (actionNode, "xsl:element: missing mandatory attribute \"name\".", errMsg);
                 return -1;
             }
-            
+
             rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                     str, &str2, errMsg);
             CHECK_RC;
@@ -3674,9 +3670,9 @@ static int ExecAction (
             xs->lastNode = savedLastNode;
             CHECK_RC;
             break;
-            
+
         case fallback: return 0;
-            
+
         case forEach:
             select = getAttr(actionNode, "select", a_select);
             if (!select) {
@@ -3742,16 +3738,16 @@ static int ExecAction (
             xpathRSFree( &rs );
             xpathRSFree (&nodeList);
             break;
-            
+
         case xsltIf:
             str = getAttr(actionNode, "test", a_test);
             if (str) {
                 xs->current = currentNode;
-                rc = evalXPath(xs, context, currentNode, currentPos, str, 
+                rc = evalXPath(xs, context, currentNode, currentPos, str,
                                &rs, errMsg);
                 CHECK_RC;
                 b = xpathFuncBoolean( &rs );
-                xpathRSFree( &rs ); 
+                xpathRSFree( &rs );
                 if (b) {
                     /* process the children as well */
                     xsltPushVarFrame (xs);
@@ -3770,9 +3766,9 @@ static int ExecAction (
         case include:
         case key:
             return 0;
-                        
+
         case message:
-            str  = getAttr(actionNode,"terminate", a_terminate); 
+            str  = getAttr(actionNode,"terminate", a_terminate);
             if (!str)  str = "no";
             fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)", ELEMENT_NODE);
             savedLastNode = xs->lastNode;
@@ -3782,7 +3778,7 @@ static int ExecAction (
                              actionNode->firstChild, errMsg);
             xsltPopVarFrame (xs);
             CHECK_RC;
-            
+
             str2 = xpathGetTextValue(fragmentNode, &len);
             fprintf (stderr, "xsl:message %s\n", str2);
             free (str2);
@@ -3793,9 +3789,9 @@ static int ExecAction (
                 return -1;
             }
             return 0;
-            
+
         case namespaceAlias: return 0;
-        
+
         case number:
             if (actionNode->firstChild) {
                 reportError (actionNode, "xsl:number has to be empty.", errMsg);
@@ -3805,11 +3801,11 @@ static int ExecAction (
                             actionNode, errMsg);
             CHECK_RC;
             break;
-        
+
         case output:
         case otherwise:
             return 0;
-             
+
         case param:
             str = getAttr(actionNode, "name", a_name);
             if (str) {
@@ -3827,9 +3823,9 @@ static int ExecAction (
                 return -1;
             }
             break;
-            
+
         case preserveSpace: return 0;
-        
+
         case procinstr:
             str = getAttr(actionNode, "name", a_name);
             if (str) {
@@ -3847,13 +3843,13 @@ static int ExecAction (
                 return -1;
             }
             break;
-            
+
         case sort:
-        case stylesheet: 
+        case stylesheet:
         case stripSpace:
         case template:
             return 0;
-        
+
         case text:
             str = getAttr(actionNode, "disable-output-escaping", a_disableOutputEscaping);
             if (str) {
@@ -3864,9 +3860,9 @@ static int ExecAction (
             domAppendNewTextNode(xs->lastNode, pc, len, TEXT_NODE, disableEsc);
             free (pc);
             break;
-            
+
         case transform: return 0;
-        
+
         case valueOf:
             if (actionNode->firstChild) {
                 reportError (actionNode, "xsl:value-of has to be empty.", errMsg);
@@ -3886,9 +3882,9 @@ static int ExecAction (
                 DBG(rsPrint(&rs));
                 str = xpathFuncString( &rs );
                 TRACE1("valueOf: xpathString='%s' \n", str);
-                domAppendNewTextNode(xs->lastNode, str, strlen(str), 
+                domAppendNewTextNode(xs->lastNode, str, strlen(str),
                                      TEXT_NODE, disableEsc);
-                xpathRSFree( &rs ); 
+                xpathRSFree( &rs );
                 free(str);
             } else {
                 reportError (actionNode,
@@ -3897,13 +3893,13 @@ static int ExecAction (
                 return -1;
             }
             break;
-            
+
         case variable:
             str = getAttr(actionNode, "name", a_name);
             if (str) {
                 if (xsltVarExists (xs, str, actionNode)) {
-                    reportError (actionNode, 
-                                 "Variable is already declared in this template", 
+                    reportError (actionNode,
+                                 "Variable is already declared in this template",
                                  errMsg);
                     return -1;
                 }
@@ -3919,11 +3915,11 @@ static int ExecAction (
                 return -1;
             }
             break;
-            
+
         case when:
         case withParam:
             return 0;
-            
+
         default:
             savedLastNode = xs->lastNode;
             DBG(fprintf(stderr,
@@ -4023,7 +4019,7 @@ static int ExecAction (
                     domAddNSToNode (xs->lastNode, ns);
                 }
             }
-            
+
             n = xs->lastNode;
             /* process the attributes */
             attr = actionNode->firstAttr;
@@ -4063,7 +4059,7 @@ static int ExecAction (
                     free(str);
                 }
                 attr = attr->nextSibling;
-            } 
+            }
             /* process the children as well */
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
@@ -4090,10 +4086,10 @@ static int ExecActions (
 {
     domNode *savedLastNode, *savedCurrentNode;
     int rc;
-    
+
     savedLastNode    = xs->lastNode;
     savedCurrentNode = xs->current;
-    
+
     while (actionNode) {
         xs->current = currentNode;
         rc = ExecAction (xs, context, currentNode, currentPos, actionNode, errMsg);
@@ -4130,20 +4126,20 @@ int ApplyTemplate (
 
     TRACE2("\n\nApplyTemplate mode='%s' currentPos=%d \n", mode, currentPos);
     DBG(printXML (currentNode, 0, 1);)
-    
+
     /*--------------------------------------------------------------
     |   find template
     \-------------------------------------------------------------*/
     tplChoosen  = NULL;
     currentPrio = -100000.0;
     currentPrec = 0.0;
-    
-    
+
+
     for( tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
-    
+
         TRACE3("find tpl match='%s' mode='%s' name='%s'\n",
                tpl->match, tpl->mode, tpl->name);
-        
+
         /* exclude those, which don't match the current mode */
         if (   ( mode && !tpl->mode)
             || (!mode &&  tpl->mode)
@@ -4161,14 +4157,14 @@ int ApplyTemplate (
             /* Higher precedence wins always. If precedences are equal,
                use priority for decision. */
             if (tpl->precedence > currentPrec ||  tpl->prio >= currentPrio) {
-                
+
                 TRACE2("testing XLocPath '%s' for node %d \n", tpl->match, currentNode->nodeNumber);
                 /* Short cut for simple common cases */
                 switch (tpl->ast->type) {
                 case IsElement:
                     if (currentNode->nodeType == ELEMENT_NODE) {
-                        if (tpl->ast->strvalue[0] != '*' 
-                            && strcmp (tpl->ast->strvalue, currentNode->nodeName)!=0) 
+                        if (tpl->ast->strvalue[0] != '*'
+                            && strcmp (tpl->ast->strvalue, currentNode->nodeName)!=0)
                             continue;
                     } else continue;
                     break;
@@ -4177,7 +4173,7 @@ int ApplyTemplate (
                         continue;
                     break;
                 case IsAttr:
-                    if (currentNode->nodeType != ATTRIBUTE_NODE) 
+                    if (currentNode->nodeType != ATTRIBUTE_NODE)
                         continue;
                     break;
                 default:
@@ -4209,7 +4205,7 @@ int ApplyTemplate (
         if (currentNode->nodeType == TEXT_NODE) {
             domAppendNewTextNode(xs->lastNode,
                                  ((domTextNode*)currentNode)->nodeValue,
-                                 ((domTextNode*)currentNode)->valueLength, 
+                                 ((domTextNode*)currentNode)->valueLength,
                                  TEXT_NODE, 0);
             return 0;
         } else
@@ -4218,7 +4214,7 @@ int ApplyTemplate (
         } else
         if (currentNode->nodeType == ELEMENT_NODE) {
             child = currentNode->firstChild;
-        } else 
+        } else
         if (currentNode->nodeType == ATTRIBUTE_NODE) {
             domAppendNewTextNode (xs->lastNode,
                                   ((domAttrNode*)currentNode)->nodeValue,
@@ -4229,9 +4225,9 @@ int ApplyTemplate (
             return 0; /* for all other node we don't have to recurse deeper */
         }
         xpathRSInit( &rs );
-        while (child) {    
+        while (child) {
             rsAddNodeFast ( &rs, child);
-            child = child->nextSibling; 
+            child = child->nextSibling;
         }
         rc = ApplyTemplates (xs, context, currentNode, currentPos, exprContext,
                              &rs, mode, modeURI, errMsg);
@@ -4243,7 +4239,7 @@ int ApplyTemplate (
         currentTplRule = xs->currentTplRule;
         xs->currentTplRule = tplChoosen;
         DBG(printXML (tplChoosen->content->firstChild, 0, 1);)
-        rc = ExecActions(xs, context, currentNode, currentPos, 
+        rc = ExecActions(xs, context, currentNode, currentPos,
                          tplChoosen->content->firstChild, errMsg);
         TRACE1("ApplyTemplate/ExecActions rc = %d \n", rc);
         CHECK_RC;
@@ -4271,7 +4267,7 @@ int ApplyTemplates (
 {
     domNode  * savedLastNode;
     int        i, rc, needNewVarFrame = 1;
-        
+
     if (nodeList->type == xNodeSetResult) {
         savedLastNode = xs->lastNode;
         for (i=0; i < nodeList->nr_nodes; i++) {
@@ -4301,7 +4297,7 @@ int ApplyTemplates (
         if (!needNewVarFrame) {
             xsltPopVarFrame (xs);
         }
-        xs->lastNode = savedLastNode;            
+        xs->lastNode = savedLastNode;
     } else {
         TRACE("ApplyTemplates: nodeList not a NodeSetResult !!!\n");
         DBG(rsPrint(nodeList);)
@@ -4329,8 +4325,8 @@ int fillElementList (
     Tcl_HashEntry *h;
     Tcl_DString dStr;
     domNS  *ns;
-    
-    
+
+
     count = 0;
     pc = str;
     while (*pc) {
@@ -4373,7 +4369,7 @@ int fillElementList (
                         Tcl_DStringInit (&dStr);
                         Tcl_DStringAppend (&dStr, ns->uri, -1);
                         Tcl_DStringAppend (&dStr, localName, -1);
-                        h = Tcl_CreateHashEntry (&(wsinfo->FQNames), 
+                        h = Tcl_CreateHashEntry (&(wsinfo->FQNames),
                                                  Tcl_DStringValue (&dStr), &hnew);
                         if (!hnew) {
                             f = (double *)Tcl_GetHashValue (h);
@@ -4402,10 +4398,10 @@ int fillElementList (
                 }
             }
         }
-        *pc = save;                   
+        *pc = save;
     }
     return 0;
-}    
+}
 
 
 /*----------------------------------------------------------------------------
@@ -4420,12 +4416,12 @@ void StripSpace (
     domNode *child, *newChild, *parent;
     int     i, len, onlySpace;
     char   *p;
-    
+
     if (node->nodeType == TEXT_NODE) {
         p = ((domTextNode*)node)->nodeValue;
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
-        for (i=0; i<len; i++) {           
+        for (i=0; i<len; i++) {
             if ((*p!=' ') && (*p!='\n') && (*p!='\r') && (*p!='\t')) {
                 onlySpace = 0;
                 break;
@@ -4438,7 +4434,7 @@ void StripSpace (
                 return;
             }
             parent = node->parentNode;
-            while (parent) {                
+            while (parent) {
                 p = getAttr(parent,"xml:space", a_space);
                 if (p!=NULL) {
                     if (strcmp(p,"preserve")==0) return;
@@ -4449,7 +4445,7 @@ void StripSpace (
             DBG(fprintf(stderr, "removing %d(len %d) under '%s' \n", node->nodeNumber, len, node->parentNode->nodeName);)
             domDeleteNode (node, NULL, NULL);
         }
-    } else 
+    } else
     if (node->nodeType == ELEMENT_NODE) {
         child = node->firstChild;
         while (child) {
@@ -4520,12 +4516,12 @@ addExcludeNS (
     char *str;
     int   rc;
 
-    str = getAttr (xsltRoot, "exclude-result-prefixes", 
+    str = getAttr (xsltRoot, "exclude-result-prefixes",
                    a_excludeResultPrefixes);
     rc = parseList (docData, xsltRoot, str, errMsg);
     CHECK_RC;
-    
-    str = getAttr (xsltRoot, "extension-element-prefixes", 
+
+    str = getAttr (xsltRoot, "extension-element-prefixes",
                    a_extensionElementPrefixes);
     rc = parseList (docData, xsltRoot, str, errMsg);
     CHECK_RC;
@@ -4554,7 +4550,7 @@ getExternalDocument (
     xsltSubDoc   *sdoc;
     XML_Parser    parser;
     Tcl_Channel   chan;
-    
+
     cmdPtr = Tcl_DuplicateObj (xsltDoc->extResolver);
     Tcl_IncrRefCount (cmdPtr);
     if (baseURI) {
@@ -4569,10 +4565,10 @@ getExternalDocument (
                               Tcl_NewStringObj (href, strlen (href)));
     Tcl_ListObjAppendElement (interp, cmdPtr,
                               Tcl_NewStringObj ("", 0));
-            
+
     /* result = Tcl_EvalObjEx (interp, cmdPtr,
-     *                          TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL);     
-     *  runs on Tcl 8.0 also: 
+     *                          TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL);
+     *  runs on Tcl 8.0 also:
      */
     result = Tcl_GlobalEvalObj(interp, cmdPtr);
 
@@ -4580,7 +4576,7 @@ getExternalDocument (
     if (result != TCL_OK) {
         goto wrongScriptResult;
     }
-    
+
     resultObj = Tcl_GetObjResult (interp);
     result = Tcl_ListObjLength (interp, resultObj, &len);
     if ((result != TCL_OK) || (len != 3)) {
@@ -4631,14 +4627,14 @@ getExternalDocument (
     } else {
         storeLineColumn = 0;
     }
-    
+
     parser = XML_ParserCreate (NULL);
-    
+
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
                            chan, extbase, xsltDoc->extResolver, interp);
-    
+
     if (doc == NULL) {
         *errMsg = strdup (XML_ErrorString (XML_GetErrorCode (parser)));
         XML_ParserFree (parser);
@@ -4661,9 +4657,9 @@ getExternalDocument (
     }
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
-    
+
     return doc;
-    
+
  wrongScriptResult:
     *errMsg = strdup(Tcl_GetStringFromObj(Tcl_GetObjResult(interp), NULL));
     return NULL;
@@ -4682,17 +4678,17 @@ static int processTopLevelVars (
 {
     int                rc, i;
     char              *select, *str;
-    xpathResultSet     nodeList, rs;    
+    xpathResultSet     nodeList, rs;
     Tcl_HashEntry     *entryPtr;
-    Tcl_HashSearch     search;        
+    Tcl_HashSearch     search;
     xsltTopLevelVar   *topLevelVar;
     xsltVarInProcess   varInProcess;
     xsltVariable      *var;
     Tcl_DString        dStr;
-    
+
     xpathRSInit (&nodeList);
-    rsAddNode (&nodeList, xmlNode); 
-    
+    rsAddNode (&nodeList, xmlNode);
+
     if (parameters) {
         i = 0;
         while (parameters[i]) {
@@ -4728,7 +4724,7 @@ static int processTopLevelVars (
 
             xs->varStackPtr++;
             if (xs->varStackPtr >= xs->varStackLen) {
-                xs->varStack = (xsltVariable *) realloc (xs->varStack, 
+                xs->varStack = (xsltVariable *) realloc (xs->varStack,
                                                          sizeof (xsltVariable)
                                                          * 2*xs->varStackLen);
                 xs->varStackLen *= 2;
@@ -4757,7 +4753,7 @@ static int processTopLevelVars (
         varInProcess.name = str;
         varInProcess.next = NULL;
         xs->varsInProcess = &varInProcess;
-        
+
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
         rc = xsltSetVar(xs, str, &nodeList, xmlNode, 0, select,
@@ -4783,7 +4779,7 @@ static int processTopLevel (
     double        * precedenceLowBound,
     char         ** errMsg
 )
-{ 
+{
     domNode           *node;
     domDocument       *extStyleSheet;
     int                rc, hnew;
@@ -4801,13 +4797,13 @@ static int processTopLevel (
     Tcl_DString        dStr;
 
     xpathRSInit( &nodeList );
-    rsAddNode( &nodeList, xmlNode); 
+    rsAddNode( &nodeList, xmlNode);
 
-    DBG(fprintf (stderr, "start processTopLevel. precedence: %f precedenceLowBound %f\n", precedence, *precedenceLowBound);); 
+    DBG(fprintf (stderr, "start processTopLevel. precedence: %f precedenceLowBound %f\n", precedence, *precedenceLowBound););
     node = xsltDocumentElement->firstChild;
     while (node) {
         switch ( getTag(node) ) {
-        
+
             case attributeSet:
                 str = getAttr(node, "name", a_name);
                 if (str) {
@@ -4853,7 +4849,7 @@ static int processTopLevel (
                        point at which they encounters the definitions are
                        already in increasing order of import precedence.
                        Therefor we have only to check, if there is a
-                       top level var or parm with the same precedence */ 
+                       top level var or parm with the same precedence */
                     if (topLevelVar->precedence == precedence) {
                         reportError (node, "There is already a variable or parameter with this name with the same import precedence.", errMsg);
                         return -1;
@@ -4865,9 +4861,9 @@ static int processTopLevel (
                 topLevelVar->node = node;
                 topLevelVar->isParameter = 1;
                 topLevelVar->precedence = precedence;
-                
+
                 break;
-                
+
             case decimalFormat:
                 if (node->firstChild) {
                     reportError (node, "xsl:decimal-format has to be empty.", errMsg);
@@ -4888,7 +4884,7 @@ static int processTopLevel (
                         df = malloc(sizeof(xsltDecimalFormat));
                         memset (df, 0, sizeof (xsltDecimalFormat));
                         df->name = strdup(str);
-                        /* prepend into list of decimal format 
+                        /* prepend into list of decimal format
                            after the default one */
                         df->next = xs->decimalFormats->next;
                         xs->decimalFormats->next = df;
@@ -4926,7 +4922,7 @@ static int processTopLevel (
                     return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
-                                                       node->ownerDocument, 
+                                                       node->ownerDocument,
                                                        baseURI, href, errMsg);
                 if (!extStyleSheet) {
                     return -1;
@@ -4941,7 +4937,7 @@ static int processTopLevel (
                     return rc;
                 }
                 break;
-                
+
             case include:
                 if (node->firstChild) {
                     reportError (node, "xsl:include has to be empty.", errMsg);
@@ -4959,7 +4955,7 @@ static int processTopLevel (
                     return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
-                                                     node->ownerDocument, 
+                                                     node->ownerDocument,
                                                      baseURI, href, errMsg);
                 if (!extStyleSheet) {
                     return -1;
@@ -4972,7 +4968,7 @@ static int processTopLevel (
                     return rc;
                 }
                 break;
-                
+
             case key:
                 if (node->firstChild) {
                     reportError (node, "xsl:key has to be empty.", errMsg);
@@ -5013,7 +5009,7 @@ static int processTopLevel (
                     Tcl_DStringAppend (&dStr, ns->uri, -1);
                 }
                 Tcl_DStringAppend (&dStr, localName, -1);
-                h = Tcl_CreateHashEntry (&(xs->keyInfos), 
+                h = Tcl_CreateHashEntry (&(xs->keyInfos),
                                          Tcl_DStringValue (&dStr), &hnew);
                 if (hnew) {
                     keyInfo->next  = NULL;
@@ -5029,7 +5025,7 @@ static int processTopLevel (
                                  errMsg);
                     return -1;
                 }
-                
+
                 str = getAttr (node, "stylesheet-prefix", a_stylesheetPrefix);
                 if (!str) {
                     reportError (node, "xsl:namespace-alias: missing mandatory attribute \"stylesheet-prefix\".", errMsg);
@@ -5081,7 +5077,7 @@ static int processTopLevel (
                 }
                 nsAlias->toUri = strdup (nsTo->uri);
                 break;
-                
+
             case output:
                 if (node->firstChild) {
                     reportError (node, "xsl:output has to be empty.", errMsg);
@@ -5096,7 +5092,7 @@ static int processTopLevel (
                 str = getAttr(node, "doctype-public", a_doctypePublic);
                 str = getAttr(node, "doctype-system", a_doctypeSystem);
                 break;
-                
+
             case preserveSpace:
                 if (node->firstChild) {
                     reportError (node, "xsl:preserve-space has to be empty.", errMsg);
@@ -5104,7 +5100,7 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
-                    rc = fillElementList(&(xs->preserveInfo), precedence, 
+                    rc = fillElementList(&(xs->preserveInfo), precedence,
                                          node, str, errMsg);
                     CHECK_RC;
                 } else {
@@ -5112,7 +5108,7 @@ static int processTopLevel (
                     return -1;
                 }
                 break;
-                
+
             case stripSpace:
                 if (node->firstChild) {
                     reportError (node, "xsl:strip-space has to be empty.", errMsg);
@@ -5128,12 +5124,12 @@ static int processTopLevel (
                     return -1;
                 }
                 break;
-                
+
             case template:
                 rc = xsltAddTemplate (xs, node, precedence, errMsg);
                 CHECK_RC;
                 break;
-                
+
             case variable:
                 str = getAttr(node, "name", a_name);
                 if (!str) {
@@ -5160,9 +5156,9 @@ static int processTopLevel (
                 topLevelVar->node = node;
                 topLevelVar->isParameter = 0;
                 topLevelVar->precedence = precedence;
-                
+
                 break;
-                
+
             default:
                 if (node->nodeType == ELEMENT_NODE) {
                     if (!node->namespace) {
@@ -5187,7 +5183,7 @@ static int processTopLevel (
 |   xsltFreeStats
 |
 \---------------------------------------------------------------------------*/
-static void 
+static void
 xsltFreeState (
     xsltState      * xs
 ) {
@@ -5204,7 +5200,7 @@ xsltFreeState (
     xsltNSAlias       *nsAlias, *nsAliasSave;
     xsltExcludeNS     *excludeNS, *excludeNSsave;
     Tcl_HashEntry     *entryPtr, *entryPtr1;
-    Tcl_HashSearch     search, search1;        
+    Tcl_HashSearch     search, search1;
     Tcl_HashTable     *htable;
     double            *f;
 
@@ -5214,16 +5210,16 @@ xsltFreeState (
         t = (ast) Tcl_GetHashValue (entryPtr);
         xpathFreeAst (t);
     }
-    Tcl_DeleteHashTable(&xs->xpaths); 
-    
+    Tcl_DeleteHashTable(&xs->xpaths);
+
     for (entryPtr = Tcl_FirstHashEntry(&xs->pattern, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
         t = (ast) Tcl_GetHashValue (entryPtr);
         xpathFreeAst (t);
     }
-    Tcl_DeleteHashTable(&xs->pattern); 
-    
+    Tcl_DeleteHashTable(&xs->pattern);
+
     for (entryPtr = Tcl_FirstHashEntry(&xs->formats, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
@@ -5231,7 +5227,7 @@ xsltFreeState (
         Tcl_Free ((char *)nf->tokens);
         Tcl_Free ((char *)nf);
     }
-    Tcl_DeleteHashTable(&xs->formats); 
+    Tcl_DeleteHashTable(&xs->formats);
 
     if (&xs->topLevelVars) {
         for (entryPtr = Tcl_FirstHashEntry(&xs->topLevelVars, &search);
@@ -5303,7 +5299,7 @@ xsltFreeState (
         if (nsAliasSave->toUri) free(nsAliasSave->toUri);
         Tcl_Free ((char *) nsAliasSave);
     }
-        
+
     /*--- free decimal formats ---*/
     df = xs->decimalFormats;
     while (df) {
@@ -5314,7 +5310,7 @@ xsltFreeState (
         if (dfsave->NaN) free(dfsave->NaN);
         free(dfsave);
     }
-    
+
     /*--- free attribute sets ---*/
     as = xs->attrSets;
     while (as) {
@@ -5322,7 +5318,7 @@ xsltFreeState (
        as = as->next;
        free(assave);
     }
-    
+
     /*--- free templates ---*/
     tpl = xs->templates;
     while (tpl) {
@@ -5331,7 +5327,7 @@ xsltFreeState (
        tpl = tpl->next;
        free(tplsave);
     }
-    
+
     for (entryPtr = Tcl_FirstHashEntry (&(xs->stripInfo.NCNames), &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
@@ -5400,7 +5396,7 @@ int xsltProcess (
     char             ** errMsg,
     domDocument      ** resultDoc   
     )
-{ 
+{
     xpathResultSet  nodeList;
     domNode        *node;
     int             rc;
@@ -5408,9 +5404,9 @@ int xsltProcess (
     double          precedence, precedenceLowBound;
     xsltState       xs;
     xsltSubDoc     *sdoc;
-    
-    *errMsg = NULL;  
-    
+
+    *errMsg = NULL;
+
     xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
     DBG(printXML(xmlNode, 0, 1);)
 
@@ -5467,9 +5463,10 @@ int xsltProcess (
     xs.decimalFormats->patternSeparator  = ';';
     xs.decimalFormats->next              = NULL;
     
+
     xsltPushVarFrame(&xs);
     xpathRSInit( &nodeList );
-    rsAddNode( &nodeList, xmlNode); 
+    rsAddNode( &nodeList, xmlNode);
 
     node = xsltDoc->documentElement;
 
@@ -5514,7 +5511,7 @@ int xsltProcess (
         rc = addExcludeNS (sdoc, node, errMsg);
         if (rc < 0) goto error;
     }
-    
+
     precedence = 1.0;
     precedenceLowBound = 0.0;
     rc = processTopLevel (clientData, node, xmlNode, &xs, precedence,
@@ -5525,6 +5522,7 @@ int xsltProcess (
      *  but not from the XML document (last one in list)
      */
     sdoc = xs.subDocs;
+
     while (sdoc && sdoc->next) {
         StripSpace (&xs, sdoc->doc->documentElement);
         sdoc = sdoc->next;
@@ -5544,10 +5542,10 @@ int xsltProcess (
     if (xs.outputMethod) {
         if (strcmp (xs.outputMethod, "xml")==0) {
             xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
-        } else 
+        } else
         if (strcmp (xs.outputMethod, "html")==0) {
             xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
-        } else 
+        } else
         if (strcmp (xs.outputMethod, "text")==0) {
             xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_TEXT;
         } else {
@@ -5562,8 +5560,8 @@ int xsltProcess (
                 int   i, only_whites;
 
                 only_whites = 1;
-                for (i=0, pc = ((domTextNode*)node)->nodeValue; 
-                     i < ((domTextNode*)node)->valueLength; 
+                for (i=0, pc = ((domTextNode*)node)->nodeValue;
+                     i < ((domTextNode*)node)->valueLength;
                      i++, pc++) {
                     if ( (*pc != ' ')  &&
                          (*pc != '\t') &&

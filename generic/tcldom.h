@@ -28,6 +28,10 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/06/02 06:36:24  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -47,6 +51,7 @@
 
 #include <tcl.h>
 
+void tcldom_initialize(void);
 
 Tcl_ObjCmdProc tcldom_domCmd;     
 Tcl_ObjCmdProc tcldom_NodeObjCmd; 
@@ -62,6 +67,7 @@ Tcl_ObjCmdProc TclTdomObjCmd;
 #define STR_TDOM_VERSION(v) ("0.7")
 
 EXTERN int Tdom_Init     _ANSI_ARGS_((Tcl_Interp *interp));
+EXTERN int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
 
 #endif
 

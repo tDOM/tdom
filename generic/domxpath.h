@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.8  2002/06/02 06:36:24  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
+|
 |   Revision 1.7  2002/05/11 16:57:29  rolf
 |   Made variable/parameter namespace aware.
 |
@@ -87,6 +91,10 @@
 #define XPATH_EVAL_ERR      -3
 #define XPATH_VAR_NOT_FOUND -4
 
+#if defined (__sun__) 
+#include <ieeefp.h>
+#define isinf(d) ((fpclass(d)==FP_PINF)?1:((fpclass(d)==FP_NINF)?-1:0))
+#endif
 
 /*----------------------------------------------------------------------------
 |   Types for abstract syntax trees

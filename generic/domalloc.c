@@ -47,25 +47,11 @@
 #include <dom.h>
 
 
-/*----------------------------------------------------------------------------
-|   Thread support
-|
-\---------------------------------------------------------------------------*/
-#ifndef TCL_THREADS
-#  define TSDPTR(x)       x
-#  define TDomThreaded(x) 
-#else
-#  define TSDPTR(x)       tsdPtr->x
-#  define TDomThreaded(x) x
-#endif
-
-
-
 /*---------------------------------------------------------------------------
 |   Defines
 |
 \--------------------------------------------------------------------------*/
-#define DBG(x)           
+#define DBG(x)
 #define MAX_BINS         256
 #define BIN_HASH_SIZE    512
 #define BIN_HASH_MASK    0x01FF
@@ -137,20 +123,20 @@ domAllocInit (
 )
 {
     int i;
-    
+
     DBG(fprintf(stderr, "domAllocInit...\n");)
 
     for (i=0; i < MAX_BINS;      i++) bins.bin[i]          = NULL;
     for (i=0; i < CACHE_SIZE;    i++) bins.blockCache[i]   = NULL;
     for (i=0; i < BIN_HASH_SIZE; i++) bins.hashedBlocks[i] = NULL;
 }
- 
- 
+
+
 /*--------------------------------------------------------------------------
 |   fillHashTable
 |
 \--------------------------------------------------------------------------*/
-static void  
+static void
 fillHashTable (
     domAllocBlock  * block,
     void           * mem
@@ -158,7 +144,7 @@ fillHashTable (
 {
     domAllocBlock * hashedBlock;
     unsigned int    i;
-    
+
     i = ( (unsigned int)mem >> BLOCK_SIZE_BITS) & BIN_HASH_MASK;
     hashedBlock = bins.hashedBlocks[i];
     while (hashedBlock != NULL) {
@@ -170,18 +156,18 @@ fillHashTable (
         else if (hashedBlock->hashIndex2 == i) hashedBlock = hashedBlock->hashNext2;
         else hashedBlock = NULL;
     }
-    
+
     /* add block in hash table */
     if (block->hashIndex1 == -1) {
         block->hashIndex1 = i;
         block->hashNext1  = bins.hashedBlocks[i];
-    } else 
+    } else
     if (block->hashIndex2 == -1) {
         block->hashIndex2 = i;
         block->hashNext2  = bins.hashedBlocks[i];
     } else {
         fprintf(stderr, "\ntoo many hash entries for %x %x->%d %d,%d!\n",
-                        (unsigned int)block, 
+                        (unsigned int)block,
                         (unsigned int)mem, i, block->hashIndex1, block->hashIndex2);
     }
     bins.hashedBlocks[i] = block;
@@ -191,7 +177,7 @@ fillHashTable (
 |   domAlloc
 |
 \--------------------------------------------------------------------------*/
-void * 
+void *
 domAlloc (
     int  size
 )
@@ -203,17 +189,26 @@ domAlloc (
     unsigned int    mask;
     char          * mem;
     unsigned int  * usedBitmap;
-    
-    
+
+
     DBG(fprintf(stderr, "\ndomAlloc %d \n", size);)
 
     if (size >= MAX_BINS) {
         fprintf(stderr, "\nSize too large as used for bin!\n");
         return NULL;
     }
-    TDomThreaded( 
-        Tcl_MutexLock (&binMutex);
-    )
+
+    /*-------------------------------------------------
+     |   FIXME
+     |
+     |   Rewrite with TSD-based bins to avoid mutex
+     |   contention. Threads are going to step on
+     |   each other toes here which is not what we
+     |   would like to have, don't we ?  (zv)
+     \------------------------------------------------*/
+
+    TDomThreaded(Tcl_MutexLock(&binMutex);)
+
     if (bins.bin[size] == NULL) {
         /*-------------------------------------------------
         |   create new bin
@@ -225,13 +220,13 @@ domAlloc (
         bin->nrBlocks    = 0;
         bin->freeBlocks  = NULL;
         bin->usedBlocks  = NULL;
-        
+
         bins.bin[size] = bin;
 
     } else {
         bin = bins.bin[size];
     }
-    
+
     if (bin->freeSlots == 0) {
         DBG(fprintf(stderr, "allocating new block ... \n");)
         /*----------------------------------------------------------------
@@ -241,7 +236,7 @@ domAlloc (
         bitmaps   = (BLOCK_DATA_SIZE  / size) / 32;
         slots     = bitmaps * 32;
         blockSize = sizeof(domAllocBlock) + bitmaps*4 + slots*size;
-        
+
         block = malloc( blockSize );
         block->bin        = bin;
         block->end        = (char*)block + blockSize;
@@ -255,47 +250,47 @@ domAlloc (
         block->hashNext1  = NULL;
         block->hashIndex2 = -1;
         block->hashNext2  = NULL;
-        
+
         usedBitmap = (unsigned int *) ((char*)block + sizeof(domAllocBlock));
         memset(usedBitmap, 0, bitmaps * 4);
-        
+
         bin->nrSlots   += slots;
         bin->freeSlots += slots;
         bin->nrBlocks++;
-        
+
         block->prev     = NULL;            /* prepend this new block to free list */
         block->next     = bin->freeBlocks;
-        bin->freeBlocks = block;      
-        
+        bin->freeBlocks = block;
+
         /*---------------------------------------------------------
-        |   enter block in 'hash' table:  
-        |     first and last memory location could have different 
-        |     hash entries due to different upper address bits 
+        |   enter block in 'hash' table:
+        |     first and last memory location could have different
+        |     hash entries due to different upper address bits
         \--------------------------------------------------------*/
         mem = (char*)usedBitmap + bitmaps * 4;
         fillHashTable (block, mem);
         mem += (slots-1) * size;
         fillHashTable (block, mem);
-        
+
     } else {
         block = bin->freeBlocks;
     }
- 
+
     /*------------------------------------------------------------------------
     |   find free slot in (partial) free block
     |
-    \-----------------------------------------------------------------------*/ 
+    \-----------------------------------------------------------------------*/
     usedBitmap = (unsigned int *) ((char*)block + sizeof(domAllocBlock));
     i    = block->freePos;  /* start at old pos to quickly find a free slot */
     j    = block->freeBit;
     mask = block->freeMask;
     do {
-        DBG(fprintf(stderr, "looking %d slot i=%d j=%d %x mask %x\n", 
+        DBG(fprintf(stderr, "looking %d slot i=%d j=%d %x mask %x\n",
                                         size, i, j, usedBitmap[i], mask); )
         if (usedBitmap[i] != 0xFFFFFFFF) {
             do {
                 if ((usedBitmap[i] & mask)==0) {
-                    DBG(fprintf(stderr, "found free slot i=%d j=%d %x mask %x\n", 
+                    DBG(fprintf(stderr, "found free slot i=%d j=%d %x mask %x\n",
                                         i, j, usedBitmap[i], mask); )
                     mem = ((char*)usedBitmap) + (4*block->bitmaps) + ((i*32)+j) * size;
                     usedBitmap[i] |= mask;
@@ -310,7 +305,7 @@ domAlloc (
                             block->prev->next = block->next;
                         }
                         if (block->next) block->next->prev = block->prev;
-                        
+
                         block->next     = bin->usedBlocks;  /* add block to used list */
                         if (block->next) block->next->prev = block;
                         block->prev     = NULL;
@@ -325,19 +320,17 @@ domAlloc (
                             hashedBlock = hashedBlock->next;
                         }
 
-                    } 
-                    /* keep found free position for later, 
-                     * so that next slots can be found quickly 
+                    }
+                    /* keep found free position for later,
+                     * so that next slots can be found quickly
                      */
                     block->freePos  = i;
-                    j++; mask = mask >> 1; 
+                    j++; mask = mask >> 1;
                     if (j >= 32) { j = 0; mask = 0x80000000; }
                     block->freeBit  = j;
                     block->freeMask = mask;
- 
-                    TDomThreaded( 
-                        Tcl_MutexUnlock (&binMutex);
-                    )
+
+                    TDomThreaded(Tcl_MutexUnlock(&binMutex);)
                     return mem;
                 }
                 j++; mask = mask >> 1;
@@ -347,12 +340,11 @@ domAlloc (
         i++;
         if (i >= block->bitmaps) i = 0;
     } while (i != block->freePos);
-        
-    TDomThreaded( 
-        Tcl_MutexUnlock (&binMutex);
-    )
+
+    /* TDomThreaded(Tcl_MutexUnlock(&binMutex);) */
+
     fprintf(stderr, "\ndomAlloc: can't happen! \n");
-    *((char*)0) = 0;
+    *((char*)0) = 0; /* Use Tcl_Panic() for this ? */
     return NULL;
 }
 
@@ -365,21 +357,25 @@ void
 domFree (
     void  * mem
 )
-{    
+{
     domAllocBlock * block;
     domAllocBlock * hashedBlock;
     domAllocBlock * prevBlock;
     int             slotNr, i, foundInCache;
     unsigned int  * usedBitmap;
     unsigned int    mask;
-    
+
     DBG(fprintf(stderr, "domFree...\n");)
-    
+
     if (mem == NULL) return;
-    
-    TDomThreaded( 
-        Tcl_MutexLock (&binMutex);
-    )
+
+    /*-------------------------------------------------
+     |   FIXME (see domAlloc comments)
+     |
+     \------------------------------------------------*/
+
+    TDomThreaded(Tcl_MutexLock(&binMutex);)
+
     /*-------------------------------------------------------------------
     |   Find the block, which corresponds to the given memory location
     |
@@ -398,7 +394,7 @@ domFree (
         }
     }
     /*-------------------------------------------------------------------
-    |   - Otherwise try to lookup corresponding block in hashtable 
+    |   - Otherwise try to lookup corresponding block in hashtable
     |
     \------------------------------------------------------------------*/
     if (!foundInCache) {
@@ -411,15 +407,13 @@ domFree (
             else block = NULL;
         }
     }
-    
+
     if (block == NULL) {
         fprintf(stderr, "\n unable to free mem %x !\n", (unsigned int)mem);
-        TDomThreaded( 
-            Tcl_MutexUnlock (&binMutex);
-        )
+        TDomThreaded(Tcl_MutexUnlock(&binMutex);)
         return;
     }
-    
+
     /*-------------------------------------------------------------------
     |   clear the allocation bit
     \------------------------------------------------------------------*/
@@ -434,12 +428,12 @@ domFree (
     usedBitmap[i] &= ~mask;
     block->freeSlots++;
     block->bin->freeSlots++;
- 
+
     DBG(
     if ((block->freeSlots < 1) || (block->freeSlots > block->slots)) {
         fprintf(stderr, "assertion failed: freeSlots = %d \n", block->freeSlots);
     })
-    
+
     /*-------------------------------------------------------------------
     |   update free/used lists
     \------------------------------------------------------------------*/
@@ -450,12 +444,12 @@ domFree (
             block->prev->next = block->next;
         }
         if (block->next) block->next->prev = block->prev;
-        
+
         block->next            = block->bin->freeBlocks;  /* add block to free list */
         if (block->next) block->next->prev = block;
         block->prev            = NULL;
         block->bin->freeBlocks = block;
-        
+
         DBG(
         /* check consistency */
         hashedBlock = block->bin->usedBlocks;
@@ -467,12 +461,12 @@ domFree (
         }
         )
     }
-    
+
     /*-------------------------------------------------------------------
     |   free the whole block, when all slots are freed
     \------------------------------------------------------------------*/
     if (block->freeSlots == block->slots) {
-    
+
         DBG(fprintf(stderr, "block completely freed %x\n",
                              (unsigned int)block);)
 
@@ -482,13 +476,13 @@ domFree (
             block->prev->next = block->next;
         }
         if (block->next) block->next->prev = block->prev;
-        
+
         block->bin->nrSlots   -= block->slots;
         block->bin->freeSlots -= block->slots;
         block->bin->nrBlocks--;
-        
+
         /*--------------------------------------------------------------------
-        |   remove block from (two) hash lists 
+        |   remove block from (two) hash lists
         \-------------------------------------------------------------------*/
         i = block->hashIndex1;
         if (i != -1) {
@@ -530,21 +524,21 @@ domFree (
         }
 
         /*------------------------------------------------------
-        |   remove block from cache, iff found
+        |   remove block from cache, if found
         \-----------------------------------------------------*/
         for (i=0; i < CACHE_SIZE; i++) {
             if (bins.blockCache[i] == block) {
                 bins.blockCache[i] = NULL;
             }
         }
-        
+
         DBG(
         /* check consistency */
         for (i=0; i < block->bitmaps; i++) {
             if (usedBitmap[i] != 0) {
                 fprintf(stderr, "strange bitmap %d is %x \n", i, usedBitmap[i]);
             }
-        } 
+        }
         for (i=0; i < BIN_HASH_SIZE; i++) {
             hashedBlock = bins.hashedBlocks[i];
             while (hashedBlock) {
@@ -555,7 +549,7 @@ domFree (
                 else if (hashedBlock->hashIndex2 == i) hashedBlock = hashedBlock->hashNext2;
                 else hashedBlock = NULL;
             }
-        } 
+        }
         hashedBlock = block->bin->freeBlocks;
         while (hashedBlock) {
             if (hashedBlock == block) {
@@ -573,7 +567,7 @@ domFree (
         )
         free(block);
 
-    } else {    
+    } else {
         /*-----------------------------------------------------------
         |   update cache
         \----------------------------------------------------------*/
@@ -585,8 +579,6 @@ domFree (
             bins.blockCache[CACHE_SIZE-1] = block;
         }
     }
-    TDomThreaded( 
-        Tcl_MutexUnlock (&binMutex);
-    )
+    TDomThreaded(Tcl_MutexUnlock(&binMutex);)
 }
 

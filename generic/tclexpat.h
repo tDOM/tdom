@@ -6,7 +6,7 @@ struct TclGenExpatInfo;
 typedef void (*CHandlerSet_userDataReset)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_userDataFree)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_parserReset)(XML_Parser parser, void *userData);
-typedef void (*CHandlerSet_initParse)(const struct TclGenExpatInfo *expat, 
+typedef void (*CHandlerSet_initParse)(const struct TclGenExpatInfo *expat,
                                       void *userData);
 
 typedef struct CHandlerSet {
@@ -126,8 +126,8 @@ typedef struct TclGenExpatInfo {
     Tcl_Obj *cdata;             /* Accumulates character data */ 
     ExpatElemContent *eContents;/* As linked list, the reported XML_Content's*/
     int      ns_mode;           /* namespace mode */
-    XML_Char nsSeparator; 
-  
+    XML_Char nsSeparator;
+
     TclHandlerSet *firstTclHandlerSet;
     CHandlerSet *firstCHandlerSet;
 } TclGenExpatInfo;
@@ -143,9 +143,9 @@ typedef struct TclGenExpatInfo {
 #endif
 
 EXTERN int TclExpatObjCmd _ANSI_ARGS_((ClientData dummy,
-                                       Tcl_Interp *interp, 
-                                       int objc, Tcl_Obj *CONST objv[]));  
-EXTERN int CheckExpatParserObj _ANSI_ARGS_((Tcl_Interp *interp, 
+                                       Tcl_Interp *interp,
+                                       int objc, Tcl_Obj *CONST objv[]));
+EXTERN int CheckExpatParserObj _ANSI_ARGS_((Tcl_Interp *interp,
                                             Tcl_Obj *CONST nameObj));
 EXTERN int CHandlerSetInstall _ANSI_ARGS_((Tcl_Interp *interp,
                                            Tcl_Obj *CONST expatObj,

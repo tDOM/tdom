@@ -39,11 +39,11 @@
 
 #ifdef USE_NORMAL_ALLOCATOR
 
-#define   domAllocInit() 
+#define   domAllocInit()
 #define   domAlloc(x)    malloc(x)   /* ckalloc(x) */
 #define   domFree(x)     free(x)     /* ckfree(x)  */
 
-#else 
+#else
 
   void    domAllocInit ();
   void  * domAlloc (int size);
@@ -51,4 +51,4 @@
 
 #endif
 
- 
+

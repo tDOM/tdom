@@ -4,7 +4,7 @@
 #ifndef XmlParse_INCLUDED
 #define XmlParse_INCLUDED 1
 
-#ifdef XML_UNICODE_WCHAR_T 
+#ifdef XML_UNICODE_WCHAR_T
 #  define XML_UNICODE
 #endif
 
@@ -189,7 +189,7 @@ typedef void (*XML_EntityDeclHandler) (void *userData,
                                        const XML_Char *systemId,
                                        const XML_Char *publicId,
                                        const XML_Char *notationName);
-				       
+				
 /* This is called for a declaration of notation.
 The base argument is whatever was set by XML_SetBase.
 The notationName will never be null.  The other arguments can be. */
@@ -346,7 +346,7 @@ struct TclGenExpatInfo;
 typedef void (*CHandlerSet_userDataReset)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_userDataFree)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_parserReset)(XML_Parser parser, void *userData);
-typedef void (*CHandlerSet_initParse)(const struct TclGenExpatInfo *expat, 
+typedef void (*CHandlerSet_initParse)(const struct TclGenExpatInfo *expat,
                                       void *userData);
 
 typedef struct CHandlerSet {
@@ -455,11 +455,11 @@ typedef struct TclGenExpatInfo {
     int needWSCheck;            /* Any handler set has ignoreWhiteCDATAs==1? */
     int status;			/* application status */
     Tcl_Obj *result;		/* application return result */
-    const char *context;        /* reference to the context pointer */  
-    Tcl_Obj *cdata;             /* Accumulates character data */ 
+    const char *context;        /* reference to the context pointer */
+    Tcl_Obj *cdata;             /* Accumulates character data */
     int      ns_mode;           /* namespace mode */
-    XML_Char nsSeparator; 
-  
+    XML_Char nsSeparator;
+
     TclHandlerSet *firstTclHandlerSet;
     CHandlerSet *firstCHandlerSet;
 } TclGenExpatInfo;

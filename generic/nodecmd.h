@@ -3,9 +3,7 @@
 +-----------------------------------------------------------------------------
 |
 |   $Header$
-|
-|
-|
+
 |   The contents of this file are subject to the Mozilla Public License
 |   Version 1.1 (the "License"); you may not use this file except in
 |   compliance with the License. You may obtain a copy of the License at
@@ -26,9 +24,12 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/06/02 06:36:24  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
 |
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |   written by Zoran Vasiljevic
@@ -36,14 +37,13 @@
 |
 \---------------------------------------------------------------------------*/
 
-
 int nodecmd_createNodeCmd (ClientData      dummy,
                            Tcl_Interp    * interp,
                            int             objc,
                            Tcl_Obj *CONST  objv[]);
 
-int nodecmd_appendFromTclScript (Tcl_Interp *interp, 
-                                 domNode    *node,
-                                 Tcl_Obj    *cmdObj);
+int nodecmd_appendFromScript (Tcl_Interp *interp, 
+                              domNode    *node,
+                              Tcl_Obj    *cmdObj);
 
 
