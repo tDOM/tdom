@@ -553,13 +553,15 @@ TclExpatCreateParser(interp, expat)
  *
  * TclExpatFreeParser --
  *
- *	Destroy the expat parser structure.
+ *	Destroy the expat parser structure and frees the stored content models,
+ *      if there one.
  *
  * Results:
  *	None.
  *
  * Side effects:
- *	Frees any memory allocated for the XML parser.
+ *	Frees any memory allocated for the XML parser and (if still present)
+ *      the stored content models.
  *
  *----------------------------------------------------------------------------
  */
@@ -568,11 +570,22 @@ static void
 TclExpatFreeParser(expat)
      TclGenExpatInfo *expat;
 {
+  ExpatElemContent *eContent, *eContentSave;
+
   XML_ParserFree(expat->parser);
   if (expat->cdata != NULL) {
       Tcl_DecrRefCount(expat->cdata);
   }
   expat->parser = NULL;
+
+  eContent = expat->eContents;
+  while (eContent) {
+      free(eContent->content); /* This *must* be done with free() */
+      eContentSave = eContent;
+      eContent = eContent->next;
+      FREE((char *) eContentSave);
+  }
+  expat->eContents = NULL;
 }
 
 /*
@@ -602,6 +615,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
   char *data;
   int len = 0, optionIndex, result = TCL_OK;
   CHandlerSet *activeCHandlerSet;
+  ExpatElemContent *eContent, *eContentSave;
 
   static CONST84 char *options[] = {
       "configure", "cget", "free", "get",
@@ -668,20 +682,32 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
 
       CheckArgs (2,2,1,"");
 
-      activeCHandlerSet = expat->firstCHandlerSet;
-      while (activeCHandlerSet) {
-          if (activeCHandlerSet->resetProc) {
-              activeCHandlerSet->resetProc (interp, activeCHandlerSet->userData);
-          }
-          activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
-      }
-
       /*
        * Destroy the parser and create a fresh one.
        */
       TclExpatFreeParser(expat);
       TclExpatCreateParser(interp, expat);
+      eContent = expat->eContents;
+      while (eContent) {
+          free(eContent->content); /* This *must* be done with free() */
+          eContentSave = eContent;
+          eContent = eContent->next;
+          FREE((char *) eContentSave);
+      }
       expat->eContents = NULL;
+
+      activeCHandlerSet = expat->firstCHandlerSet;
+      while (activeCHandlerSet) {
+          if (activeCHandlerSet->parserResetProc) {
+              activeCHandlerSet->parserResetProc (expat->parser,
+                                                  activeCHandlerSet->userData);
+          }
+          if (activeCHandlerSet->resetProc) {
+              activeCHandlerSet->resetProc (interp, 
+                                            activeCHandlerSet->userData);
+          }
+          activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
+      }
 
       break;
 
@@ -3633,7 +3659,8 @@ TclGenExpatEndDoctypeDeclHandler(userData)
       eContent = eContent->next;
       FREE((char *) eContentSave);
   }
-
+  expat->eContents = NULL;
+  
   return;
 }
 
@@ -3851,13 +3878,14 @@ CheckExpatParserObj (interp, nameObj)
     Tcl_CmdInfo info;
 
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (nameObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (nameObj, NULL),
+                             &info)) {
         return 0;
     }
-    if (info.objProc == TclExpatInstanceCmd) {
-        return 1;
+    if (!info.isNativeObjectProc || info.objProc != TclExpatInstanceCmd) {
+        return 0;
     }
-    return 0;
+    return 1;
 }
 
 int
@@ -3870,7 +3898,8 @@ CHandlerSetInstall (interp, expatObj, handlerSet)
     TclGenExpatInfo *expat;
     CHandlerSet *activeCHandlerSet;
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL),
+                             &info)) {
         return 1;
     }
     expat = (TclGenExpatInfo *) info.objClientData;
