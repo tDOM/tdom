@@ -4192,8 +4192,9 @@ static int xpathEvalStep (
         rc = xpathEvalFunction (step, ctxNode, exprContext, position, nodeList,
                                 cbs, result, docOrder, errMsg);
         CHECK_RC;
+        break;
     default:
-        fprintf (stderr, "!! xpathEvalStep: not handled switch %d !!\n", step->type);
+        fprintf (stderr, "!! xpathEvalStep: not handled switch %s !!\n", astType2str[step->type]);
         return XPATH_EVAL_ERR;
     }
     return XPATH_OK;
