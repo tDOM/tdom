@@ -155,6 +155,7 @@ typedef struct xsltSubDoc
     xsltExclExtNS      * excludeNS;
     xsltExclExtNS      * extensionNS;
     int                  fwCmpProcessing;
+    int                  isStylesheet;
 
     struct xsltSubDoc  * next;
 
@@ -751,7 +752,9 @@ static int xsltAddExternalDocument (
     found = 0;
     sdoc = xs->subDocs;
     while (sdoc) {
-        if (sdoc->baseURI && strcmp (sdoc->baseURI, str)==0) {
+        if (!sdoc->isStylesheet
+            && sdoc->baseURI 
+            && strcmp (sdoc->baseURI, str)==0) {
             rsAddNode (result, sdoc->doc->rootNode);
             found = 1;
             break;
@@ -5367,7 +5370,7 @@ getExternalDocument (
     domDocument *xsltDoc,
     char        *baseURI,
     char        *href,
-    int          isXSLTdoc,
+    int          isStylesheet,
     char       **errMsg
     )
 {
@@ -5446,14 +5449,20 @@ getExternalDocument (
     result = Tcl_ListObjIndex (interp, resultObj, 1, &extbaseObj);
     extbase = Tcl_GetStringFromObj (extbaseObj, NULL);
 
+    /* Since stylesheets and source docouments have different white space
+       stripping rules, an already parsed tree could only reused, if the
+       'usage type' of the already present tree is the same as for the
+       currently requested document */
     sdoc = xs->subDocs;
     while (sdoc) {
-        if (sdoc->baseURI && strcmp(sdoc->baseURI, extbase) == 0) {
+        if (isStylesheet == sdoc->isStylesheet
+            && sdoc->baseURI
+            && strcmp(sdoc->baseURI, extbase) == 0) {
             return sdoc->doc;
         }
         sdoc = sdoc->next;
     }
-
+    
     if (xsltDoc->documentElement->nodeFlags & HAS_LINE_COLUMN) {
         storeLineColumn = 1;
     } else {
@@ -5509,7 +5518,8 @@ getExternalDocument (
     sdoc->excludeNS = NULL;
     sdoc->extensionNS = NULL;
     sdoc->fwCmpProcessing = 0;
-    if (isXSLTdoc) {
+    sdoc->isStylesheet = isStylesheet;
+    if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
             return NULL;
         }
@@ -6609,6 +6619,7 @@ int xsltProcess (
     sdoc->excludeNS = NULL;
     sdoc->extensionNS = NULL;
     sdoc->fwCmpProcessing = 0;
+    sdoc->isStylesheet = 0;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
@@ -6620,6 +6631,7 @@ int xsltProcess (
     sdoc->excludeNS = NULL;
     sdoc->extensionNS = NULL;
     sdoc->fwCmpProcessing = 0;
+    sdoc->isStylesheet = 1;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
