@@ -131,6 +131,34 @@ typedef enum {
 } xsltAttr;
 
 
+/*--------------------------------------------------------------------------
+|   xsltExclExtNS
+|
+\-------------------------------------------------------------------------*/
+typedef struct xsltExclExtNS
+{
+    char                 * uri;
+
+    struct xsltExclExtNS * next;
+
+} xsltExclExtNS;
+
+/*--------------------------------------------------------------------------
+|   xsltSubDocs
+|
+\-------------------------------------------------------------------------*/
+typedef struct xsltSubDoc
+{
+    domDocument        * doc;
+    char               * baseURI;
+    Tcl_HashTable        keyData;
+    xsltExclExtNS      * excludeNS;
+    xsltExclExtNS      * extensionNS;
+    int                  fwCmpProcessing;
+
+    struct xsltSubDoc  * next;
+
+} xsltSubDoc;
 
 /*--------------------------------------------------------------------------
 |   xsltTemplate
@@ -138,17 +166,18 @@ typedef enum {
 \-------------------------------------------------------------------------*/
 typedef struct xsltTemplate {
 
-    char    * match;
-    char    * name;
-    char    * nameURI;
-    ast       ast;
-    char    * mode;
-    char    * modeURI;
-    double    prio;
-    domNode * content;
-    double    precedence;
-    ast       freeAst;
-    
+    char       * match;
+    char       * name;
+    char       * nameURI;
+    ast          ast;
+    char       * mode;
+    char       * modeURI;
+    double       prio;
+    domNode    * content;
+    double       precedence;
+    ast          freeAst;
+    xsltSubDoc * sDoc;
+
     struct xsltTemplate *next;
 
 } xsltTemplate;
@@ -222,7 +251,6 @@ typedef struct xsltVariable {
 
 } xsltVariable;
 
-
 /*--------------------------------------------------------------------------
 |   xsltVarFrame
 |
@@ -237,36 +265,6 @@ typedef struct xsltVarFrame {
 
 } xsltVarFrame;
 
-
-/*--------------------------------------------------------------------------
-|   xsltExcludeNS
-|
-\-------------------------------------------------------------------------*/
-typedef struct xsltExcludeNS
-{
-    char                 * uri;
-
-    struct xsltExcludeNS * next;
-
-} xsltExcludeNS;
-
-
-/*--------------------------------------------------------------------------
-|   xsltSubDocs
-|
-\-------------------------------------------------------------------------*/
-typedef struct xsltSubDoc
-{
-    domDocument        * doc;
-    char               * baseURI;
-    Tcl_HashTable        keyData;
-    xsltExcludeNS      * excludeNS;
-
-    struct xsltSubDoc  * next;
-
-} xsltSubDoc;
-
-
 /*--------------------------------------------------------------------------
 |   xsltTopLevelVar
 |
@@ -280,7 +278,6 @@ typedef struct xsltTopLevelVar
     double                    precedence;
 
 } xsltTopLevelVar;
-
 
 /*--------------------------------------------------------------------------
 |   xsltVarInProcess
@@ -400,6 +397,7 @@ typedef struct {
     xsltDecimalFormat * decimalFormats;
     domNode           * current;
     xsltSubDoc        * subDocs;
+    xsltSubDoc        * currentSubDoc;
     xsltTemplate      * currentTplRule;
     domNode           * currentXSLTNode;
     domDocument       * xsltDoc;
@@ -463,7 +461,8 @@ static int ExecActions (xsltState *xs, xpathResultSet *context,
 
 static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
                                           domDocument *xsltDoc, char *baseURI,
-                                          char *href, char **errMsg);
+                                          char *href, int isXSLTdoc,
+                                          char **errMsg);
 
 
 /*----------------------------------------------------------------------------
@@ -766,7 +765,7 @@ static int xsltAddExternalDocument (
         }
         extDocument = getExternalDocument (
                          (Tcl_Interp*)xs->orig_funcClientData,
-                         xs, xs->xsltDoc, baseURI, str, errMsg);
+                         xs, xs->xsltDoc, baseURI, str, 0, errMsg);
         if (extDocument) {
             rsAddNode (result, extDocument->rootNode);
         } else {
@@ -1325,7 +1324,7 @@ static int xsltFormatNumber (
     Tcl_UniChar prefix1[80], prefix2[80], suffix1[80], suffix2[80], s[240];
     Tcl_UniChar save = '\0', save1, *prefix, *suffix, n[80], f[80];
     char stmp[240], ftmp[80];
-    int i, j, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg, prefixMinux;
+    int i, j, k, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg, prefixMinux;
     int percentMul = 0, perMilleMul = 0;
     Tcl_DString  dStr;
     Tcl_UniChar *format, *negformat = NULL, *p, *p1;
@@ -1567,13 +1566,14 @@ static int xsltFormatNumber (
                 break;
             }
         }
+        k = 0;
         if ((number - i != 0.0) || (fZero > 0)) {
-            for (j = 0; j < l; j++) {
+            while (ftmp[k] != '.') k++;
+            k++;
+            for (j = k ; j < l; j++) {
                 f[j] = df->zeroDigit + (int) ftmp[j] - 48;
             }
-            f[l] = 0;
-        } else {
-            f[2] = 0;
+            f[l] = '\0';
         }
         DBG(fprintf(stderr, "f='%s'\n", f);)
         j = 0;
@@ -1585,9 +1585,9 @@ static int xsltFormatNumber (
         while (*p) {
             s[j] = *p; p++; j++;
         }
-        if (f[2] != 0) {
+        if (k) {
             s[j] = df->decimalSeparator;  j++;
-            p = &(f[2]);
+            p = &(f[k]);
             while (*p) {
                 s[j] = *p; p++; j++;
             }
@@ -2850,6 +2850,7 @@ static int addMatch (
         t->modeURI    = tpl->modeURI;
         t->content    = tpl->content;
         t->precedence = tpl->precedence;
+        t->sDoc       = tpl->sDoc;
         t->next       = NULL;
         if (prioStr) {
             t->prio   = tpl->prio;
@@ -2960,6 +2961,7 @@ static int xsltAddTemplate (
     domNS         *ns;
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
+    xsltSubDoc    *sDoc;
 
     tpl = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
 
@@ -3031,7 +3033,14 @@ static int xsltAddTemplate (
     if (prioStr) {
         tpl->prio = (double)atof(prioStr);
     } 
-
+    
+    sDoc = xs->subDocs;
+    while (sDoc) {
+        if (sDoc->doc == node->ownerDocument) break;
+        sDoc = sDoc->next;
+    }
+    tpl->sDoc = sDoc;
+    
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
         rc = xpathParse(tpl->match, errMsg, &(tpl->freeAst), 1);
@@ -3686,8 +3695,8 @@ static int ExecAction (
     domAttrNode    *attr, *attr1;
     domTextNode    *tnode;
     domNS          *ns, *ns1;
-    xsltSubDoc     *sDoc;
-    xsltExcludeNS  *excludeNS;
+    xsltSubDoc     *sDoc, *currentSubDoc;
+    xsltExclExtNS  *eNS;
     xsltNSAlias    *nsAlias;
     Tcl_DString     dStr;
     domProcessingInstructionNode *pi;
@@ -3825,7 +3834,7 @@ static int ExecAction (
                                          ((domTextNode*)currentNode)->nodeValue,
                                          ((domTextNode*)currentNode)->valueLength,
                                          TEXT_NODE, 0);
-                    return 0;
+                    break;
                 } else
                 if (currentNode->nodeType == ELEMENT_NODE) {
                     child = currentNode->firstChild;
@@ -3835,9 +3844,10 @@ static int ExecAction (
                                           ((domAttrNode*)currentNode)->nodeValue,
                                           ((domAttrNode*)currentNode)->valueLength,
                                           TEXT_NODE, 0);
-                    return 0;
+                    break;
                 } else {
-                    return 0; /* for all other node we don't have to recurse deeper */
+                    /* for all other node we don't have to recurse deeper */
+                    break;
                 }
                 xpathRSInit( &rs );
                 while (child) {
@@ -3855,12 +3865,15 @@ static int ExecAction (
             xsltPushVarFrame (xs);
             SETSCOPESTART;
             currentTplRule = xs->currentTplRule;
+            currentSubDoc = xs->currentSubDoc;
             xs->currentTplRule = tplChoosen;
+            xs->currentSubDoc = tplChoosen->sDoc;
             rc = ExecActions(xs, context, currentNode, currentPos,
                              tplChoosen->content->firstChild, errMsg);
             xsltPopVarFrame (xs);
             CHECK_RC;
             xs->currentTplRule = currentTplRule;
+            xs->currentSubDoc = currentSubDoc;
             break;
 
         case applyTemplates:
@@ -4070,12 +4083,15 @@ static int ExecAction (
                 xsltPopVarFrame (xs);
                 return rc;
             }
+            currentSubDoc = xs->currentSubDoc;
+            xs->currentSubDoc = tplChoosen->sDoc;
             SETSCOPESTART;
             rc = ExecActions(xs, context, currentNode, currentPos, 
                              tplChoosen->content->firstChild, errMsg);
             TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
             xsltPopVarFrame (xs);
-            CHECK_RC;    
+            CHECK_RC;
+            xs->currentSubDoc = currentSubDoc;
             DBG(printXML(xs->lastNode, 0, 2);)
             break;
 
@@ -4628,25 +4644,55 @@ static int ExecAction (
             return 0;
 
         default:
+            sDoc = xs->currentSubDoc;
+            if (actionNode->namespace) {
+                ns = actionNode->ownerDocument->namespaces[actionNode->namespace - 1];
+                eNS = sDoc->extensionNS;
+                while (eNS) {
+                    if (eNS->uri) {
+                        if (strcmp (eNS->uri, ns->uri)==0) break;
+                    } else {
+                        if (ns->prefix[0] == '\0') break;
+                    }
+                    eNS = eNS->next;
+                }
+                if (eNS) {
+                    /* An extension element; process fallback */
+                    child = actionNode->firstChild;
+                    while (child) {
+                        if (child->info = fallback) {
+                            xsltPushVarFrame (xs);
+                            rc = ExecActions (xs, context, currentNode,
+                                              currentPos, child->firstChild,
+                                              errMsg);
+                            xsltPopVarFrame (xs);
+                            CHECK_RC;
+                        }
+                        child = child->nextSibling;
+                    }
+                    return 0;
+                }
+            }
             savedLastNode = xs->lastNode;
             DBG(fprintf(stderr,
                         "append new tag '%s' uri='%s' \n", actionNode->nodeName,
                         domNamespaceURI(actionNode) ););
             xs->lastNode = domAppendLiteralNode (xs->lastNode, actionNode);
             n = actionNode;
-            sDoc = xs->subDocs;
-            while (sDoc) {
-                if (sDoc->doc == actionNode->ownerDocument) break;
-                sDoc = sDoc->next;
-            }
-            if (!sDoc) {
-                *errMsg = tdomstrdup ("While copying literal result elements: Internal Error");
-                return -1;
-            }
+
             while (n) {
                 attr = n->firstAttr;
                 while (attr && (attr->nodeFlags & IS_NS_NODE)) {
                     /* xslt namespace isn't copied */
+                    /* Well, xslt implementors doesn't seem to agree
+                       at which point this rule out of second paragraph of
+                       7.1.1 must be applied: before or after applying
+                       the namespace aliases (or, in other words: is this
+                       rule (of not copying the XSLT namespace for lre)
+                       considered, at the time, the lre is found in the
+                       styhlesheet or at the time, the lre is written to the
+                       result doc). In deed the rec doesn't clarify this
+                       explicitly. */
                     if (strcmp (attr->nodeValue, XSLT_NAMESPACE)==0){
                         attr = attr->nextSibling;
                         continue;
@@ -4681,17 +4727,28 @@ static int ExecAction (
                         }
                         nsAlias = nsAlias->next;
                     }
-                    excludeNS = sDoc->excludeNS;
-                    while (excludeNS) {
-                        if (excludeNS->uri) {
-                            if (strcmp (excludeNS->uri, ns->uri)==0) break;
+                    eNS = sDoc->excludeNS;
+                    while (eNS) {
+                        if (eNS->uri) {
+                            if (strcmp (eNS->uri, ns->uri)==0) break;
                         } else {
                             if (ns->prefix[0] == '\0') break;
                         }
-                        excludeNS = excludeNS->next;
+                        eNS = eNS->next;
                     }
-                    if (!excludeNS) {
-                        domAddNSToNode (xs->lastNode, ns);
+                    if (!eNS) {
+                        eNS = sDoc->extensionNS;
+                        while (eNS) {
+                            if (eNS->uri) {
+                                if (strcmp (eNS->uri, ns->uri)==0) break;
+                            } else {
+                                if (ns->prefix[0] == '\0') break;
+                            }
+                            eNS = eNS->next;
+                        }
+                        if (!eNS) {
+                            domAddNSToNode (xs->lastNode, ns);
+                        }
                     }
                     ns->uri = uri;
                     attr = attr->nextSibling;
@@ -4831,6 +4888,7 @@ int ApplyTemplate (
     Tcl_HashEntry  *h;
     Tcl_DString     dStr;
     domNS          *ns;
+    xsltSubDoc     *currentSubDoc;
 
     TRACE2("\n\nApplyTemplate mode='%s' currentPos=%d \n", mode, currentPos);
     DBG(printXML (currentNode, 0, 1);)
@@ -4969,13 +5027,16 @@ int ApplyTemplate (
     } else {
         TRACE1("tplChoosen '%s' \n", tplChoosen->match);
         currentTplRule = xs->currentTplRule;
+        currentSubDoc = xs->currentSubDoc;
         xs->currentTplRule = tplChoosen;
+        xs->currentSubDoc = tplChoosen->sDoc;
         DBG(printXML (tplChoosen->content->firstChild, 0, 1);)
         rc = ExecActions(xs, context, currentNode, currentPos,
                          tplChoosen->content->firstChild, errMsg);
         TRACE1("ApplyTemplate/ExecActions rc = %d \n", rc);
         CHECK_RC;
         xs->currentTplRule = currentTplRule;
+        xs->currentSubDoc = currentSubDoc;
     }
     return 0;
 }
@@ -5194,7 +5255,7 @@ void StripSpace (
 
 
 /*----------------------------------------------------------------------------
-|   addExcludeNS
+|   addExclExtNS
 |
 \---------------------------------------------------------------------------*/
 static int
@@ -5202,10 +5263,11 @@ parseList (
     xsltSubDoc  *docData,
     domNode     *xsltRoot,
     char        *str,
+    int          extensionNS,
     char       **errMsg
     )
 {
-    xsltExcludeNS *excludeNS;
+    xsltExclExtNS *eNS;
     char          *pc, *start, save;
     domNS         *ns;
 
@@ -5218,23 +5280,30 @@ parseList (
             while (*pc && (*pc != ' ')) pc++;
             save = *pc;
             *pc = '\0';
-            excludeNS = (xsltExcludeNS *)MALLOC(sizeof (xsltExcludeNS));
-            excludeNS->next = docData->excludeNS;
-            docData->excludeNS = excludeNS;
+            eNS = (xsltExclExtNS *)MALLOC(sizeof (xsltExclExtNS));
+            if (extensionNS) {
+                eNS->next = docData->extensionNS;
+                docData->extensionNS = eNS;
+            } else {
+                eNS->next = docData->excludeNS;
+                docData->excludeNS = eNS;
+            }
             if (strcmp (start, "#default")==0) {
                 ns = domLookupPrefix (xsltRoot, "");
                 if (!ns) {
-                    *errMsg = tdomstrdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    reportError (xsltRoot, "All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.",
+                                 errMsg);
                     return -1;
                 }
-                excludeNS->uri = NULL;
+                eNS->uri = NULL;
             } else {
                 ns = domLookupPrefix (xsltRoot, start);
                 if (!ns) {
-                    *errMsg = tdomstrdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
+                    reportError (xsltRoot, "All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.",
+                                 errMsg);
                     return -1;
                 }
-                excludeNS->uri = tdomstrdup (ns->uri);
+                eNS->uri = tdomstrdup (ns->uri);
             }
             *pc = save;
         }
@@ -5243,23 +5312,46 @@ parseList (
 }
 
 static int
-addExcludeNS (
+addExclExtNS (
     xsltSubDoc  *docData,
     domNode     *xsltRoot,
     char       **errMsg
     )
 {
-    char *str;
-    int   rc;
+    char  *str, *tailptr;
+    int    rc;
+    double d;
+
+    str = getAttr (xsltRoot, "version", a_version);
+    if (!str) {
+        reportError (xsltRoot, "missing mandatory attribute \"version\".", errMsg);
+        return -1;
+    }
+    d = strtod (str, &tailptr);
+    if (d == 0.0 && tailptr == str) {
+        reportError (xsltRoot, 
+                     "The value of the attribute \"version\" must be a number.",
+                     errMsg);
+        return -1;
+    }
+    if (d > 1.0) {
+        docData->fwCmpProcessing = 1;
+    } else {
+        if (d != 1.0) {
+            reportError (xsltRoot, "Strange \"version\" value.", errMsg);
+            return -1;
+            docData->fwCmpProcessing = 0;
+        }
+    }
 
     str = getAttr (xsltRoot, "exclude-result-prefixes",
                    a_excludeResultPrefixes);
-    rc = parseList (docData, xsltRoot, str, errMsg);
+    rc = parseList (docData, xsltRoot, str, 0, errMsg);
     CHECK_RC;
 
     str = getAttr (xsltRoot, "extension-element-prefixes",
                    a_extensionElementPrefixes);
-    rc = parseList (docData, xsltRoot, str, errMsg);
+    rc = parseList (docData, xsltRoot, str, 1, errMsg);
     CHECK_RC;
     return 1;
 }
@@ -5275,6 +5367,7 @@ getExternalDocument (
     domDocument *xsltDoc,
     char        *baseURI,
     char        *href,
+    int          isXSLTdoc,
     char       **errMsg
     )
 {
@@ -5414,8 +5507,12 @@ getExternalDocument (
     sdoc->baseURI = tdomstrdup (extbase);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
     sdoc->excludeNS = NULL;
-    if (addExcludeNS (sdoc, doc->documentElement, errMsg) < 0) {
-        return NULL;
+    sdoc->extensionNS = NULL;
+    sdoc->fwCmpProcessing = 0;
+    if (isXSLTdoc) {
+        if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
+            return NULL;
+        }
     }
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
@@ -5859,8 +5956,8 @@ static int processTopLevel (
                     return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
-                                                       node->ownerDocument,
-                                                       baseURI, href, errMsg);
+                                                     node->ownerDocument,
+                                                     baseURI, href, 1, errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -5893,7 +5990,7 @@ static int processTopLevel (
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                      node->ownerDocument,
-                                                     baseURI, href, errMsg);
+                                                     baseURI, href, 1, errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -6133,8 +6230,12 @@ static int processTopLevel (
                         return -1;
                     }
                     if (strcmp (XSLT_NAMESPACE, domNamespaceURI (node))==0) {
-                        reportError (node, "Unknown XSLT element.", errMsg);
-                        return -1;
+                        if (!xs->currentSubDoc->fwCmpProcessing) {
+                            reportError (node, "Unknown XSLT element.",
+                                         errMsg);
+                            
+                            return -1;
+                        }
                     }
                 }
                 break;
@@ -6165,7 +6266,7 @@ xsltFreeState (
     ast                t;
     xsltTopLevelVar   *tlv;
     xsltNSAlias       *nsAlias, *nsAliasSave;
-    xsltExcludeNS     *excludeNS, *excludeNSsave;
+    xsltExclExtNS     *eNS, *eNSsave;
     Tcl_HashEntry     *entryPtr, *entryPtr1;
     Tcl_HashSearch     search, search1;
     Tcl_HashTable     *htable;
@@ -6265,12 +6366,19 @@ xsltFreeState (
             FREE((char*)htable);
         }
         Tcl_DeleteHashTable (&sdsave->keyData);
-        excludeNS = sdsave->excludeNS;
-        while (excludeNS) {
-            if (excludeNS->uri) FREE(excludeNS->uri);
-            excludeNSsave = excludeNS;
-            excludeNS = excludeNS->next;
-            FREE((char *)excludeNSsave);
+        eNS = sdsave->excludeNS;
+        while (eNS) {
+            if (eNS->uri) FREE(eNS->uri);
+            eNSsave = eNS;
+            eNS = eNS->next;
+            FREE((char *)eNSsave);
+        }
+        eNS = sdsave->extensionNS;
+        while (eNS) {
+            if (eNS->uri) FREE(eNS->uri);
+            eNSsave = eNS;
+            eNS = eNS->next;
+            FREE((char *)eNSsave);
         }
         if (sdsave->next && sdsave->next->next) {
             domFreeDocument (sdsave->doc, NULL, NULL);
@@ -6387,14 +6495,17 @@ int xsltProcess (
     xpathResultSet  nodeList;
     domNode        *node;
     int             rc;
-    char           *str;
     double          precedence, precedenceLowBound;
     xsltState       xs;
     xsltSubDoc     *sdoc;
 
     *errMsg = NULL;
 
-    xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
+    if (xmlNode->nodeType == DOCUMENT_NODE) {
+        xmlNode = ((domDocument *)xmlNode)->rootNode;
+    } else {
+        xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
+    }
     DBG(printXML(xmlNode, 0, 1);)
 
     Tcl_InitHashTable ( &(xs.namedTemplates), TCL_STRING_KEYS);
@@ -6479,6 +6590,8 @@ int xsltProcess (
     sdoc->baseURI = findBaseURI (xmlNode);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
     sdoc->excludeNS = NULL;
+    sdoc->extensionNS = NULL;
+    sdoc->fwCmpProcessing = 0;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
@@ -6488,9 +6601,13 @@ int xsltProcess (
     sdoc->baseURI = findBaseURI (xsltDoc->documentElement);
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
     sdoc->excludeNS = NULL;
+    sdoc->extensionNS = NULL;
+    sdoc->fwCmpProcessing = 0;
     sdoc->next = xs.subDocs;
     xs.subDocs = sdoc;
 
+    xs.currentSubDoc = sdoc;
+    
     if ((getTag(node) != stylesheet) && (getTag(node) != transform)) {
         TRACE("no stylesheet node found --> ExecAction ");
         StripSpace (&xs, node);
@@ -6506,12 +6623,7 @@ int xsltProcess (
         xsltFreeState (&xs);
         return 0;
     } else {
-        str = getAttr (node, "version", a_version);
-        if (!str) {
-            reportError (node, "missing mandatory attribute \"version\".", errMsg);
-            goto error;
-        }
-        rc = addExcludeNS (sdoc, node, errMsg);
+        rc = addExclExtNS (sdoc, node, errMsg);
         if (rc < 0) goto error;
     }
 
@@ -6587,7 +6699,21 @@ int xsltProcess (
             }
         }
     }
-    xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
+    /* Make the first ELEMENT_NODE the documentElement. There could
+       be text, comment or PI nodes before the first element node.
+       If the root node doesn't have a element node under it's childs,
+       fall back to the firstChild as documentElement. */
+    node = xs.resultDoc->rootNode->firstChild;
+    while (node) {
+        if (node->nodeType == ELEMENT_NODE) {
+            xs.resultDoc->documentElement = node;
+            break;
+        }
+        node = node->nextSibling;
+    }
+    if (!node) {
+        xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
+    }
     *resultDoc = xs.resultDoc;
 
     xsltPopVarFrame (&xs);
