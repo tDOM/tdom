@@ -39,11 +39,25 @@
 #
 #
 # AOLserver 4.X. It uses public Tcl library.
+# Builds the package as a regular Tcl module
+# but installs it in the AOLserver tree.
 # Just do "make" and "make install". You might
 # want to change the default AOLserver install
 # directory (/usr/local/aolserver). 
 # ----------------------------------------------------
 # ../configure --enable-threads --disable-tdomalloc \
+#   --prefix=/usr/local/aolserver
+#
+# AOLserver 4.X. It uses public Tcl library.
+# Builds the package as a AOLserver module.
+# You will have to manually trim your AOLserver
+# startup script to load it. 
+# Just do "make" and "make install". You might
+# want to change the default AOLserver install
+# directory (/usr/local/aolserver). 
+# ----------------------------------------------------
+# ../configure --enable-threads --disable-tdomalloc \
+#   --with-aolserver=/usr/local/aolserver \
 #   --prefix=/usr/local/aolserver
 #
 #
