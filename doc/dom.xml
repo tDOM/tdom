@@ -70,8 +70,8 @@ handle namespaces.</desc>
 
               <optdef>
                 <optname>-html</optname>
-                <desc>If <m>-html</m> is specified, a fast HTML parser is used, which tries
-to even parse badly formed HTML into a DOM tree.</desc>
+                <desc>If <m>-html</m> is specified, a fast HTML parser is 
+used, which tries to even parse badly formed HTML into a DOM tree.</desc>
               </optdef>
        
               <optdef>
@@ -87,9 +87,10 @@ text nodes are removed at parsing time.</desc>
                 <optarg>&lt;channel-ID&gt;</optarg>
 
                 <desc>If <m>-channel &lt;channel-ID&gt;</m> is specified, the
-input to be parsed is read from the specified channel. The input is read from
-the channel in "raw" (binary) mode from the channel, ignoring any encoding
-setting via -fconfigure of the channel.</desc>
+input to be parsed is read from the specified channel. The encoding setting of
+the channel (via fconfigure -encoding) is respected, ie the data read from the
+channel are converted to UTF-8 according to the encoding settings, befor the
+data is parsed.</desc>
               </optdef>
 
               <optdef>
@@ -143,6 +144,17 @@ of type "string", or the name of a tcl channel, in the case of type
 
           <desc><p>Creates a new DOM document object with one element node with
 node name <samp>docElemName</samp>. The <samp>objVar</samp> controlls the
+memory handling as explained above.</p>
+</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>createDocumentNS</method>
+<m>docElemName</m> <m>uri</m> ?<m>objVar</m>?</command>
+
+          <desc><p>Creates a new DOM document object with one element node with
+node name <samp>docElemName</samp>. <samp>Uri</samp> gives the namespace of the
+document element to create. The <samp>objVar</samp> controlls the
 memory handling as explained above.</p>
 </desc>
         </commanddef>
