@@ -38,6 +38,10 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.13  2002/04/19 20:48:05  rolf
+|   Added handling of IS_NS_NODE flag set for an attribute node at a few
+|   more places.
+|
 |   Revision 1.12  2002/04/19 18:55:40  rolf
 |   Changed / enhanced namespace handling and namespace information
 |   storage. The namespace field of the domNode and domAttributeNode
@@ -1885,8 +1889,8 @@ int xpathNodeTest (
         return 0;
     } else
     if (step->child->type == IsAttr) {
-        if (     node->nodeType == ATTRIBUTE_NODE 
-            && !(node->nodeFlags & IS_NS_NODE)    ) {
+        if (node->nodeType == ATTRIBUTE_NODE) {
+            if (node->nodeFlags & IS_NS_NODE) return 0;
             if (  (step->child->strvalue[0] == '*')
                 &&(step->child->strvalue[1] == '\0')
             ) {
@@ -4456,7 +4460,8 @@ int xpathMatches (
                 break;
                 
             case IsAttr:
-                if (nodeToMatch->nodeType != ATTRIBUTE_NODE) {
+                if (nodeToMatch->nodeType != ATTRIBUTE_NODE
+                    || (nodeToMatch->nodeFlags | IS_NS_NODE)) {
                     xpathRSFree (&nodeList); return 0;
                 }
                 if (!((steps->strvalue[0] == '*') && (steps->strvalue[1] == '\0')))  {
