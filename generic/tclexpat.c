@@ -2112,9 +2112,9 @@ TclGenExpatElementEndHandler(userData, name)
 
           if (!--(activeTclHandlerSet->continueCount)) {
               activeTclHandlerSet->status = TCL_OK;
-              goto nextTcl;
+              break;
           }
-          break;
+          goto nextTcl;
       case TCL_BREAK:
           goto nextTcl;
           break;

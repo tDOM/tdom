@@ -86,7 +86,6 @@ static void * StackPush  _ANSI_ARGS_((void *));
 static void * StackPop   _ANSI_ARGS_((void));
 static void * StackTop   _ANSI_ARGS_((void));
 static int    NodeObjCmd _ANSI_ARGS_((ClientData,Tcl_Interp*,int,Tcl_Obj *CONST o[]));
-static void  domAppendChild1(domNode*, domNode *);
 static void   StackFinalize _ANSI_ARGS_((ClientData));
 
 extern int tcldom_appendXML (Tcl_Interp*, domNode*, Tcl_Obj*);
@@ -256,7 +255,7 @@ NodeObjCmd (arg, interp, objc, objv)
         if (disableOutputEscaping) {
             newNode->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
         }
-        domAppendChild1(parent, newNode);
+        domAppendChild(parent, newNode);
         break;
 
     case PROCESSING_INSTRUCTION_NODE:
@@ -268,7 +267,7 @@ NodeObjCmd (arg, interp, objc, objv)
         aval = Tcl_GetStringFromObj(objv[2], &dlen);
         newNode = (domNode *)
             domNewProcessingInstructionNode(doc, tval, len, aval, dlen);
-        domAppendChild1(parent, newNode);
+        domAppendChild(parent, newNode);
         break;
 
     case PARSER_NODE: /* non-standard node-type : a hack! */
@@ -292,7 +291,7 @@ NodeObjCmd (arg, interp, objc, objv)
         }
 
         newNode = (domNode *)domNewElementNode(doc, tag, ELEMENT_NODE);
-        domAppendChild1(parent, newNode);
+        domAppendChild(parent, newNode);
         
         /*
          * Allow for following syntax:
@@ -499,29 +498,6 @@ void *
 nodecmd_currentNode(void)
 {
     return StackTop();
-}
-
-/*---------------------------------------------------------------------------
-|   domAppendChild1
-|
-|   A (slightly faster) shortcut for standard domAppendChild function
-\--------------------------------------------------------------------------*/
-
-static void
-domAppendChild1 (domNode *node, domNode *childToAppend)
-{
-    if (node->lastChild) {
-        node->lastChild->nextSibling = childToAppend;
-        childToAppend->previousSibling = node->lastChild;
-    } else {
-        node->firstChild = childToAppend;
-        childToAppend->previousSibling = NULL;
-    }
-
-    node->lastChild = childToAppend;
-    childToAppend->nextSibling = NULL;
-    childToAppend->parentNode = node;
-    node->ownerDocument->fragments = NULL;
 }
 
 /* EOF $RCSfile $ */

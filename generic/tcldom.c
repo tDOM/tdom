@@ -37,7 +37,6 @@
 \---------------------------------------------------------------------------*/
 
 
-
 /*----------------------------------------------------------------------------
 |   Includes
 |
@@ -261,6 +260,7 @@ static char node_usage[] =
 \---------------------------------------------------------------------------*/
 typedef struct TcldomDocDeleteInfo {
     domDocument * document;
+    domNode     * node;
     Tcl_Interp  * interp;
     char        * traceVarName;
 
@@ -276,18 +276,15 @@ typedef struct XsltMsgCBInfo
 |   Prototypes for procedures defined later in this file:
 |
 \---------------------------------------------------------------------------*/
-static int tcldom_DocObjCmd (ClientData clientData,
-                             Tcl_Interp *interp,
-                             int         objc,
-                             Tcl_Obj    *objv[]);
 
-static void tcldom_docCmdDeleteProc (ClientData  clientData);
+Tcl_ObjCmdProc tcldom_DocObjCmd;
+Tcl_ObjCmdProc tcldom_NodeObjCmd;
 
-static char * tcldom_docTrace (ClientData    clientData,
-                               Tcl_Interp   *interp,
-                               CONST84 char *name1,
-                               CONST84 char *name2,
-                               int           flags);
+static Tcl_VarTraceProc tcldom_docTrace;
+static Tcl_VarTraceProc tcldom_nodeTrace;
+
+static Tcl_CmdDeleteProc tcldom_docCmdDeleteProc;
+static Tcl_CmdDeleteProc tcldom_nodeCmdDeleteProc;
 
 #ifdef TCL_THREADS
 
@@ -367,12 +364,15 @@ void tcldom_docCmdDeleteProc  (
 {
     TcldomDocDeleteInfo  * dinfo = (TcldomDocDeleteInfo*) clientData;
 
-    DBG(fprintf (stderr, "--> tcldom_docCmdDeleteProc doc 0x%x !\n", dinfo->document);)
+    DBG(fprintf (stderr, "--> tcldom_docCmdDeleteProc doc %p\n", dinfo->document);)
+
     if (dinfo->traceVarName) {
-        DBG(fprintf (stderr, "--> tcldom_docCmdDeleteProc calling Tcl_UntraceVar ...\n");)
-        Tcl_UntraceVar (dinfo->interp, dinfo->traceVarName,
-                                TCL_TRACE_WRITES |  TCL_TRACE_UNSETS,
-                                tcldom_docTrace, clientData);
+        DBG(fprintf (stderr, 
+                     "--> tcldom_docCmdDeleteProc call Tcl_UntraceVar for \"%s\"\n",
+                     dinfo->traceVarName);)
+        Tcl_UntraceVar(dinfo->interp, dinfo->traceVarName,
+                       TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+                       tcldom_docTrace, clientData);
         FREE(dinfo->traceVarName);
         dinfo->traceVarName = NULL;
     }
@@ -390,6 +390,9 @@ void tcldom_docCmdDeleteProc  (
                         tcldom_docDeleteNode, dinfo->interp, 1);
             dinfo->document->refCount--;
             Tcl_MutexUnlock(&tableMutex);
+            DBG(fprintf(stderr,
+                        "--> tcldom_docCmdDeleteProc doc %p left in shared table\n", 
+                        dinfo->document);)
             return; /* Because doc has still users attached */
         }
         /* Document has only one thread attached: the current thread */
@@ -397,8 +400,9 @@ void tcldom_docCmdDeleteProc  (
         entryPtr = Tcl_FindHashEntry(&sharedDocs, objCmdName);
         if (entryPtr) {
             Tcl_DeleteHashEntry(entryPtr);
-            DBG(fprintf(stderr, "--> document %s deleted from the shared table\n",
-                        objCmdName);)
+            DBG(fprintf(stderr,
+                        "--> tcldom_docCmdDeleteProc doc %p removed from shared table\n", 
+                        dinfo->document);)
         }
         Tcl_MutexUnlock(&tableMutex);
     }
@@ -406,6 +410,32 @@ void tcldom_docCmdDeleteProc  (
 
     /* delete DOM tree */
     domFreeDocument (dinfo->document, tcldom_docDeleteNode, dinfo->interp );
+    FREE((void*)dinfo);
+}
+
+
+/*----------------------------------------------------------------------------
+|   tcldom_nodeCmdDeleteProc
+|
+\---------------------------------------------------------------------------*/
+static
+void tcldom_nodeCmdDeleteProc (
+    ClientData  clientData
+)
+{
+    TcldomDocDeleteInfo * dinfo = (TcldomDocDeleteInfo*)clientData;
+
+    DBG(fprintf (stderr, "--> tcldom_nodeCmdDeleteProc node %p\n", dinfo->node);)
+    if (dinfo->traceVarName) {
+        DBG(fprintf (stderr, 
+                     "--> tcldom_nodeCmdDeleteProc call Tcl_UntraceVar for \"%s\"\n",
+                     dinfo->traceVarName);)
+        Tcl_UntraceVar (dinfo->interp, dinfo->traceVarName,
+                        TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+                        tcldom_nodeTrace, clientData);
+        FREE(dinfo->traceVarName);
+        dinfo->traceVarName = NULL;
+    }
     FREE((void*)dinfo);
 }
 
@@ -423,31 +453,24 @@ char * tcldom_docTrace (
     int           flags
 )
 {
-    TcldomDocDeleteInfo * dinfo;
-    char                  objCmdName[40];
+    TcldomDocDeleteInfo * dinfo = (TcldomDocDeleteInfo*) clientData;
+    char objCmdName[40];
 
+    DBG(fprintf (stderr, "--> tcldom_docTrace %x %p\n", flags, dinfo->document );)
 
-    dinfo = (TcldomDocDeleteInfo*) clientData;
-
-    DBG(fprintf (stderr, "--> tcldom_trace %x doc%x !\n", flags, clientData );)
+    if (flags & TCL_INTERP_DESTROYED) {
+        return NULL;
+    }
     if (flags & TCL_TRACE_WRITES) {
         return "var is read-only";
     }
     if (flags & TCL_TRACE_UNSETS) {
         DOC_CMD(objCmdName, dinfo->document);
-        DBG(fprintf (stderr, "--> tcldom_trace delete %s (addr 0x%x)!\n",
-                     objCmdName, dinfo->document);)
-
-       /* delete document by deleting Tcl object command */
-
-       /*
-        Tcl_UntraceVar (interp, name1, TCL_TRACE_WRITES |
-                                       TCL_TRACE_UNSETS,
-                                       tcldom_docTrace, clientData);
-       */
-        DBG(fprintf (stderr, "--> tcldom_trace calling Tcl_DeleteCommand\n");)
+        DBG(fprintf(stderr, "--> tcldom_docTrace delete doc %p\n",
+                    dinfo->document);)
         Tcl_DeleteCommand ( interp, objCmdName );
     }
+
     return NULL;
 }
 
@@ -465,28 +488,27 @@ char * tcldom_nodeTrace (
     int           flags
 )
 {
-    char     objCmdName[40];
-    domNode *node;
+    TcldomDocDeleteInfo * dinfo = (TcldomDocDeleteInfo*)clientData;
+    char objCmdName[40];
 
-    DBG(fprintf (stderr, "--> tcldom_nodeTrace %d 0x%x !\n", flags, (int)clientData );)
+    DBG(fprintf(stderr, "--> tcldom_nodeTrace %x %p\n", flags, dinfo->node);)
 
-    if (flags & TCL_INTERP_DESTROYED) return NULL;
-    
-    node = (domNode*) clientData;
-
-    if (flags & TCL_TRACE_UNSETS) {
-        NODE_CMD(objCmdName, node);
-        DBG(fprintf (stderr, "--> tcldom_nodeTrace delete domNode %s !\n", objCmdName);)
-        Tcl_DeleteCommand ( interp, objCmdName );
-        Tcl_UntraceVar (interp, name1, TCL_TRACE_WRITES |
-                                       TCL_TRACE_UNSETS,
-                                       tcldom_nodeTrace, clientData);
-        node->nodeFlags &= ~VISIBLE_IN_TCL;
+    if (flags & TCL_INTERP_DESTROYED) {
         return NULL;
     }
     if (flags & TCL_TRACE_WRITES) {
-        return "node object is read-only";
+        return "var is read-only";
     }
+    if (flags & TCL_TRACE_UNSETS) {
+        NODE_CMD(objCmdName, dinfo->node);
+        DBG(fprintf (stderr, "--> tcldom_nodeTrace delete node %p\n",
+                     dinfo->node);)
+        Tcl_DeleteCommand ( interp, objCmdName );
+        Tcl_UntraceVar(interp, name1, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+                       tcldom_nodeTrace, clientData);
+        dinfo->node->nodeFlags &= ~VISIBLE_IN_TCL;
+    }
+
     return NULL;
 }
 
@@ -508,10 +530,10 @@ void tcldom_createNodeObj (
     } else {
         NODE_CMD(objCmdName, node);
         DBG(fprintf(stderr,"--> creating node %s\n", objCmdName);)
-        Tcl_CreateObjCommand ( interp, objCmdName,
-                               (Tcl_ObjCmdProc *)  tcldom_NodeObjCmd,
-                               (ClientData)        node,
-                               (Tcl_CmdDeleteProc*)NULL );
+        Tcl_CreateObjCommand(interp, objCmdName,
+                             (Tcl_ObjCmdProc *)  tcldom_NodeObjCmd,
+                             (ClientData)        node,
+                             (Tcl_CmdDeleteProc*)NULL);
         node->nodeFlags |= VISIBLE_IN_TCL;
     }
 }
@@ -544,8 +566,11 @@ int tcldom_returnNodeObj (
     Tcl_Obj    *var_name
 )
 {
+    char objCmdName[40], *objVar;
+    Tcl_CmdInfo cmdInfo;
+    TcldomDocDeleteInfo * dinfo;
+
     GetTcldomTSD()
-    char  objCmdName[40], *objVar;
 
     if (node == NULL) {
         if (setVariable) {
@@ -560,17 +585,31 @@ int tcldom_returnNodeObj (
     if (TSD(dontCreateObjCommands)) {
         if (setVariable) {
             objVar = Tcl_GetStringFromObj (var_name, NULL);
-            Tcl_SetVar   (interp, objVar, objCmdName, 0);
+            Tcl_SetVar (interp, objVar, objCmdName, 0);
         }
     } else {
         if (setVariable) {
+
+            dinfo = (TcldomDocDeleteInfo*)MALLOC(sizeof(TcldomDocDeleteInfo));
+            dinfo->interp       = interp;
+            dinfo->node         = node;
+            dinfo->traceVarName = NULL;
+
             objVar = Tcl_GetStringFromObj (var_name, NULL);
             Tcl_UnsetVar (interp, objVar, 0);
             Tcl_SetVar   (interp, objVar, objCmdName, 0);
             Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES |
                                           TCL_TRACE_UNSETS,
                                           (Tcl_VarTraceProc*)tcldom_nodeTrace,
-                                          (ClientData) node);
+                                          (ClientData) dinfo);
+
+            dinfo->traceVarName = tdomstrdup(objVar);
+
+            /* Patch node object command to remove above trace on teardown */
+            Tcl_GetCommandInfo(interp, objCmdName, &cmdInfo);
+            cmdInfo.deleteData = (ClientData)dinfo;
+            cmdInfo.deleteProc = tcldom_nodeCmdDeleteProc;
+            Tcl_SetCommandInfo(interp, objCmdName, &cmdInfo);
         }
     }
     SetResult ( objCmdName);
@@ -618,28 +657,32 @@ int tcldom_returnDocumentObj (
                               (Tcl_ObjCmdProc *)  tcldom_DocObjCmd,
                               (ClientData)        dinfo,
                               (Tcl_CmdDeleteProc*)tcldom_docCmdDeleteProc);
-        TDomThreaded(
-            {
-                Tcl_HashEntry *entryPtr;
-                int newEntry;
-
-                Tcl_MutexLock(&tableMutex);
-                ++document->refCount;
-                entryPtr = Tcl_CreateHashEntry(&sharedDocs, objCmdName, &newEntry);
-                if (newEntry) {
-                    Tcl_SetHashValue(entryPtr, (ClientData)dinfo->document);
-                }
-                Tcl_MutexUnlock(&tableMutex);
-                DBG(fprintf(stderr, "--> document 0x%x %s shared table\n",
-                            dinfo->document,
-                            (newEntry) ? "entered into" : "already in");)
-            }
-        )
-
     } else {
         /* reuse old informaion */
         dinfo = (TcldomDocDeleteInfo*)cmd_info.objClientData;
     }
+
+    TDomThreaded(
+    {
+        Tcl_HashEntry *entryPtr;
+        int refCount;
+        int newEntry;
+        
+        Tcl_MutexLock(&tableMutex);
+        refCount = ++document->refCount;
+        entryPtr = Tcl_CreateHashEntry(&sharedDocs, objCmdName, &newEntry);
+        if (newEntry) {
+            Tcl_SetHashValue(entryPtr, (ClientData)dinfo->document);
+        }
+        Tcl_MutexUnlock(&tableMutex);
+        DBG(fprintf(stderr,
+                    "--> document %p %s shared table with refcount %d\n",
+                    dinfo->document,
+                    (newEntry) ? "entered into" : "already in", refCount);
+            )
+    }
+    )
+
     if (setVariable) {
         objVar = Tcl_GetStringFromObj (var_name, NULL);
         Tcl_UnsetVar (interp, objVar, 0);
@@ -1005,7 +1048,7 @@ domDocument * tcldom_getDocumentFromName (
             tabDoc = (domDocument*)Tcl_GetHashValue(entryPtr);
             Tcl_MutexUnlock(&tableMutex);
             if (doc != tabDoc) {
-                Tcl_Panic("document mismatch; doc=%x, in table=%x\n", doc, tabDoc);
+                Tcl_Panic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
             }
         }
     )
@@ -2857,8 +2900,6 @@ int tcldom_XSLTObjCmd (
     Tcl_Obj    *CONST objv[]
 )
 {
-    GetTcldomTSD()
-    
     CheckArgs(2,8,1, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?");
     objv++;
     objc--;
@@ -3863,12 +3904,11 @@ int tcldom_NodeObjCmd (
 |   tcldom_DocObjCmd
 |
 \---------------------------------------------------------------------------*/
-static
 int tcldom_DocObjCmd (
     ClientData  clientData,
     Tcl_Interp *interp,
     int         objc,
-    Tcl_Obj    *objv[]
+    Tcl_Obj    *CONST objv[]
 )
 {
     TcldomDocDeleteInfo * dinfo;

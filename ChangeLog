@@ -1,3 +1,41 @@
+2003-09-14  Rolf Ade  <rolf@pointsman.de>
+
+        Merged fixes of 0.7.8 back to HEAD. This includes:
+
+        2003-08-06  Zoran Vasiljevic  <zoran@archiware.com>
+
+        	* generic/nodecmd.c: removed optimized domAppendChild1
+        	  in favour of generic domAppendChild since former was
+        	  trashing memory in certain situations.
+
+        2003-08-06  Rolf Ade  <rolf@pointsman.de>
+
+                * tests/all.tcl
+                * tests/domCmd.test: Added contraint need_uri, so that
+                  the few tests, which needs the tcllib uri package
+                  are skipped, if the uri package isn't present.
+
+        2003-07-06  Rolf Ade  <rolf@pointsman.de>
+
+                * generic/tclexpat.c: Fixed bug in the subtree skipping
+                  feature of event handlers. Should be merged with HEAD.
+
+                * lib/tdom.tcl: Fixed error reporting in
+                  tDOM::extRefHandler.
+
+        2003-07-03  Zoran Vasiljevic  <zoran@archiware.com>
+
+        	* generic/domlock.c: fixed double mutex unlock.
+
+        	* generic/tcldom.c: allows same thread to issue several
+        	  "attachDocument" commands to artificially bump the 
+                  document refcount thus making the document sticky.
+        	  
+        	  Also, fixed variable tracing issues when tearing down the
+        	  dom document. Now, all node object command variables are
+        	  automatically untraced. This prevents memory trashing when
+        	  such variables are unset by user or by Tcl.
+
 2003-06-13  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Added an argument check for XSLTCmds.

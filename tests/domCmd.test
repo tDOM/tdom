@@ -810,7 +810,7 @@ test domCmd-6.1 {-useForeignDTD 0} {
     $doc delete
 } {}
 
-test domCmd-6.2 {-useForeignDTD 1 with document with internal subset} {
+test domCmd-6.2 {-useForeignDTD 1 with document with internal subset} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
     set ::tDOM::useForeignDTD "data/domCmd1.dtd"
     set doc [dom parse \
@@ -827,7 +827,7 @@ test domCmd-6.2 {-useForeignDTD 1 with document with internal subset} {
     set result
 } {toThat}
 
-test domCmd-6.3 {-useForeignDTD 1 with document with internal subset} {
+test domCmd-6.3 {-useForeignDTD 1 with document with internal subset} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
     set ::tDOM::useForeignDTD "data/domCmd1.dtd"
     set doc [dom parse \
@@ -845,7 +845,7 @@ test domCmd-6.3 {-useForeignDTD 1 with document with internal subset} {
     set result
 } {toThis toThat}
 
-test domCmd-6.4 {-useForeignDTD 1 with document without document declaration} {
+test domCmd-6.4 {-useForeignDTD 1 with document without document declaration} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
     set ::tDOM::useForeignDTD "data/domCmd1.dtd"
     set doc [dom parse \
@@ -858,7 +858,7 @@ test domCmd-6.4 {-useForeignDTD 1 with document without document declaration} {
     set result
 } {toThis}
 
-test domCmd-6.5 {-useForeignDTD 1 does not overwrite a given external subset} {
+test domCmd-6.5 {-useForeignDTD 1 does not overwrite a given external subset} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
     set ::tDOM::useForeignDTD "data/domCmd1.dtd"
     set doc [dom parse \
@@ -873,12 +873,12 @@ test domCmd-6.5 {-useForeignDTD 1 does not overwrite a given external subset} {
     set result
 } {toThat}
 
-test domCmd-6.6 {-useForeignDTD with nonboolean arg} {
+test domCmd-6.6 {-useForeignDTD with nonboolean arg} {need_uri} {
     set result [catch {set doc [dom parse -useForeignDTD foo <root/>]} errMsg]
     lappend result $errMsg
 } {1 {-useForeignDTD must have a boolean arg}}
 
-test domCmd-7.1 {document with external subset} {
+test domCmd-7.1 {document with external subset} {need_uri} {
     set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
     set doc [dom parse \
             -baseurl $baseURI \
