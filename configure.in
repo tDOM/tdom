@@ -11,17 +11,6 @@ dnl	to configure the system for the local environment.
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
-# __CHANGE__
-# This very first macro is used to verify that the configure script can 
-# find the sources.  The argument to AC_INIT should be a unique filename
-# for this package, and can be a relative path, such as:
-#
-# AC_INIT(generic/tcl.h)
-#-----------------------------------------------------------------------
-
-AC_INIT(generic/tcldom.c)
-
-#-----------------------------------------------------------------------
 # Be sure we're invoked from the platform directory.
 #-----------------------------------------------------------------------
 
@@ -37,11 +26,15 @@ if test ${srcdir} = "." ; then
 fi
 
 #-----------------------------------------------------------------------
-# These are needed for the expat compilation. Do this early so we
-# do not step over some CFLAGS which will confuse the compiler.
+# __CHANGE__
+# This very first macro is used to verify that the configure script can 
+# find the sources.  The argument to AC_INIT should be a unique filename
+# for this package, and can be a relative path, such as:
+#
+# AC_INIT(generic/tcl.h)
 #-----------------------------------------------------------------------
 
-AC_CHECK_FUNCS(memmove bcopy)
+AC_INIT(generic/tcldom.c)
 
 #-----------------------------------------------------------------------
 # Where is the tcl.m4 and brothers?
@@ -56,7 +49,7 @@ AC_SUBST(CONFIGDIR)
 # Set your package name and version numbers here. The NODOT_VERSION is
 # required for constructing the library name on systems that don't like
 # dots in library names (Windows). The VERSION variable is used on the
-# other systems. Note that we substitute the VERSIN later down, after
+# other systems. Note that we substitute the VERSION later down, after
 # we have initialized TEA so we know which platform we're dealing with.
 #----------------------------------------------------------------------
 
@@ -95,13 +88,6 @@ TEA_INIT
 TEA_PATH_TCLCONFIG
 TEA_LOAD_TCLCONFIG
 
-#--------------------------------------------------------------------
-# Load the tkConfig.sh file if necessary (Tk extension)
-#--------------------------------------------------------------------
-
-#TEA_PATH_TKCONFIG
-#TEA_LOAD_TKCONFIG
-
 #-----------------------------------------------------------------------
 # Handle the --prefix=... option by defaulting to what Tcl gave.
 # Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
@@ -118,6 +104,12 @@ TEA_PREFIX
 
 TEA_SETUP_COMPILER
 
+#-----------------------------------------------------------------------
+# Those two are needed for compiling expat.
+#-----------------------------------------------------------------------
+
+AC_CHECK_FUNCS(memmove bcopy)
+
 #--------------------------------------------------------------------
 # __CHANGE__
 # Choose which headers you need.  Extension authors should try very
@@ -129,9 +121,6 @@ TEA_SETUP_COMPILER
 
 TEA_PUBLIC_TCL_HEADERS
 #TEA_PRIVATE_TCL_HEADERS
-
-#TEA_PUBLIC_TK_HEADERS
-#TEA_PRIVATE_TK_HEADERS
 
 #--------------------------------------------------------------------
 # __CHANGE__
@@ -192,6 +181,7 @@ TEA_ENABLE_SHARED
 #--------------------------------------------------------------------
 
 TEA_CONFIG_CFLAGS
+
 TDOM_LD_SEARCH_FLAGS=${LD_SEARCH_FLAGS}
 AC_SUBST(TDOM_LD_SEARCH_FLAGS)
 
@@ -201,13 +191,6 @@ AC_SUBST(TDOM_LD_SEARCH_FLAGS)
 
 TEA_ENABLE_SYMBOLS
 
-if test "${SHARED_BUILD}" = "1" ; then
-    CFLAGS='${CFLAGS_DEFAULT} ${CFLAGS_WARNING} ${SHLIB_CFLAGS}'
-else
-    CFLAGS='${CFLAGS_DEFAULT} ${CFLAGS_WARNING}'
-fi
-AC_SUBST(SHARED_BUILD)
-
 #--------------------------------------------------------------------
 # Setup the current source directory so extensions building against
 # tDOM stub library will know where to find binary directories.
@@ -215,24 +198,27 @@ AC_SUBST(SHARED_BUILD)
 # Note: some of those below are replicated in Makefile.in as well.
 #--------------------------------------------------------------------
 
-# libdir must be a fully qualified path and (not ${exec_prefix}/lib)
-if test "x${exec_prefix}" = "xNONE" ; then
+# The "libdir" must be a fully qualified path and not ${exec_prefix}/lib
+if test "${exec_prefix}" = "NONE" ; then
     exec_prefix="${prefix}"
-fi 
+fi
 eval libdir="$libdir"
 
-tdom_SRC_DIR=`cd ${srcdir}; pwd`
+stublib="-ltdomstub${VERSION}${TCL_DBGX}"
 
-tdomstub_LIB_FLAG="-ltdomstub${VERSION}${DBGX}"
 if test "${TEA_PLATFORM}" = "windows" ; then
-    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/win ${tdomstub_LIB_FLAG}"
-else 
-    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/${TEA_PLATFORM} ${tdomstub_LIB_FLAG}"
+    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/win ${stublib}"
+elif test "${TEA_PLATFORM}" = "unix" ; then
+    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/unix ${stublib}"
+else
+    error "unsupported TEA platform: ${TEA_PLATFORM}"
 fi
-tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${tdomstub_LIB_FLAG}"
-
 AC_SUBST(tdomstub_BUILD_SPEC)
+
+tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${stublib}"
 AC_SUBST(tdomstub_FILE_SPEC)
+
+tdom_SRC_DIR=`cd ${srcdir}; pwd`
 AC_SUBST(tdom_SRC_DIR)
 
 #--------------------------------------------------------------------
@@ -243,7 +229,6 @@ AC_SUBST(tdom_SRC_DIR)
 #--------------------------------------------------------------------
 
 AC_DEFINE(USE_TCL_STUBS)
-#AC_DEFINE(USE_TK_STUBS)
 
 #--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
@@ -255,11 +240,12 @@ AC_DEFINE(USE_TCL_STUBS)
 TEA_MAKE_LIB
 
 #--------------------------------------------------------------------
-# __CHANGE__
-# Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
+# TEA_TCL_LINK_LIBS
+#
+# Search for the libraries needed to link the Tcl shell.
 #--------------------------------------------------------------------
 
-LIBS="${LIBS} -lm"
+TEA_TCL_LINK_LIBS
 
 #--------------------------------------------------------------------
 # Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
@@ -271,7 +257,6 @@ LIBS="${LIBS} -lm"
 #--------------------------------------------------------------------
 
 TEA_PROG_TCLSH
-#TEA_PROG_WISH
 
 #--------------------------------------------------------------------
 # Add some private include directories
