@@ -2,7 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   A DOM interface upon the expat XML parser for the C language
