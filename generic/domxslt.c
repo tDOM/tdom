@@ -7278,15 +7278,16 @@ int xsltProcess (
        be text, comment or PI nodes before the first element node.
        If the root node doesn't have an element node under it's childs,
        fall back to the firstChild as documentElement. */
+    xs->resultDoc->documentElement = NULL;
     node = xs->resultDoc->rootNode->firstChild;
     while (node) {
+        node->parentNode = NULL;
         if (node->nodeType == ELEMENT_NODE) {
             xs->resultDoc->documentElement = node;
-            break;
         }
         node = node->nextSibling;
     }
-    if (!node) {
+    if (!xs->resultDoc->documentElement) {
         xs->resultDoc->documentElement = xs->resultDoc->rootNode->firstChild;
     }
     *resultDoc = xs->resultDoc;
