@@ -187,6 +187,13 @@ memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
+          <command><cmd>dom</cmd> <method>createDocumentNode</method>
+?<m>objVar</m>?</command>
+          <desc>Creates a new, 'empty' DOM document object without any element
+node. <m>objVar</m> controlls the memory handling as explained above.</desc>
+        </commanddef>
+
+        <commanddef>
           <command><cmd>dom</cmd> <method>setResultEncoding</method> ?<m>encodingName</m>?</command>
           <desc>If <m>encodingName</m> is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
@@ -305,7 +312,19 @@ creation time decides. If TextCheck is true at creation time, the
 command will check his arguments, otherwise not.The
 <m>setTextCheck</m> method set this flag. It returns the current
 TextCheck flag state. The default state for TextCheck is true.</desc>
-</commanddef>
+      </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>setObjectCommands</method> ?<m>(automatic|token|command=</m>?</command>
+          <desc>Controls, if documents and nodes are created as tcl commands or
+as token to be
+used with the domNode and domDoc commands. If the mode is
+'automatic', then methods used at tcl commands will create tcl
+commands and methods used at doc or node tokes will create tokens. If
+the mode is 'command' then always tcl commands will be created. If
+the mode is 'token', then always token will be created. The method
+returns the current mode. This method is an experimental interface.</desc>
+      </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>isName</method> <m>name</m></command>
@@ -338,8 +357,7 @@ to production 6 of the of the <ref href="http://www.w3.org/TR/1999/REC-xml-names
           <command><cmd>dom</cmd> <method>isCharData</method>
 <m>string</m></command>
           <desc>Returns 1, if every character in <m>string</m> is
-a valid XML Char according to production 2 of the <ref
-href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+a valid XML Char according to production 2 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
 recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
@@ -347,8 +365,7 @@ recommendation. Otherwise it returns 0.</desc>
           <command><cmd>dom</cmd> <method>isComment</method>
 <m>string</m></command>
           <desc>Returns 1, if <m>string</m> is
-a valid comment according to production 15 of the <ref
-href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+a valid comment according to production 15 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
 recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
