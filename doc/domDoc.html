@@ -4,16 +4,16 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80aace8">NAME</a> · <a href="#SECTid80aad60">SYNOPSIS</a> · <a href="#SECTid80aae28">DESCRIPTION </a> · <a href="#SECTid80ac818">SEE ALSO</a> · <a href="#SECTid80ac890">KEYWORDS</a>
+<a href="#SECTid80ab4e0">NAME</a> · <a href="#SECTid80ab558">SYNOPSIS</a> · <a href="#SECTid80ab620">DESCRIPTION </a> · <a href="#SECTid80adf88">SEE ALSO</a> · <a href="#SECTid80ae000">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid80aace8">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80ab4e0">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTid80aad60">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid80ab558">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid80aae28">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
+  <h2><a name="SECTid80ab620">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
 methods should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
@@ -246,17 +246,140 @@ are neither adjacent Text nodes nor empty Text nodes. If the option
 converted to text nodes, as a first step before the
 normalization. </dd>
       
+
+      
+        <dt><b class="method">nodeType</b></dt>
+        <dd>Returns the node type of the document node. This is always
+DOCUMENT_NODE.</dd>
+      
+
+      
+        <dt>
+<b class="method">getElementById</b> <i class="m">id</i>
+</dt>
+        <dd>Returns the node having a id attribute with value
+<i class="m">id</i> or the emtpy string, if no node has an id attribute with that value.</dd>
+      
+
+      
+        <dt>
+<b class="method">firstChild</b> <b class="variable">?objVar?</b>
+</dt>
+        <dd>Returns the first top level node of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">lastChild</b> <b class="variable">?objVar?</b>
+</dt>
+        <dd>Returns the last top level node of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendChild</b> <i class="m">newChild</i>
+</dt>
+        <dd>Append <i class="m">newChild</i> to the end of the list of top level nodes
+of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">removeChild</b> <i class="m">child</i>
+</dt>
+        <dd>Removes <i class="m">child</i> from the list of top level nodes of the
+document. <i class="m">child</i> will be part of the document fragment list
+after this operation. It is not physically deleted.</dd>
+      
+
+      
+        <dt><b class="method">hasChildNodes</b></dt>
+        <dd>Returns 1 if the document has any nodes in the tree. Otherwise 0 is returned.</dd>
+      
+
+      
+        <dt><b class="method">childNodes</b></dt>
+        <dd>Returns a list of the top level nodes of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">ownerDocument</b> <b class="variable">?domObjVar?</b>
+</dt>
+        <dd>Returns the document itself.</dd>
+      
+
+      
+        <dt>
+<b class="method">insertBefore</b> <i class="m">newChild</i>  <i class="m">refChild</i>
+</dt>
+        <dd>Insert <i class="m">newChild</i> before the <i class="m">refChild</i> into the list of
+top level nodes of the document. If <i class="m">refChild</i> is the empty string, insert
+<i class="m">newChild</i> at the end of the top level nodes.</dd>
+      
+
+      
+        <dt>
+<b class="method">replaceChild</b> <i class="m">newChild</i>  <i class="m">oldChild</i>
+</dt>
+        <dd>Replace <i class="m">newChild</i> with <i class="m">oldChild</i> in list of top level
+nodes of the document. <i class="m">oldChild</i> will be part of the document fragment
+list after this operation.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendFromList</b> <i class="m">list</i>
+</dt>
+        <dd>Parses <i class="m">list</i> , creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendXML</b> <i class="m">XMLstring</i>
+</dt>
+        <dd>Parses <i class="m">XMLstring</i>, creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.</dd>
+      
+
+      
+        <dt><b class="method">baseURI <i class="m">?URI?</i>
+</b></dt>
+        <dd>Returns the present baseURI of the document. If the optional 
+argument URI is given, sets the base URI of the document to the given URI.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendFromScript</b> <i class="m">tclScript</i>
+</dt>
+        <dd>Appends the nodes created by the <i class="m">tclScript</i> by
+Tcl functions, which have been built using <i class="m">dom createNodeCmd</i>, at the end
+of the current list of top level nodes of the document.</dd>
+      
+
+      
+        <dt>
+<b class="method">insertBeforeFromScript</b> <i class="m">tclScript</i> <i class="m">refChild</i>
+</dt>
+        <dd>Inserts the nodes created in the <i class="m">tclScript</i> by
+Tcl functions, which have been built using <i class="m">dom createNodeCmd</i>, before the
+<i class="m">refChild</i> into to the list of top level nodes of the document. If <i class="m">refChild</i> is
+the empty string, the new nodes will be appended.</dd>
+      
+
       </dl><p>Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace <tt class="samp">::dom::domDoc</tt> is
 tried to be executed. This allows quick method additions on Tcl level.</p><p>Newly created nodes are appended to a hidden fragment list. If there
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTid80ac818">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid80adf88">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTid80ac890">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTid80ae000">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 

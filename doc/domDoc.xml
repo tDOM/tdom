@@ -239,6 +239,104 @@ are neither adjacent Text nodes nor empty Text nodes. If the option
 converted to text nodes, as a first step before the
 normalization. </desc>
       </commanddef>
+
+      <commanddef>
+        <command><method>nodeType</method></command>
+        <desc>Returns the node type of the document node. This is always
+DOCUMENT_NODE.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>getElementById</method> <m>id</m></command>
+        <desc>Returns the node having a id attribute with value
+<m>id</m> or the emtpy string, if no node has an id attribute with that value.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>firstChild</method> <variable>?objVar?</variable></command>
+        <desc>Returns the first top level node of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>lastChild</method> <variable>?objVar?</variable></command>
+        <desc>Returns the last top level node of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>appendChild</method> <m>newChild</m></command>
+        <desc>Append <m>newChild</m> to the end of the list of top level nodes
+of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>removeChild</method> <m>child</m></command>
+        <desc>Removes <m>child</m> from the list of top level nodes of the
+document. <m>child</m> will be part of the document fragment list
+after this operation. It is not physically deleted.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>hasChildNodes</method></command>
+        <desc>Returns 1 if the document has any nodes in the tree. Otherwise 0 is returned.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>childNodes</method></command>
+        <desc>Returns a list of the top level nodes of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>ownerDocument</method> <variable>?domObjVar?</variable></command>
+        <desc>Returns the document itself.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>insertBefore</method> <m>newChild</m>  <m>refChild</m></command>
+        <desc>Insert <m>newChild</m> before the <m>refChild</m> into the list of
+top level nodes of the document. If <m>refChild</m> is the empty string, insert
+<m>newChild</m> at the end of the top level nodes.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>replaceChild</method> <m>newChild</m>  <m>oldChild</m></command>
+        <desc>Replace <m>newChild</m> with <m>oldChild</m> in list of top level
+nodes of the document. <m>oldChild</m> will be part of the document fragment
+list after this operation.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>appendFromList</method> <m>list</m></command>
+        <desc>Parses <m>list</m> , creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>appendXML</method> <m>XMLstring</m></command>
+        <desc>Parses <m>XMLstring</m>, creates an according DOM subtree and
+appends this subtree at the end of the current list of top level nodes of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>baseURI <m>?URI?</m></method></command>
+        <desc>Returns the present baseURI of the document. If the optional 
+argument URI is given, sets the base URI of the document to the given URI.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>appendFromScript</method> <m>tclScript</m></command>
+        <desc>Appends the nodes created by the <m>tclScript</m> by
+Tcl functions, which have been built using <m>dom createNodeCmd</m>, at the end
+of the current list of top level nodes of the document.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>insertBeforeFromScript</method> <m>tclScript</m> <m>refChild</m></command>
+        <desc>Inserts the nodes created in the <m>tclScript</m> by
+Tcl functions, which have been built using <m>dom createNodeCmd</m>, before the
+<m>refChild</m> into to the list of top level nodes of the document. If <m>refChild</m> is
+the empty string, the new nodes will be appended.</desc>
+      </commanddef>
+
       </commandlist>
 
       <p>Otherwise, if an unknown method name is given, the command with the
