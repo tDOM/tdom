@@ -6,8 +6,7 @@ struct TclGenExpatInfo;
 typedef void (*CHandlerSet_userDataReset)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_userDataFree)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_parserReset)(XML_Parser parser, void *userData);
-typedef void (*CHandlerSet_initParse)(struct TclGenExpatInfo *expat,
-                                      void *userData);
+typedef void (*CHandlerSet_initParse)(Tcl_Interp *interp, void *userData);
 
 typedef struct CHandlerSet {
     struct CHandlerSet *nextHandlerSet;
@@ -125,7 +124,10 @@ typedef struct TclGenExpatInfo {
     const char *context;        /* reference to the context pointer */  
     Tcl_Obj *cdata;             /* Accumulates character data */ 
     ExpatElemContent *eContents;/* The reported XML_Content's as linked list */
-    int      ns_mode;           /* namespace mode */
+    int ns_mode;                /* namespace mode */
+    Tcl_Obj *baseURI;
+    int finished;
+    int parsingStarted;
     XML_Char nsSeparator;       
     int paramentityparsing;     
     int noexpand;
