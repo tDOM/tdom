@@ -7,6 +7,7 @@
 #    tnc-1.*: Basics
 #    tnc-2.*: Parsing with tnc enabled
 #    tnc-3.*: ValidationCmds
+#    tnc-4.*: parser uses -useForeignDTD
 #
 # Copyright (c) 2003 Rolf Ade.
 
@@ -372,6 +373,51 @@ test tnc-3.14 {validator cmd - validateAttributes} {
     $validator delete
     set result
 } {0 {Unknown attribute for this element.}}
+
+proc extrefhandler-4.1 {base systemId publicId} {
+    if {$systemId == ""} {
+        return [list "string" $base {
+    <!ELEMENT root (#PCDATA|a|b)*>
+    <!ELEMENT a (#PCDATA)>
+    <!ELEMENT b EMPTY>
+}]
+    } else {
+        error "error in tnc-4.1"
+    }
+}
+
+test tnc-4.1 {document has no DTD, DTD provided via -useForeignDTD} {
+    set parser [expat -externalentitycommand extrefhandler-4.1 \
+                      -paramentityparsing always \
+                      -useForeignDTD 1]
+    tnc $parser enable
+    $parser parse {<root>
+text<a>text</a><b/>more text
+</root>}
+    $parser free
+    set result 1
+} {1}
+
+proc extrefhandler-4.2 {base systemId publicId} {
+    global parser
+
+    if {$systemId == ""} {
+        tnc $parser remove
+        return [list string $base ""]
+    } else {
+        error "error in tnc-4.2"
+    }
+}
+
+test tnc-4.2 {remove tnc from parser in extrefhandler} {
+    set parser [expat -externalentitycommand extrefhandler-4.2 \
+                            -paramentityparsing always \
+                            -useForeignDTD 1]
+    tnc $parser enable
+    $parser parse <foo/>
+    $parser free
+    set result 1
+} {1}
     
 # cleanup
 ::tcltest::cleanupTests
