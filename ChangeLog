@@ -1,20 +1,26 @@
 2003-10-26  Rolf Ade  <rolf@pointsman.de>
 
-        * domxpath.c: number() bug fix: Now works according to the
-          XPath rec understanding of a Number, not with the libc
-          understanding of a double.    
+        * generic/dom.c
+        * tests/dom.test: Bug fix: Under some circumstances it was
+          possible, that an URI change for a subtree was not stored in
+          the tree (resulting in wrong base URI for that nodes).
 
-        * domxpath.c
-        * dom.h
-        * domxslt.c: Globalized the macro IS_XML_WHITESPACE.
+        * generic/domxpath.c: number() bug fix: Now works according to
+          the XPath rec understanding of a Number, not with the libc
+          understanding of a double.
+
+        * generic/domxpath.c
+        * generic/dom.h
+        * generic/dom.domxslt.c: Globalized the macro IS_XML_WHITESPACE.
 
 2003-10-24  Rolf Ade  <rolf@pointsman.de>
 
-        * domxslt.c: Bug fix for document() func, if called with 2
-          args and first arg evaluates to the empty string. Improved
-          error reporting, if an XSLT variable is tried to reset,
-          although there is already such a variable in scope: now the
-          name of the var is also reported in the error msg.
+        * generic/domxslt.c: Bug fix for document() func, if called
+          with 2 args and first arg evaluates to the empty
+          string. Improved error reporting, if an XSLT variable is
+          tried to reset, although there is already such a variable in
+          scope: now the name of the var is also reported in the error
+          msg.
 
         * apps/xslt.tcl: Updated to use the new asText option.
 
