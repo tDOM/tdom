@@ -486,7 +486,8 @@ XML_SimpleParse (
                     tnode->previousSibling = parent_node->lastChild;
                     parent_node->lastChild = (domNode*)tnode;
                 } else {
-                    parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
+                    parent_node->firstChild = parent_node->lastChild = 
+                        (domNode*)tnode;
                 }
             }
 
@@ -639,7 +640,7 @@ XML_SimpleParse (
                         x++;
                     }
                     if (*x) {
-                        if (parent_node) {
+                        if (parent_node && (x - start)) {
                             /*----------------------------------------------------
                             |   allocate new TEXT node for CDATA section data
                             \---------------------------------------------------*/
