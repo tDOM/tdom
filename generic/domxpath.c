@@ -2210,6 +2210,40 @@ int xpathFuncBoolean (
     }
 }
 
+static int
+xpathIsNumber (
+    char *str
+    )
+{
+    int dotseen = 0;
+    
+    while (*str && IS_XML_WHITESPACE(*str)) str++;
+    if (!*str) return 0;
+    if (*str == '-') {
+        str++;
+        if (!*str) return 0;
+    } else if (*str == '.') {
+        dotseen = 1;
+        str++;
+        if (!*str) return 0;
+    }
+    if (!isdigit(*str)) return 0;
+    while (*str) {
+        if (isdigit(*str)) {
+            str++;
+            continue;
+        }
+        if (*str == '.' && !dotseen) {
+            dotseen = 1;
+            str++;
+            continue;
+        }
+        break;
+    }
+    while (*str && IS_XML_WHITESPACE(*str)) str++;
+    if (*str) return 0;
+    else return 1;
+}
 
 /*----------------------------------------------------------------------------
 |   xpathFuncNumber
@@ -2259,6 +2293,11 @@ double xpathFuncNumber (
 #   endif
 #endif
         case StringResult:
+              if (!xpathIsNumber (rs->string)) {
+                  d = strtod ("nan", &tailptr);
+                  *NaN = 2;
+                  return d;
+              }
               strncpy(tmp, rs->string, (rs->string_len<79) ? rs->string_len : 79);
               tmp[(rs->string_len<79) ? rs->string_len : 79] = '\0';
               d = strtod (tmp, &tailptr);
@@ -2286,6 +2325,12 @@ double xpathFuncNumber (
               return d;
         case xNodeSetResult:
               pc = xpathFuncString(rs);
+              if (!xpathIsNumber (pc)) {
+                  d = strtod ("nan", &tailptr);
+                  *NaN = 2;
+                  FREE(pc);
+                  return d;
+              }
               d = strtod (pc, &tailptr);
               if (d == 0.0 && tailptr == pc) {
                   d = strtod ("nan", &tailptr);
