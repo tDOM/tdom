@@ -253,7 +253,9 @@ static int xpathEvalPredicate (ast steps, domNode *exprContext,
 void xpathRSFree ( xpathResultSet *rs ) {
 
     if (rs->type == xNodeSetResult) {
-        if (rs->nodes) FREE((char*)rs->nodes);
+        if (!rs->intvalue) {
+            if (rs->nodes) FREE((char*)rs->nodes);
+        }
         rs->nr_nodes  = 0;
     } else 
     if (rs->type == StringResult) {
@@ -389,7 +391,17 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
         rs->nodes[0]  = node;
 
     } else {
-        int i, insertIndex;
+        int insertIndex;
+        int i;
+
+        if (rs->intvalue) {
+            /* we must do a copy-on-write */
+            domNode **nodes;
+            nodes = (domNode**)MALLOC(rs->allocated * sizeof(domNode*));
+            memcpy (nodes, rs->nodes, sizeof(domNode*) * rs->nr_nodes);
+            rs->nodes = nodes;
+            rs->intvalue = 0;
+        }
 
         insertIndex = rs->nr_nodes;
         for (i = rs->nr_nodes - 1; i >= 0; i--) {
@@ -458,6 +470,7 @@ void rsCopy ( xpathResultSet *to, xpathResultSet *from ) {
         to->nodes = (domNode**)MALLOC(from->nr_nodes * sizeof(domNode*));
         for (i=0; i<from->nr_nodes; i++)
             to->nodes[i] = from->nodes[i];
+        to->intvalue = 0;
     }
 }
 
@@ -4717,6 +4730,20 @@ static int xpathEvalPredicate (
     savedDocOrder = *docOrder;
     while (step && step->type == Pred) {
         xpathRSInit (&tmpResult);
+        if (step->child->type == Int) {
+            if (stepResult->nr_nodes >= step->child->intvalue
+                && step->child->intvalue > 0) {
+                if (*docOrder) {
+                    rsAddNode (&tmpResult, 
+                               stepResult->nodes[step->child->intvalue - 1]);
+                } else {
+                    rsAddNode (&tmpResult, 
+                               stepResult->nodes[stepResult->nr_nodes - 
+                                                 step->child->intvalue]);
+                }
+            }
+            goto nextPred;
+        }
         for (i=0; i<stepResult->nr_nodes; i++) {
             xpathRSInit (&predResult);
             rc = xpathEvalStep( step->child, stepResult->nodes[i],
@@ -4750,6 +4777,7 @@ static int xpathEvalPredicate (
             }
             xpathRSFree (&predResult);
         }
+    nextPred:
         DBG( fprintf(stderr, "result after Predicate: \n"); )
         DBG( rsPrint( &tmpResult); )
         xpathRSFree( stepResult );
