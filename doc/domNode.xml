@@ -404,6 +404,14 @@ defined for it.</desc>
       </commanddef>
 
       <commanddef>
+        <command><method>asText</method></command>
+          <desc>For ELEMENT_NODEs, the asText method outputs 
+the string-value of every text node descendant of node in document
+order without any escaping. For every other node type, this method outputs the
+the XPath string value of that node.</desc>
+      </commanddef>
+
+      <commanddef>
         <command><method>appendFromList</method> <m>list</m></command>
         <desc>Parses <m>list</m> , creates an according DOM subtree and
 appends this subtree to the current node.</desc>

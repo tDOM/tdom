@@ -145,6 +145,14 @@ confirms to the given HTML version.</desc>
       </commanddef>
 
       <commanddef>
+        <command><method>asText</method></command>
+          <desc>The asText method outputs the result tree by outputting
+the string-value of every text node in the result tree in document
+order without any escaping. In effect, this is what the xslt output method
+"text" (XSLT 1.0 recommendation, section 16.3) does.</desc>
+      </commanddef>
+
+      <commanddef>
         <command><method>publicId</method> <m>?publicId?</m></command>
         <desc>Returns the public identifier of the doctype declaration of the
 document, if there is one, otherwise the empty string. If there is a value
