@@ -38,6 +38,39 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.12  2002/04/19 18:55:40  rolf
+|   Changed / enhanced namespace handling and namespace information
+|   storage. The namespace field of the domNode and domAttributeNode
+|   structurs is still set. But other than up to now, namespace attributes
+|   are now stored in the DOM tree as other, 'normal' attributes also,
+|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
+|   every 'namespace attribute' is stored befor any 'normal' attribute
+|   node, in the list of the attributes of an element. The still saved
+|   namespace index in the namespace field is used for fast access to the
+|   namespace information. To speed up the look up of the namespace info,
+|   an element or attributes contains to, the namespace index is now the
+|   index number (plus offset 1) of the corresponding namespace info in
+|   the domDoc->namespaces array. All xpath expressions with the exception
+|   of the namespace axes (still not implemented) have to ignore this
+|   'namespace attributes'. With this enhanced storage of namespace
+|   declarations, it is now possible, to find all "namespaces in scope" of
+|   an element by going up the ancestor-or-self axis and inspecting all
+|   namespace declarations. (That may be a bit expensive, for documents
+|   with lot of namespace declarations all over the place or deep
+|   documents. Something like
+|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
+|   English for that url) describes, may be an idea, if this new mechanism
+|   should not scale good enough.)
+|
+|   Changes at script level: special attributes used for declaring XML
+|   namespaces are now exposed and can be manipulated just like any other
+|   attribute. (That is now according to the DOM2 rec.) It isn't
+|   guaranteed (as it was), that the necessary namespace declarations are
+|   created during serializing. (That's also DOM2 compliant, if I read it
+|   right, even if this seems to be a bit a messy idea.) Because the old
+|   behavior have some advantages, from the viepoint of a programmer, it
+|   eventually should restored (as default or as 'asXML' option?).
+|
 |   Revision 1.11  2002/04/09 01:59:50  rolf
 |   xslt rec 5.2: "The string-value of an element node is the
 |   concatenation of the string-values of all text node descendants of the
@@ -1852,7 +1885,8 @@ int xpathNodeTest (
         return 0;
     } else
     if (step->child->type == IsAttr) {
-        if ( ((domAttrNode*)node)->nodeType == ATTRIBUTE_NODE) {
+        if (     node->nodeType == ATTRIBUTE_NODE 
+            && !(node->nodeFlags & IS_NS_NODE)    ) {
             if (  (step->child->strvalue[0] == '*')
                 &&(step->child->strvalue[1] == '\0')
             ) {
@@ -2026,10 +2060,9 @@ char * xpathGetTextValueForElement (
     int     *len
 )
 {
-    char         *pc, *t;
+    char        *pc, *t;
     int          l;
     domNode     *child;
-    domAttrNode *attr;
 
     if (node->nodeType == ELEMENT_NODE) {
         DBG(fprintf(stderr,"GetTextValue: tag='%s' \n", node->nodeName);)
@@ -2387,7 +2420,9 @@ static int xpathEvalStep (
             if (strcmp(step->child->strvalue, "*")==0) {
                 attr = ctxNode->firstAttr;
                 while (attr) {
-                    checkRsAddNode (result, (domNode *)attr);
+                    if (!(attr->nodeFlags & IS_NS_NODE)) {
+                        checkRsAddNode (result, (domNode *)attr);
+                    }
                     attr = attr->nextSibling;
                 }
             } else {

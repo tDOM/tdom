@@ -36,6 +36,39 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.17  2002/04/19 18:55:41  rolf
+|   Changed / enhanced namespace handling and namespace information
+|   storage. The namespace field of the domNode and domAttributeNode
+|   structurs is still set. But other than up to now, namespace attributes
+|   are now stored in the DOM tree as other, 'normal' attributes also,
+|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
+|   every 'namespace attribute' is stored befor any 'normal' attribute
+|   node, in the list of the attributes of an element. The still saved
+|   namespace index in the namespace field is used for fast access to the
+|   namespace information. To speed up the look up of the namespace info,
+|   an element or attributes contains to, the namespace index is now the
+|   index number (plus offset 1) of the corresponding namespace info in
+|   the domDoc->namespaces array. All xpath expressions with the exception
+|   of the namespace axes (still not implemented) have to ignore this
+|   'namespace attributes'. With this enhanced storage of namespace
+|   declarations, it is now possible, to find all "namespaces in scope" of
+|   an element by going up the ancestor-or-self axis and inspecting all
+|   namespace declarations. (That may be a bit expensive, for documents
+|   with lot of namespace declarations all over the place or deep
+|   documents. Something like
+|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
+|   English for that url) describes, may be an idea, if this new mechanism
+|   should not scale good enough.)
+|
+|   Changes at script level: special attributes used for declaring XML
+|   namespaces are now exposed and can be manipulated just like any other
+|   attribute. (That is now according to the DOM2 rec.) It isn't
+|   guaranteed (as it was), that the necessary namespace declarations are
+|   created during serializing. (That's also DOM2 compliant, if I read it
+|   right, even if this seems to be a bit a messy idea.) Because the old
+|   behavior have some advantages, from the viepoint of a programmer, it
+|   eventually should restored (as default or as 'asXML' option?).
+|
 |   Revision 1.16  2002/04/10 02:48:35  rolf
 |   Optimization: Now handles xsltVarFrames and xsltVariables as stacks,
 |   instead of constantly malloc/free it. On the way removed
@@ -778,6 +811,10 @@ static int xsltAddExternalDocument (
         sdoc = sdoc->next;
     }
     if (!found) {
+        if (!xs->xsltDoc->extResolver) {
+            *errMsg = strdup("need resolver Script to include Stylesheet! (use \"-externalentitycommand\")");
+            return -1;
+        }
         extDocument = getExternalDocument (
                          (Tcl_Interp*)xs->orig_funcClientData,
                          xs, xs->xsltDoc, baseURI, str, errMsg);
@@ -1100,7 +1137,6 @@ static void formatValue (
     return;
 }
 
-
 /*----------------------------------------------------------------------------
 |   xsltFormatNumber
 |
@@ -1114,7 +1150,7 @@ static int xsltFormatNumber (
 )
 {
     char *p, prefix[80], suffix[80], s[240], n[80], f[80];
-    int i, l, zl, g, nHash, nZero, fHash, fZero, gLen;
+    int i, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
       
     DBG(fprintf(stderr, "\nformatStr='%s' \n", formatStr);)
     p = formatStr;
@@ -1169,11 +1205,13 @@ static int xsltFormatNumber (
 
     /* fill in grouping char */
     if (gLen > 0) {
+        if (i < 0.0) isNeg = 1;
+        else isNeg = 0;
         sprintf(s,"%0*d", nZero, i);    
         l = strlen(s);
         /* if (l > (nHash+nZero)) { l = nHash+nZero; } */
-        DBG(fprintf(stderr,"s='%s'\n", s);)
-        zl = l + ((l-1) / gLen);
+        DBG(fprintf(stderr,"s='%s isNeg=%d'\n", s, isNeg);)
+        zl = l + ((l-1-isNeg) / gLen);
         DBG(fprintf(stderr, "l=%d zl=%d \n", l, zl);)
         n[zl--] = '\0';
         p = s + strlen(s) -1;
@@ -1181,7 +1219,7 @@ static int xsltFormatNumber (
         while (zl>=0) {
             g++;
             n[zl--] = *p--;
-            if ((g == gLen) && (zl>=0)) {
+            if ((g == gLen) && (zl>=1+isNeg)) {
                 n[zl--] = ',';
                 g = 0;
             }
@@ -1193,7 +1231,7 @@ static int xsltFormatNumber (
         DBG(fprintf(stderr,"n='%s'\n", n);)
     }
 
-    DBG(fprintf(stderr, "fHash=%d fZero=%d \n",fHash, fZero);)
+    DBG(fprintf(stderr, "number=%f Hash=%d fZero=%d \n", number, fHash, fZero);)
     if ((fHash+fZero) > 0) {
  
         /* format fraction part */
@@ -1556,7 +1594,7 @@ static int xsltXPathFuncs (
 )
 {
     xsltState     * xs = clientData;
-    char          * keyId, *filterValue, *str, *baseURI;
+    char          * keyId, *filterValue, *str, *baseURI, tmp[5];
     int             rc, i, len, NaN, freeStr;
     double          n;
     xsltKeyValue  * value;
@@ -1664,8 +1702,12 @@ static int xsltXPathFuncs (
         NaN = 0;
         n   = xpathFuncNumber (argv[0], &NaN);
         if (NaN) {
-            *errMsg = strdup("format-number: NaN passed!");
-            return 1;
+            sprintf(tmp, "%f", n);
+            if (strcmp(tmp,"nan")==0)  rsSetString (result, "NaN");
+            else if (strcmp(tmp,"inf")==0)  rsSetString (result, "Infinity");
+            else if (strcmp(tmp,"-inf")==0) rsSetString (result, "-Infinity");
+            else *errMsg = strdup("format-number: unrecognized NaN!!! - Please report!");
+            return 0;
         }
         str = xpathFuncString (argv[1]);
         DBG(fprintf(stderr, "1 str='%s' \n", str);)
@@ -2271,8 +2313,7 @@ static int xsltGetVar (
             } else {
                 rc = xsltSetVar(xs, 0, variableName, &nodeList, 
                                 xs->xmlRootNode, 0,
-                                NULL, topLevelVar->node->firstChild, 1, 
-                                errMsg);
+                                NULL, topLevelVar->node->firstChild, 1, errMsg);
             }
             xpathRSFree ( &nodeList );
             CHECK_RC;
@@ -2409,7 +2450,7 @@ int ExecUseAttributeSets (
         while (*pc == ' ') pc++;
         aSet = pc;
     }
-    return 0;           
+    return 0; 
 }
 
 
@@ -3158,7 +3199,8 @@ static int ExecAction (
             xsltPopVarFrame (xs);
             CHECK_RC;
             pc = xpathGetTextValue (xs->lastNode, &len);
-            domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc, ns);
+            domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
+                               ns, 1);
             free(pc);
             Tcl_DStringFree (&dStr);
             domDeleteNode (xs->lastNode, NULL, NULL);
@@ -3363,7 +3405,7 @@ static int ExecAction (
                 attr = (domAttrNode *)currentNode;
                 domSetAttributeNS (xs->lastNode, attr->nodeName,
                                    attr->nodeValue, 
-                                   domNamespaceURI (currentNode));
+                                   domNamespaceURI (currentNode), 1);
             }
 
             /* process the children only for root and element nodes */
@@ -3618,14 +3660,17 @@ static int ExecAction (
                         rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
                                         select, NULL, 0, errMsg);
                     } else {
-                        if (actionNode->firstChild) {
-                            rc = xsltSetVar(xs, 0, str, context, currentNode,
-                                            currentPos, NULL, 
-                                            actionNode->firstChild, 0, errMsg);
-                        } else {
-                            rc = xsltSetVar(xs, 0, str, context, currentNode, 
-                                            currentPos, "", NULL, 0, errMsg);
-                        }
+                        rc = xsltSetVar(xs, 0, str, context, currentNode,
+                                        currentPos, NULL, 
+                                        actionNode->firstChild, 0, errMsg);
+/*                          if (actionNode->firstChild) { */
+/*                              rc = xsltSetVar(xs, 0, str, context, currentNode, */
+/*                                              currentPos, NULL,  */
+/*                                              actionNode->firstChild, 0, errMsg); */
+/*                          } else { */
+/*                              rc = xsltSetVar(xs, 0, str, context, currentNode,  */
+/*                                              currentPos, "", NULL, 0, errMsg); */
+/*                          } */
                     }
                     CHECK_RC;
                 }
@@ -3764,7 +3809,7 @@ static int ExecAction (
                                             currentPos, attr->nodeValue, &str,
                                             errMsg);
                     CHECK_RC;
-                    domSetAttributeNS (n, attr->nodeName, str, uri);
+                    domSetAttributeNS (n, attr->nodeName, str, uri, 1);
                     free(str);
                 }
                 attr = attr->nextSibling;
