@@ -36,6 +36,12 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.4  2002/03/01 04:06:59  rolf
+|   Improved detection of improper stylesheets: xsl:include xsl:import
+|   xsl:strip-space xsl:preserve-space xsl:apply-imports
+|   xsl:namespace-alias xsl:value-of xsl:number xsl:sort xsl:copy-of
+|   xsl:key xsl:decimal-format and xsl:output must be emtpy.
+|
 |   Revision 1.3  2002/02/24 02:31:27  rolf
 |   Fixed UTF-8 char byte length determination
 |
@@ -2496,6 +2502,10 @@ static int doSortActions (
         if (child->nodeType == ELEMENT_NODE) {
             TRACE1("doSortActions child '%s' \n", child->nodeName);
             if (getTag(child) == sort) {
+                if (child->firstChild) {
+                    reportError (child, "xsl:sort has to be empty.", errMsg);
+                    return -1;
+                }
                 typeText  = 1;
                 ascending = 1;
                 select = getAttr(child, "select", a_select);
@@ -3234,6 +3244,10 @@ static int ExecAction (
             break;
             
         case copyOf:            
+            if (actionNode->firstChild) {
+                reportError (actionNode, "xsl:copy-of has to be empty.", errMsg);
+                return -1;
+            }
             select = getAttr(actionNode, "select", a_select);
             if (select != NULL) {
                 xs->current = currentNode;
@@ -3429,6 +3443,10 @@ static int ExecAction (
         case namespaceAlias: return 0;
         
         case number:
+            if (actionNode->firstChild) {
+                reportError (actionNode, "xsl:number has to be empty.", errMsg);
+                return -1;
+            }
             rc = xsltNumber(xs, context, currentNode, currentPos,
                             actionNode, errMsg);
             CHECK_RC;
@@ -3498,6 +3516,10 @@ static int ExecAction (
         case transform: return 0;
         
         case valueOf:
+            if (actionNode->firstChild) {
+                reportError (actionNode, "xsl:value-of has to be empty.", errMsg);
+                return -1;
+            }
             str = getAttr(actionNode, "disable-output-escaping", a_disableOutputEscaping);
             if (str) {
                 if (strcmp (str, "yes")==0) disableEsc = 1;
@@ -4157,13 +4179,16 @@ static int processTopLevel (
                     attrSet->content = node;
                     attrSet->name    = str;
                     xs->attrSets = attrSet;
+                } else {
+                    reportError (node, "xsl:attribute-set: missing mandatory attribute \"name\".", errMsg);
+                    return -1;
                 }
                 break;
 
             case param:
                 str = getAttr(node, "name", a_name);
                 if (!str) {
-                    reportError (node, "xsl:param must have a \"name\" attribute.",
+                    reportError (node, "xsl:param: missing mandatory attribute \"name\".",
                                  errMsg);
                     return -1;
                 }
@@ -4190,6 +4215,10 @@ static int processTopLevel (
                 break;
                 
             case decimalFormat:
+                if (node->firstChild) {
+                    reportError (node, "xsl:decimal-format has to be empty.", errMsg);
+                    return -1;
+                }
                 str = getAttr(node, "name", a_name);
                 if (str) {
                     /* a named decimal format */
@@ -4227,19 +4256,19 @@ static int processTopLevel (
 
             case import:
                 if (node->firstChild) {
-                    reportError (node, "xsl:include has to empty!", errMsg);
+                    reportError (node, "xsl:import has to empty!", errMsg);
                     return -1;
                 }
                 if (!node->ownerDocument->extResolver) {
                     reportError (node, "need resolver Script to include Stylesheet! (use \"-externalentitycommand\")", errMsg);
-                    return -11;
+                    return -1;
                 }
                 baseURI = findBaseURI (node);
                 href = getAttr (node, "href", a_href);
                 if (!href) {
-                    reportError (node, "xsl:include must have a \"href\" attribute!",
+                    reportError (node, "xsl:import: missing mandatory attribute \"href\".",
                                  errMsg);
-                    return -11;
+                    return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                        node->ownerDocument, 
@@ -4260,17 +4289,17 @@ static int processTopLevel (
                 
             case include:
                 if (node->firstChild) {
-                    reportError (node, "xsl:include has to be empty!", errMsg);
+                    reportError (node, "xsl:include has to be empty.", errMsg);
                     return -1;
                 }
                 if (!node->ownerDocument->extResolver) {
-                    reportError (node, "need resolver Script to include Stylesheet! (use \"-externalentitycommand\")", errMsg);
+                    reportError (node, "need resolver Script to include Stylesheet. (use \"-externalentitycommand\")", errMsg);
                     return -1;
                 }
                 baseURI = findBaseURI (node);
                 href = getAttr (node, "href", a_href);
                 if (!href) {
-                    reportError (node, "xsl:include must have a \"href\" attribute!",
+                    reportError (node, "xsl:include: missing mandatory attribute \"href\".",
                                  errMsg);
                     return -1;
                 }
@@ -4290,19 +4319,23 @@ static int processTopLevel (
                 break;
                 
             case key:
+                if (node->firstChild) {
+                    reportError (node, "xsl:key has to be empty.", errMsg);
+                    return -1;
+                }
                 name = getAttr(node, "name", a_name);
                 if (!name) {
-                    reportError (node, "xsl:key requires name attribute!", errMsg);
+                    reportError (node, "xsl:key: missing mandatory attribute \"name\".", errMsg);
                     return -1;
                 }
                 match = getAttr(node, "match", a_match);
                 if (!match) {
-                    reportError (node, "xsl:key requires match attribute!", errMsg);
+                    reportError (node, "xsl:key: missing mandatory attribute \"match\".", errMsg);
                     return -1;
                 }
                 use = getAttr(node, "use", a_use);
                 if (!use) {
-                    reportError (node, "xsl:key requires use attribute!", errMsg);
+                    reportError (node, "xsl:key: missing mandatory attribute \"use\".", errMsg);
                     return -1;
                 }
 
@@ -4323,9 +4356,18 @@ static int processTopLevel (
                 break;
 
             case namespaceAlias:
+                if (node->firstChild) {
+                    reportError (node, "xsl:namespace-alias has to be empty.",
+                                 errMsg);
+                    return -1;
+                }
                 break;
                 
             case output:
+                if (node->firstChild) {
+                    reportError (node, "xsl:output has to be empty.", errMsg);
+                    return -1;
+                }
                 str = getAttr(node, "method", a_method);
                 if (str) { xs->outputMethod    = strdup(str); }
                 str = getAttr(node, "encoding", a_encoding);
@@ -4337,6 +4379,10 @@ static int processTopLevel (
                 break;
                 
             case preserveSpace:
+                if (node->firstChild) {
+                    reportError (node, "xsl:preserve-space has to be empty.", errMsg);
+                    return -1;
+                }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
                     fillElementList(&(xs->preserveInfo), precedence, node, str);
@@ -4344,6 +4390,10 @@ static int processTopLevel (
                 break;
                 
             case stripSpace:
+                if (node->firstChild) {
+                    reportError (node, "xsl:strip-space has to be empty.", errMsg);
+                    return -1;
+                }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
                     fillElementList(&(xs->stripInfo), precedence, node, str);
