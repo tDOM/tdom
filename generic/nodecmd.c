@@ -465,11 +465,24 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     return TCL_ERROR;
 }
 
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * nodecmd_appendFromScript --
+ *
+ *	This procedure implements the dom method appendFromScript.
+ *      See the user documentation for details on what it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Appends new child nodes to node.
+ *
+ *----------------------------------------------------------------------
+ */
 
-/*----------------------------------------------------------------------------
-|   nodecmd_appendFromScript
-|
-\---------------------------------------------------------------------------*/
 int
 nodecmd_appendFromScript (interp, node, cmdObj)
     Tcl_Interp *interp;                 /* Current interpreter. */
@@ -477,6 +490,14 @@ nodecmd_appendFromScript (interp, node, cmdObj)
     Tcl_Obj    *cmdObj;                 /* Argument objects. */
 {
     int ret;
+    domNode *oldLastChild, *child, *nextChild;
+
+    if (node->nodeType != ELEMENT_NODE) {
+        Tcl_SetResult (interp, "NOT_AN_ELEMENT : can't append nodes", NULL);
+        return TCL_ERROR;
+    }
+    
+    oldLastChild = node->firstChild;
 
     StackPush((void *)node);
     Tcl_AllowExceptions(interp);
@@ -486,8 +507,90 @@ nodecmd_appendFromScript (interp, node, cmdObj)
     }
     StackPop();
 
+    if (ret == TCL_ERROR) {
+        if (oldLastChild) {
+            child = oldLastChild->nextSibling;
+        } else {
+            child = node->firstChild;
+        }
+        while (child) {
+            nextChild = child->nextSibling;
+            domFreeNode (child, NULL, NULL, 0);
+            child = nextChild;
+        }
+        if (oldLastChild) {
+            oldLastChild->nextSibling = NULL;
+            node->lastChild = oldLastChild;
+        } else {
+            node->firstChild = NULL;
+            node->lastChild = NULL;
+        }
+    }
+            
     return (ret == TCL_BREAK) ? TCL_OK : ret;
 }
+
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * nodecmd_insertBeforeFromScript --
+ *
+ *	This procedure implements the dom method
+ *	insertBeforeFromScript. See the user documentation for details
+ *	on what it does.
+ *
+ *      This procedure is actually mostly a wrapper around
+ *      nodecmd_appendFromScript.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Insert new child nodes before referenceChild to node.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+nodecmd_insertBeforeFromScript (interp, node, cmdObj, refChild)
+    Tcl_Interp *interp;                 /* Current interpreter. */
+    domNode    *node;                   /* Parent dom node */
+    Tcl_Obj    *cmdObj;                 /* Argument objects. */
+    domNode    *refChild;               /* Insert new childs before this
+                                         * node; may be NULL */
+{
+    int      ret;
+    domNode *storedLastChild;
+
+    if (!refChild) {
+        return nodecmd_appendFromScript (interp, node, cmdObj);
+    }
+    
+    if (node->nodeType != ELEMENT_NODE) {
+        Tcl_SetResult (interp, "NOT_AN_ELEMENT : can't append nodes", NULL);
+        return TCL_ERROR;
+    }
+    storedLastChild = node->lastChild;
+    if (refChild->previousSibling) {
+        refChild->previousSibling->nextSibling = NULL;
+        node->lastChild = refChild->previousSibling;
+    } else {
+        node->firstChild = NULL;
+        node->lastChild = NULL;
+    }
+    ret = nodecmd_appendFromScript (interp, node, cmdObj);
+    if (node->lastChild) {
+        node->lastChild->nextSibling = refChild;
+        refChild->previousSibling = node->lastChild;
+    } else {
+        node->firstChild = refChild;
+    }
+    node->lastChild = storedLastChild;
+    
+    return ret;
+}
+
 
 /*----------------------------------------------------------------------------
 |   nodecmd_curentNode

@@ -245,6 +245,7 @@ static char node_usage[] =
                 "    asText                      \n"
                 "    appendFromList nestedList   \n"
                 "    appendFromScript script     \n"
+                "    insertBeforeFromScript script ref \n"
                 "    appendXML xmlString         \n"
                 "    selectNodes xpathQuery ?typeVar? \n"
                 "    toXPath                     \n"
@@ -2989,6 +2990,7 @@ int tcldom_NodeObjCmd (
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
         "disableOutputEscaping",             "precedes",         "asText",
+        "insertBeforeFromScript",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -3009,7 +3011,8 @@ int tcldom_NodeObjCmd (
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
-        m_disableOutputEscaping,             m_precedes,        m_asText
+        m_disableOutputEscaping,             m_precedes,        m_asText,
+        m_insertBeforeFromScript
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3469,6 +3472,24 @@ int tcldom_NodeObjCmd (
             }
             return tcldom_returnNodeObj (interp, node, 0, NULL);
 
+        case m_insertBeforeFromScript:
+            CheckArgs(4,4,2, "script refChild");
+            nodeName = Tcl_GetStringFromObj (objv[3], NULL);
+            if (nodeName[0] == '\0') {
+                refChild = NULL;
+            } else {
+                refChild = tcldom_getNodeFromName (interp, nodeName, &errMsg);
+                if (refChild == NULL) {
+                    SetResult ( errMsg );
+                    return TCL_ERROR;
+                }
+            }
+            if (nodecmd_insertBeforeFromScript(interp, node, objv[2], refChild)
+                != TCL_OK) {
+                return TCL_ERROR;
+            }
+            return tcldom_returnNodeObj (interp, node, 0, NULL);
+            
         case m_appendXML:
             CheckArgs(3,3,2,"xmlString");
             return tcldom_appendXML (interp, node, objv[2]);

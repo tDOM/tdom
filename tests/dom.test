@@ -33,6 +33,7 @@
 #    dom-30.*: precedes
 #    dom-31.*: insertBefore
 #    dom-32.*: asText
+#    dom-33.*: insertBeforeFromScript
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003 Rolf Ade.
@@ -1110,6 +1111,58 @@ test dom-13.9 {appendFromScript while fragment list isn't empty} {
     $doc delete
     set result
 } {1}
+
+test dom-13.10 {appendFromScript - tcl error inside the script} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    set result [catch {$root appendFromScript {
+        nodeCmds::e1
+        nodeCmds::e1 {
+            # This is intentionally wrong
+            set foo 1 + 1
+        }
+    }}]
+    lappend result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {1 <root/>}
+
+test dom-13.11 {appendFromScript - tcl error inside the script} {
+    set doc [dom parse <root><child/></root>]
+    set root [$doc documentElement]
+    set result [catch {$root appendFromScript {
+        nodeCmds::e1 {
+            nodeCmds::e2 {
+                t foo
+            }
+            nodeCmds::e2 -attr attrvalue {
+                nodeCmds::e2 -attr1 attrvalue attr2 attrvalue {
+                    t bar
+                }
+            }
+        }
+        nodeCmds::e1 {
+            # This is intentionally wrong
+            set foo 1 + 1
+        }
+    }}]
+    lappend result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {1 <root><child/></root>}
+
+test dom-13.12 {appendFromScript - node isn't ELEMENT_NODE} {
+    dom parse <root>text</root> doc
+    $doc documentElement root
+    $root firstChild textNode
+    set result [catch {$textNode appendFromScript {
+        nodeCmds::e1
+    }} errMsg]
+    lappend result $errMsg
+    lappend result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {1 {NOT_AN_ELEMENT : can't append nodes} <root>text</root>}
 
 test dom-14.1 {appendFromList} {
     set doc [dom createDocument root]
@@ -2213,6 +2266,104 @@ test dom-32.7 {asText} {
     }
 
 $doc delete
+
+# The tests in dom-33.* also uses the nodeCmds created for the
+# dom-13.* tests.
+test dom-33.1 {insertBeforeFromScript} {
+    set doc [dom parse {<root><child/></root>}]
+    $doc documentElement root
+    $root insertBeforeFromScript {
+        nodeCmds::e1
+    } [$root firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><e1/><child/></root>}
+
+test dom-33.2 {insertBeforeFromScript} {
+    set doc [dom parse {<root><child/></root>}]
+    $doc documentElement root
+    $root insertBeforeFromScript {
+        nodeCmds::e1
+    } {}
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><child/><e1/></root>}
+
+test dom-33.3 {insertBeforeFromScript - error in the script} {
+    set doc [dom parse {<root><child/></root>}]
+    $doc documentElement root
+    set result [catch {$root insertBeforeFromScript {
+        nodeCmds::e1
+        nodeCmds::e1 {
+            # This is intentionally wrong
+            set foo 1 + 1
+        }
+    } [$root firstChild]}]
+    lappend result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {1 <root><child/></root>}
+
+test dom-33.4 {insertBefore- insert more then one node} {
+    set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
+    $doc documentElement root
+    namespace eval nodeCmds {
+        $root insertBeforeFromScript {
+            e1
+            e2 {
+                t new
+            }
+            e1
+        } [lindex [$root childNodes] 1]
+    }
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<doc><foo/><e1/><e2>new</e2><e1/><bar/><grill/></doc>}
+
+test dom-33.5 {insertBefore- insert more then one node} {
+    set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
+    $doc documentElement root
+    namespace eval nodeCmds {
+        $root insertBeforeFromScript {
+            e1
+            e2 {
+                t new
+            }
+            e1
+        } [lindex [$root childNodes] 1]
+    }
+    set result ""
+    foreach node [$root childNodes] {
+        append result "[$node nodeName] "
+    }
+    $doc delete
+    set result
+} {foo e1 e2 e1 bar grill }
+
+test dom-33.6 {insertBefore- insert more then one node} {
+    set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
+    $doc documentElement root
+    namespace eval nodeCmds {
+        $root insertBeforeFromScript {
+            e1
+            e2 {
+                t new
+            }
+            e1
+        } [lindex [$root childNodes] 1]
+    }
+    set result ""
+    set node [$root lastChild]
+    while {$node != ""} {
+        append result "[$node nodeName] "
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {grill bar e1 e2 e1 foo }
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
