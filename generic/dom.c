@@ -136,6 +136,7 @@ typedef struct _domReadInfo {
     domNode       *currentNode;
     int            depth;
     int            ignoreWhiteSpaces;
+    Tcl_DString   *cdata;
     TEncoding     *encoding_8bit;
     int            storeLineColumn;
     int            feedbackAfter;
@@ -150,6 +151,12 @@ typedef struct _domReadInfo {
 } domReadInfo;
 
 #ifndef TCL_THREADS
+
+/*----------------------------------------------------------------------------
+|   Prototypes
+|
+\---------------------------------------------------------------------------*/
+static void DispatchPCDATA (domReadInfo *info);
 
 /*---------------------------------------------------------------------------
 |   domModuleFinalize
@@ -891,6 +898,8 @@ startElement(
         }
     }
 
+    DispatchPCDATA (info);
+    
     h = Tcl_CreateHashEntry(&HASHTAB(info->document,tagNames), name, &hnew);
     if (info->storeLineColumn) {
         node = (domNode*) domAlloc(sizeof(domNode)
@@ -1156,6 +1165,8 @@ endElement (
 {
     domReadInfo  *info = userData;
 
+    DispatchPCDATA (info);
+    
     info->depth--;
 #ifdef TDOM_NS
     /* pop active namespaces */
@@ -1185,17 +1196,38 @@ characterDataHandler (
 )
 {
     domReadInfo   *info = userData;
+
+    Tcl_DStringAppend (info->cdata, s, len);
+    return;
+    
+}
+
+/*---------------------------------------------------------------------------
+|   DispatchPCDATA
+|
+\--------------------------------------------------------------------------*/
+static void
+DispatchPCDATA (
+    domReadInfo *info
+    )
+{
     domTextNode   *node;
     domNode       *parentNode;
     domLineColumn *lc;
     Tcl_HashEntry *h;
-    int            hnew;
-
+    char          *s;
+    int            len, hnew;
+    
+    s = Tcl_DStringValue (info->cdata);
+    len = Tcl_DStringLength (info->cdata);
+    if (!len) return;
+    
     if (TclOnly8Bits && info->encoding_8bit) {
         tdom_Utf8to8Bit( info->encoding_8bit, s, &len);
     }
     parentNode = info->currentNode;
-
+    if (!parentNode) return;
+    
     if (   parentNode->lastChild 
         && parentNode->lastChild->nodeType == TEXT_NODE) {
 
@@ -1222,6 +1254,7 @@ characterDataHandler (
                 }
             }
             if (only_whites) {
+                Tcl_DStringSetLength (info->cdata, 0);
                 return;
             }
         }
@@ -1269,6 +1302,7 @@ characterDataHandler (
             lc->column       = XML_GetCurrentColumnNumber(info->parser);
         }
     }
+    Tcl_DStringSetLength (info->cdata, 0);
 }
 
 
@@ -1293,6 +1327,8 @@ commentHandler (
         DBG(fprintf (stderr, "commentHandler: insideDTD, skipping\n");)
         return;
     }
+
+    DispatchPCDATA (info);
 
     len = strlen(s);
     if (TclOnly8Bits && info->encoding_8bit) {
@@ -1380,6 +1416,8 @@ processingInstructionHandler(
                      "processingInstructionHandler: insideDTD, skipping\n");)
         return;
     }
+
+    DispatchPCDATA (info);
     
     parentNode = info->currentNode;
 
@@ -1790,6 +1828,8 @@ domReadDocument (
     info.currentNode          = NULL;
     info.depth                = 0;
     info.ignoreWhiteSpaces    = ignoreWhiteSpaces;
+    info.cdata                = (Tcl_DString*) MALLOC (sizeof (Tcl_DString));
+    Tcl_DStringInit (info.cdata);
     info.encoding_8bit        = encoding_8bit;
     info.storeLineColumn      = storeLineColumn;
     info.feedbackAfter        = feedbackAfter;
@@ -1819,7 +1859,9 @@ domReadDocument (
 
     if (channel == NULL) {
         if (!XML_Parse(parser, xml, length, 1)) {
-            FREE ( (char*) info.activeNS );
+            FREE ( info.activeNS );
+            Tcl_DStringFree (info.cdata);
+            FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
             return NULL;
         }
@@ -1828,6 +1870,8 @@ domReadDocument (
         Tcl_DStringInit (&dStr);
         if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
             FREE ( (char*) info.activeNS );
+            Tcl_DStringFree (info.cdata);
+            FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
             return NULL;
         }
@@ -1840,6 +1884,8 @@ domReadDocument (
                 done = len < sizeof(buf);
                 if (!XML_Parse (parser, buf, len, done)) {
                     FREE ( (char*) info.activeNS );
+                    Tcl_DStringFree (info.cdata);
+                    FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
                     return NULL;
                 }
@@ -1853,6 +1899,8 @@ domReadDocument (
                 str = Tcl_GetStringFromObj(bufObj, &len);
                 if (!XML_Parse (parser, str, len, done)) {
                     FREE ( (char*) info.activeNS );
+                    Tcl_DStringFree (info.cdata);
+                    FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
                     Tcl_DecrRefCount (bufObj);
                     return NULL;
@@ -1867,12 +1915,16 @@ domReadDocument (
             if (!XML_Parse (parser, buf, len, done)) {
                 FREE ( (char*) info.activeNS );
                 domFreeDocument (doc, NULL, NULL);
+                Tcl_DStringFree (info.cdata);
+                FREE ( info.cdata);
                 return NULL;
             }
         } while (!done);
 #endif
     }
     FREE ( (char*) info.activeNS );
+    Tcl_DStringFree (info.cdata);
+    FREE ( info.cdata);
 
     rootNode = doc->rootNode;
     rootNode->firstChild = doc->documentElement;
@@ -4604,6 +4656,7 @@ typedef struct _tdomCmdReadInfo {
     domNode       *currentNode;
     int            depth;
     int            ignoreWhiteSpaces;
+    Tcl_DString   *cdata;
     TEncoding     *encoding_8bit;
     int            storeLineColumn;
     int            feedbackAfter;
@@ -4635,12 +4688,14 @@ tdom_freeProc (
         domFreeDocument (info->document, NULL, NULL);
     }
     if (info->activeNS) {
-        FREE ( (char *) info->activeNS);
+        FREE (info->activeNS);
     }
+    Tcl_DStringFree (info->cdata);
+    FREE (info->cdata);
     if (info->extResolver) {
         Tcl_DecrRefCount (info->extResolver);
     }
-    FREE ( (char *) info);
+    FREE (info);
 }
 
 void
@@ -4673,6 +4728,7 @@ tdom_resetProc (
     info->currentNode       = NULL;
     info->depth             = 0;
     info->feedbackAfter     = 0;
+    Tcl_DStringSetLength (info->cdata, 0);
     info->lastFeedbackPosition = 0;
     info->interp            = interp;
     info->activeNSpos       = -1;
@@ -4778,6 +4834,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->currentNode       = NULL;
         info->depth             = 0;
         info->ignoreWhiteSpaces = 1;
+        info->cdata             = (Tcl_DString*) MALLOC (sizeof (Tcl_DString));
+        Tcl_DStringInit (info->cdata);
         info->encoding_8bit     = 0;
         info->storeLineColumn   = 0;
         info->feedbackAfter     = 0;

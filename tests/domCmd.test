@@ -105,7 +105,7 @@ test domCmd-1.14 {createDocument - rename the doc cmd} {
     set result
 } {root}
 
-test domCmd-2.1 {Don't quash white space at start or end of non white space content} {knownBug} {
+test domCmd-2.1 {Don't quash white space at start or end of non white space content} {
     set doc [dom parse {<root>
     some content
     </root>}]
@@ -704,13 +704,12 @@ test domCmd-4.1 {asXML -escapeNonASCII} {need_i18n} {
 test domCmd-4.2 {asXML -escapeNonASCII; comments and PI's are not altered} {need_i18n} {
     set doc [dom parse [tDOM::xmlReadFile \
             [file join [file dir [info script]] data/i18n_2.xml]]]
-    set result [$doc asXML -escapeNonASCII]
+    set result [$doc asXML -indent none -escapeNonASCII]
     $doc delete
     set result
 } {<root withUmlauts="&#228;&#246;&#252;&#223;"><!-- A comment with german umlauts: äöüß --><?äöüß A processing node with german umlauts?>
 german umlauts: &#228;&#246;&#252;&#223;
-</root>
-}
+</root>}
 
 test domCmd-4.3 {asHTML -escapeNonASCII -htmlEntities} {need_i18n} {
     set doc [dom parse {<html><body>&#228;&#xfc;&#8222;&#8223;&#8224;</body></html>}]
