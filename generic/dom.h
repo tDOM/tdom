@@ -29,6 +29,13 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2002/03/21 01:47:22  rolf
+|   Collected the various nodeSet Result types into "nodeSetResult" (there
+|   still exists a seperate emptyResult type). Reworked
+|   xpathEvalStep. Fixed memory leak in xpathMatches, added
+|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
+|   already in the nodeSet.
+|
 |   Revision 1.4  2002/03/10 01:14:57  rolf
 |   Introduced distinction between XML Name and XML NC Name.
 |
@@ -403,6 +410,8 @@ typedef struct domDocument {
     Tcl_HashTable    *baseURIs;
     Tcl_HashTable    *NSscopes;
     Tcl_Obj          *extResolver;
+    struct domNS    **NSbuffer;
+    int               NSbufferLen;
 } domDocument;
 
 
@@ -419,6 +428,18 @@ typedef struct domNS {
    struct domNS *next;
 
 } domNS;
+
+/*---------------------------------------------------------------------------
+|   type domNSContext
+|
+\--------------------------------------------------------------------------*/
+typedef struct domNSContext 
+{
+    int     newNS;
+    int     nrOfNS;
+    domNS **ns;
+} domNSContext;
+
 
 #define MAX_PREFIX_LEN   80
 

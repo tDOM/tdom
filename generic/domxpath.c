@@ -38,6 +38,13 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.4  2002/03/21 01:47:22  rolf
+|   Collected the various nodeSet Result types into "nodeSetResult" (there
+|   still exists a seperate emptyResult type). Reworked
+|   xpathEvalStep. Fixed memory leak in xpathMatches, added
+|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
+|   already in the nodeSet.
+|
 |   Revision 1.3  2002/03/07 22:16:21  rolf
 |   Improved recognition of REALs (of the form .123). Made variable name
 |   recognition UTF-8 save.
@@ -215,6 +222,8 @@ DeclProduction(AbsoluteLocationPath);
 
 char *xpathFuncString (xpathResultSet  *rs );
 
+int dbonerow = 0;
+
 #ifndef isnan
 int isnan(double number) { return (!(number == number)); }
 #endif
@@ -236,12 +245,7 @@ void xpathRSInit ( xpathResultSet *rs ) {
 }
 void xpathRSFree ( xpathResultSet *rs ) {
 
-    if ( (rs->type == NodeSetResult)
-       ||(rs->type == AttrNodeSetResult)
-       ||(rs->type == AttrValueSetResult)
-       ||(rs->type == MixedSetResult) 
-        )
-    {
+    if (rs->type == xNodeSetResult) {
         if (rs->nodes) free(rs->nodes);
         rs->nodes     = NULL;
         rs->nr_nodes  = 0;
@@ -278,17 +282,9 @@ void rsPrint ( xpathResultSet *rs ) {
                                                        rs->string);
              break;
 
-        case MixedSetResult:
-             fprintf(stderr, "nodeSet result (len %d):\n", rs->nr_nodes);
-             i = 1;
-             /* fall throu */
-        case NodeSetResult:
+        case xNodeSetResult:
              if (!i) fprintf(stderr,"nodeSet result (len %d):\n",rs->nr_nodes);
              for (i=0; i<rs->nr_nodes; i++) {
-                 if (rs->nodes[i]->nodeType == DOCUMENT_NODE) {
-                     fprintf(stderr, "%2d doc Node %d %s \n",
-                             i, rs->nodes[i]->nodeNumber, rs->nodes[i]->nodeName);
-                 } else
                  if (rs->nodes[i]->nodeType == ELEMENT_NODE) {
                      fprintf(stderr, "%2d domNode%d %s ",
                              i, rs->nodes[i]->nodeNumber, rs->nodes[i]->nodeName);
@@ -321,10 +317,6 @@ void rsPrint ( xpathResultSet *rs ) {
                      fprintf(stderr, "%2d domNode%d text:'%s' \n",
                              i, rs->nodes[i]->nodeNumber, tmp);
                  } else
-                 if (rs->nodes[i]->nodeType == DOCUMENT_NODE) {
-                     fprintf(stderr, "%2d domDoc%d \n",
-                             i, rs->nodes[i]->nodeNumber);
-                 } else 
                  if (rs->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                      fprintf(stderr, "%2d Attr %s='%*s'\n", i,
                              ((domAttrNode*)rs->nodes[i])->nodeName,
@@ -334,24 +326,6 @@ void rsPrint ( xpathResultSet *rs ) {
              }
              break;
 
-        case AttrNodeSetResult:
-             fprintf(stderr, "attrNodeSet result (len %d):\n", rs->nr_nodes);
-             for (i=0; i<rs->nr_nodes; i++) {
-                 fprintf(stderr, "%2d %s='%*s'\n", i,
-                         ((domAttrNode*)rs->nodes[i])->nodeName,
-                         ((domAttrNode*)rs->nodes[i])->valueLength,
-                         ((domAttrNode*)rs->nodes[i])->nodeValue);
-             }
-             break;
-
-        case AttrValueSetResult:
-             fprintf(stderr, "attrValueSet result (len %d):\n", rs->nr_nodes);
-             for (i=0; i<rs->nr_nodes; i++) {
-                 fprintf(stderr, "%2d '%*s'\n", i,
-                         ((domAttrNode*)rs->nodes[i])->valueLength,
-                         ((domAttrNode*)rs->nodes[i])->nodeValue);
-             }
-             break;
     }
 }
 void rsSetReal ( xpathResultSet *rs, double d) {
@@ -381,28 +355,14 @@ void rsSetString ( xpathResultSet *rs, char *s) {
     }
     rs->nr_nodes = 0;
 }
-static void rsAdd ( xpathResultSet *rs, domNode *node, xpathResultType type ) {
+void rsAddNode ( xpathResultSet *rs, domNode *node) {
 
-    if ((rs->type != EmptyResult) && (rs->type != type)) {
-/*          switch (type) { */
-/*              case NodeSetResult: */
-/*                  fprintf(stderr, "xpathResultSet not a NodeSet!"); break; */
-/*              case AttrNodeSetResult: */
-/*                  fprintf(stderr, "xpathResultSet not a AttrNodeSet!"); break; */
-/*              case AttrValueSetResult: */
-/*                  fprintf(stderr, "xpathResultSet not a AttrValueSet!"); break; */
-/*              default: */
-/*                  fprintf(stderr, "? not matching result set ?"); break; */
-/*          } */
-/*          fprintf(stderr, " But have:\n"); */
-/*          rsPrint(rs); */
-/*          exit(3); */
-        /* switch nodeSet result type to MixedSetResult */
-        rs->type = MixedSetResult;
+    if ((rs->type != EmptyResult) && (rs->type != xNodeSetResult)) {
+        fprintf(stderr, "could not add node to non NodeSetResult xpathResultSet!"); return;
     }
     if (rs->type == EmptyResult) {
 
-        rs->type      = type;
+        rs->type      = xNodeSetResult;
         rs->nodes     = (domNode**)malloc(INITIAL_SIZE * sizeof(domNode*) );
         rs->allocated = INITIAL_SIZE;
         rs->nr_nodes  = 1;
@@ -427,18 +387,31 @@ static void rsAdd ( xpathResultSet *rs, domNode *node, xpathResultType type ) {
         rs->nodes[rs->nr_nodes++] = node;
     }
 }
-void rsAddNode ( xpathResultSet *rs, domNode *node ) {
-    if (node->nodeType == ATTRIBUTE_NODE) {
-        rsAdd( rs, node, AttrNodeSetResult);
-    } else {
-        rsAdd( rs, node, NodeSetResult);
+
+void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
+
+    if ((rs->type != EmptyResult) && (rs->type != xNodeSetResult)) {
+        fprintf(stderr, "could not add node to non NodeSetResult xpathResultSet!"); return;
     }
-}
-void rsAddAttrNode ( xpathResultSet *rs, domAttrNode *node ) {
-    rsAdd( rs, (domNode*)node, AttrNodeSetResult);
-}
-void rsAddAttrValue ( xpathResultSet *rs, domAttrNode *node ) {
-    rsAdd( rs, (domNode*)node, AttrValueSetResult);
+    if (rs->type == EmptyResult) {
+
+        rs->type      = xNodeSetResult;
+        rs->nodes     = (domNode**)malloc(INITIAL_SIZE * sizeof(domNode*) );
+        rs->allocated = INITIAL_SIZE;
+        rs->nr_nodes  = 1;
+        rs->nodes[0]  = node;
+
+    } else {
+    
+        int i;
+
+        if ((rs->nr_nodes+1) >= rs->allocated) {
+            rs->nodes = (domNode**)realloc( (void*)rs->nodes,
+                                            2 * rs->allocated * sizeof(domNode*) );
+            rs->allocated = rs->allocated * 2;
+        }
+        rs->nodes[rs->nr_nodes++] = node;
+    }
 }
 
 void rsCopy ( xpathResultSet *to, xpathResultSet *from ) {
@@ -452,16 +425,12 @@ void rsCopy ( xpathResultSet *to, xpathResultSet *from ) {
         to->string     = strdup(from->string);
         to->string_len = from->string_len;
     }
-
-    if ((to->type == NodeSetResult) ||
-        (to->type == AttrNodeSetResult) ||
-        (to->type == AttrValueSetResult) ||
-        (to->type == MixedSetResult)) {
+    if (to->type == xNodeSetResult) {
         to->nr_nodes = from->nr_nodes;
         to->nodes = (domNode**)malloc(from->nr_nodes * sizeof(domNode*) );
         for (i=0; i<from->nr_nodes; i++)
             to->nodes[i] = from->nodes[i];
-    }
+    } 
 }
 
 
@@ -1444,6 +1413,7 @@ EndProduction
 |
 \----------------------------------------------------------------*/
 static int usesPositionInformation ( ast a) {
+    
     if (a->type == ExecFunction) {
         if (   (strcmp(a->strvalue,"position")==0)
             || (strcmp(a->strvalue,"last")==0)
@@ -1926,10 +1896,7 @@ int xpathFuncBoolean (
         case IntResult:          return ( rs->intvalue ? 1 : 0 );
         case RealResult:         return ((rs->realvalue != 0.0 ) && !isnan (rs->realvalue));
         case StringResult:       return ( rs->string_len > 0   );
-        case NodeSetResult:      return ( rs->nr_nodes > 0     );
-        case AttrNodeSetResult:  return ( rs->nr_nodes > 0     );
-        case AttrValueSetResult: return ( rs->nr_nodes > 0     );
-        case MixedSetResult:     return ( rs->nr_nodes > 0     );
+        case xNodeSetResult:     return ( rs->nr_nodes > 0     );
         default:                 return 0;
     }
 }
@@ -1978,10 +1945,7 @@ double xpathFuncNumber (
                   }
               }
               return d;
-        case NodeSetResult:
-        case AttrNodeSetResult:
-        case AttrValueSetResult:
-        case MixedSetResult:
+        case xNodeSetResult:
               pc = xpathFuncString(rs);
               d = strtod (pc, &tailptr);
               if (d == 0.0 && tailptr == pc) {
@@ -2114,10 +2078,7 @@ char * xpathFuncString (
             *(pc + rs->string_len) = '\0';
             return pc;
 
-        case NodeSetResult:
-        case AttrNodeSetResult:
-        case AttrValueSetResult:
-        case MixedSetResult:
+        case xNodeSetResult:
             if (rs->nr_nodes == 0) {
                 pc = strdup ("");
             } else {
@@ -2242,11 +2203,10 @@ static int xpathEvalStep (
 )
 {
     xpathResultSet   leftResult, rightResult, replaceResult;
-    xpathResultSet   pleftResult, prightResult, tResult;
-    int              i, j, k, rc, res, pwhite, len,  NaN;
+    xpathResultSet  *pleftResult, *prightResult, tResult;
+    int              i, j, k, rc, res, pwhite, len,  NaN, switchResult;
     char             *replaceStr, *pfrom, *pto, tmp[80], tmp1[80], *uri;
     domNode          *node, *child, *startingNode, *ancestor;
-    domDocument      *doc;
     domAttrNode      *attr;
     double           leftReal;
     ast              nextStep;
@@ -2256,7 +2216,7 @@ static int xpathEvalStep (
     Tcl_HashEntry   *entryPtr;
     unsigned int     from, leftNodeNr, rightNodeNr;
     int              left = 0, right = 0;
-    double           dLeft = 0.0, dRight = 0.0;
+    double           dLeft = 0.0, dRight = 0.0, dTmp;
     char             *leftStr = NULL, *rightStr = NULL;
 #if TclOnly8Bits
     char             *fStr;
@@ -2268,15 +2228,17 @@ static int xpathEvalStep (
     Tcl_UniChar      *ufStr, *upfrom, unichar;
 #endif    
     
-    if (step->type == AxisChild) {
+    switch (step->type) {
+        
+    case AxisChild:
         DBG(fprintf(stderr, "AxisChild ctxNode->nodeType = %d \n", ctxNode->nodeType);)
         *docOrder = 1;
-        if (ctxNode->nodeType == DOCUMENT_NODE) {
-            doc = (domDocument*) ctxNode;
-            if (xpathNodeTest(doc->documentElement, exprContext, step))
-                rsAddNode( result, doc->documentElement);
-            return XPATH_OK;
-        } else
+/*          if (ctxNode->nodeType == DOCUMENT_NODE) { */
+/*              doc = (domDocument*) ctxNode; */
+/*              if (xpathNodeTest(doc->documentElement, exprContext, step)) */
+/*                  rsAddNode( result, doc->documentElement); */
+/*              return XPATH_OK; */
+/*          } else */
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         DBG(fprintf(stderr, "AxisChild: scanning \n");)
         child = ctxNode->firstChild;
@@ -2291,14 +2253,15 @@ static int xpathEvalStep (
         DBG( fprintf(stderr,"AxisChild result:\n");
              rsPrint(result);
         )
-    } else
+        break;
 
-    if (step->type == AxisDescendant || step->type == AxisDescendantOrSelf) {
+    case AxisDescendant:
+    case AxisDescendantOrSelf:
         *docOrder = 1;
-        if (ctxNode->nodeType == DOCUMENT_NODE) {
-            doc = (domDocument*) ctxNode;
-            ctxNode = doc->documentElement;
-        } else
+/*          if (ctxNode->nodeType == DOCUMENT_NODE) { */
+/*              doc = (domDocument*) ctxNode; */
+/*              ctxNode = doc->documentElement; */
+/*          } else */
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
 
         if (step->type == AxisDescendantOrSelf) {
@@ -2332,21 +2295,21 @@ static int xpathEvalStep (
                 break;
             }
         }
-    } else
+        break;
 
-    if (step->type == AxisSelf) {
+    case AxisSelf:
         *docOrder = 1;
         DBG(fprintf(stderr, "AxisSelf :: \n");)
         if (xpathNodeTest(ctxNode, exprContext, step)) {
             rsAddNode( result, ctxNode);
         }
-    } else
+        break;
     
-    if (step->type == GetContextNode) {
+    case GetContextNode:
         rsAddNode( result, ctxNode);
-    } else
+        break;
 
-    if (step->type == AxisAttribute) {
+    case AxisAttribute:
         *docOrder = 1;
         DBG(fprintf(stderr, "AxisAttribute %s \n", step->child->strvalue);)
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
@@ -2357,24 +2320,23 @@ static int xpathEvalStep (
             if (strcmp(step->child->strvalue, "*")==0) {
                 attr = ctxNode->firstAttr;
                 while (attr) {
-                    /*  rsAddAttrNode(result, attr); */
-                    rsAddAttrValue (result, attr);
+                    rsAddNode (result, (domNode *)attr);
                     attr = attr->nextSibling;
                 }
             } else {
                 attr = ctxNode->firstAttr;
                 while (attr) {
                     if (xpathNodeTest( (domNode*)attr, exprContext, step)) 
-                        rsAddAttrValue(result, attr);
+                        rsAddNode (result, (domNode *)attr);
                     attr = attr->nextSibling;
                 }
             }
         }
-    } else
+        break;
 
-    if (step->type == AxisParent) {
+    case AxisParent:
         *docOrder = 1;
-        if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK;
+/*          if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK; */
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             if (xpathNodeTest(((domAttrNode *)ctxNode)->parentNode, exprContext, step)) {
                 rsAddNode(result,((domAttrNode *)ctxNode)->parentNode);
@@ -2391,10 +2353,10 @@ static int xpathEvalStep (
                 }
             }
         }
-    } else
+        break;
     
-    if (step->type == GetParentNode) {
-        if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK;
+    case GetParentNode:
+/*          if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK; */
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             rsAddNode(result,((domAttrNode*)ctxNode)->parentNode);
         } else {
@@ -2406,11 +2368,12 @@ static int xpathEvalStep (
                 }
             }
         }
-    } else
+        break;
 
-    if (step->type == AxisAncestor || step->type == AxisAncestorOrSelf) {
+    case AxisAncestor:
+    case AxisAncestorOrSelf:
         *docOrder = 0;
-        if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK;
+/*          if (ctxNode->nodeType == DOCUMENT_NODE) return XPATH_OK; */
         xpathRSInit (&tResult);
         if (step->type == AxisAncestorOrSelf) {
             if (xpathNodeTest(ctxNode, exprContext, step))
@@ -2432,10 +2395,9 @@ static int xpathEvalStep (
             rsAddNode (result, tResult.nodes[i]);
         }
         xpathRSFree (&tResult);
-        
-    } else
+        break;
 
-    if (step->type == AxisFollowingSibling) {
+    case AxisFollowingSibling:
         *docOrder = 1;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             return XPATH_OK;
@@ -2444,12 +2406,9 @@ static int xpathEvalStep (
             ctxNode = ctxNode->nextSibling;
             if (xpathNodeTest(ctxNode, exprContext, step)) rsAddNode(result, ctxNode);
         }
-    } else
+        break;
 
-
-    /* code sponsored by Rolf Ade rolf@pointsman.de */
-
-    if (step->type == AxisPrecedingSibling) {
+    case AxisPrecedingSibling:
         *docOrder = 0;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             return XPATH_OK;
@@ -2464,9 +2423,9 @@ static int xpathEvalStep (
             if (xpathNodeTest(node, exprContext, step)) rsAddNode(result, node);
             node = node->nextSibling;
         }
-    } else
+        break;
     
-    if (step->type == AxisFollowing) {
+    case AxisFollowing:
         *docOrder = 1;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             node = ((domAttrNode *)ctxNode)->parentNode;
@@ -2500,9 +2459,9 @@ static int xpathEvalStep (
                 node = node->nextSibling;
             }
         }
-    } else
+        break;
 
-    if (step->type == AxisPreceding) {
+    case AxisPreceding:
         *docOrder = 0;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             ancestor = node = ((domAttrNode *)ctxNode)->parentNode;
@@ -2571,9 +2530,9 @@ static int xpathEvalStep (
                 startingNode = NULL;
             }
         }
-    } else
+        break;
 
-    if (step->type == AxisNamespace) {
+    case AxisNamespace:
         *docOrder = 1;
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         uri = domNamespaceURI(ctxNode);
@@ -2587,36 +2546,221 @@ static int xpathEvalStep (
                 }
             }
         }
-        
-    } else
+        break;
 
-    if (step->type == GetVar) {
+    case GetVar:
         if (cbs->varCB) {
             rc = (cbs->varCB)(cbs->varClientData, step->strvalue, result, errMsg);
             CHECK_RC;
         }
-    } else
+        break;
 
-    if (step->type == Literal) {
+    case Literal:
         rsSetString (result, step->strvalue);
-    } else
+        break;
 
-    if (step->type == Int) {
+    case Int:
         rsSetInt (result, step->intvalue);
-    } else
+        break;
 
-    if (step->type == Real) {
+    case Real:
         rsSetReal (result, step->realvalue);
-    } else
+        break;
 
-    if ( (step->type == And)     || (step->type == Or)
-       ||(step->type == Equal)   || (step->type == NotEqual)
-       ||(step->type == Less)    || (step->type == LessOrEq)
-       ||(step->type == Greater) || (step->type == GreaterOrEq)
-       ||(step->type == Add)     || (step->type == Substract)
-       ||(step->type == Mult)    || (step->type == Div)
-       ||(step->type == Mod)     || (step->type == CombineSets)
-    ) {
+    case Add:
+    case Substract:
+    case Mult:
+    case Div:
+    case Mod:
+        xpathRSInit (&leftResult);
+        xpathRSInit (&rightResult);
+
+        savedDocOrder = *docOrder;
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+        CHECK_RC;
+        DBG( fprintf(stderr,"left:\n");
+             rsPrint(&leftResult);
+        )
+
+        *docOrder = savedDocOrder;
+        rc = xpathEvalStep( step->child->next, ctxNode, exprContext,  position,
+                            nodeList, cbs, &rightResult, docOrder, errMsg);
+        CHECK_RC;
+        *docOrder = savedDocOrder;
+
+        DBG( fprintf(stderr,"right:\n");
+             rsPrint(&rightResult);
+        )
+
+        dLeft  = xpathFuncNumber(&leftResult, &NaN);
+        if (NaN) { 
+            rsSetReal (result, dLeft);
+            xpathRSFree (&rightResult);
+            xpathRSFree (&leftResult);
+            return XPATH_OK;
+        }
+        dRight = xpathFuncNumber(&rightResult, &NaN);
+        if (NaN) {
+            rsSetReal (result, dRight);
+            xpathRSFree (&rightResult);
+            xpathRSFree (&leftResult);
+            return XPATH_OK;
+        }
+        switch (step->type) {
+        case Add:       rsSetReal (result, dLeft + dRight); break;
+        case Substract: rsSetReal (result, dLeft - dRight); break;
+        case Mult:      rsSetReal (result, dLeft * dRight); break;                
+        case Div:
+        case Mod:       
+            if (dRight == 0.0) {
+                if (dLeft == 0.0) {
+                    dLeft = strtod ("nan", &leftStr);
+                    rsSetReal (result, dLeft);
+                } else {
+                    if (dLeft > 0) {
+                        dLeft = strtod ("inf", &leftStr);
+                        rsSetReal (result, dLeft);
+                    } else {
+                        dLeft = strtod ("-inf", &leftStr);
+                        rsSetReal (result, dLeft);
+                    }
+                }
+            } else {
+                if (step->type == Div) 
+                    rsSetReal (result, dLeft / dRight);
+                else 
+                    rsSetInt  (result, ((int)dLeft) % ((int)dRight));
+            }
+            break;
+        default:        break;
+        }
+        xpathRSFree (&rightResult);
+        xpathRSFree (&leftResult);
+        return XPATH_OK;
+
+    case CombineSets:
+        xpathRSInit (&leftResult);
+        xpathRSInit (&rightResult);
+
+        savedDocOrder = *docOrder;
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+        CHECK_RC;
+        DBG( fprintf(stderr,"left:\n");
+             rsPrint(&leftResult);
+        )
+
+        *docOrder = savedDocOrder;
+        rc = xpathEvalStep( step->child->next, ctxNode, exprContext,  position,
+                            nodeList, cbs, &rightResult, docOrder, errMsg);
+        CHECK_RC;
+        *docOrder = savedDocOrder;
+
+        DBG( fprintf(stderr,"right:\n");
+             rsPrint(&rightResult);
+        )
+            
+        if (((leftResult.type != xNodeSetResult)
+             && (leftResult.type != EmptyResult))
+            || 
+            ((rightResult.type != xNodeSetResult)
+             && (rightResult.type != EmptyResult))) 
+        {
+            *errMsg = (char*)strdup("| requires node sets!");
+            xpathRSFree (&rightResult);
+            xpathRSFree (&leftResult);
+            return XPATH_EVAL_ERR;
+        }
+        if (leftResult.type == EmptyResult) {
+            rsCopy (result, &rightResult);
+            goto combineSetCleanup;
+        } 
+        if (rightResult.type == EmptyResult) {
+            rsCopy (result, &leftResult);
+            goto combineSetCleanup;
+        }
+        *docOrder = 1;
+        j = k = 0;
+        for (i=0; i<(leftResult.nr_nodes+rightResult.nr_nodes); i++) {
+            if (leftResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
+                leftNodeNr = ((domAttrNode *)leftResult.nodes[j])->parentNode->nodeNumber;
+                if ((rightResult.nodes[k]->nodeType == ATTRIBUTE_NODE)
+                    && (leftNodeNr == ((domAttrNode *)rightResult.nodes[k])->parentNode->nodeNumber)) {
+                    /* OK, so this two attributes belongs to
+                       the same element. This following
+                       "sorting" of attributes is not strictly
+                       necessary (see xpath rec 5.: "The
+                       relative order of attribute nodes is
+                       implementation-dependent").  But since
+                       all 'big' players seems to do this sorting, we
+                       also want to play nice.*/
+                    attr = ((domAttrNode *)leftResult.nodes[j])->parentNode->firstAttr;
+                    while (attr) {
+                        if (attr == (domAttrNode *)leftResult.nodes[j]) {
+                            rsAddNode (result, leftResult.nodes[j]);
+                            j++; break;
+                        } else 
+                            if (attr == (domAttrNode *)rightResult.nodes[k]) {
+                                rsAddNode (result, rightResult.nodes[k]);
+                                k++; break;
+                            }
+                        attr = attr->nextSibling;
+                    }
+                    if (j == leftResult.nr_nodes) break;
+                    if (k == rightResult.nr_nodes) break;
+                    continue;                            
+                } else 
+                    if ((rightResult.nodes[k]->nodeType == ELEMENT_NODE)
+                        && (leftNodeNr == rightResult.nodes[k]->nodeNumber)) {
+                        rsAddNode (result, rightResult.nodes[k]);
+                        k++;
+                        if (k == rightResult.nr_nodes) break;
+                        continue;
+                    }
+            } else {
+                leftNodeNr = (leftResult.nodes[j])->nodeNumber;
+            }
+            if (rightResult.nodes[k]->nodeType == ATTRIBUTE_NODE) {
+                rightNodeNr = ((domAttrNode *)rightResult.nodes[k])->parentNode->nodeNumber;
+                if ((leftResult.nodes[j]->nodeType == ELEMENT_NODE)
+                    && (rightNodeNr == leftResult.nodes[j]->nodeNumber)) {
+                    rsAddNode (result, leftResult.nodes[j]);
+                    j++;
+                    if (j == leftResult.nr_nodes) break;
+                    continue;
+                }
+            } else {
+                rightNodeNr = (rightResult.nodes[k])->nodeNumber;
+            }
+            if (leftNodeNr < rightNodeNr) {
+                rsAddNode (result, leftResult.nodes[j]);
+                j++;
+                if (j == leftResult.nr_nodes) break;
+            } else {
+                rsAddNode (result, rightResult.nodes[k]);
+                k++;
+                if (k == rightResult.nr_nodes) break;
+            }
+        }
+        if (j < leftResult.nr_nodes) {
+            for (i=j; i< leftResult.nr_nodes; i++) {
+                rsAddNode ( result, leftResult.nodes[i]);
+            }
+        } else {
+            for (i=k; i< rightResult.nr_nodes; i++) {
+                rsAddNode ( result, rightResult.nodes[i]);
+            }
+        }
+    combineSetCleanup:
+        xpathRSFree (&rightResult);
+        xpathRSFree (&leftResult);
+        return XPATH_OK;
+        
+    case And:
+    case Or:
+    case Equal:
+    case NotEqual:
         xpathRSInit (&leftResult);
         xpathRSInit (&rightResult);
 
@@ -2652,20 +2796,16 @@ static int xpathEvalStep (
             }
         }
 
-        savedDocOrder = *docOrder;
         rc = xpathEvalStep( step->child->next, ctxNode, exprContext,  position,
                             nodeList, cbs, &rightResult, docOrder, errMsg);
         CHECK_RC;
-        savedDocOrder = *docOrder;
+        *docOrder = savedDocOrder;
 
         DBG( fprintf(stderr,"right:\n");
              rsPrint(&rightResult);
         )
         res = 0;
-
         if ((step->type == And) || (step->type == Or)) {
-            /* left = xpathFuncBoolean(&leftResult);
-             */
             right = xpathFuncBoolean(&rightResult);
             if (step->type == And) res = (left && right);
             if (step->type == Or) res = (left || right);
@@ -2673,542 +2813,228 @@ static int xpathEvalStep (
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_OK;
-        } else
+        }
 
-        if ( (step->type == Add)  || (step->type == Substract)
-           ||(step->type == Mult) || (step->type == Div)
-           ||(step->type == Mod)
-        ) {
-            dLeft  = xpathFuncNumber(&leftResult, &NaN);
-            if (NaN) { rsSetReal (result, dLeft); return XPATH_OK; }
-            dRight = xpathFuncNumber(&rightResult, &NaN);
-            if (NaN) { rsSetReal (result, dRight); return XPATH_OK; }
-            switch (step->type) {
-                case Add:       rsSetReal (result, dLeft + dRight); break;
-                case Substract: rsSetReal (result, dLeft - dRight); break;
-                case Mult:      rsSetReal (result, dLeft * dRight); break;                
-                case Div:
-                case Mod:       if (dRight == 0.0) {
-                                   if (dLeft == 0.0) {
-                                        dLeft = strtod ("nan", &leftStr);
-                                        rsSetReal (result, dLeft);
-                                    } else {
-                                        if (dLeft > 0) {
-                                            dLeft = strtod ("inf", &leftStr);
-                                            rsSetReal (result, dLeft);
-                                        } else {
-                                            dLeft = strtod ("-inf", &leftStr);
-                                            rsSetReal (result, dLeft);
-                                        }
-                                    }
-                                } else {
-                                    if (step->type == Div) 
-                                         rsSetReal (result, dLeft / dRight);
-                                    else rsSetInt  (result, ((int)dLeft) % ((int)dRight));
-                                }
-                                break;
-                default:        break;
-                
-            }
-            xpathRSFree (&rightResult);
-            xpathRSFree (&leftResult);
-            return XPATH_OK;
-        } else
-
-        if (step->type == CombineSets) {
-
-            if ( ((leftResult.type != NodeSetResult) &&
-                  (leftResult.type != EmptyResult) &&
-                  (leftResult.type != AttrNodeSetResult) &&
-                  (leftResult.type != AttrValueSetResult) &&
-                  (leftResult.type != MixedSetResult)
-                 )
-               ||
-                 ((rightResult.type != NodeSetResult) &&
-                  (rightResult.type != EmptyResult) &&
-                  (rightResult.type != AttrNodeSetResult) &&
-                  (rightResult.type != AttrValueSetResult) &&
-                  (rightResult.type != MixedSetResult)
-                 )
-            ) {
-                *errMsg = (char*)strdup("| requires node sets!");
-                return XPATH_EVAL_ERR;
-            }
-            *docOrder = 1;
-            j = k = 0;
-            if (leftResult.type == EmptyResult) {
-                rsCopy (result, &rightResult);
-            } else 
-            if (rightResult.type == EmptyResult) {
-                rsCopy (result, &leftResult);
+        if (   leftResult.type == xNodeSetResult
+            || rightResult.type == xNodeSetResult) {
+            if (leftResult.type == xNodeSetResult) {
+                pleftResult = &leftResult;
+                prightResult = &rightResult;
             } else {
-                for (i=0; i<(leftResult.nr_nodes+rightResult.nr_nodes); i++) {
-                    if (leftResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
-                        leftNodeNr = ((domAttrNode *)leftResult.nodes[j])->parentNode->nodeNumber;
-                        if ((rightResult.nodes[k]->nodeType == ATTRIBUTE_NODE)
-                            && (leftNodeNr == ((domAttrNode *)rightResult.nodes[k])->parentNode->nodeNumber)) {
-                            /* OK, so this two attributes belongs to
-                               the same element. This following
-                               "sorting" of attributes is not strictly
-                               necessary (see xpath rec 5.: "The
-                               relative order of attribute nodes is
-                               implementation-dependent."  But since
-                               all 'big' players seems to do this sorting, we
-                               also want to play nice.*/
-                            attr = ((domAttrNode *)leftResult.nodes[j])->parentNode->firstAttr;
-                            while (attr) {
-                                if (attr == (domAttrNode *)leftResult.nodes[j]) {
-                                    rsAdd (result, leftResult.nodes[j], leftResult.type);
-                                    j++; break;
-                                } else 
-                                if (attr == (domAttrNode *)rightResult.nodes[k]) {
-                                    rsAdd (result, rightResult.nodes[k], rightResult.type);
-                                    k++; break;
-                                }
-                                attr = attr->nextSibling;
-                            }
-                            if (j == leftResult.nr_nodes) break;
-                            if (k == rightResult.nr_nodes) break;
-                            continue;                            
-                        } else 
-                        if ((rightResult.nodes[k]->nodeType == ELEMENT_NODE)
-                            && (leftNodeNr == rightResult.nodes[k]->nodeNumber)) {
-                            rsAdd (result, rightResult.nodes[k], rightResult.type);
-                            k++;
-                            if (k == rightResult.nr_nodes) break;
-                            continue;
-                        }
-                    } else {
-                        leftNodeNr = (leftResult.nodes[j])->nodeNumber;
-                    }
-                    if (rightResult.nodes[k]->nodeType == ATTRIBUTE_NODE) {
-                        rightNodeNr = ((domAttrNode *)rightResult.nodes[k])->parentNode->nodeNumber;
-                        if ((leftResult.nodes[j]->nodeType == ELEMENT_NODE)
-                            && (rightNodeNr == leftResult.nodes[j]->nodeNumber)) {
-                            rsAdd (result, leftResult.nodes[j], leftResult.type);
-                            j++;
-                            if (j == leftResult.nr_nodes) break;
-                            continue;
-                        }
-                    } else {
-                        rightNodeNr = (rightResult.nodes[k])->nodeNumber;
-                    }
-                    if (leftNodeNr < rightNodeNr) {
-                        rsAdd (result, leftResult.nodes[j], leftResult.type);
-                        j++;
-                        if (j == leftResult.nr_nodes) break;
-                    } else {
-                        rsAdd (result, rightResult.nodes[k], rightResult.type);
-                        k++;
-                        if (k == rightResult.nr_nodes) break;
-                    }
-                }
-                if (j < leftResult.nr_nodes) {
-                    for (i=j; i< leftResult.nr_nodes; i++) {
-                        rsAdd( result, leftResult.nodes[i], leftResult.type);
-                    }
-                } else {
-                    for (i=k; i< rightResult.nr_nodes; i++) {
-                        rsAdd( result, rightResult.nodes[i], rightResult.type);
-                    }
-                }
+                pleftResult = &rightResult;
+                prightResult = &leftResult;
             }
-            xpathRSFree (&rightResult);
-            xpathRSFree (&leftResult);
-            return XPATH_OK;
-        } else
-
-        if ((leftResult.type == EmptyResult)
-            || rightResult.type == EmptyResult) {
-            res = 0;
-/*              if (leftResult.type == EmptyResult) { */
-/*                  tResult.nr_nodes = rightResult.nr_nodes; */
-/*                  tResult.nodes    = rightResult.nodes; */
-/*                  tResult.type     = rightResult.type; */
-/*              } else { */
-/*                  tResult.nr_nodes = leftResult.nr_nodes; */
-/*                  tResult.nodes    = leftResult.nodes; */
-/*                  tResult.type     = leftResult.type; */
-/*              } */
-/*              if ((tResult.type == NodeSetResult) ||  */
-/*                  (tResult.type == AttrNodeSetResult) ||  */
-/*                  (tResult.type == AttrValueSetResult) || */
-/*                  (tResult.type == MixedSetResult)) { */
-/*                  if ((step->type == Equal) ||(step->type == NotEqual)) { */
-/*                      for (i=0; i < tResult.nr_nodes; i++) { */
-/*                          rightStr = xpathFuncStringForNode (tResult.nodes[i]); */
-/*                          res = strcmp (rightStr,""); */
-/*                          free (rightStr); */
-/*                          if      (step->type == Equal)    res = (res==0); */
-/*                          else if (step->type == NotEqual) res = (res!=0); */
-/*                          if (res) goto resultfound; */
-/*                      } */
-/*                      res = 0; */
-/*                  } else { */
-                    /* For all other comparisons the nodes in the both nodesets are
-                       converted to number. Since the empty node set is NaN
-                       this is always false. */
-/*                      res = 0; */
-/*                  } */
-/*              } else { */
-/*                  if (tResult.type == StringResult) { */
-/*                      if (step->type == Equal) { */
-/*                          if (tResult.string_len == 0) res = 1; */
-/*                          else res = 0; */
-/*                      } else */
-/*                      if (step->type == NotEqual) { */
-/*                          if (tResult.string_len == 0) res = 0; */
-/*                          else res = 1; */
-/*                      } else { */
-                        /* would mean conversion to number, with empty node to NaN */
-/*                          res = 0; */
-/*                      } */
-/*                  } else  */
-/*                  if (tResult.type == BoolResult) { */
-/*                      if (step->type == Equal)   */
-/*                          res = (0 == xpathFuncBoolean (&tResult)); */
-/*                      else if (step->type == NotEqual) */
-/*                          res = (0 != xpathFuncBoolean (&tResult)); */
-/*                      else if (step->type == And) */
-/*                          res = (0 && xpathFuncBoolean (&tResult)); */
-/*                      else if (step->type == Or) */
-/*                          res = (0 || xpathFuncBoolean (&tResult)); */
-/*                  } else { */
-                    /* IntResult and RealResult. Since empty node set converted to
-                       number is NaN, always false */
-/*                      res = 0; */
-/*                  } */
-/*              } */
-        } else 
-        if ((leftResult.type == NodeSetResult) || 
-            (leftResult.type == AttrNodeSetResult) || 
-            (leftResult.type == AttrValueSetResult) || 
-            (leftResult.type == MixedSetResult) ||
-            (rightResult.type == NodeSetResult) || 
-            (rightResult.type == AttrNodeSetResult) || 
-            (rightResult.type == AttrValueSetResult) ||
-            (rightResult.type == MixedSetResult)) {
-            if ((leftResult.type == NodeSetResult || 
-                 leftResult.type == AttrNodeSetResult || 
-                 leftResult.type == AttrValueSetResult ||
-                 leftResult.type == MixedSetResult) && 
-                (rightResult.type == NodeSetResult || 
-                 rightResult.type == AttrNodeSetResult || 
-                 rightResult.type == AttrValueSetResult ||
-                 rightResult.type == MixedSetResult))  {
-                 
+            switch (prightResult->type) {
+            case EmptyResult:
+                res = 0;
+                break;
+            case xNodeSetResult:
                 JDBG( fprintf(stderr,"\nleft+right result:\n");
-                     rsPrint(&leftResult);
-                     rsPrint(&rightResult);
+                     rsPrint(pleftResult);
+                     rsPrint(prightResult);
                 )
-                for (i=0; i < leftResult.nr_nodes; i++) {
-                    if ((step->type != Equal) && (step->type != NotEqual)) {
-                        dLeft = xpathFuncNumberForNode (leftResult.nodes[i], &NaN);
-                        if (NaN) { 
-                            xpathRSFree (&pleftResult);
-                            continue;
-                        }
-                    } else {
-                        leftStr = xpathFuncStringForNode (leftResult.nodes[i]);
-                    }
-                    for (j=0; j < rightResult.nr_nodes; j++) {
-                        if ((step->type == Equal) ||(step->type == NotEqual)) {
-                            rightStr = xpathFuncStringForNode (rightResult.nodes[j]);
-                            JDBG(fprintf(stderr, "leftStr='%s' rightStr='%s'\n", leftStr, rightStr);)
-                            res = strcmp (leftStr, rightStr);
-                            if      (step->type == Equal)    res = (res==0);
-                            else if (step->type == NotEqual) res = (res!=0);
-                            free (rightStr);
-                        } else {
-                            dRight = xpathFuncNumberForNode (rightResult.nodes[j], &NaN);
-                            if (NaN) {  
-                                DBG(fprintf(stderr,"2426\n");)
-                                continue;
-                            }
-                            JDBG(fprintf(stderr, "dLeft=%f dRight=%f \n", dLeft, dRight);)
-                            if      (step->type == Less)     res = (dLeft <  dRight);
-                            else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                            else if (step->type == Greater)  res = (dLeft >  dRight);
-                            else                             res = (dLeft >= dRight);
-                        }
-                        JDBG(fprintf(stderr, "res = %d \n", res);)
-                        if (res) {
-                            if ((step->type == Equal) || (step->type == NotEqual)) free (leftStr);
-                            goto resultfound;
-                        }
-                    }
-                    if ((step->type == Equal) || (step->type == NotEqual)) free (leftStr);
-                }
-            } else {
-                xpathRSInit (&tResult);
-                if (leftResult.type == NodeSetResult || 
-                    leftResult.type == AttrNodeSetResult ||
-                    leftResult.type == AttrValueSetResult ||
-                    leftResult.type == MixedSetResult) {
-                    
-                    tResult.nr_nodes  = leftResult.nr_nodes;
-                    tResult.nodes     = leftResult.nodes;
-                    tResult.type      = leftResult.type;
-                    prightResult.type = rightResult.type;
-                    j = 1;
-                } else {
-                    tResult.nr_nodes  = rightResult.nr_nodes;
-                    tResult.nodes     = rightResult.nodes;
-                    tResult.type      = rightResult.type;
-                    prightResult.type = leftResult.type;
-                    j = 0;
-                }
-                if (   (prightResult.type == EmptyResult) 
-                    && (step->type != Equal) && (step->type != NotEqual)
-                ) {
-                    res = 0;
-                } else
-                if ((prightResult.type == StringResult) ||
-                    (prightResult.type == EmptyResult)) {
-                     
-                    if (j) {
-                        if (prightResult.type == StringResult) {
-                            prightResult.string = strdup(rightResult.string);
-                            prightResult.string_len = rightResult.string_len;
-                        }
-                        if ((step->type != Equal) && (step->type != NotEqual)) {
-                            dRight   = xpathFuncNumber (&prightResult, &NaN);
-                            /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                            if (NaN) {res = 0; goto resultfound;}
-                        }
-                        rightStr = xpathFuncString (&prightResult);
-                    } else {
-                        if (prightResult.type == StringResult) {
-                            prightResult.string = strdup(leftResult.string);
-                            prightResult.string_len = leftResult.string_len;
-                        }
-                        if ((step->type != Equal) && (step->type != NotEqual)) {
-                            dLeft   = xpathFuncNumber (&prightResult, &NaN);
-                            /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                            if (NaN) {res = 0; goto resultfound;}
-                        }
-                        leftStr = xpathFuncString (&prightResult);
-                    }
-                    
-                    for (i=0; i < tResult.nr_nodes; i++) {
-                        /*xpathRSInit (&pleftResult);
-                        rsAdd (&pleftResult, tResult.nodes[i], tResult.type);
-                        JDBG(rsPrint(&pleftResult);)
-                        if (j) leftStr = xpathFuncString (&pleftResult);
-                        else  rightStr = xpathFuncString (&pleftResult);
-                        */
-                        if (j) leftStr = xpathFuncStringForNode (tResult.nodes[i]);
-                        else  rightStr = xpathFuncStringForNode (tResult.nodes[i]);
+                for (i=0; i < pleftResult->nr_nodes; i++) {
+                    leftStr = xpathFuncStringForNode (pleftResult->nodes[i]);
+                    for (j=0; j < prightResult->nr_nodes; j++) {
+                        rightStr = xpathFuncStringForNode (prightResult->nodes[j]);
+                        JDBG(fprintf(stderr, "leftStr='%s' rightStr='%s'\n", leftStr, rightStr);)
                         res = strcmp (leftStr, rightStr);
-                        JDBG(fprintf(stderr, "2434 %d (%d) leftStr='%s' rightStr='%s' \n", i, j, leftStr, rightStr);)                        
                         if      (step->type == Equal)    res = (res==0);
                         else if (step->type == NotEqual) res = (res!=0);
-                        else {
-                            if (j) dLeft   = xpathFuncNumber (&pleftResult, &NaN);
-                            else dRight    = xpathFuncNumber (&pleftResult, &NaN);
-                            /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                            if (NaN) {
-                                if (j) free (leftStr);
-                                else free (rightStr);
-                                continue;
-                            }
-                            if      (step->type == Less)     res = (dLeft <  dRight);
-                            else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                            else if (step->type == Greater)  res = (dLeft >  dRight);
-                            else                             res = (dLeft >= dRight);
-                        }
-                        if (j) free (leftStr);
-                        else free (rightStr);
-                        /*xpathRSFree (&pleftResult);*/
+                        free (rightStr);
                         if (res) break;
                     }
-                    if (j) free (rightStr);
-                    else free (leftStr);
-                    xpathRSFree (&prightResult);
-                } else if ((prightResult.type == IntResult) || (prightResult.type == RealResult)) {
-                    if (j) {
-                        prightResult.intvalue = rightResult.intvalue;
-                        prightResult.realvalue = rightResult.realvalue;
-                        dRight = xpathFuncNumber (&prightResult, &NaN);
-                    } else {
-                        prightResult.intvalue = leftResult.intvalue;
-                        prightResult.realvalue = leftResult.realvalue;
-                        dLeft = xpathFuncNumber (&prightResult, &NaN);
-                    }
-                    /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                    if (NaN) {res = 0; goto resultfound;}
-
-                    for (i=0; i < tResult.nr_nodes; i++) {
-                        /*
-                        xpathRSInit (&pleftResult);
-                        rsAdd (&pleftResult, tResult.nodes[i], tResult.type);
-                        if (j) dLeft = xpathFuncNumber (&pleftResult, &NaN);
-                        else  dRight = xpathFuncNumber (&pleftResult, &NaN);
-                        */
-                        if (j) dLeft = xpathFuncNumberForNode (tResult.nodes[i], &NaN);
-                        else  dRight = xpathFuncNumberForNode (tResult.nodes[i], &NaN);
-                        JDBG(fprintf(stderr, "dLeft='%f' dRight='%f' \n", dLeft, dRight);)
-                        /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                        if (NaN) continue;
-
-                        if      (step->type == Equal)    res = (dLeft == dRight);
-                        else if (step->type == NotEqual) res = (dLeft != dRight);
-                        else if (step->type == Less)     res = (dLeft <  dRight);
-                        else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                        else if (step->type == Greater)  res = (dLeft >  dRight);
-                        else                             res = (dLeft >= dRight);
-                        /*xpathRSFree (&pleftResult);*/
-                        if (res) break;
-                    }
-                    xpathRSFree (&prightResult);
-                } else {
-                    if (j) {
-                        prightResult.intvalue = rightResult.intvalue;
-                        prightResult.nr_nodes = rightResult.nr_nodes;
-                        right = xpathFuncBoolean (&prightResult);
-                        dRight = right;
-                    } else {
-                        prightResult.intvalue = rightResult.intvalue;
-                        prightResult.nr_nodes = rightResult.nr_nodes;
-                        left = xpathFuncBoolean (&prightResult);
-                        dLeft = left;
-                    }
-                    for (i=0; i < tResult.nr_nodes; i++) {
-                        /*
-                        xpathRSInit (&pleftResult);
-                        rsAdd (&pleftResult, tResult.nodes[i], tResult.type);
-                        if (j) left = xpathFuncBoolean (&pleftResult);
-                        else right = xpathFuncBoolean (&pleftResult);
-                        */
-                        if (j) left = 1; /* has always one node --> true */
-                        else right = 1;
-
-                        if      (step->type == Equal)    res = (left == right);
-                        else if (step->type == NotEqual) res = (left != right);
-                        else {
-                            if (j) dLeft = xpathFuncNumber (&pleftResult, &NaN);
-                            else  dRight = xpathFuncNumber (&pleftResult, &NaN);
-                            if (NaN) continue;
-                            
-                            if      (step->type == Less)     res = (dLeft <  dRight);
-                            else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                            else if (step->type == Greater)  res = (dLeft >  dRight);
-                            else                             res = (dLeft >= dRight);
-                        }
-                        /*xpathRSFree (&pleftResult);*/
-                        if (res) break;
-                    }
-                    xpathRSFree (&prightResult);
+                    free (leftStr);
+                    if (res) break;
                 }
+                break;
+            case BoolResult:
+                if (step->type == Equal) res = (prightResult->intvalue != 0);
+                else                     res = (prightResult->intvalue == 0);
+                break;
+            case IntResult:
+            case RealResult:
+                dRight = xpathFuncNumber (prightResult, &NaN);
+                for (i=0; i < pleftResult->nr_nodes; i++) {
+                    dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    if (step->type == Equal) res = (dLeft == dRight);
+                    else                     res = (dLeft != dRight);
+                    if (res) break;
+                }
+                break;
+            case StringResult:
+                rightStr = xpathFuncString (prightResult);
+                for (i=0; i < pleftResult->nr_nodes; i++) {
+                    leftStr = xpathFuncStringForNode (pleftResult->nodes[i]);
+                    res = strcmp (leftStr, rightStr);
+                    if (step->type == Equal) res = (res == 0);
+                    else                     res = (res != 0);
+                    free (leftStr);
+                    if (res) break;
+                }
+                free (rightStr);
+                break;
             }
-        } else
-
-        if ((leftResult.type == BoolResult) || (rightResult.type == BoolResult)) {
-            left = xpathFuncBoolean(&leftResult);
-            right = xpathFuncBoolean(&rightResult);
-            if      (step->type == Equal)    res = (left == right);
-            else if (step->type == NotEqual) res = (left != right);
-            else {
-                if (leftResult.type != BoolResult) {
-                    dLeft = xpathFuncNumber(&leftResult, &NaN);
-                    if (NaN) {res = 0; goto resultfound;}
-                }
-                else dLeft = left;
-                if (rightResult.type != BoolResult) {
-                    dRight = xpathFuncNumber(&rightResult, &NaN);
-                    if (NaN) {res = 0; goto resultfound;}
-                }
-                else dRight = right;
-                if      (step->type == Less)     res = (dLeft <  dRight);
-                else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                else if (step->type == Greater)  res = (dLeft >  dRight);
-                else                             res = (dLeft >= dRight);
-            }
-        } else
-
-        if (   (leftResult.type  == IntResult) 
-            || (leftResult.type  == RealResult)
-            || (rightResult.type == IntResult)
-            || (rightResult.type == RealResult)
-           )
-        {
-            dLeft = xpathFuncNumber(&leftResult, &NaN);
-            if (NaN) {res = 0; goto resultfound;}
-            dRight = xpathFuncNumber(&rightResult, &NaN);
-            if (NaN) {res = 0; goto resultfound;}
-            if      (step->type == Equal)    res = (dLeft == dRight);
-            else if (step->type == NotEqual) res = (dLeft != dRight);
-            else if (step->type == Less)     res = (dLeft <  dRight);
-            else if (step->type == LessOrEq) res = (dLeft <= dRight);
-            else if (step->type == Greater)  res = (dLeft >  dRight);
-            else                             res = (dLeft >= dRight);
-        } 
-
-        else {
-        
-            leftStr  = xpathFuncString(&leftResult);
-            rightStr = xpathFuncString(&rightResult);
-            res = strcmp(leftStr,rightStr);
-            JDBG(fprintf(stderr,"2522 leftStr='%s' rightStr='%s' res=%d\n",
-                            leftStr, rightStr, res);
-                 rsPrint(&leftResult);
-                 rsPrint(&rightResult);
-            )   
-            if      (step->type == Equal)    res = (res==0);
-            else if (step->type == NotEqual) res = (res!=0);
-            else {
+        } else 
+        if (leftResult.type == BoolResult || rightResult.type == BoolResult) {
+            left  = xpathFuncBoolean (&leftResult);
+            right = xpathFuncBoolean (&rightResult);
+            if (step->type == Equal) res = (left == right);
+            else                     res = (left != right);
+        } else 
+        if (
+               leftResult.type  == IntResult 
+            || leftResult.type  == RealResult
+            || rightResult.type == IntResult
+            || rightResult.type == RealResult
+            ) {
+            if (   leftResult.type == EmptyResult 
+                || rightResult.type == EmptyResult) {
+                res = 0;
+            } else {
                 dLeft  = xpathFuncNumber (&leftResult, &NaN);
-                /*  if (NaN) { rsSetString (result, "NaN"); return XPATH_OK; } */
-                if (NaN) {
-                    res = 0;
-                    free(rightStr);
-                    free(leftStr);            
-                    goto resultfound;
-                }
                 dRight = xpathFuncNumber (&rightResult, &NaN);
-                if (NaN) { 
-                    res = 0;
-                    free(rightStr);
-                    free(leftStr);            
-                    goto resultfound;
-                }
-                if      (step->type == Less)     res = (dLeft <  dRight);
-                else if (step->type == LessOrEq) res = (dLeft <= dRight);
-                else if (step->type == Greater)  res = (dLeft >  dRight);
-                else                             res = (dLeft >= dRight);
+                if (step->type == Equal) res = (dLeft == dRight);
+                else                     res = (dLeft != dRight);
             }
-            free(rightStr);
-            free(leftStr);            
-        } 
-    resultfound:
+        } else {
+            if (   leftResult.type == EmptyResult 
+                || rightResult.type == EmptyResult) {
+                res = 0;
+            } else {
+                leftStr  = xpathFuncString (&leftResult);
+                rightStr = xpathFuncString (&rightResult);
+                res = strcmp (leftStr, rightStr);
+                if (step->type == Equal) res = (res == 0);
+                else                     res = (res != 0);
+            }
+        }
         rsSetBool (result, res);
         xpathRSFree (&rightResult);
         xpathRSFree (&leftResult);
-    } else 
+        return XPATH_OK;
 
-    if (step->type == SelectRoot) {
+    case Less:
+    case LessOrEq:
+    case Greater:
+    case GreaterOrEq:
+        xpathRSInit (&leftResult);
+        xpathRSInit (&rightResult);
+
+        savedDocOrder = *docOrder;
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+        CHECK_RC;
+        *docOrder = savedDocOrder;
+
+        DBG( fprintf(stderr,"left:\n");
+             rsPrint(&leftResult);
+        )
+        rc = xpathEvalStep( step->child->next, ctxNode, exprContext,  position,
+                            nodeList, cbs, &rightResult, docOrder, errMsg);
+        CHECK_RC;
+        *docOrder = savedDocOrder;
+
+        DBG( fprintf(stderr,"right:\n");
+             rsPrint(&rightResult);
+        )
+        res = 0;
+
+        if (   leftResult.type == xNodeSetResult
+            || rightResult.type == xNodeSetResult) {
+            if (leftResult.type == xNodeSetResult) {
+                pleftResult = &leftResult;
+                prightResult = &rightResult;
+                switchResult = 0;
+            } else {
+                pleftResult = &rightResult;
+                prightResult = &leftResult;
+                switchResult = 1;
+            }
+            switch (prightResult->type) {
+            case EmptyResult:
+                res = 0;
+                break;
+            case xNodeSetResult:
+                JDBG( fprintf(stderr,"\nleft+right result:\n");
+                     rsPrint(pleftResult);
+                     rsPrint(prightResult);
+                )
+                for (i=0; i < pleftResult->nr_nodes; i++) {
+                    dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    for (j=0; j < prightResult->nr_nodes; j++) {
+                        dRight = xpathFuncNumberForNode (prightResult->nodes[j], &NaN);
+                        if (switchResult) {
+                            dTmp   = dLeft;
+                            dLeft  = dRight;
+                            dRight = dTmp;
+                        }
+                        if      (step->type == Less)     res = (dLeft < dRight);
+                        else if (step->type == LessOrEq) res = (dLeft <= dRight);
+                        else if (step->type == Greater)  res = (dLeft >  dRight);
+                        else                             res = (dLeft >= dRight);
+                        
+                        if (res) break;
+                    }
+                    if (res) break;
+                }
+                break;
+            case BoolResult:
+                /* pleftResult is a non-emtpy nodeset, therefor: */
+                dLeft = 1.0;
+                dRight = xpathFuncNumber (prightResult, &NaN);
+                if      (step->type == Less)     res = (dLeft < dRight);
+                else if (step->type == LessOrEq) res = (dLeft <= dRight);
+                else if (step->type == Greater)  res = (dLeft >  dRight);
+                else                             res = (dLeft >= dRight);
+                
+                if (switchResult) {
+                    res = !res;
+                }
+                break;
+            case IntResult:
+            case RealResult:
+            case StringResult:
+                dRight = xpathFuncNumber (prightResult, &NaN);
+                for (i=0; i < pleftResult->nr_nodes; i++) {
+                    dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    if (switchResult) {
+                        dTmp   = dLeft;
+                        dLeft  = dRight;
+                        dRight = dTmp;
+                    }
+                    if      (step->type == Less)     res = (dLeft < dRight);
+                    else if (step->type == LessOrEq) res = (dLeft <= dRight);
+                    else if (step->type == Greater)  res = (dLeft >  dRight);
+                    else                             res = (dLeft >= dRight);
+
+                    if (res) break;
+                }
+                break;
+            }
+        } else {
+            if (   leftResult.type == EmptyResult 
+                || rightResult.type == EmptyResult) {
+                res = 0;
+            } else {
+                dLeft  = xpathFuncNumber (&leftResult, &NaN);
+                dRight = xpathFuncNumber (&rightResult, &NaN);
+                if      (step->type == Less)     res = (dLeft < dRight);
+                else if (step->type == LessOrEq) res = (dLeft <= dRight);
+                else if (step->type == Greater)  res = (dLeft >  dRight);
+                else                             res = (dLeft >= dRight);
+            }
+        }
+        rsSetBool (result, res);
+        xpathRSFree (&rightResult);
+        xpathRSFree (&leftResult);
+        return XPATH_OK;
+
+    case SelectRoot:
         rsAddNode(result, ctxNode->ownerDocument->rootNode);
+        break;
 
-#if 0
-        if (ctxNode->nodeType == ELEMENT_NODE) {
-            rsAddNode(result, (domNode*)ctxNode->ownerDocument);
-        } else
-        if (ctxNode->nodeType == DOCUMENT_NODE) {
-            rsAddNode(result, ctxNode);
-        }
-        if (ctxNode->nodeType == DOCUMENT_NODE) {
-            doc = (domDocument*) ctxNode;
-            ctxNode = doc->documentElement;
-        }
-        while (ctxNode->parentNode) {
-            ctxNode = ctxNode->parentNode;
-        }
-        rsAddNode(result, ctxNode);
-#endif
-    } else
-
-    if (step->type == EvalSteps) {
-
+    case EvalSteps:
         rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, position,
                              docOrder,cbs, &leftResult, errMsg);
         CHECK_RC;
@@ -3217,13 +3043,10 @@ static int xpathEvalStep (
             return XPATH_EVAL_ERR;
         }
         switch (leftResult.type) {
-            case NodeSetResult:
-            case AttrNodeSetResult:
-            case AttrValueSetResult:
-            case MixedSetResult:
+            case xNodeSetResult:
                 for (i=0; i<leftResult.nr_nodes; i++) {
                     DBG(fprintf(stderr, "EvalSteps: adding %d \n", i);)
-                    rsAdd(result, leftResult.nodes[i], leftResult.type);
+                    rsAddNode (result, leftResult.nodes[i]);
                 }
                 break;
             case BoolResult:   rsSetBool(result, leftResult.intvalue);
@@ -3237,10 +3060,10 @@ static int xpathEvalStep (
             default:           break;
         }
         xpathRSFree( &leftResult  );
-    } else
+        break;
 
-    if (step->type == ExecFunction || step->type == ExecIdKey) {
-
+    case ExecFunction:
+    case ExecIdKey:
         if (IS_FUNC('p',"position")) {
             XPATH_ARITYCHECK(step,0,errMsg);
             if (*docOrder) {
@@ -3407,12 +3230,7 @@ static int xpathEvalStep (
                 *errMsg = (char*)strdup ("id() requires an argument!");
                 return XPATH_EVAL_ERR;
             }
-            if (   (leftResult.type == NodeSetResult)
-                || (leftResult.type == AttrNodeSetResult)
-                || (leftResult.type == AttrValueSetResult)
-                || (leftResult.type == MixedSetResult)
-                )
-            {
+            if (leftResult.type == xNodeSetResult) {
                 for (i=0; i < leftResult.nr_nodes; i++) {
                     leftStr = xpathFuncStringForNode (leftResult.nodes[i]);
                     entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
@@ -3489,11 +3307,7 @@ static int xpathEvalStep (
                 xpathRSFree( &leftResult );
                 return rc;
             }
-            if ((leftResult.type != NodeSetResult) &&
-                (leftResult.type != AttrNodeSetResult) &&
-                (leftResult.type != AttrValueSetResult) &&
-                (leftResult.type != MixedSetResult)) 
-            {
+            if (leftResult.type != xNodeSetResult) {
                 if (leftResult.type == EmptyResult) {
                     rsSetInt (result, 0);
                     xpathRSFree( &leftResult );
@@ -3864,11 +3678,7 @@ static int xpathEvalStep (
             }
             
             if (IS_FUNC('c',"count")) {
-                if ((leftResult.type != NodeSetResult) &&
-                    (leftResult.type != AttrNodeSetResult) &&
-                    (leftResult.type != AttrValueSetResult) &&
-                    (leftResult.type != MixedSetResult)
-                ) {
+                if (leftResult.type != xNodeSetResult) {
                     if ((leftResult.type == EmptyResult)) {
                         rsSetInt (result, 0);
                         xpathRSFree( &leftResult );
@@ -3887,14 +3697,11 @@ static int xpathEvalStep (
                 if (leftResult.type == EmptyResult) {
                     rsSetString (result, "");
                     return XPATH_OK;
-                } else
-                if (leftResult.type == NodeSetResult ||
-                    leftResult.type == AttrNodeSetResult ||
-                    leftResult.type == AttrValueSetResult ||
-                    leftResult.type == MixedSetResult) {
-                    if (leftResult.nodes[0]->nodeType == DOCUMENT_NODE) {
-                        sprintf(tmp,"doc%d", ((domDocument*)leftResult.nodes[0])->documentNumber);
-                    } else 
+                } else 
+                if (leftResult.type == xNodeSetResult) {
+/*                      if (leftResult.nodes[0]->nodeType == DOCUMENT_NODE) { */
+/*                          sprintf(tmp,"doc%d", ((domDocument*)leftResult.nodes[0])->documentNumber); */
+/*                      } else  */
                     if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
                         node = ((domAttrNode*)leftResult.nodes[0])->parentNode;
                         i = 0;
@@ -3910,9 +3717,9 @@ static int xpathEvalStep (
                     }
                 } else
                 if (xpathArity(step) == 0) {
-                    if (ctxNode->nodeType == DOCUMENT_NODE) {
-                        sprintf(tmp, "doc%d", ((domDocument*)ctxNode)->documentNumber);
-                    } else 
+/*                      if (ctxNode->nodeType == DOCUMENT_NODE) { */
+/*                          sprintf(tmp, "doc%d", ((domDocument*)ctxNode)->documentNumber); */
+/*                      } else  */
                     if (ctxNode->nodeType == ATTRIBUTE_NODE) {
                         node = ((domAttrNode*)ctxNode)->parentNode;
                         i = 0;
@@ -3946,10 +3753,7 @@ static int xpathEvalStep (
             } else
             
             if (IS_FUNC('n',"namespace-uri")) {
-                if (leftResult.type != NodeSetResult &&
-                    leftResult.type != AttrValueSetResult &&
-                    leftResult.type != AttrNodeSetResult &&
-                    leftResult.type != MixedSetResult) {
+                if (leftResult.type != xNodeSetResult) {
                     *errMsg = (char*)strdup("namespace-uri() requires a node set!");
                     xpathRSFree( &leftResult );
                     return XPATH_EVAL_ERR;
@@ -3966,10 +3770,7 @@ static int xpathEvalStep (
             } else
             
             if (IS_FUNC('l',"local-name")) {
-                if (leftResult.type != NodeSetResult &&
-                    leftResult.type != AttrValueSetResult &&
-                    leftResult.type != AttrNodeSetResult &&
-                    leftResult.type != MixedSetResult) {
+                if (leftResult.type != xNodeSetResult) {
                     *errMsg = (char*)strdup("local-name() requires a node set!");
                     xpathRSFree( &leftResult );
                     return XPATH_EVAL_ERR;
@@ -4001,11 +3802,8 @@ static int xpathEvalStep (
             } else
             
             if (IS_FUNC('n',"name")) {
-                if (leftResult.type != NodeSetResult &&
-                    leftResult.type != AttrNodeSetResult &&
-                    leftResult.type != AttrValueSetResult &&
-                    leftResult.type != MixedSetResult &&
-                    leftResult.type != EmptyResult) {
+                if (   leftResult.type != xNodeSetResult
+                    && leftResult.type != EmptyResult) {
                     *errMsg = (char*)strdup("name() requires a node set!");
                     xpathRSFree( &leftResult );
                     return XPATH_EVAL_ERR;
@@ -4267,10 +4065,7 @@ int xpathEvalSteps (
             DBG( fprintf(stderr, "doing location step nodeList->nr_nodes=%d \n",
                                  nodeList->nr_nodes);
             )
-            if (result->type != NodeSetResult &&
-                result->type != AttrValueSetResult &&
-                result->type != AttrNodeSetResult &&
-                result->type != MixedSetResult) {
+            if (result->type != xNodeSetResult) {
                 xpathRSFree (result);
                 xpathRSInit (result);
                 *nodeList = savedContext;
@@ -4373,7 +4168,7 @@ int xpathMatchesSlow (
         }
         DBG(rsPrint(&rs);)
 
-        if (rs.type == NodeSetResult) {
+        if (rs.type == xNodeSetResult) {
             found = 0;
             for (i=0; i<rs.nr_nodes; i++) {
                 if (rs.nodes[i] == nodeToMatch) {
@@ -4437,6 +4232,8 @@ int xpathMatches (
     domNS          *contextNS;
 
     DBG(printAst(3,steps));
+    xpathRSInit (&rs);
+    xpathRSInit (&nodeList);
     while (steps) {
         TRACE1("xpathMatches type=%d \n", steps->type);
         switch (steps->type) {        
@@ -4447,7 +4244,7 @@ int xpathMatches (
                         steps->child->type = IsAttr;
                     } else {
                         fprintf(stderr, "strange: AxisAttribute with no IsAttr below!\n");
-                        return 0;
+                        xpathRSFree (&nodeList); return 0;
                     }
                 }
                 attr = NULL;
@@ -4455,112 +4252,166 @@ int xpathMatches (
                     rc = xpathMatches (steps->child, exprContext, nodeToMatch, cbs,
                                        errMsg);
                     DBG(fprintf(stderr, "rc=%d attribute match\n", rc); )
-                    if (rc != 1) return 0;
+                    if (rc != 1) { xpathRSFree (&nodeList); return 0; }
                     attr = (domAttrNode*) nodeToMatch;
-                } else return 0;
-                if (attr == NULL) return 0;
+                } else { xpathRSFree (&nodeList); return 0; }
+                if (attr == NULL) { xpathRSFree (&nodeList); return 0; }
                 break;
                                 
             case AxisChild:
                 if (steps->child->type == IsElement) {
-                    if (nodeToMatch->nodeType != ELEMENT_NODE) return 0;
-                    if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) return 0;
+                    if (nodeToMatch->nodeType != ELEMENT_NODE) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
+                    if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     if ((steps->child->strvalue[0] != '*') ||
                         (steps->child->strvalue[1] != '\0')) 
                     {
-                        if (strcmp(nodeToMatch->nodeName, steps->child->strvalue)!=0) 
-                            return 0;
+                        if (strcmp(nodeToMatch->nodeName, steps->child->strvalue)!=0) {
+                            xpathRSFree (&nodeList); return 0;
+                        }
                     }
                     break;
                 }
                 if (steps->child->type == IsFQElement) {
-                    if (nodeToMatch->nodeType != ELEMENT_NODE) return 0;
+                    if (nodeToMatch->nodeType != ELEMENT_NODE) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     contextNS = domLookupPrefix (exprContext, steps->child->strvalue);
-                    if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
+                    if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                     nodeUri = domNamespaceURI (nodeToMatch);
-                    if (!nodeUri) return 0;
-                    if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
+                    if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
+                    if (strcmp (contextNS->uri, nodeUri) != 0) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     localName = domGetLocalName (nodeToMatch->nodeName);
-                    if (!localName) return 0;
-                    if (strcmp (steps->child->child->strvalue, localName)!=0)
-                        return 0;
+                    if (!localName) { xpathRSFree (&nodeList); return 0; }
+                    if (strcmp (steps->child->child->strvalue, localName)!=0) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     break;
                 }
                 if (steps->child->type == IsNSElement) {
                     contextNS = domLookupPrefix (exprContext, steps->child->strvalue);
-                    if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
+                    if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                     nodeUri = domNamespaceURI (nodeToMatch);
-                    if (!nodeUri) return 0;
-                    if (strcmp (contextNS->uri, nodeUri)!=0) return 0;
+                    if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
+                    if (strcmp (contextNS->uri, nodeUri)!=0) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     break;
                 }
                 fprintf(stderr, "strange: AxisChild with no IsElement, IsFQElement or IsNSElement below!\n");
                 return 0;
                     
             case IsElement:
-                if (nodeToMatch->nodeType != ELEMENT_NODE) return 0;
-                if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) return 0;
+                if (nodeToMatch->nodeType != ELEMENT_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
+                if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) {
+                    xpathRSFree (&nodeList); return 0;
+                }
+/*                  if (strcmp (nodeToMatch->nodeName, "row")==0) { */
+/*                      if (dbonerow == 432) { */
+/*                          fprintf (stderr, "foohoo\n"); */
+/*                          dbonerow++; */
+/*                          return 1; */
+/*                      } */
+/*                      dbonerow++; */
+/*                      return 0; */
+/*                  } */
                 if ((steps->strvalue[0] != '*') ||
                     (steps->strvalue[1] != '\0')) 
                 {
-                    if (strcmp(nodeToMatch->nodeName, steps->strvalue)!=0) return 0;
+                    if (strcmp(nodeToMatch->nodeName, steps->strvalue)!=0) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                 }
                 break;
 
             case IsFQElement: 
-                if (nodeToMatch->nodeType != ELEMENT_NODE) return 0;
+                if (nodeToMatch->nodeType != ELEMENT_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 contextNS = domLookupPrefix (exprContext, steps->strvalue);
-                if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
+                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                 nodeUri = domNamespaceURI (nodeToMatch);
-                if (!nodeUri) return 0;
-                if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
+                if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
+                if (strcmp (contextNS->uri, nodeUri) != 0) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 localName = domGetLocalName (nodeToMatch->nodeName);
-                if (!localName) return 0;
-                if (strcmp (steps->child->strvalue, localName)!=0) return 0;
+                if (!localName) { xpathRSFree (&nodeList); return 0; }
+                if (strcmp (steps->child->strvalue, localName)!=0)  {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsNSElement:
                 contextNS = domLookupPrefix (exprContext, steps->strvalue);
-                if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
+                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                 nodeUri = domNamespaceURI (nodeToMatch);
-                if (!nodeUri) return 0;
-                if (strcmp (contextNS->uri, nodeUri)!=0) return 0;
+                if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
+                if (strcmp (contextNS->uri, nodeUri)!=0) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsAttr:
-                if (nodeToMatch->nodeType != ATTRIBUTE_NODE) return 0;
+                if (nodeToMatch->nodeType != ATTRIBUTE_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 if (!((steps->strvalue[0] == '*') && (steps->strvalue[1] == '\0')))  {
-                    if (strcmp( ((domAttrNode*)nodeToMatch)->nodeName, steps->strvalue)!=0) return 0;
+                    if (strcmp( ((domAttrNode*)nodeToMatch)->nodeName, steps->strvalue)!=0) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                 }
                 break;
             
             case IsNode:
                 DBG(fprintf(stderr, "IsNode: nodeTpye=%d \n", nodeToMatch->nodeType);)
-                if (nodeToMatch->nodeType == ATTRIBUTE_NODE) return 0;
+                if (nodeToMatch->nodeType == ATTRIBUTE_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                } 
                 if ((nodeToMatch->nodeType == ELEMENT_NODE) &&
-                    (nodeToMatch->ownerDocument->rootNode == nodeToMatch)) 
-                    return 0;
+                    (nodeToMatch->ownerDocument->rootNode == nodeToMatch)) {
+                    xpathRSFree (&nodeList); return 0;
+                } 
                 break;
                 
             case IsText:
-                if (nodeToMatch->nodeType != TEXT_NODE) return 0;
+                if (nodeToMatch->nodeType != TEXT_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsPI:
-                if (nodeToMatch->nodeType != PROCESSING_INSTRUCTION_NODE) return 0;
+                if (nodeToMatch->nodeType != PROCESSING_INSTRUCTION_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsSpecificPI:
-                if (nodeToMatch->nodeType != PROCESSING_INSTRUCTION_NODE) return 0;
-                if (strncmp(((domProcessingInstructionNode*)nodeToMatch)->targetValue, steps->strvalue, ((domProcessingInstructionNode*)nodeToMatch)->targetLength) != 0) return 0;
+                if (nodeToMatch->nodeType != PROCESSING_INSTRUCTION_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
+                if (strncmp(((domProcessingInstructionNode*)nodeToMatch)->targetValue, steps->strvalue, ((domProcessingInstructionNode*)nodeToMatch)->targetLength) != 0) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsComment:
-                if (nodeToMatch->nodeType != COMMENT_NODE) return 0;
+                if (nodeToMatch->nodeType != COMMENT_NODE) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case IsRoot:
-                if (nodeToMatch != nodeToMatch->ownerDocument->rootNode) return 0;
+                if (nodeToMatch != nodeToMatch->ownerDocument->rootNode) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case ToParent:
@@ -4568,7 +4419,9 @@ int xpathMatches (
                     nodeToMatch = ((domAttrNode *)nodeToMatch)->parentNode;
                     break;
                 }
-                if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) return 0;
+                if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 if (nodeToMatch->parentNode) {
                     nodeToMatch = nodeToMatch->parentNode;
                 } else {
@@ -4577,28 +4430,31 @@ int xpathMatches (
                 break;
 
             case ToAncestors:
-                if (steps->next == NULL) return 1; /* rolf 30.09.2001 */
+                if (steps->next == NULL) { xpathRSFree (&nodeList); return 1;}
                 while (1) {
 /*                      if (nodeToMatch->nodeType != ELEMENT_NODE) return 0; */
                     if (nodeToMatch->nodeType == ATTRIBUTE_NODE) {
                         nodeToMatch = ((domAttrNode *)nodeToMatch)->parentNode;
                     } else {
-                        if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) return 0;
+                        if (nodeToMatch == nodeToMatch->ownerDocument->rootNode) {
+                            xpathRSFree (&nodeList); return 0;
+                        }
                         if (nodeToMatch->parentNode) {
                             nodeToMatch = nodeToMatch->parentNode;
                         } else {
                             nodeToMatch = nodeToMatch->ownerDocument->rootNode;
                         }
                     }
-                    if (steps->next == NULL) return 0;
-                    rc = xpathMatches (steps->next, exprContext, nodeToMatch, cbs,
-                                       errMsg);
+                    if (steps->next == NULL) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
+                    rc = xpathMatches (steps->next, exprContext, nodeToMatch,
+                                       cbs, errMsg);
                     if (rc == 1) break;
                 }
                 break;
                 
             case FillWithCurrentNode:
-                xpathRSInit (&nodeList);
                 rsAddNode( &nodeList, nodeToMatch);
                 currentPos = 0;
                 DBG(
@@ -4612,11 +4468,12 @@ int xpathMatches (
                     child = (domNode*)  ((domAttrNode*)nodeToMatch)->parentNode->firstAttr;
                     DBG(fprintf(stderr, "FillNodeList all attribute\n");)
                 } else {
-                    if (nodeToMatch->parentNode == NULL) return 0;
+                    if (nodeToMatch->parentNode == NULL) {
+                        xpathRSFree (&nodeList); return 0;
+                    }
                     DBG(fprintf(stderr, "FillNodeList on %s/%s...\n", nodeToMatch->parentNode->nodeName,nodeToMatch->nodeName);)
                     child = nodeToMatch->parentNode->firstChild;
                 }
-                xpathRSInit (&nodeList);
                 currentPos = -1;
                 i = 0;
                 while (child) {
@@ -4651,7 +4508,6 @@ int xpathMatches (
                 )
                 nodeMatches = 0;
 
-                DBG(rsPrint(&stepResult);)
                 if (stepResult.type == RealResult) {
                     stepResult.type = IntResult;
                     stepResult.intvalue = xpathRound(stepResult.realvalue);
@@ -4672,7 +4528,7 @@ int xpathMatches (
                 /* if nodeMatches == false we don't have to continue to filter */
                 if (!nodeMatches) { 
                     xpathRSFree (&stepResult);
-                    return 0;
+                    xpathRSFree (&nodeList); return 0;
                 }
                 
                 /*  if next step is not a Predicate, nodeMatches contains the
@@ -4683,11 +4539,7 @@ int xpathMatches (
                     break; /* return nodeMatches; */
                 }
                 
-                if ((stepResult.type != NodeSetResult)     && 
-                    (stepResult.type != AttrNodeSetResult) &&
-                    (stepResult.type != AttrValueSetResult) &&
-                    (stepResult.type != MixedSetResult)
-                ) {
+                if (stepResult.type != xNodeSetResult) {
                     xpathRSInit(&stepResult);
                     rsAddNode  (&stepResult, nodeToMatch);
                 }
@@ -4715,7 +4567,7 @@ int xpathMatches (
                     }
                 }
                 xpathRSFree (&stepResult);
-                if (!nodeMatches) return 0;
+                if (!nodeMatches) { xpathRSFree (&nodeList); return 0; }
                 break;
                 
             case CombinePath:
@@ -4726,7 +4578,9 @@ int xpathMatches (
                     if (rc == 1) break;
                     childSteps = childSteps->next;
                 }
-                if (childSteps == NULL) return 0;
+                if (childSteps == NULL) {
+                    xpathRSFree (&nodeList); return 0;
+                }
                 break;
                 
             case ExecIdKey:
@@ -4734,7 +4588,10 @@ int xpathMatches (
                 rc = xpathEvalStep (steps, nodeToMatch, exprContext, currentPos,
                                     &nodeList, cbs, &stepResult, &docOrder, errMsg);
                 CHECK_RC;
-                if (stepResult.type != NodeSetResult) return 0;
+                if (stepResult.type != xNodeSetResult) {
+                    xpathRSFree (&stepResult);
+                    xpathRSFree (&nodeList); return 0;
+                }
                 nodeMatches = 0;
                 for (i = 0; i < stepResult.nr_nodes; i++) {
                     if (nodeToMatch == stepResult.nodes[i]) {
@@ -4742,14 +4599,14 @@ int xpathMatches (
                         break;
                     }
                 }
-                if (!nodeMatches) return 0;
+                if (!nodeMatches) { xpathRSFree (&nodeList); return 0; }
                 break;
                 
             default: 
                 fprintf(stderr, "wrong type %d for xpathMatches \n", steps->type);
                 fprintf(stderr, "AST:\n");
                 printAst (0, steps);                             
-                return 0;
+                xpathRSFree (&nodeList); return 0;
                 break;
         }
         steps = steps->next;
