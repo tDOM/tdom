@@ -175,37 +175,41 @@ should closely conform to the W3C recommendation "Document Object Model
 as well to parts of the W3C draft "XML Pointer Language (XPointer)"
 (http://www.w3.org/TR/1998/WD-xptr-19980303).
 .PP
-The selectNodes method implements (partially) the "XML Path
+The selectNodes method implements the "XML Path
 Language (XPath) Version 1.0" W3C recommendation 16 November 1999 (http://www.w3.org/TR/1999/REC-xpath-19991116). Look
 at these documents for a deeper understanding of the functionality.
 .PP
 The valid methods are:
 .TP
 \&\fB\fBnodeType\fP
-\&\fR Returns the node type of that node object. This can be:
-ELEMENT_NODE, ATTRIBUTE_NODE, TEXT_NODE, or CDATA_SECTION_NODE.
+\&\fRReturns the node type of that node object. This can be:
+ELEMENT_NODE, TEXT_NODE, CDATA_SECTION_NODE, COMMENT_NODE or
+PROCESSING_INSTRUCTION_NODE.
 .TP
 \&\fB\fBnodeName\fP
-\&\fR Returns the node name of that node object. This is the element
+\&\fRReturns the node name of that node object. This is the element
 (tag) name for element nodes (type ELEMENT_NODE), "#text" for text
 node or "#cdata" for cdata section nodes.
 .TP
-\&\fB\fBnodeValue\fP
-\&\fR Returns the value of that node object. This is the the text or
-the data for element nodes of type TEXT_NODE or CDATA_SECTION_NODE). Otherwise
-it is empty.
+\&\fB\fBnodeValue\fP \fI?newValue?\fB
+\&\fRReturns the value of that node object. This is the the text or
+the data for element nodes of type TEXT_NODE, COMMENT_NODE,
+PROCESSING_INSTRUCTION_NODE or CDATA_SECTION_NODE). Otherwise it is empty. If
+the node is a TEXT_NODE, COMMENT_NODE or PROCESSING_INSTRUCTION_NODE and the
+optional argument \fInewValue\fR is given, the node is set to that
+value.
 .TP
 \&\fB\fBhasChildNodes\fP
-\&\fR Returns 1 if the has children. Otherwise 0 is returned.
+\&\fRReturns 1 if the has children. Otherwise 0 is returned.
 .TP
-\&\fB\fBparentNodes\fP
-\&\fR Returns the parent node.
-.TP
-\&\fB\fBchildNodes\fP
-\&\fR Returns a list of direct children node objects.
+\&\fB\fBparentNode\fP \fB?objVar?\fP
+\&\fRReturns the parent node.
 .TP
 \&\fB\fBchildNodes\fP
-\&\fR Returns a "live" nodeList object of the child nodes of
+\&\fRReturns a list of direct children node objects.
+.TP
+\&\fB\fBchildNodesLive\fP
+\&\fRReturns a "live" nodeList object of the child nodes of
 the node in the sense of the DOM recommendation. This nodeList object is
 "live" in the sense that, for instance, changes to the children of
 the node object that it was created from are immediately reflected in the nodes
@@ -214,69 +218,71 @@ of the node. The both accessors know by the nodeList object are "item
 <index>", which returns the indexth item in the collection, and
 "length", which returns the number of nodes in the list.
 .TP
-\&\fB\fBfirstChild\fP \fBobjVar\fP
-\&\fR Returns the first child as a node object.
+\&\fB\fBfirstChild\fP \fB?objVar?\fP
+\&\fRReturns the first child as a node object.
 .TP
-\&\fB\fBlastChild\fP \fBobjVar\fP
-\&\fR Returns the last child as a node object.
+\&\fB\fBlastChild\fP \fB?objVar?\fP
+\&\fRReturns the last child as a node object.
 .TP
-\&\fB\fBnextSibling\fP  \fBobjVar\fP
-\&\fR Returns the next sibling relativ to the current node as a node
+\&\fB\fBnextSibling\fP  \fB?objVar?\fP
+\&\fRReturns the next sibling relativ to the current node as a node
 object.
 .TP
-\&\fB\fBpreviousSibling\fP \fBobjVar\fP
-\&\fR Returns the next sibling relativ to the current node as a node
+\&\fB\fBpreviousSibling\fP \fB?objVar?\fP
+\&\fRReturns the next sibling relativ to the current node as a node
 object.
 .TP
 \&\fB\fBgetElementsByTagName\fP \fIname\fB
-\&\fR Returns a list of all elements in the subtree matching (glob
+\&\fRReturns a list of all elements in the subtree matching (glob
 style) \fIname\fR.
 .TP
 \&\fB\fBgetElementsByTagNameNS\fP \fIuri\fB \fIlocalname\fB
-\&\fR Returns a list of all elements in the subtree
+\&\fRReturns a list of all elements in the subtree
 matching (glob style) \fIlocalname\fR and having the given namespace
 \&\fIuri\fR.
 .TP
 \&\fB\fBgetElementById\fP \fIid\fB
-\&\fR Returns the node having a id attribute with value
+\&\fRReturns the node having a id attribute with value
 \&\fIid\fR.
 .TP
 \&\fB\fBhasAttribute\fP \fIattributeName\fB
-\&\fR Returns 1 iff the object node contains an attribute with name
+\&\fRReturns 1 if the object node contains an attribute with name
 \&\fIattributeName\fR . Otherwise 0 is returned.
 .TP
-\&\fB\fBgetAttribute\fP \fIattributeName\fB \fBdefaultValue\fP
-\&\fR Returns the value of the attribute \fIattributeName\fR. If
+\&\fB\fBgetAttribute\fP \fIattributeName  ?defaultValue?\fB
+\&\fRReturns the value of the attribute \fIattributeName\fR. If
 attribute is not available \fIdefaultValue\fR is returned.
 .TP
-\&\fB\fBsetAttribute\fP \fIattributeName\fB \fInewValue\fB ?\fIattributeName\fB \fInewValue\fB
-\&\fR Sets the value for an attribute \fIattributeName\fR to
-\&\fInewValue\fR. This will create a new attribute, if it wasn't avialble
-before.
+\&\fB\fBsetAttribute\fP \fIattributeName newValue  ?attributeName newValue ...?\fB
+\&\fRSets the value for one or more attributes. Every
+\&\fIattributeName\fR is set to the corresponding \fInewValue\fR. If there
+isn't an attribute for one or more of the \fIattributeName\fR this will
+create that attribute.
 .TP
 \&\fB\fBremoveAttribute\fP \fIattributeName\fB
-\&\fR Removes the attribute \fIattributeName\fR.
+\&\fRRemoves the attribute \fIattributeName\fR.
 .TP
 \&\fB\fBhasAttributeNS\fP \fIuri\fB \fIlocalName\fB
 \&\fRReturns 1 if the object node contains an attribute with the
 local name \fIlocalName\fR within the namespace \fIuri\fR.  Otherwise 0 is
 returned.
 .TP
-\&\fB\fBgetAttributeNS\fP \fIuri\fB \fIlocalName\fB \fBdefaultValue\fP
+\&\fB\fBgetAttributeNS\fP \fIuri\fB \fIlocalName ?defaultValue?\fB
 \&\fRReturns the value of the attribute with the local name
 \&\fIlocalName\fR within the namespace URI \fIuri\fR. If the node dosn't have
 that attribute the \fIdefaultValue\fR is returned.
 .TP
-\&\fB\fBsetAttributeNS\fP \fIuri\fB \fIqualifiedName\fB \fInewValue\fB
+\&\fB\fBsetAttributeNS\fP \fIuri qualifiedName newValue ?uri qualifiedName newValue ...?\fB
 \&\fR
 .RS
 .PP
-Sets the value for an attribute \fIqualifiedName\fR with the
-namespace URI \fIuri\fR to \fInewValue\fR. This will create a new attribute,
-if it wasn't avialble before. If you want to set an attribute within a
-namespace you must specify the attribute name with prefix, even if you want to
-set an already existing attribute to a new value. While searching, if the
-attribute already exists, only the given \fIuri\fR and the localname of the
+Sets the value for one or more full qualified
+attributes. Every attribute \fIqualifiedName\fR with the namespace URI
+\&\fIuri\fR will be set to \fInewValue\fR. This will create a new attribute, if
+it wasn't avialble before. If you want to set an attribute within a namespace
+you must specify the attribute name with prefix, even if you want to set an
+already existing attribute to a new value. While searching, if the attribute
+already exists, only the given \fIuri\fR and the localname of the
 \&\fIqualifiedName\fR is used.
 
 
@@ -316,26 +322,26 @@ prefix.
 the namespace \fIuri\fR.
 .TP
 \&\fB\fBattributes\fP \fBattributeNamePattern\fP
-\&\fR Returns all attributes matching the \fIattributeNamePattern\fR.
+\&\fRReturns all attributes matching the \fIattributeNamePattern\fR.
 If \fIattributeNamePattern\fR isn't given all attributes are returned as a Tcl
 list.
 .TP
 \&\fB\fBappendChild\fP \fInewChild\fB
-\&\fR Append \fInewChild\fR to the end of the child list of the
+\&\fRAppend \fInewChild\fR to the end of the child list of the
 node. \fInewChild\fR must be in the document fragment list.
 .TP
 \&\fB\fBinsertBefore\fP \fInewChild\fB  \fIrefChild\fB
-\&\fR Insert \fInewChild\fR before the \fIrefChild\fR in list of
+\&\fRInsert \fInewChild\fR before the \fIrefChild\fR in list of
 children of that node. \fInewChild\fR must be in the document fragment list.
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
-\&\fR Replace \fInewChild\fR with \fIoldChild\fR in list of children
+\&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of children
 of that node.  \fInewChild\fR must be in the document fragment list.
 \&\fIoldChild\fR will be part of the document fragment list after this
 operation.
 .TP
 \&\fB\fBremoveChild\fP \fIchild\fB
-\&\fR Removes \fIchild\fR from the list of children of that node
+\&\fRRemoves \fIchild\fR from the list of children of that node
 \&\fIchild\fR will be part of the document fragment list after this
 operation. It is not physically deleted.
 .TP
@@ -345,46 +351,47 @@ and frees the complete internal memory. The affected nodes are not accessible
 through the document fragment list.
 .TP
 \&\fB\fBcloneNode\fP \fB-deep\fP
-\&\fR Clones this node and adds the new create node into the document
+\&\fRClones this node and adds the new create node into the document
 fragment list. If the \fI-deep\fR option is specified, all descendant nodes
 are also cloned.
 .TP
-\&\fB\fBownerDocument\fP
-\&\fR Returns the document object of the document this node belongs
+\&\fB\fBownerDocument\fP \fB?domObjVar?\fP
+\&\fRReturns the document object of the document this node belongs
 to.
 .TP
 \&\fB\fBfind\fP \fIattrName\fB \fIattrVal\fB \fBobjVar\fP
-\&\fR Finds the node with the attribute name \fIattrName\fR, and
+\&\fRFinds the node with the attribute name \fIattrName\fR, and
 attribute value \fIattrVal\fR in the subtree starting the current node.
 .TP
 \&\fB\fBchild\fP \fInumber|all\fB \fBtype\fP \fBattrName attrValue\fP
-\&\fR (XPointer) child
+\&\fR(XPointer) child
 .TP
 \&\fB\fBdescendant\fP \fInumber|all\fB \fBtype\fP \fBattrName attrValue\fP
-\&\fR (XPointer) descendant
+\&\fR(XPointer) descendant
 .TP
 \&\fB\fBancestor\fP \fInumber|all\fB \fBtype\fP \fBattrName attrValue\fP
-\&\fR (XPointer) ancestor
+\&\fR(XPointer) ancestor
 .TP
 \&\fB\fBfsibling\fP \fInumber|all\fB \fBtype\fP \fBattrName attrValue\fP
-\&\fR (XPointer) fsibling
+\&\fR(XPointer) fsibling
 .TP
 \&\fB\fBpsibling\fP \fInumber|all\fB \fBtype\fP \fBattrName attrValue\fP
-\&\fR (XPointer) psibling
+\&\fR(XPointer) psibling
 .TP
 \&\fB\fBroot\fP  \fBobjVar\fP
-\&\fR (XPointer) root
+\&\fR(XPointer) root
 .TP
 \&\fB\fBtext\fP
-\&\fR Returns all text node children of that current node combined,
+\&\fRReturns all text node children of that current node combined,
 i.e. appended into one string.
 .TP
 \&\fB\fBtarget\fP
-\&\fR For a processing instruction node the target part is returned.
+\&\fRFor a processing instruction node the target part is returned.
 Otherwise an error is generated.
 .TP
 \&\fB\fBdata\fP
-\&\fR For a processing instruction node the data part is returned.
+\&\fRFor a processing instruction node the data part is returned. For
+a text node, comment node or cdata section node the value is returned.
 Otherwise an error is generated.
 .TP
 \&\fB\fBprefix\fP
@@ -397,7 +404,7 @@ Otherwise an error is generated.
 \&\fRReturns the localName from the tag name of the given node.
 .TP
 \&\fB\fBselectNodes\fP \fIxpathQuery\fB \fBtypeVar\fP
-\&\fR Returns the result of applying the XPath query \fIxpathQuery\fR
+\&\fRReturns the result of applying the XPath query \fIxpathQuery\fR
 to the subtree. This can be a string/value, a list of strings, a list of nodes,
 a list of attribute name and a list of attribute name / value pairs. If
 \&\fItypeVar\fR is given the result type name is store into that variable
@@ -415,15 +422,15 @@ foreach paragraph $paragraphNodes {
 .RE
 .TP
 \&\fB\fBgetLine\fP
-\&\fR Returns the line number of that node in the orignal parsed
+\&\fRReturns the line number of that node in the orignal parsed
 XML.
 .TP
 \&\fB\fBgetColumn\fP
-\&\fR Returns the column number of that node in the orignal parsed
+\&\fRReturns the column number of that node in the orignal parsed
 XML.
 .TP
 \&\fB\fBasList\fP
-\&\fR Returns the DOM substree starting form the current node as a
+\&\fRReturns the DOM substree starting form the current node as a
 nested Tcl list.
 .TP
 \&\fB\fBasXML\fP \fB-indent none/1..8\fP \fB-channel channelId\fP
@@ -432,7 +439,7 @@ node as an indented XML string or sends the output directly to the given
 channelId in order to save memory.
 .TP
 \&\fB\fBappendFromList\fP \fIlist\fB
-\&\fR Parses \fIlist\fR , creates an according DOM subtree and
+\&\fRParses \fIlist\fR , creates an according DOM subtree and
 appends this subtree to the current node.
 .TP
 \&\fB\fBappendFromScript\fP \fItclScript\fB
@@ -441,11 +448,11 @@ Tcl functions, which have been built using \fIdom createNodeCmd\fR, to the
 given node.
 .TP
 \&\fB\fBappendXML\fP \fIXMLstring\fB
-\&\fR Parses \fIXMLstring\fR, creates an according DOM subtree and
+\&\fRParses \fIXMLstring\fR, creates an according DOM subtree and
 appends this subtree to the current node.
 .TP
 \&\fB\fBsimpleTranslate\fP \fIoutputVar\fB \fIspecifications\fB
-\&\fR Translate the subtree starting at the object node according to
+\&\fRTranslate the subtree starting at the object node according to
 the specifications in \fIspecifications\fR and outputs the result in the
 variable \fIoutputVar\fR . The translation is very similar to Cost Simple
 mode.
@@ -454,6 +461,9 @@ mode.
 \&\fRReturns a XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one.
+.TP
+\&\fB\fBgetBaseURI\fP
+\&\fRReturns the baseURI of the node.
 .TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies a XSLT transformation on the whole document of the node
@@ -464,13 +474,12 @@ level <xsl:param> to string values. The \fIparameterList\fR has to be a
 tcl list consisting of parameter name and value pairs.
 .TP
 \&\fB\fI@attrName\fB
-\&\fR Returns the value of the attribute \fIattrName\fR.  Short cut
+\&\fRReturns the value of the attribute \fIattrName\fR.  Short cut
 for \fIgetAttribute\fR.
 .PP
 Otherwise, if an unknown method name is given, the command with the same
 name as the given method within the namespace \fB::dom::domNode\fR is tried to
 be executed. This allows quick method additions on Tcl level.
-.SH "PORTABILITY ISSUES"
 .SH "SEE ALSO"
 dom, domDoc
 .SH KEYWORDS
