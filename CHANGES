@@ -1,11 +1,11 @@
-2002-10-31  Zoran Vasiljevic  <zoran@archiware.com>
+2002-10-01  Zoran Vasiljevic  <zoran@archiware.com>
 
-	The library file lib/tdomhtml.tcl is now the first class citizen
-  	in tdom. It is automatically loaded at "package require tdom".
-        This file implements a simple HTML generator using DOM machinery.
-  
-	The layout of the pkgIndex.tcl file has changed in order to
-	accomodate for the above file.
+	The library file lib/tdomhtml.tcl is now moved to a separate
+	package in "extensions" directory. This is a simple, yet very
+	"clever" HTML generator, using advanced tdom HTML capabilities.
+ 	To use, please change to "extensions/tdomhtml" directory and 
+	invoke "configure" followed by "make", followed by "make install".
+        Be sure, however, to build and install the tdom package first.
 
 -EOF-
 

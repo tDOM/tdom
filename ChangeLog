@@ -1,3 +1,15 @@
+2002-11-02  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* lib/tdomhtml.tcl: removed in favour of new tdom extension
+
+	* extensions/tdomhtml: added new tdom extension for HTML
+	  generation based on tdomhtml.tcl and internal tdom 
+	  appendFromScript mechanism. This is a Tcl-only extension
+	  which merely needs to be "make install"'ed.
+
+	* Makefile.in: removed traces of tdomhtml.tcl file since it
+	  now lives in its own extension
+
 2002-11-01  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Fixed 'missing separator' problem (using tab
