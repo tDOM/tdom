@@ -36,6 +36,13 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.12  2002/04/08 02:01:56  rolf
+|   Added optional -parameters option to domNode xslt method, to enable
+|   setting of top level parameters from tcl level.
+|   BugFix: Don't use direct calles to ApplyTemplate(), always go throw
+|   ApplyTemplates(), to get var context right (example: xalan tests
+|   variable35).
+|
 |   Revision 1.11  2002/04/06 18:05:14  rolf
 |   Bug fix for attribute value templates: "A right curly brace inside a
 |   Literal in an expression is not recognized as terminating the
@@ -3015,14 +3022,10 @@ static int ExecAction (
                     rsAddNodeFast ( &rs, child);
                     child = child->nextSibling; 
                 }
-                savedLastNode = xs->lastNode;
-                for (i=0; i < rs.nr_nodes; i++) {
-                    rc = ApplyTemplate (xs, &rs, rs.nodes[i], actionNode, i, mode,
-                                        errMsg);
-                    CHECK_RC;
-                }
-                xs->lastNode = savedLastNode;
+                rc = ApplyTemplates (xs, context, currentNode, currentPos,
+                                actionNode, &rs, mode, errMsg);
                 xpathRSFree( &rs );
+                CHECK_RC;
 
                 break;
             }
@@ -3521,7 +3524,6 @@ static int ExecAction (
         case message:
             str  = getAttr(actionNode,"terminate", a_terminate); 
             if (!str)  str = "no";
-            /* jcl: TODO */
             fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)", ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -3769,9 +3771,9 @@ int ApplyTemplate (
 {
     xsltTemplate   * tpl;
     xsltTemplate   * tplChoosen, *currentTplRule;
-    domNode        * child, *savedLastNode;
+    domNode        * child;
     xpathResultSet   rs;
-    int              rc, i;
+    int              rc;
     double           currentPrio, currentPrec;
 
 
@@ -3874,14 +3876,10 @@ int ApplyTemplate (
             rsAddNodeFast ( &rs, child);
             child = child->nextSibling; 
         }
-        savedLastNode = xs->lastNode;
-        for (i=0; i < rs.nr_nodes; i++) {
-            rc = ApplyTemplate (xs, &rs, rs.nodes[i], exprContext, i, mode, errMsg);
-            CHECK_RC;
-        }
-        xs->lastNode = savedLastNode;
+        rc = ApplyTemplates (xs, context, currentNode, currentPos, exprContext,
+                             &rs, mode, errMsg);
         xpathRSFree( &rs );
-
+        CHECK_RC;
 
     } else {
         TRACE1("tplChoosen '%s' \n", tplChoosen->match);
@@ -4221,20 +4219,64 @@ getExternalDocument (
 static int processTopLevelVars (
     domNode       * xmlNode,
     xsltState     * xs,
+    char         ** parameters,
     char         ** errMsg
     )
 {
-    int                rc;
+    int                rc, i;
     char              *select, *str;
-    xpathResultSet     nodeList;    
+    xpathResultSet     nodeList, rs;    
     Tcl_HashEntry     *entryPtr;
     Tcl_HashSearch     search;        
     xsltTopLevelVar   *topLevelVar;
     xsltVarInProcess   varInProcess;
+    xsltVariable      *var;
+    Tcl_DString        dStr;
     
     xpathRSInit (&nodeList);
     rsAddNode (&nodeList, xmlNode); 
     
+    if (parameters) {
+        i = 0;
+        while (parameters[i]) {
+            entryPtr = Tcl_FindHashEntry (&xs->topLevelVars, parameters[i]);
+            if (!entryPtr) {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, "There isn't a parameter named \"", -1);
+                Tcl_DStringAppend (&dStr, parameters[i], -1);
+                Tcl_DStringAppend (&dStr, "\" defined at top level in the stylesheet.", -1);
+                *errMsg = strdup (Tcl_DStringValue (&dStr));
+                Tcl_DStringFree (&dStr);
+                return -1;
+            }
+            topLevelVar = (xsltTopLevelVar *) Tcl_GetHashValue (entryPtr);
+            if (!topLevelVar->isParameter) {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, "\"", 1);
+                Tcl_DStringAppend (&dStr, parameters[i], -1);
+                Tcl_DStringAppend (&dStr, "\" is defined as variable, not as parameter.", -1);
+                *errMsg = strdup (Tcl_DStringValue (&dStr));
+                Tcl_DStringFree (&dStr);
+                return -1;
+            }
+            if (xsltVarExists (xs, parameters[i])) {
+                i += 2;
+                continue;
+            }
+
+            xpathRSInit (&rs);
+            rsSetString (&rs, parameters[i+1]);
+            var = (xsltVariable*) malloc(sizeof(xsltVariable));
+            var->name   = strdup (parameters[i]);
+            var->next   = xs->varFrames->vars;
+            var->select = NULL;
+            var->value  = topLevelVar->node;
+            var->rs     = rs;
+            xs->varFrames->vars = var;
+
+            i += 2;
+        }
+    }
     for (entryPtr = Tcl_FirstHashEntry(&xs->topLevelVars, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
@@ -4779,6 +4821,7 @@ void xsltFreeState (
 int xsltProcess (
     domDocument       * xsltDoc,
     domNode           * xmlNode,
+    char             ** parameters,
     xpathFuncCallback   funcCB,
     void              * clientData,
     char             ** errMsg,
@@ -4892,7 +4935,7 @@ int xsltProcess (
     precedence = 1.0;
     precedenceLowBound = 0.0;
     rc = processTopLevel (clientData, node, xmlNode, &xs, precedence,
-                          &precedenceLowBound,errMsg);
+                          &precedenceLowBound, errMsg);
     if (rc != 0) {
         xsltFreeState (&xs);
         return rc;
@@ -4915,13 +4958,14 @@ int xsltProcess (
         StripXMLSpace (&xs, sdoc->doc->documentElement);
     }
 
-    rc = processTopLevelVars (xmlNode, &xs, errMsg);
+    rc = processTopLevelVars (xmlNode, &xs, parameters, errMsg);
     if (rc != 0) {
         xsltFreeState (&xs);
         return rc;
     }
 
-    rc = ApplyTemplate(&xs, &nodeList, xmlNode, node, 0, NULL, errMsg);
+    rc = ApplyTemplates (&xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,
+                         errMsg);
     if (rc != 0) {
         xsltFreeState (&xs);
         return rc;
