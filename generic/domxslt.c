@@ -688,7 +688,6 @@ static void xsltPushVarFrame (
 {
     xsltVarFrame  * currentFrame;
     
-    DBG (fprintf (stderr, "start of xsltPushVarFrame. xs->varFrames = %p\n", xs->varFrames);)
     xs->varFramesStackPtr++;
     if (xs->varFramesStackPtr >= xs->varFramesStackLen) {
         xs->varFramesStack = (xsltVarFrame *) realloc (xs->varFramesStack,
@@ -702,7 +701,6 @@ static void xsltPushVarFrame (
     currentFrame->varStartIndex = -1;
 
     xs->varFrames = currentFrame;
-    DBG (fprintf (stderr, "end of xsltPushVarFrame. xs->varFrames = %p\n", xs->varFrames);)
     
 }
 
@@ -1807,8 +1805,9 @@ static int evalXPath (
         Tcl_SetHashValue(h, t);
     }
     xpathRSInit( rs );
-    
-    DBG(printAst(0,t);)
+
+    DBG(fprintf (stderr, "evalXPath evaluating xpath:\n");)
+    DBG(printAst(3,t);)
     rc = xpathEvalSteps( t, context, currentNode, xs->currentXSLTNode, currentPos,
                          &docOrder, &(xs->cbs), rs, errMsg); 
     if (rc != XPATH_OK) {
@@ -2896,6 +2895,31 @@ static int xsltNumber (
 
 
 /*----------------------------------------------------------------------------
+|   CopyNS
+|
+\---------------------------------------------------------------------------*/
+static void
+copyNS (
+    domNode *from,
+    domNode *to
+    )
+{
+    domNode     *n;
+    domAttrNode *attr;
+    
+    n = from;
+    while (n) {
+        attr = n->firstAttr;
+        while (attr && (attr->nodeFlags & IS_NS_NODE)) {
+            domAddNSToNode (to,
+                            n->ownerDocument->namespaces[attr->namespace-1]);
+            attr = attr->nextSibling;
+        }
+        n = n->parentNode;
+    }
+}
+
+/*----------------------------------------------------------------------------
 |   ExecAction
 |
 \---------------------------------------------------------------------------*/
@@ -3295,7 +3319,11 @@ static int ExecAction (
             break;
             
         case copy:
-            DBG(fprintf(stderr, "copy '%s' \n", currentNode->nodeName);)
+            DBG(if (currentNode->nodeType == ATTRIBUTE_NODE) {
+                    fprintf(stderr, "copy '%s' \n", ((domAttrNode*)currentNode)->nodeName);
+                } else {
+                    fprintf(stderr, "copy '%s' \n", currentNode->nodeName);
+                })
             if (currentNode->nodeType == TEXT_NODE) {
                 DBG(fprintf(stderr, "node is TEXT_NODE \n");)
                 tnode = (domTextNode*)currentNode;
@@ -3314,6 +3342,7 @@ static int ExecAction (
                     xs->lastNode = n;
                     str = getAttr(actionNode, "use-attribute-sets",
                               a_useAttributeSets);
+                    copyNS (currentNode, xs->lastNode);
                     if (str) {
                         rc = ExecUseAttributeSets (xs, context, currentNode,
                                                    currentPos, str, errMsg);
@@ -3385,21 +3414,22 @@ static int ExecAction (
                 for (i=0; i<rs.nr_nodes; i++) { 
                     if (rs.nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         attr = (domAttrNode*)rs.nodes[i];
-                        domSetAttribute(xs->lastNode, 
-                                        attr->nodeName, attr->nodeValue);
+                        ns = domGetNamespaceByIndex (attr->parentNode->ownerDocument, attr->namespace);
+                        if (ns) uri = ns->uri;
+                        else uri = NULL;
+                        domSetAttributeNS(xs->lastNode, attr->nodeName,
+                                          attr->nodeValue, uri, 1);
                     } else {
                         if (*(rs.nodes[i]->nodeName) == '(' &&
                             ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
                              || (strcmp(rs.nodes[i]->nodeName,"(rootNode)")==0))) {
                             child = rs.nodes[i]->firstChild;
                             while (child) {
-                                n = domCloneNode(child, 1);
-                                domAppendChild(xs->lastNode, n);
+                                domCopyTo(child, xs->lastNode, 1);
                                 child = child->nextSibling;
                             }
                         } else {
-                            n = domCloneNode(rs.nodes[i], 1);
-                            domAppendChild(xs->lastNode, n);
+                            domCopyTo (rs.nodes[i], xs->lastNode, 1);
                         }
                     }
                 }
@@ -3480,6 +3510,8 @@ static int ExecAction (
                   }
               } else if (currentNode->nodeType == ATTRIBUTE_NODE) {
                   fprintf (stderr, "forEach select from Attribute Node '%s' Value '%s'\n", ((domAttrNode *)currentNode)->nodeName, ((domAttrNode *)currentNode)->nodeValue);
+              } else {
+                  fprintf (stderr, "forEach select from nodetype %d\n", currentNode->nodeType);
               }
             )
             xpathRSInit( &nodeList );
@@ -3779,7 +3811,7 @@ static int ExecAction (
                 n = n->parentNode;
             }
             /* It's not clear, what to do, if the literal result
-               element has a namespace, that should be excluded. We
+               element is in a namespace, that should be excluded. We
                follow saxon and xalan, which both add the namespace of
                the literal result element always to the result tree,
                to ensure, that the result tree is conform to the XML
@@ -3951,6 +3983,9 @@ int ApplyTemplate (
                     if (currentNode->nodeType != ATTRIBUTE_NODE) 
                         continue;
                     break;
+                default:
+                    /* to pacify gcc -Wall */
+                    ;
                 }
                 rc = xpathMatches ( tpl->ast, exprContext, currentNode, &(xs->cbs), errMsg);
                 TRACE1("xpathMatches = %d \n", rc);
