@@ -1,10 +1,22 @@
+2003-03-22  Rolf Ade  <rolf@pointsman.de>
+
+        * extensions/tnc/tnc.c
+        * extensions/tnc/tests/tnc.c: Added code needed to handle
+          effects of the -useForeignDTD option.
+          
+        * doc/domNode.*
+        * generic/tcldom.c
+        * tests/dom.test: Renamed 'startBefore' method to the better
+          name 'precedes' and changed behavior: the method now
+          returns simply a boolean value.
+
 2003-03-19  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c    
         * generic/domxslt.c    
         * generic/dom.h    
         * generic/dom.c: Replaced a few exit() code with Tcl_Panic(),
-          which ensures, that even windows users get a usefull error
+          which ensures, that even windows users get a useful error
           msg.
 
         * generic/dom.c: Fixed a mem leak in handling external
@@ -333,6 +345,8 @@
           node test (they raised error up to now). Changed
           generate-id() to return the more generic named 'id<idstr>'
           instead of the up to now used 'node<idstr>'.
+
+--- Release 0.7.5, 27. Nov. 2002 ---
 
 2002-11-24  Rolf Ade  <rolf@pointsman.de>
 
