@@ -1503,12 +1503,12 @@ startDoctypeDeclHandler (
     domReadInfo                  *info = (domReadInfo *) userData;
 
     if (pubid) {
-        info->document->doctype = MALLOC (sizeof (domDoctype));
+        info->document->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
         memset (info->document->doctype, 0, sizeof (domDoctype));
         info->document->doctype->systemId = tdomstrdup (sysid);
         info->document->doctype->publicId = tdomstrdup (pubid);
     } else if (sysid) {
-        info->document->doctype = MALLOC (sizeof (domDoctype));
+        info->document->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
         memset (info->document->doctype, 0, sizeof (domDoctype));
         info->document->doctype->systemId = tdomstrdup (sysid);
     }
