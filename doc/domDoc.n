@@ -1,0 +1,127 @@
+'\"
+'\" Generated from domDoc.xml
+'\"
+.so man.macros
+.TH domDoc n "" Tcl ""
+.BS
+.SH NAME
+domDoc \- Manipulates an instance of a DOM document object
+.SH SYNOPSIS
+.nf
+\&\fBdomDocObjCmd\fP \fImethod\fR ?\fIarg arg ...\fR?
+.fi
+.BE
+.SH "DESCRIPTION "
+.PP
+This command manipulates one particular instance of a document
+object. \fImethod\fR indicates a specific method of the document class. These
+methods should closely conform to the W3C recommendation "Document Object Model
+(Core) Level 1" (http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html). Look
+at these documents for a deeper understanding of the functionality.
+.PP
+The valid methods are:
+.TP
+\&\fB\fBdocumentElement\fP ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Returns the top most element in the document (the root
+element).
+.RE
+.TP
+\&\fB\fBgetElementsByTagName\fP \fIname\fB
+\&\fR
+.RS
+.PP
+Returns a list of all elements in the document matching
+(glob style) \fIname\fR.
+.RE
+.TP
+\&\fB\fBcreateElement\fP \fItagName\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates (allocates) a new element node with node name
+\&\fItagName\fR, append it to the hidden fragment list in the document
+object and returns the node object.  If \fIobjVar\fR is given the new
+node object store in this variable.
+.RE
+.TP
+\&\fB\fBcreateElementNS\fP \fIurl\fB \fItagName\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates (allocates) a new element node within a namespace
+having \fIuri\fR as the URI and node name \fItagName\fR, which
+could include the namespace prefix, append it to the hidden fragment list in
+the document object and returns the node object.  If \fIobjVar\fR is
+given the new node object store in this variable.
+.RE
+.TP
+\&\fB\fBcreateTextNode\fP \fItext\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates (allocates) a new text node with node value
+\&\fItext\fR, appends it to the hidden fragment list in the document
+object and returns the node object.  If \fIobjVar\fR is given, the new
+node object is stored in this variable.
+.RE
+.TP
+\&\fB\fBcreateComment\fP \fItext\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates (allocates) a new comment node with value
+\&\fItext\fR, appends it to the hidden fragment list in the document
+object and returns the node object.  If \fIobjVar\fR is given, the new
+comment node object is stored in this variable.
+.RE
+.TP
+\&\fB\fBcreateCDATASection\fP \fIdata\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates (allocates) a new CDATA node with node value
+\&\fIdata\fR, appends it to the hidden fragment list in the document
+object and returns the node object.  If \fIobjVar\fR is given, the new
+node object is stored in this variable.
+.RE
+.TP
+\&\fB\fBcreateProcessingInstruction\fP \fItarget\fB \fIdata\fB ?\fIobjVar\fB?
+\&\fR
+.RS
+.PP
+Creates a process instruction, appends it to the hidden
+fragment list in the document object and returns the node object.  If
+\&\fIobjVar\fR is given, the new node object is stored in this variable.
+.RE
+.TP
+\&\fB\fBdelete\fP
+\&\fR
+.RS
+.PP
+Explicitly deletes the document, including the associated
+Tcl object commands (for nodes, fragment/new nodes, the document object itself)
+and the underlying DOM tree.
+.RE
+.TP
+\&\fB\fBgetDefaultOutputMethod\fP
+\&\fR
+.RS
+.PP
+Returns the default output method of the document. This is
+usually a result of a XSLT transformation.
+.RE
+.PP
+Otherwise, if an unknown method name is given, the command with the
+same name as the given metho within the namespace \fB::dom::domDoc\fR is
+tried to be executed. This allows quick method additions on Tcl level.
+.PP
+Newly created nodes are appended to a hidden fragment list. If there
+are not moved into the tree they are automaticaly deleted, when the whole
+document gets deleted.
+.SH "SEE ALSO"
+dom, domNode
+.SH KEYWORDS
+DOM node creation, document element

@@ -1,0 +1,80 @@
+'\"
+'\" Generated from tdomcmd.xml
+'\"
+.so man.macros
+.TH tdom n "" Tcl ""
+.BS
+.SH NAME
+tdom \- tdom is an expat parser object extension to create an in-memory
+DOM tree from the input while parsing.
+.SH SYNOPSIS
+.nf
+package require tdom
+
+set parser [expat]
+
+tdom $parser enable
+.fi
+.BE
+.SH DESCRIPTION
+.PP
+\&\fItdom\fR adds the C handler set "tdom" to an tcl expat
+parser obj. This handler set builds an in-memory DOM tree out of the input,
+parsed by the parser. A DOM tree created this way behave exactly like a DOM
+tree created by the "dom" command (see there). In fact, tdom is only
+another interface to the same functionality; it uses the code behind the
+\&\fBdom\fR code for building the DOM tree.
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBenable\fP
+\&\fR
+.RS
+.PP
+Adds the tdom C handler set to a Tcl expat parser object. Next
+time, the parser parses input, the tdom C handler functions create an in-memory
+DOM tree.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBgetdoc\fP
+\&\fR
+.RS
+.PP
+Returns the DOM tree as domDoc (see there) object.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBsetResultEncoding\fP
+\&\fR
+.RS
+.PP
+See the method \fBsetResultEncoding\fR of the
+\&\fBdom\fP command.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBsetStoreLineColumn\fP ?\fIboolean\fB?
+\&\fR
+.RS
+.PP
+See the method \fBsetStoreLineColumn\fR of the
+\&\fBdom\fP command.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBremove\fP
+\&\fR
+.RS
+.PP
+Removes the tdom C handler set from the parser
+object.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBkeepEmpties\fP
+\&\fR
+.RS
+.PP
+See the option \fB-keepEmpties\fR of the \fBdom\fP command.
+.RE
+.TP
+\&\fB\fBtdom\fP \fIparserObj\fB \fBsetExternalEntityResolver\fP \fIscript\fB
+\&\fR
+.SH "SEE ALSO"
+dom, expat
+.SH KEYWORDS
+DOM, SAX, C handler set

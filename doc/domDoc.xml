@@ -1,0 +1,136 @@
+<manpage id="domDoc" cat="cmd" title="domDoc">
+  <namesection>
+    <name>domDoc</name>
+    <desc>Manipulates an instance of a DOM document object</desc>
+  </namesection>
+  <!--
+  
+  Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
+  
+  See the file "LICENSE" for information on usage and redistribution
+  of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+  
+  -->
+  <synopsis>
+    <syntax><cmd>domDocObjCmd</cmd> <m>method</m> ?<m>arg arg ...</m>?</syntax>
+  </synopsis>
+
+  <section>
+    <title>DESCRIPTION </title>
+
+    <p>This command manipulates one particular instance of a document
+object. <m>method</m> indicates a specific method of the document class. These
+methods should closely conform to the W3C recommendation "Document Object Model
+(Core) Level 1" (<ref
+href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</ref>). Look
+at these documents for a deeper understanding of the functionality.</p>
+
+      <p>The valid methods are:</p>
+
+      <commandlist>
+        <commanddef>
+          <command><method>documentElement</method> ?<m>objVar</m>?</command>
+
+          <desc><p>Returns the top most element in the document (the root
+element).</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>getElementsByTagName</method> <m>name</m></command>
+
+          <desc><p> Returns a list of all elements in the document matching
+(glob style) <m>name</m>.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createElement</method> <m>tagName</m> ?<m>objVar</m>?</command>
+
+          <desc><p> Creates (allocates) a new element node with node name
+<m>tagName</m>, append it to the hidden fragment list in the document
+object and returns the node object.  If <m>objVar</m> is given the new
+node object store in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createElementNS</method> <m>url</m> <m>tagName</m> ?<m>objVar</m>?</command>
+
+          <desc><p>Creates (allocates) a new element node within a namespace
+having <m>uri</m> as the URI and node name <m>tagName</m>, which
+could include the namespace prefix, append it to the hidden fragment list in
+the document object and returns the node object.  If <m>objVar</m> is
+given the new node object store in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createTextNode</method> <m>text</m> ?<m>objVar</m>?</command>
+
+          <desc><p> Creates (allocates) a new text node with node value
+<m>text</m>, appends it to the hidden fragment list in the document
+object and returns the node object.  If <m>objVar</m> is given, the new
+node object is stored in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createComment</method> <m>text</m> ?<m>objVar</m>?</command>
+
+          <desc><p> Creates (allocates) a new comment node with value
+<m>text</m>, appends it to the hidden fragment list in the document
+object and returns the node object.  If <m>objVar</m> is given, the new
+comment node object is stored in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createCDATASection</method> <m>data</m> ?<m>objVar</m>?</command>
+
+          <desc><p> Creates (allocates) a new CDATA node with node value
+<m>data</m>, appends it to the hidden fragment list in the document
+object and returns the node object.  If <m>objVar</m> is given, the new
+node object is stored in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>createProcessingInstruction</method> <m>target</m> <m>data</m> ?<m>objVar</m>?</command>
+
+          <desc><p> Creates a process instruction, appends it to the hidden
+fragment list in the document object and returns the node object.  If
+<m>objVar</m> is given, the new node object is stored in this variable.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>delete</method></command>
+
+          <desc><p> Explicitly deletes the document, including the associated
+Tcl object commands (for nodes, fragment/new nodes, the document object itself)
+and the underlying DOM tree.</p></desc>
+        </commanddef>
+
+        <commanddef>
+          <command><method>getDefaultOutputMethod</method></command>
+
+          <desc><p> Returns the default output method of the document. This is
+usually a result of a XSLT transformation.</p></desc>
+        </commanddef>
+      </commandlist>
+
+      <p>Otherwise, if an unknown method name is given, the command with the
+same name as the given metho within the namespace <samp>::dom::domDoc</samp> is
+tried to be executed. This allows quick method additions on Tcl level.</p>
+
+      <p>Newly created nodes are appended to a hidden fragment list. If there
+are not moved into the tree they are automaticaly deleted, when the whole
+document gets deleted.</p>
+
+    </section>
+
+    <seealso>
+      <ref>dom</ref>
+      <ref>domNode</ref>
+    </seealso>
+
+    <keywords>
+      <keyword>DOM node creation</keyword>
+      <keyword>document element</keyword>
+    </keywords>
+
+</manpage>
+

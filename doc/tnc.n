@@ -1,0 +1,56 @@
+'\"
+'\" Generated from tnc.xml
+'\"
+.so man.macros
+.TH tnc n "" Tcl ""
+.BS
+.SH NAME
+tnc \- tnc is an expat parser object extension, that validates the XML
+stream according the document DTD while parsing.
+.SH SYNOPSIS
+.nf
+package require tdom
+package require tnc
+
+set parser [expat]
+
+tnc $parser enable
+.fi
+.BE
+.SH DESCRIPTION
+.PP
+\&\fItnc\fR adds the C handler set "tnc" to an tcl expat parser
+obj. This handler set is a simple DTD validator. If the validator detects the
+first validation error, it sets the interp result, signals error and stops
+parsing. There isn't any validation error recovering. As a consequence, only
+valid documents are completely parsed.
+.PP
+This handler set has only two methods:
+.TP
+\&\fB\fBtnc\fP \fIparserObj\fB \fBenable\fP
+\&\fR
+.RS
+.PP
+Adds the tnc C handler set to a Tcl expat parser object.
+.RE
+.TP
+\&\fB\fBtnc\fP \fIparserObj\fB \fBremove\fP
+\&\fR
+.SH BUGS
+.PP
+The validation error reports could be much more informative and
+user-friendly.
+.PP
+The validator doesn't detect ambiguous content models (see XML
+recomendation Section 3.2.1 and Appendix E). Some Java validators also doesn't,
+but handle such content models right anyhow. Tnc does not; if your DTD has
+such ambiguous content models, tnc can not used to validate documents against
+such (not completely XML spec compliant) DTDs.
+.PP
+There are a few bugs (two that I'm aware of, a third one is somehow
+fixed in the expat sources used by tDOM) in the underlying expat parser, that
+results either in "not well-formed" errors, although the document is
+well-formed or in passing the parsing step silently, although the document
+isn't well-formed in some rarely cases.
+.SH KEYWORDS
+Validation
