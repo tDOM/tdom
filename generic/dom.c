@@ -1654,7 +1654,6 @@ domCreateXMLNamespaceNode (
     attr->parentNode    = parent;
     attr->valueLength   = strlen (XML_NAMESPACE);
     attr->nodeValue     = XML_NAMESPACE;
-    MutationEvent();
     return attr;
 }
 #endif /* TDOM_NS */
