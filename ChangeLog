@@ -10,6 +10,10 @@
 	* unix/CONFIG: new file. Adds some examples how to build
 	  the extension on some common Unix platforms.
 
+	* mac: added Bernard CodeWarrior files for Mac builds.
+	* macosx: added directory where we will supply the ProjectBuilder
+	  files (hopefully :)
+
 2003-03-03  Rolf Ade  <rolf@pointsman.de>
 
         * tests/dom.test    
