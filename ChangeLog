@@ -1,3 +1,8 @@
+2004-09-29  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Added the with 0.8 added doc methods to
+          the doc_usage.    
+
 2004-09-21  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domDoc.*: Add documentation for 'selectNodes' method.
