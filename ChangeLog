@@ -1,3 +1,10 @@
+2003-08-06  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/all.tcl
+        * tests/domCmd.test: Added contraint need_uri, so that the few
+          tests, which needs the tcllib uri package are skipped, if
+          the uri package isn't present.
+
 2003-07-06  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tclexpat.c: Fixed bug in the subtree skipping
