@@ -128,7 +128,7 @@ typedef enum {
     a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version,
     a_excludeResultPrefixes, a_extensionElementPrefixes,
     a_stylesheetPrefix, a_resultPrefix, a_indent, a_omitXMLDeclaration,
-    a_standalone
+    a_standalone, a_cdataSectionElements
 
 } xsltAttr;
 
@@ -1750,7 +1750,6 @@ static void nsAddNode (
     }
 }
 
-
 static int buildKeyInfoForDoc (
     xsltSubDoc     *sd,
     char           *keyId,
@@ -1761,7 +1760,7 @@ static int buildKeyInfoForDoc (
 {
     int             hnew, rc, docOrder, i;
     char           *useValue;
-    domNode        *node;
+    domNode        *node, *savedCurrent;
     xpathResultSet  rs, context;
     Tcl_HashTable  *valueTable;
     Tcl_HashEntry  *h;
@@ -1778,6 +1777,7 @@ static int buildKeyInfoForDoc (
     Tcl_InitHashTable (valueTable, TCL_STRING_KEYS);
     Tcl_SetHashValue (h, valueTable);
 
+    savedCurrent = xs->current;
     node = sd->doc->rootNode;
     while (node) {
         kinfo = kinfoStart;
@@ -1795,6 +1795,7 @@ static int buildKeyInfoForDoc (
                 rsAddNode (&context, node);
                 DBG(printXML(node, 0, 2);)
                 docOrder = 1;
+                xs->current = node;
                 rc = xpathEvalSteps (kinfo->useAst, &context, node, 
                                      kinfo->node, 0, &docOrder, &(xs->cbs),
                                      &rs, errMsg);
@@ -1866,6 +1867,7 @@ static int buildKeyInfoForDoc (
             break;
         }
     }
+    xs->current = savedCurrent;
     return 0;
 }
 
@@ -2417,6 +2419,7 @@ static int evalXPath (
 {
     int rc, hnew, docOrder = 1;
     ast t;
+    domNode *savedCurrent;
     Tcl_HashEntry *h;
 
     h = Tcl_CreateHashEntry (&(xs->xpaths), xpath, &hnew);
@@ -2435,8 +2438,11 @@ static int evalXPath (
 
     DBG(fprintf (stderr, "evalXPath evaluating xpath:\n");)
     DBG(printAst(3,t);)
+    savedCurrent = xs->current;
+    xs->current = currentNode;
     rc = xpathEvalSteps( t, context, currentNode, xs->currentXSLTNode,
                          currentPos, &docOrder, &(xs->cbs), rs, errMsg);
+    xs->current = savedCurrent;
     if (rc != XPATH_OK) {
         reportError (xs->currentXSLTNode, *errMsg, errMsg);
         xpathRSFree( rs );
@@ -2689,18 +2695,15 @@ static int xsltSetVar (
     int              rc;
     xpathResultSet   rs;
     xsltVarFrame    *tmpFrame = NULL;
-    domNode         *fragmentNode, *savedLastNode, *savedCurrent;
+    domNode         *fragmentNode, *savedLastNode;
     char             prefix[MAX_PREFIX_LEN], *localName;
     domNS           *ns;
 
     TRACE1("xsltSetVar variableName='%s' \n", variableName);
     if (select!=NULL) {
         TRACE2("xsltSetVar variableName='%s' select='%s'\n", variableName, select);
-        savedCurrent = xs->current;
-        xs->current = currentNode;
         rc = evalXPath (xs, context, currentNode, currentPos, select, &rs,
                         errMsg);
-        xs->current = savedCurrent;
         CHECK_RC;
     } else {
         if (!actionNode->firstChild) {
@@ -3292,7 +3295,6 @@ static int evalAttrTemplates (
 
                 *str = '\0';
                 TRACE1("attrTpl: '%s' \n", tplStart);
-                xs->current = currentNode;
                 rc = evalXPath (xs, context, currentNode, currentPos,
                                 tplStart, &rs, errMsg);
                 *str = '}';
@@ -3420,7 +3422,7 @@ static int doSortActions (
     char           ** errMsg
 )
 {
-    domNode       *child, *savedCurrentNode;
+    domNode       *child;
     char          *str, *evStr, *select, *lang;
     char         **vs = NULL;
     char          *localName, prefix[MAX_PREFIX_LEN];
@@ -3517,10 +3519,8 @@ static int doSortActions (
                     vd = (double *)MALLOC(sizeof (double) * nodelist->nr_nodes);
                     for (i=0; i<nodelist->nr_nodes;i++) vd[i] = 0.0;
                 }
-                savedCurrentNode = xs->current;
                 for (i = 0; i < nodelist->nr_nodes; i++) {
                     xpathRSInit (&rs);
-                    xs->current = nodelist->nodes[i];
                     rc = evalXPath (xs, nodelist, nodelist->nodes[i], i,
                                     select, &rs, errMsg);
                     if (rc < 0)
@@ -3533,7 +3533,6 @@ static int doSortActions (
                     }
                     xpathRSFree (&rs);
                 }
-                xs->current = savedCurrentNode;
                 rc = sortNodeSetFastMerge (typeText, ascending, upperFirst,
                                            nodelist->nodes, nodelist->nr_nodes,
                                            vs, vd, pos, errMsg);
@@ -3617,7 +3616,6 @@ static int xsltNumber (
     
     if (value) {
         TRACE2("xsltNumber value='%s' format='%s' \n", value, format);
-        xs->current = currentNode;
         rc = evalXPath(xs, context, currentNode, currentPos,
                        value, &rs, errMsg);
         if (rc < 0) goto xsltNumberError;
@@ -4124,7 +4122,6 @@ static int ExecAction (
                 rsAddNodeFast( &nodeList, currentNode );
                 DBG(rsPrint( &nodeList ));
                 TRACE2("applyTemplates: select = '%s' mode='%s'\n", select, mode);
-                xs->current = currentNode;
                 rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
                 xpathRSFree( &nodeList );
                 CHECK_RC;
@@ -4352,7 +4349,6 @@ static int ExecAction (
                         str = getAttr(child, "test", a_test);
                         if (str) {
                             TRACE1("checking when test '%s' \n", str);
-                            xs->current = currentNode;
                             rc = evalXPath(xs, context, currentNode, 
                                            currentPos, str, &rs, errMsg);
                             CHECK_RC;
@@ -4478,6 +4474,13 @@ static int ExecAction (
                         CHECK_RC;
                     }
                 }
+                /* process the children only for root and element nodes */
+                xsltPushVarFrame (xs);
+                rc = ExecActions(xs, context, currentNode, currentPos,
+                                 actionNode->firstChild, errMsg);
+                xsltPopVarFrame (xs);
+                CHECK_RC;
+                xs->lastNode = savedLastNode;
             } else
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
                 pi = (domProcessingInstructionNode*)currentNode;
@@ -4516,16 +4519,6 @@ static int ExecAction (
                                    attr->nodeValue,
                                    domNamespaceURI (currentNode), 1);
             }
-
-            /* process the children only for root and element nodes */
-            if (currentNode->nodeType == ELEMENT_NODE) {
-                xsltPushVarFrame (xs);
-                rc = ExecActions(xs, context, currentNode, currentPos,
-                                 actionNode->firstChild, errMsg);
-                xsltPopVarFrame (xs);
-                CHECK_RC;
-                xs->lastNode = savedLastNode;
-            }
             break;
 
         case copyOf:
@@ -4541,7 +4534,6 @@ static int ExecAction (
                 return -1;
             }
 
-            xs->current = currentNode;
             rc = evalXPath(xs, context, currentNode, currentPos, select,
                            &rs, errMsg);
             CHECK_RC;
@@ -4710,7 +4702,6 @@ static int ExecAction (
             xpathRSInit( &nodeList );
             rsAddNodeFast( &nodeList, currentNode );
             DBG(rsPrint( &nodeList ));
-            xs->current = currentNode;
             rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
             xpathRSFree (&nodeList);
             if (rc < 0) {
@@ -4767,7 +4758,6 @@ static int ExecAction (
         case xsltIf:
             str = getAttr(actionNode, "test", a_test);
             if (str) {
-                xs->current = currentNode;
                 rc = evalXPath(xs, context, currentNode, currentPos, str,
                                &rs, errMsg);
                 CHECK_RC;
@@ -4974,7 +4964,6 @@ static int ExecAction (
             str = getAttr(actionNode, "select", a_select);
             if (str) {
                 TRACE1("valueOf: str='%s' \n", str);
-                xs->current = currentNode;
                 rc = evalXPath(xs, context, currentNode, currentPos, str,
                                &rs, errMsg);
                 CHECK_RC;
@@ -5599,6 +5588,76 @@ static int fillElementList (
     return 1;
 }
 
+/*----------------------------------------------------------------------------
+|   getCdataSectionElements
+|
+\---------------------------------------------------------------------------*/
+static int
+getCdataSectionElements (
+    domNode        * node,
+    char           * qnameList,
+    Tcl_HashTable  * HashTable,
+    char          ** errMsg
+    )
+{
+    char *pc, *start, save, *localName, prefix[MAX_PREFIX_LEN];
+    int hnew;
+    Tcl_HashEntry *h;
+
+    Tcl_DString dStr;
+    domNS  *ns;
+
+    Tcl_DStringInit (&dStr);
+    pc = qnameList;
+    while (*pc) {
+        while (*pc && IS_XML_WHITESPACE(*pc)) pc++;
+        if (*pc == '\0') break;
+        start = pc;
+        while (*pc && !IS_XML_WHITESPACE(*pc)) pc++;
+        save = *pc;
+        *pc = '\0';
+        domSplitQName (start, prefix, &localName);
+        if (prefix[0] != '\0') {
+            if (!domIsNCNAME (prefix)) {
+                Tcl_DStringSetLength (&dStr, 0);
+                Tcl_DStringAppend (&dStr, "Invalid prefix '", -1);
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                Tcl_DStringAppend (&dStr, "'.", 2);
+                reportError (node, Tcl_DStringValue (&dStr), errMsg);
+                Tcl_DStringFree (&dStr);
+                return 0;
+            }
+            ns = domLookupPrefix (node, prefix);
+            if (!ns) {
+                Tcl_DStringSetLength (&dStr, 0);
+                Tcl_DStringAppend (&dStr, "There isn't a namespace bound to"
+                                   " the prefix '", -1);
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                Tcl_DStringAppend (&dStr, "'.", 2);
+                reportError (node, Tcl_DStringValue (&dStr), errMsg);
+                Tcl_DStringFree (&dStr);
+                return 0;
+            }
+            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+        }
+        if (!domIsNCNAME (localName)) {
+            Tcl_DStringSetLength (&dStr, 0);
+            Tcl_DStringAppend (&dStr, "Invalid name '", -1);
+            Tcl_DStringAppend (&dStr, prefix, -1);
+            Tcl_DStringAppend (&dStr, "'.", 2);
+            reportError (node, Tcl_DStringValue (&dStr), errMsg);
+            Tcl_DStringFree (&dStr);
+            return 0;
+        }
+        Tcl_DStringAppend (&dStr, localName, -1);
+        h = Tcl_CreateHashEntry (HashTable, Tcl_DStringValue (&dStr), &hnew);
+        Tcl_DStringSetLength (&dStr, 0);
+        *pc = save;
+    }
+    return 1;
+}
+        
 /*----------------------------------------------------------------------------
 |   StripXSLTSpace
 |
@@ -6638,37 +6697,6 @@ static int processTopLevel (
                     if (xs->doctype.encoding) FREE(xs->doctype.encoding);
                     xs->doctype.encoding  = tdomstrdup(str);
                 }
-                str = getAttr(node, "media-type", a_mediaType);
-                if (str) { 
-                    if (xs->doctype.mediaType) FREE(xs->doctype.mediaType);
-                    xs->doctype.mediaType = tdomstrdup(str); 
-                }
-                str = getAttr(node, "doctype-public", a_doctypePublic);
-                if (str) {
-                    if (xs->doctype.publicId) {
-                        FREE ((char*) xs->doctype.publicId);
-                    }
-                    xs->doctype.publicId = tdomstrdup(str);
-                }
-                str = getAttr(node, "doctype-system", a_doctypeSystem);
-                if (str) {
-                    if (xs->doctype.systemId) {
-                        FREE ((char*) xs->doctype.systemId);
-                    }
-                    xs->doctype.systemId = tdomstrdup(str);
-                }
-                str = getAttr(node, "indent", a_indent);
-                if (str) {
-                    if (strcmp (str, "yes") == 0) {
-                        xs->indentOutput = 1;
-                    } else if (strcmp (str, "no") == 0) {
-                        xs->indentOutput = 0;
-                    } else {
-                        reportError (node, "Unexpected value for 'indent'"
-                                     " attribute.", errMsg);
-                        return -1;
-                    }
-                }
                 str = getAttr(node, "omit-xml-declaration", 
                               a_omitXMLDeclaration);
                 if (str) {
@@ -6694,6 +6722,51 @@ static int processTopLevel (
                                      " attribute", errMsg);
                         return -1;
                     }
+                }
+                str = getAttr(node, "doctype-public", a_doctypePublic);
+                if (str) {
+                    if (xs->doctype.publicId) {
+                        FREE ((char*) xs->doctype.publicId);
+                    }
+                    xs->doctype.publicId = tdomstrdup(str);
+                }
+                str = getAttr(node, "doctype-system", a_doctypeSystem);
+                if (str) {
+                    if (xs->doctype.systemId) {
+                        FREE ((char*) xs->doctype.systemId);
+                    }
+                    xs->doctype.systemId = tdomstrdup(str);
+                }
+                str = getAttr(node, "cdata-section-elements", 
+                              a_cdataSectionElements);
+                if (str) {
+                    if (!xs->doctype.cdataSectionElements) {
+                        xs->doctype.cdataSectionElements = 
+                            MALLOC (sizeof (Tcl_HashTable));
+                        Tcl_InitHashTable (xs->doctype.cdataSectionElements,
+                                           TCL_STRING_KEYS);
+                    }
+                    if (!getCdataSectionElements (node, str,
+                            xs->doctype.cdataSectionElements, errMsg)) {
+                        return -1;
+                    }
+                }
+                str = getAttr(node, "indent", a_indent);
+                if (str) {
+                    if (strcmp (str, "yes") == 0) {
+                        xs->indentOutput = 1;
+                    } else if (strcmp (str, "no") == 0) {
+                        xs->indentOutput = 0;
+                    } else {
+                        reportError (node, "Unexpected value for 'indent'"
+                                     " attribute.", errMsg);
+                        return -1;
+                    }
+                }
+                str = getAttr(node, "media-type", a_mediaType);
+                if (str) { 
+                    if (xs->doctype.mediaType) FREE(xs->doctype.mediaType);
+                    xs->doctype.mediaType = tdomstrdup(str); 
                 }
                 break;
 
@@ -6865,6 +6938,10 @@ xsltFreeState (
     if (xs->doctype.systemId) FREE(xs->doctype.systemId);
     if (xs->doctype.publicId) FREE(xs->doctype.publicId);
     if (xs->doctype.internalSubset) FREE(xs->doctype.internalSubset);
+    if (xs->doctype.cdataSectionElements) {
+        Tcl_DeleteHashTable (xs->doctype.cdataSectionElements);
+        FREE (xs->doctype.cdataSectionElements);
+    }
     for (entryPtr = Tcl_FirstHashEntry (&xs->namedTemplates, &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
@@ -7305,10 +7382,12 @@ int xsltProcess (
 {
     xpathResultSet  nodeList;
     domNode        *node;
-    int             rc;
+    int             rc, hnew;
     char           *baseURI;
     xsltState      *xs;
     xsltSubDoc     *sdoc;
+    Tcl_HashEntry  *entryPtr;
+    Tcl_HashSearch  search;
 
     *errMsg = NULL;
     if (xsltCmdData) {
@@ -7369,7 +7448,25 @@ int xsltProcess (
     if (xs->indentOutput) {
         xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_INDENT;
     }
-    
+    if (xs->doctype.cdataSectionElements) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
+        }
+        xs->resultDoc->doctype->cdataSectionElements =
+            MALLOC (sizeof (Tcl_HashTable));
+        Tcl_InitHashTable (xs->resultDoc->doctype->cdataSectionElements,
+                           TCL_STRING_KEYS);
+        for (entryPtr = Tcl_FirstHashEntry (xs->doctype.cdataSectionElements,
+                                            &search);
+             entryPtr != (Tcl_HashEntry*) NULL;
+             entryPtr = Tcl_NextHashEntry (&search)) {
+            Tcl_CreateHashEntry (xs->resultDoc->doctype->cdataSectionElements,
+                                 Tcl_GetHashKey (
+                                     xs->doctype.cdataSectionElements, entryPtr
+                                     ), &hnew);
+        }
+    }
     
     xs->xmlRootNode         = xmlNode;
     xs->lastNode            = xs->resultDoc->rootNode;
