@@ -36,6 +36,10 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.13  2002/04/08 03:43:04  rolf
+|   Optimation: re-initialize current var frame in ApplyTemplates() loop
+|   only if necessary (i.e. if the applied template has "populated" it).
+|
 |   Revision 1.12  2002/04/08 02:01:56  rolf
 |   Added optional -parameters option to domNode xslt method, to enable
 |   setting of top level parameters from tcl level.
@@ -287,6 +291,7 @@ typedef struct xsltVariable {
 typedef struct xsltVarFrame {
 
     xsltVariable        * vars;
+    int                   polluted;
     struct xsltVarFrame * next;
         
 } xsltVarFrame;
@@ -701,6 +706,7 @@ static void xsltPushVarFrame (
     
     currentFrame = (xsltVarFrame*) malloc(sizeof(xsltVarFrame));
     currentFrame->vars = NULL;
+    currentFrame->polluted = 0;
     currentFrame->next = xs->varFrames;
 
     xs->varFrames = currentFrame;
@@ -2129,6 +2135,7 @@ static int xsltSetVar (
         var->name = strdup(variableName);
         var->next = xs->varFrames->vars;
         tmpFrame->vars = var;
+        tmpFrame->polluted = 1;
 /*          xs->varFrames->vars = var;         */
     }        
     var->select = select;
@@ -3912,18 +3919,27 @@ int ApplyTemplates (
 )
 {
     domNode  * savedLastNode;
-    int        i, rc;
+    int        i, rc, needNewVarFrame = 1;
         
     if (nodeList->type == xNodeSetResult) {
         savedLastNode = xs->lastNode;
         for (i=0; i < nodeList->nr_nodes; i++) {
-            xsltPushVarFrame (xs);
-            rc = setParamVars (xs, context, currentNode, currentPos,
-                               actionNode, errMsg);
-            CHECK_RC;
+            if (needNewVarFrame) {
+                xsltPushVarFrame (xs);
+                rc = setParamVars (xs, context, currentNode, currentPos,
+                                   actionNode, errMsg);
+                CHECK_RC;
+                xs->varFrames->polluted = 0;
+            }
             rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode, i, 
                                 mode, errMsg);
             CHECK_RC;
+            if (xs->varFrames->polluted) {
+                xsltPopVarFrame (xs);
+                needNewVarFrame = 1;
+            } else needNewVarFrame = 0;
+        }
+        if (!needNewVarFrame) {
             xsltPopVarFrame (xs);
         }
         xs->lastNode = savedLastNode;            
