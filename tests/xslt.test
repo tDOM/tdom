@@ -71,6 +71,25 @@ test xslt-1.3 {xpath parse real number} {
     $resultDoc delete
     set result
 } {-0.12345}
+
+test xslt-1.4 {pattern IsFQElement with FillNodeList} {
+     set xml [dom parse {<m:elem xmlns:m="foo"/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:m="foo"
+  version="1.0">
+
+    <xsl:template match="m:elem[1]">
+      <out><xsl:value-of select="name(.)"/></out>
+    </xsl:template>
+</xsl:stylesheet>}]
+    $xml xslt $xslt resultDoc
+    set result [$resultDoc asXML -indent none]
+    $xslt delete
+    $xml delete
+    $resultDoc delete
+    set result
+} {<out xmlns:m="foo">m:elem</out>}
      
 test xslt-2.1 {xslt top level parameter: use default value} {
     set xml [dom parse {<root/>}]
