@@ -25,6 +25,11 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
+|   Revision 1.6  2002/07/10 03:19:21  zoran
+|   Reset interp result in nodecmd_appendFromScript to leave the clean object
+|   rep because tcldom.c SetResult and friends macros fail to check the
+|   object found in interp result for being shared (or not)
+|
 |   Revision 1.5  2002/07/02 19:25:07  zoran
 |   Fixed references to CONS'ified Tcl API (8.4 and later)
 |   Also, fixed (disappeared) NODE_NO references which broke the
@@ -447,6 +452,7 @@ nodecmd_appendFromScript (interp, node, cmdObj)
     StackPush((void *)node);
     Tcl_AllowExceptions(interp);
     ret = Tcl_EvalObj(interp, cmdObj);
+    Tcl_ResetResult(interp);
     StackPop();
 
     return (ret == TCL_BREAK) ? TCL_OK : ret;
