@@ -49,7 +49,7 @@ set root     [$document documentElement]</example>
       <p>parses the XML in the variable xml, creates the DOM tree in memory,
 make a reference to the document object, visible in Tcl as a document object
 command, and returns this new object name, which is then stored in
-<samp>document</samp>.  To free the underlying DOM tree and the associative Tcl
+<m>document</m>.  To free the underlying DOM tree and the associative Tcl
 object commands (document + nodes + fragment nodes) the document object command
 has to be explicitly deleted by:</p>
 
@@ -173,27 +173,27 @@ their XML declaration.</desc>
           <command><cmd>dom</cmd> <method>createDocument</method>
 <m>docElemName</m> ?<m>objVar</m>?</command>
           <desc>Creates a new DOM document object with one element node with
-node name <samp>docElemName</samp>. The <samp>objVar</samp> controlls the
+node name <m>docElemName</m>. The <m>objVar</m> controlls the
 memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>createDocumentNS</method>
-<m>docElemName</m> <m>uri</m> ?<m>objVar</m>?</command>
+<m>uri</m> <m>docElemName</m> ?<m>objVar</m>?</command>
           <desc>Creates a new DOM document object with one element node with
-node name <samp>docElemName</samp>. <samp>Uri</samp> gives the namespace of the
-document element to create. The <samp>objVar</samp> controlls the
+node name <m>docElemName</m>. <m>Uri</m> gives the namespace of the
+document element to create. The <m>objVar</m> controlls the
 memory handling as explained above.</desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>setResultEncoding</method> ?<m>encodingName</m>?</command>
-          <desc>If <samp>encodingName</samp> is not given the current global
+          <desc>If <m>encodingName</m> is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
-<samp>encodingName</samp>.  All character data, attribute values, etc. will
+<m>encodingName</m>.  All character data, attribute values, etc. will
 then be converted from UTF-8, which is delivered from the Expat XML parser, to
 the given 8 bit encoding at XML/DOM parse time.  Valid values for
-<samp>encodingName</samp> are: utf-8, ascii, cp1250, cp1251, cp1252, cp1253,
+<m>encodingName</m> are: utf-8, ascii, cp1250, cp1251, cp1252, cp1253,
 cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
 iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</desc>
         </commanddef>
