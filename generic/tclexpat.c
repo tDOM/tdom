@@ -1476,40 +1476,34 @@ TclExpatGet (interp, expat, objc, objv)
     case EXPAT_SPECIFIEDATTRCOUNT:
 
       Tcl_SetIntObj(resultPtr, XML_GetSpecifiedAttributeCount(expat->parser));
-      return TCL_OK;
       break;
 
     case EXPAT_CURRENTBYTECOUNT:
 
       Tcl_SetIntObj(resultPtr, XML_GetCurrentByteCount(expat->parser));
-      return TCL_OK;
       break;
 
     case EXPAT_CURRENTLINENUMBER:
 
       Tcl_SetIntObj(resultPtr, XML_GetCurrentLineNumber(expat->parser));
-      return TCL_OK;
       break;
 
     case EXPAT_CURRENTCOLUMNNUMBER:
 
       Tcl_SetIntObj(resultPtr, XML_GetCurrentColumnNumber(expat->parser));
-      return TCL_OK;
       break;
 
     case EXPAT_CURRENTBYTEINDEX:
 
       Tcl_SetLongObj(resultPtr, XML_GetCurrentByteIndex(expat->parser));
-      return TCL_OK;
       break;
 
     default:
 
       return TCL_ERROR;
-      break;
   }
 
-  return TCL_ERROR;
+  return TCL_OK;
 }
 
 
@@ -2564,9 +2558,6 @@ TclGenExpatUnknownEncodingHandler(encodingHandlerData, name, info)
      XML_Encoding *info;
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) encodingHandlerData;
-  Tcl_Obj *cmdPtr;
-  int result;
-  TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
 
   TclExpatDispatchPCDATA(expat);
@@ -2575,44 +2566,9 @@ TclGenExpatUnknownEncodingHandler(encodingHandlerData, name, info)
       return 0;
   }
 
-  activeTclHandlerSet = expat->firstTclHandlerSet;
-  while (activeTclHandlerSet) {
-
+  if (expat->firstTclHandlerSet) {
       Tcl_SetResult(expat->interp, "not implemented", NULL);
       return 0;
-
-      if (activeTclHandlerSet->unknownencodingcommand == NULL) {
-          goto nextTcl;
-      }
-
-      /*
-       * Take a copy of the callback script so that arguments may be appended.
-       */
-
-      cmdPtr = Tcl_DuplicateObj(activeTclHandlerSet->unknownencodingcommand);
-      Tcl_IncrRefCount(cmdPtr);
-      Tcl_Preserve((ClientData) expat->interp);
-
-      /*
-       * Setup the arguments
-       */
-
-      /*
-       * It would be desirable to be able to terminate parsing
-       * if the return result is TCL_ERROR or TCL_BREAK.
-       */
-#if (TCL_MAJOR_VERSION == 8)
-      result = Tcl_GlobalEvalObj(expat->interp, cmdPtr);
-#else
-      result = Tcl_EvalObj(expat->interp, cmdPtr, TCL_EVAL_GLOBAL);
-#endif /* if TCL_MAJOR_VERSION == 8 */
-
-      Tcl_DecrRefCount(cmdPtr);
-      Tcl_Release((ClientData) expat->interp);
-
-      TclExpatHandlerResult(expat, activeTclHandlerSet, result);
-  nextTcl:
-      activeTclHandlerSet = activeTclHandlerSet->nextHandlerSet;
   }
 
   activeCHandlerSet = expat->firstCHandlerSet;
