@@ -109,18 +109,23 @@ usually a result of a XSLT transformation.</desc>
         </commanddef>
 
       <commanddef>
-        <command><method>asXML</method> <option>?-indent none/1..8?</option>
-<option>?-channel channelId?</option> <option>?-escapeNonASCII?</option></command>
+        <command><method>asXML</method> <option>?-indent none/1..8?</option> <option>?-channel channelId?</option> <option>?-escapeNonASCII?</option> <option>-doctypeDeclaration &lt;boolean&gt;</option></command>
         <desc>Returns the DOM tree as an (optional indented) XML string or
 sends the output directly to the given channelId. If the option
 <m>-escapeNonASCII</m> is given, every non 7 bit ASCII character in attribute
 values or element PCDATA content will be escaped as character reference in
-decimal representation.</desc>
+decimal representation. The flag <m>-doctypeDeclaration</m> determines, whether
+there will be a DOCTYPE declaration emitted before the first node of the
+document. The default is, to do not. The DOCTYPE name will always be the
+element name of the document element. An external entity declaration of the
+external subset is only emitted, if the document has a system identifier.
+</desc>
+
       </commanddef>
 
       <commanddef>
         <command><method>asHTML</method> <option>?-channel
-channelId?</option> <option>?-escapeNonASCII?</option> <option>?-htmlEntities?</option></command> 
+channelId?</option> <option>?-escapeNonASCII?</option> <option>?-htmlEntities?</option> <option>-doctypeDeclaration &lt;boolean&gt;</option></command> 
         <desc>Returns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
@@ -128,8 +133,41 @@ channelId. If the option <m>-escapeNonASCII</m> is given, every non 7 bit ASCII
 character in attribute values or element PCDATA content will be escaped as
 character reference in decimal representation. If the option
 <m>-htmlEntities</m> is given, a character is outputed using a HTML 4.01
-character entity reference, if one is defined for it.</desc>
+character entity reference, if one is defined for it. The flag
+<m>-doctypeDeclaration</m> determines, whether there will be a DOCTYPE
+declaration emitted before the first node of the document. The default is, to
+do not. The DOCTYPE name will always be the element name of the document
+element without case normalization. An external entity declaration of the
+external subset is only emitted, if the document has a system identifier. The
+doctype declaration will be written from the avaliable informations, without
+check, if this is a known (w3c) HTML version information or if the document
+confirms to the given HTML version.</desc>
       </commanddef>
+
+      <commanddef>
+        <command><method>publicId</method> <m>?publicId?</m></command>
+        <desc>Returns the public identifier of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the public identifier of the document is set to this
+value.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>systemId</method> <m>?systemId?</m></command>
+        <desc>Returns the system identifier of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the system identifier of the document is set to this
+value.</desc>
+      </commanddef>
+
+<!--      <commanddef>
+        <command><method>internalSubset</method>
+        <desc>Returns the internal subset of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the internal subset of the document is set to this
+value.</desc>
+        </command>
+      </commanddef> -->
 
       <commanddef>
         <command><method>xslt</method> <option>?-parameters
