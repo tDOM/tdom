@@ -339,6 +339,43 @@ test domDoc-3.6 {toXSLTcmd} {
     lappend result $errMsg
 } {1 {only one -parameters option allowed}}
 
+test domDoc-3.7 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd}]
+    $xsltCmd delete
+    set result
+} {1}
+
+test domDoc-3.8 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd delete bogus}]
+    $xsltCmd delete
+    set result 
+} {1}
+
+test domDoc-3.9 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+
+    set result [catch {$xsltCmd transform} errMsg]
+    $xsltCmd delete
+    set result
+} {1}
+
+test domDoc-3.10 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt1]
+    set xsltCmd [$xslt toXSLTcmd]
+    $xsltCmd transform $doc resultDoc              
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xsltCmd delete
+    set result
+} {param1Default param2Default param3Default }
+
 $doc delete
 
 test domDoc-4.1 {asText - syntax check} {
@@ -917,7 +954,7 @@ test domDoc-22.2 {appendFromScript} {
     $doc delete
     set result
 } {<root/><e1/><e2/> {} 1 {} 1 {} 1}
-    
+
 # cleanup
 ::tcltest::cleanupTests
 return

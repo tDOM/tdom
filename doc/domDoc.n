@@ -308,9 +308,9 @@ xsl:message has an attribute "terminate" with the value "yes".
 .TP
 \&\fB\fBtoXSLTcmd\fP ?\fIobjVar\fB?
 \&\fRIf the DOM tree represents a valid XSLT stylesheet, this method
-transforms the DOM tree into a xslt command, otherwise it returns error. The
+transforms the DOM tree into an xslt command, otherwise it returns error. The
 created xsltCmd is returnd and stored in the \fIobjVar\fR, if a var name was
-given. A successful transformation of the DOM tree to a xsltCmd removes the
+given. A successful transformation of the DOM tree to an xsltCmd removes the
 domDoc cmd and all nodeCmds of the document.
 .RS
 .PP
@@ -320,15 +320,43 @@ The syntax of the created xsltCmd is:
 
 .CS
 
-\&\fBxsltCmd\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIdocNode\fR \fI?outputVar?\fR
+\&\fBxsltCmd\fP \fBmethod\fP \fB?arg ...?\fP
 
 .CE
 .PP
-The options are the same as for the domDoc \fIxslt\fR method; see there for
-a description. The \fIdocNode\fR argument is the XML document to transform
-(given as domDoc). The command returns a document object containing the result
-document of the transformation and stores it in the optional \fIoutputVar\fR,
-if that was given.
+The valid methods are:
+.TP
+\&\fB\fBtransform\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIdomDoc\fB \fI?outputVar?\fB
+\&\fRApplies XSLT transformation on the document
+\&\fIdomDoc\fR. Returns a document object containing the
+result document of that transformation and stores it in the optional
+\&\fIoutputVar\fR.
+.RS
+.PP
+The optional \fI-parameters\fR option sets top level
+<xsl:param> to string values. The \fIparameterList\fR has to be a tcl
+list consisting of parameter name and value pairs.
+.PP
+If the option \fI-ignoreUndeclaredParameters\fR is given, then parameter
+names in the \fIparameterList\fR given to the \fI-parameters\fR options that
+are not declared as top-level parameters in the stylesheet are silently
+ignored. Without this option, an error is raised, if the user tries to set a
+top-level parameter, which is not declared in the stylesheet.
+.PP
+The \fI-xsltmessagecmd\fR option sets a callback for xslt:message elements
+in the stylesheet. The actual command consists of the script, given as argument
+to the option, appended with the XML Fragment from instantiating the
+xsl:message element content as string (as if the XPath string() function would
+have been applied to the XML Fragment) and a flag, which indicates, if the
+xsl:message has an attribute "terminate" with the value "yes".
+.RE
+.TP
+\&\fB\fBdelete\fP
+\&\fRDeletes the xsltCmd and cleans up all used recourses
+.PP
+If the first argument to an xsltCmd is a domDoc or starts with a "-",
+then the command is processed in the same way as
+\&\fI<xsltCmd> transform\fR.
 .RE
 .TP
 \&\fB\fBnormalize\fP \fI?-forXPath?\fB

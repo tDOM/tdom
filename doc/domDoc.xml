@@ -209,22 +209,58 @@ xsl:message has an attribute "terminate" with the value "yes".</p>
         <command><method>toXSLTcmd</method> ?<m>objVar</m>?</command>
      
         <desc>If the DOM tree represents a valid XSLT stylesheet, this method
-transforms the DOM tree into a xslt command, otherwise it returns error. The
+transforms the DOM tree into an xslt command, otherwise it returns error. The
 created xsltCmd is returnd and stored in the <m>objVar</m>, if a var name was
-given. A successful transformation of the DOM tree to a xsltCmd removes the
+given. A successful transformation of the DOM tree to an xsltCmd removes the
 domDoc cmd and all nodeCmds of the document. 
 
 <p>The syntax of the created xsltCmd is:</p>
  
 <syntax>
-<cmd>xsltCmd</cmd> <option>?-parameters parameterList?</option> <option>?-ignoreUndeclaredParameters?</option> <option>?-xsltmessagecmd script?</option> <m>docNode</m> <m>?outputVar?</m>
+<cmd>xsltCmd</cmd> <option>method</option> <option>?arg ...?</option>
 </syntax>
 
-<p>The options are the same as for the domDoc <m>xslt</m> method; see there for
-a description. The <m>docNode</m> argument is the XML document to transform
-(given as domDoc). The command returns a document object containing the result
-document of the transformation and stores it in the optional <m>outputVar</m>,
-if that was given.</p>
+<p>The valid methods are:</p>
+
+<commandlist>
+  <commanddef>
+    <command><method>transform</method> <option>?-parameters
+parameterList?</option> <option>?-ignoreUndeclaredParameters?</option>
+<option>?-xsltmessagecmd script?</option> <m>domDoc</m> <m>?outputVar?</m></command>          
+
+        <desc>Applies XSLT transformation on the document
+<m>domDoc</m>. Returns a document object containing the
+result document of that transformation and stores it in the optional
+<m>outputVar</m>. 
+
+<p>The optional <m>-parameters</m> option sets top level
+&lt;xsl:param&gt; to string values. The <m>parameterList</m> has to be a tcl
+list consisting of parameter name and value pairs.</p>
+
+<p>If the option <m>-ignoreUndeclaredParameters</m> is given, then parameter
+names in the <m>parameterList</m> given to the <m>-parameters</m> options that
+are not declared as top-level parameters in the stylesheet are silently
+ignored. Without this option, an error is raised, if the user tries to set a
+top-level parameter, which is not declared in the stylesheet.</p>
+
+<p>The <m>-xsltmessagecmd</m> option sets a callback for xslt:message elements
+in the stylesheet. The actual command consists of the script, given as argument
+to the option, appended with the XML Fragment from instantiating the
+xsl:message element content as string (as if the XPath string() function would
+have been applied to the XML Fragment) and a flag, which indicates, if the
+xsl:message has an attribute "terminate" with the value "yes".</p>
+</desc>
+      </commanddef>
+
+  <commanddef>
+    <command><method>delete</method></command>          
+    <desc>Deletes the xsltCmd and cleans up all used recourses</desc>
+  </commanddef>
+</commandlist>
+
+<p>If the first argument to an xsltCmd is a domDoc or starts with a "-",
+then the command is processed in the same way as 
+<m>&lt;xsltCmd&gt; transform</m>.</p>
  </desc>
       </commanddef>
 
