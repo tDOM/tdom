@@ -1,3 +1,9 @@
+2002-10-31  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c
+        * generic/domxpath.c
+        * generic/dom.c: Fixed mem leaks/possible invalid read
+    
 2002-10-30  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Added -escapeNonASCII and -htmlEntities
@@ -7,11 +13,11 @@
           features. Made more usable.    
 
         * apps/xslt.tcl: Updated to using domDoc xslt method,
-          -escapeNonASCII for asXML and as HTML and additionally
+          -escapeNonASCII for asXML and asHTML and additionally
           -htmlEntities for asHTML.
 
 	* generic/domxslt.c: Implemented "Forwards-Compatible
-          rocessing" (XSLT rec 2.5), with limitations: xsl:version
+          Processing" (XSLT rec 2.5), with limitations: xsl:version
           attributes on literal result elements are not
           supported. Fixed a bug in XPath func
           format-number(). XsltProcess now accepts also a
