@@ -391,6 +391,36 @@ appends this subtree at the end of the current list of top level nodes of the do
 \&\fRParses \fIXMLstring\fR, creates an according DOM subtree and
 appends this subtree at the end of the current list of top level nodes of the document.
 .TP
+\&\fB\fBselectNodes\fP \fB?-namespaces prefixUriList?\fP \fIxpathQuery\fB \fB?typeVar?\fP
+\&\fRReturns the result of applying the XPath query
+\&\fIxpathQuery\fR to the subtree. This can be a
+string/value, a list of strings, a list of nodes or a list
+of attribute name / value pairs. If \fItypeVar\fR is given
+the result type name is stored into that variable (empty,
+bool, number, string, nodes, attrnodes or mixed). The option
+\&\fI-namespaces\fR expects a tcl list with prefix /
+namespace pairs as argument. If this option is given, any
+namespace prefix within the xpath expression will be first
+resolved against this list. If this fails, then the
+namespace definitions in scope of the context node will be
+used to resolve the prefix, as usual.
+.RS
+.PP
+Examples:
+
+          
+.CS
+set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
+foreach paragraph $paragraphNodes {
+    lappend  values [$paragraph selectNodes attribute::type]
+}
+
+set doc [dom parse {<doc xmlns="http://www.defaultnamespace.org"><child/></doc>}]
+set root [$doc documentElement]
+set childNodes [$root selectNodes -namespaces {default http://www.defaultnamespace.org} default:child]
+.CE
+.RE
+.TP
 \&\fB\fBbaseURI \fI?URI?\fB\fP
 \&\fRReturns the present baseURI of the document. If the optional
 argument URI is given, sets the base URI of the document to the given URI.
@@ -401,10 +431,11 @@ Tcl functions, which have been built using \fIdom createNodeCmd\fR, at the end
 of the current list of top level nodes of the document.
 .TP
 \&\fB\fBinsertBeforeFromScript\fP \fItclScript\fB \fIrefChild\fB
-\&\fRInserts the nodes created in the \fItclScript\fR by
-Tcl functions, which have been built using \fIdom createNodeCmd\fR, before the
-\&\fIrefChild\fR into to the list of top level nodes of the document. If \fIrefChild\fR is
-the empty string, the new nodes will be appended.
+\&\fRInserts the nodes created in the \fItclScript\fR by Tcl
+functions, which have been built using \fIdom
+createNodeCmd\fR, before the \fIrefChild\fR into to the list
+of top level nodes of the document. If \fIrefChild\fR is the
+empty string, the new nodes will be appended.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is
