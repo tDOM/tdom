@@ -421,13 +421,9 @@ typedef unsigned int domAttrFlags;
 
 typedef unsigned int domDocFlags;
 
-#define OUTPUT_DEFAULT_XML        1
-#define OUTPUT_DEFAULT_HTML       2
-#define OUTPUT_DEFAULT_TEXT       4
-#define OUTPUT_DEFAULT_UNKNOWN    8
-#define USE_8_BIT_ENCODING       16
-#define NEEDS_RENUMBERING        32
-#define DONT_FREE                64
+#define OUTPUT_DEFAULT_INDENT     1
+#define NEEDS_RENUMBERING         2
+#define DONT_FREE                 4
 
 /*--------------------------------------------------------------------------
 |   a index to the namespace records
@@ -461,18 +457,25 @@ typedef enum {
 |   domDoctype
 |
 \-------------------------------------------------------------------------*/
-typedef struct domDoctype {
+typedef struct domDocInfo {
     
     /* 'name' is always the name of the documentElement, no struct element
        needed for this */
-    domString        publicId;
-    domString        systemId;
-    domString        internalSubset;
-    /* Currently missing, according to DOM 2: 'entities' and 'notations'.
-       Additional, this would be a good place to store additional 
-       informations about the document according xslt rec section 16. */
+    domString      publicId;
+    domString      systemId;
+    domString      internalSubset;
+    /* Currently missing, according to DOM 2: 'entities' and 'notations'. */
+    /* The following struct elements describes additional 'requested'
+       facets of the document, following the xslt rec, section 16 */
+    float          version;
+    char          *encoding;
+    int            omitXMLDeclaration;
+    int            standalone;
+    Tcl_HashTable *cdataSectionElements;
+    domString      method;
+    domString      mediaType;
     
-} domDoctype;
+} domDocInfo;
 
 /*--------------------------------------------------------------------------
 |   domDocument
@@ -500,7 +503,7 @@ typedef struct domDocument {
     Tcl_HashTable     unparsedEntities;
     Tcl_HashTable     baseURIs;
     Tcl_Obj          *extResolver;
-    domDoctype       *doctype;
+    domDocInfo       *doctype;
     TDomThreaded (
         Tcl_HashTable tagNames;        /* Names of tags found in doc */
         Tcl_HashTable attrNames;       /* Names of tag attributes */
