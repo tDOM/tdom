@@ -13,7 +13,7 @@
 #    parser-9.*: parser parse
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
-# Copyright (c) 2002-2004 Rolf Ade
+# Copyright (c) 2002-2005 Rolf Ade
 #
 # $Id$
 
@@ -153,6 +153,28 @@ test parser-1.11 {parser cget syntax} {
     set parser [expat parser-1.11 -baseurl http://foo.org/]
     set result [$parser cget -handlerset default -baseurl]
 } {http://foo.org/}
+
+test parser-1.12 {parser cget} {
+    catch {rename parser-1.12 {}}
+    set parser [expat parser-1.12]
+    set result [$parser cget -baseurl]
+} {}
+
+proc esh_1_13_1 {args} {
+    incr ::esh_1_13_1
+}
+proc esh_1_13_2 {args} {
+    incr ::esh_1_13_2
+}
+test parser-1.13 {parser configure} {
+    set ::esh_1_13_1 0
+    set ::esh_1_13_2 0
+    catch {rename parser-1.13 {}}
+    set p [expat parser-1.13 -elementstartcommand esh_1_13_1]
+    $p configure -elementstartcommand esh_1_13_2
+    $p parse {<root><a/><b/></root>}
+    list $::esh_1_13_1 $::esh_1_13_2
+} {0 3}
 
 # Test break return code from callback
 

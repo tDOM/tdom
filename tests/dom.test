@@ -12,6 +12,7 @@
 #    dom-7.*:  setNameCheck, setTextCheck
 #    dom-8.*:  createDocumentNode, documentNodes
 #    dom-9.*:  setObjectCommands
+#    dom-10.*: createNodeCmd
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
 
@@ -1158,6 +1159,38 @@ test dom-9.5 {setObjectCommands} {
     $docCmd delete
     set result
 } {1 1}
+
+catch {namespace delete nodeCmds}
+
+namespace eval nodeCmds {
+    dom createNodeCmd elementNode e1
+    dom createNodeCmd elementNode e2
+    dom createNodeCmd commentNode c
+    dom createNodeCmd textNode    t
+    dom createNodeCmd cdataNode   cdata
+    dom createNodeCmd piNode      pi
+    dom createNodeCmd parserNode  parser
+}
+
+test dom-10.1 {createNodeCmd} {
+    llength [info commands nodeCmds::*]
+} {7}
+
+namespace eval nodeCmds {
+    rename e1 {}
+    rename e2 {}
+    rename c {}
+    rename t {}
+    rename cdata {}
+    rename pi {}
+    rename parser {}
+}
+
+test dom-10.2 {createNodeCmd} {
+    llength [info commands nodeCmds::*]
+} {0}
+
+namespace delete nodeCmds
 
 # cleanup
 ::tcltest::cleanupTests
