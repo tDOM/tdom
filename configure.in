@@ -170,25 +170,6 @@ AC_SUBST(VERSION)
 eval AC_DEFINE_UNQUOTED(VERSION, "${VERSION}")
 
 #--------------------------------------------------------------------
-# Setup the current source directory so extensions building against
-# tDOM stub library will know where to find binary directories.
-# Setup paths and linker specification of the stub library.
-# Note: some of those below are replicated in Makefile.in as well.
-#--------------------------------------------------------------------
-
-tdom_SRC_DIR=`cd ${srcdir}; pwd`
-
-pkglibdir="${exec_prefix}/lib/${PACKAGE}${VERSION}"
-tdomstub_LIB_FLAG="-ltdomstub${VERSION}${TCL_DBGX}"
-
-tdomstub_BUILD_SPEC="-L`pwd` ${tdomstub_LIB_FLAG}"
-tdomstub_FILE_SPEC="-L${pkglibdir} ${tdomstub_LIB_FLAG}"
-
-AC_SUBST(tdomstub_BUILD_SPEC)
-AC_SUBST(tdomstub_FILE_SPEC)
-AC_SUBST(tdom_SRC_DIR)
-
-#--------------------------------------------------------------------
 # Check whether --enable-threads or --disable-threads was given.
 #--------------------------------------------------------------------
 
@@ -223,6 +204,25 @@ else
     CFLAGS='${CFLAGS_DEFAULT} ${CFLAGS_WARNING}'
 fi
 AC_SUBST(SHARED_BUILD)
+
+#--------------------------------------------------------------------
+# Setup the current source directory so extensions building against
+# tDOM stub library will know where to find binary directories.
+# Setup paths and linker specification of the stub library.
+# Note: some of those below are replicated in Makefile.in as well.
+#--------------------------------------------------------------------
+
+tdom_SRC_DIR=`cd ${srcdir}; pwd`
+
+pkglibdir="${exec_prefix}/lib/${PACKAGE}${VERSION}"
+tdomstub_LIB_FLAG="-ltdomstub${VERSION}${DBGX}"
+
+tdomstub_BUILD_SPEC="-L`pwd` ${tdomstub_LIB_FLAG}"
+tdomstub_FILE_SPEC="-L${pkglibdir} ${tdomstub_LIB_FLAG}"
+
+AC_SUBST(tdomstub_BUILD_SPEC)
+AC_SUBST(tdomstub_FILE_SPEC)
+AC_SUBST(tdom_SRC_DIR)
 
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you
