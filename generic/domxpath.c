@@ -5531,8 +5531,6 @@ double xpathGetPrio (
     ast steps
 )
 {
-    double prio, max;
-
     if (!steps) return 0.0;
 
     DBG(printAst(0, steps);)
