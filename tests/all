@@ -9,6 +9,6 @@
 
 set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
 
-package require expat 2.0
+package require tdom 0.7
 
 source all.tcl
