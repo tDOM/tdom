@@ -382,11 +382,11 @@ void tcldom_docCmdDeleteProc  (
 \---------------------------------------------------------------------------*/
 static
 char * tcldom_docTrace (
-    ClientData  clientData,
-    Tcl_Interp *interp,
-    char       *name1,
-    char       *name2,
-    int        flags
+    ClientData    clientData,
+    Tcl_Interp   *interp,
+    CONST84 char *name1,
+    CONST84 char *name2,
+    int           flags
 )
 {
     TcldomDocDeleteInfo * dinfo;
@@ -424,11 +424,11 @@ char * tcldom_docTrace (
 \---------------------------------------------------------------------------*/
 static
 char * tcldom_nodeTrace (
-    ClientData  clientData,
-    Tcl_Interp *interp,
-    char       *name1,
-    char       *name2,
-    int        flags
+    ClientData    clientData,
+    Tcl_Interp   *interp,
+    CONST84 char *name1,
+    CONST84 char *name2,
+    int           flags
 )
 {
     char     objCmdName[40];
@@ -1170,7 +1170,7 @@ int tcldom_xpathFuncCallBack (
     char         *errStr, *typeStr, *nodeName;
     Tcl_Obj     *resultPtr, *objv[MAX_REWRITE_ARGS], *type, *value, *nodeObj;
     Tcl_CmdInfo  cmdInfo;
-    int          objc, rc, i, errStrLen, listLen, intValue;
+    int          objc, rc, i, errStrLen, listLen, intValue, res;
     double       doubleValue;
     domNode     *node;
 
@@ -1197,24 +1197,31 @@ int tcldom_xpathFuncCallBack (
         return XPATH_EVAL_ERR;
     }
     objc = 0;
-    objv[objc++] = Tcl_NewStringObj(tclxpathFuncName, -1);
+    objv[objc] = Tcl_NewStringObj(tclxpathFuncName, -1);
+    Tcl_IncrRefCount(objv[objc++]);
     tcldom_createNodeObj (interp, ctxNode, objCmdName);
-    objv[objc++] = Tcl_NewStringObj (objCmdName, -1);
+    objv[objc] = Tcl_NewStringObj (objCmdName, -1);
+    Tcl_IncrRefCount(objv[objc++]);
 
-    objv[objc++] = Tcl_NewIntObj (position);
+    objv[objc] = Tcl_NewIntObj (position);
+    Tcl_IncrRefCount(objv[objc++]);
 
     type  = Tcl_NewObj();
     value = Tcl_NewObj();
     tcldom_xpathResultSet (interp, nodeList, type, value);
-    objv[objc++] = type;
-    objv[objc++] = value;
+    objv[objc] = type;
+    Tcl_IncrRefCount(objv[objc++]);
+    objv[objc] = value;
+    Tcl_IncrRefCount(objv[objc++]);
 
     for (i=0; i<argc; i++) {
         type  = Tcl_NewObj();
         value = Tcl_NewObj();
         tcldom_xpathResultSet (interp, args[i], type, value);
-        objv[objc++] = type;
-        objv[objc++] = value;
+        objv[objc] = type;
+        Tcl_IncrRefCount(objv[objc++]);
+        objv[objc] = value;
+        Tcl_IncrRefCount(objv[objc++]);
     }
     rc = (cmdInfo.objProc (cmdInfo.objClientData, interp, objc, objv));
     if (rc == TCL_OK) {
@@ -1224,11 +1231,13 @@ int tcldom_xpathFuncCallBack (
         if (rc == TCL_OK) {
             if (listLen == 1) {
                 rsSetString (result, Tcl_GetStringFromObj(resultPtr, NULL) );
-                return XPATH_OK;
+                res = XPATH_OK;
+                goto funcCallCleanup;
             }
             if (listLen != 2) {
                 *errMsg = (char*)tdomstrdup("wrong return tuple! Must be {type value} !");
-                return XPATH_EVAL_ERR;
+                res = XPATH_EVAL_ERR;
+                goto funcCallCleanup;
             }
             rc = Tcl_ListObjIndex (interp, resultPtr, 0, &type);
             rc = Tcl_ListObjIndex (interp, resultPtr, 1, &value);
@@ -1253,7 +1262,8 @@ int tcldom_xpathFuncCallBack (
                 rc = Tcl_ListObjLength (interp, value, &listLen);
                 if (rc != TCL_OK) {
                     *errMsg = tdomstrdup("value not a node list!");
-                    return XPATH_EVAL_ERR;
+                    res = XPATH_EVAL_ERR;
+                    goto funcCallCleanup;
                 }
                 for (i=0; i < listLen; i++) {
                     rc = Tcl_ListObjIndex (interp, value, i, &nodeObj);
@@ -1261,7 +1271,8 @@ int tcldom_xpathFuncCallBack (
                     node = tcldom_getNodeFromName (interp, nodeName, &errStr);
                     if (node == NULL) {
                         *errMsg = tdomstrdup(errStr);
-                        return XPATH_EVAL_ERR;
+                        res = XPATH_EVAL_ERR;
+                        goto funcCallCleanup;
                     }
                     rsAddNode (result, node);
                 }
@@ -1269,7 +1280,8 @@ int tcldom_xpathFuncCallBack (
             } else
             if (strcmp(typeStr, "attrnodes")==0) {
                 *errMsg = tdomstrdup("attrnodes not implemented yet!");
-                return XPATH_EVAL_ERR;
+                res = XPATH_EVAL_ERR;
+                goto funcCallCleanup;
             } else
             if (strcmp(typeStr, "attrvalues")==0) {
                 rsSetString(result, Tcl_GetStringFromObj(value,NULL) );
@@ -1281,25 +1293,32 @@ int tcldom_xpathFuncCallBack (
                 strcat (*errMsg, "\" from tcl coded XPath function \"");
                 strcat (*errMsg, functionName);
                 strcat (*errMsg, "\"!");
-                return XPATH_EVAL_ERR;
+                res = XPATH_EVAL_ERR;
+                goto funcCallCleanup;
             }
         } else {
             DBG(fprintf(stderr, "ListObjLength != TCL_OK --> returning XPATH_EVAL_ERR \n");)
-            return XPATH_EVAL_ERR;
+            res = XPATH_EVAL_ERR;
+            goto funcCallCleanup;
         }
         Tcl_ResetResult (interp);
-        return XPATH_OK;
+        res = XPATH_OK;
+    } else {
+        errStr = Tcl_GetStringFromObj( Tcl_GetObjResult(interp), &errStrLen);
+        *errMsg = (char*)MALLOC(120+strlen(functionName) + errStrLen);
+        strcpy(*errMsg, "Tcl error while executing XPATH extension function '");
+        strcat(*errMsg, functionName );
+        strcat(*errMsg, "':\n" );
+        strcat(*errMsg, errStr);
+        Tcl_ResetResult (interp);
+        DBG( fprintf(stderr, "returning XPATH_EVAL_ERR \n"); )
+        res = XPATH_EVAL_ERR;
     }
-    errStr = Tcl_GetStringFromObj( Tcl_GetObjResult(interp), &errStrLen);
-    *errMsg = (char*)MALLOC(120+strlen(functionName) + errStrLen);
-    strcpy(*errMsg, "Tcl error while executing XPATH extension function '");
-    strcat(*errMsg, functionName );
-    strcat(*errMsg, "':\n" );
-    strcat(*errMsg, errStr);
-    Tcl_ResetResult (interp);
-
-    DBG( fprintf(stderr, "returning XPATH_EVAL_ERR \n"); )
-    return XPATH_EVAL_ERR;
+ funcCallCleanup:
+    for (i = 0; i < objc; i++) {
+        Tcl_DecrRefCount(objv[i]);
+    }
+    return res;
 }
 
 
