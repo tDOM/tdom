@@ -6,6 +6,7 @@
 #    domCmd-1.*:  createDocument, createDocumentNS
 #    domCmd-2.*:  parse
 #    domCmd-3.*:  isName, isNCName, isCharData
+#    domCmd-4.*:  asXML, asHTML
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -437,6 +438,33 @@ test domCmd-3.25 {isCharData} {longRunning} {
     }
     set nr
 } {65536}
+
+test domCmd-4.1 {asXML -escapeNonASCII} {
+    set doc [dom parse [tDOM::xmlReadFile \
+            [file join [file dir [info script]] data/i18n_1.xml]]]
+    set result [$doc asXML -escapeNonASCII]
+    $doc delete
+    set result
+} {<test>&#1072;&#1073;&#1074;&#1075;&#1076;&#1077;&#1078;&#1079;&#1080;&#1081;</test>
+}
+
+test domCmd-4.2 {asXML -escapeNonASCII; comments and PI's are not altered} {
+    set doc [dom parse [tDOM::xmlReadFile \
+            [file join [file dir [info script]] data/i18n_2.xml]]]
+    set result [$doc asXML -escapeNonASCII]
+    $doc delete
+    set result
+} {<root withUmlauts="&#228;&#246;&#252;&#223;"><!-- A comment with german umlauts: äöüß --><?äöüß A processing node with german umlauts?>
+german umlauts: &#228;&#246;&#252;&#223;
+</root>
+}
+
+test domCmd-4.3 {asHTML -escapeNonASCII -htmlEntities} {
+    set doc [dom parse {<html><body>&#228;&#xfc;&#8222;&#8223;&#8224;</body></html>}]
+    set result [$doc asHTML -escapeNonASCII -htmlEntities]
+    $doc delete
+    set result
+} {<html><body>&auml;&uuml;&bdquo;&#8223;&dagger;</body></html>}
 
 
 # cleanup
