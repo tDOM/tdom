@@ -2916,11 +2916,36 @@ domAppendChild (
     return OK;
 }
 
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domInsertBefore --
+ *
+ *	This procedure implements the dom method insertBefore.
+ *      Inserts the node childToInsert before the existing child node
+ *      referenceChild. If referenceChild is null, insert childToInsert
+ *      at the end of the list of children of node. The arguments node
+ *      and childToInsert must be non NULL. The childToInsert is 
+ *      unliked from its previous place (fragment list or tree).
+ *
+ * Results:
+ *	Returns a domException:
+ *      HIERARCHY_REQUEST_ERR: Raised if this node is of a type that
+ *      does not allow children of the type of the childToInsert node, or
+ *      if the node to insert is one of this node's ancestors or it the 
+ *      rootNode of the node's document.
+ *      NOT_FOUND_ERR: Raised if refChild is not a child of this node.
+ *      NOT_SUPPORTED_ERR: Raised if the childToInsert is the rootNode
+ *      of another document.
+ *      OK: otherwise
+ *
+ * Side effects:
+ *	Alters the involved document.
+ *
+ *----------------------------------------------------------------------
+ */
 
-/*---------------------------------------------------------------------------
-|   domInsertBefore
-|
-\--------------------------------------------------------------------------*/
 domException
 domInsertBefore (
     domNode *node,
@@ -2928,88 +2953,124 @@ domInsertBefore (
     domNode *referenceChild
 )
 {
-    domNode *frag_node, *searchNode, *n;
+    domNode *n;
 
 
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
     }
-    if (childToInsert->parentNode == node) {
-        return HIERARCHY_REQUEST_ERR;
+    if (childToInsert == referenceChild) {
+        return OK;
     }
 
+    /* check, if node is in deed the parent of referenceChild */
+    if (referenceChild && referenceChild->parentNode != node) {
+        return NOT_FOUND_ERR;
+    }
+    
     /* check, whether childToInsert is one of node's ancestors */
     n = node;
     while (n) {
-        if (n->parentNode == childToInsert) {
+        if (n == childToInsert) {
             return HIERARCHY_REQUEST_ERR;
         }
         n = n->parentNode;
     }
 
-    /* if that node was in the fragment list, remove it from there */
-    frag_node = childToInsert->ownerDocument->fragments;
-    while (frag_node) {
-        if (frag_node == childToInsert) {
-
-            /* unlink childToInsert from fragment list */
-
-            if (childToInsert->previousSibling) {
-                childToInsert->previousSibling->nextSibling = childToInsert->nextSibling;
-            } else {
-                childToInsert->ownerDocument->fragments = childToInsert->nextSibling;
-            }
-            if (childToInsert->nextSibling) {
-                childToInsert->nextSibling->previousSibling = childToInsert->previousSibling;
-            }
-            break;
-        }
-        frag_node = frag_node->nextSibling;
+    /* The rootNode isn't really a node (in the scope of DOM). Although
+       is may be possible, to define sensible rules what is allowed in
+       this case and what should happen, for now we just don't support
+       this. */
+    if (node == node->ownerDocument->rootNode) {
+        return NOT_SUPPORTED_ERR;
     }
-
-    if (!frag_node) {
+    
+    if (childToInsert->parentNode == NULL 
+        && childToInsert != childToInsert->ownerDocument->documentElement) {
+        /* The child to insert is either out of a fragment list 
+           (not necessary out of the fragment list of the current
+           document), the root element of the current document
+           the root element of another document, or the document
+           element of another document. */
+        if (childToInsert == childToInsert->ownerDocument->rootNode) {
+            if (childToInsert == node->ownerDocument->rootNode) {
+                return HIERARCHY_REQUEST_ERR;
+            } else {
+                /* For now, we simply don't allow the rootNode of
+                   another element as childToInsert. The way to go may
+                   be simply to treat the rootNode as DocumentFragment
+                   and to insert all child of that rootNode before the
+                   referenceChild.  This would result in a document
+                   without documentElement, which then should be
+                   handled right by other methods. This is planed, but
+                   not carefully considered, yet.  */
+                return NOT_SUPPORTED_ERR;
+            }
+        }
+        
+        /* unlink childToInsert from fragment list */
+        if (childToInsert->previousSibling) {
+            childToInsert->previousSibling->nextSibling = 
+                childToInsert->nextSibling;
+        } else {
+            childToInsert->ownerDocument->fragments = 
+                childToInsert->nextSibling;
+        }
+        if (childToInsert->nextSibling) {
+            childToInsert->nextSibling->previousSibling = 
+                childToInsert->previousSibling;
+        }
+    } else {
         /* unlink childToInsert from normal tree */
         if (childToInsert->previousSibling) {
-            childToInsert->previousSibling->nextSibling = childToInsert->nextSibling;
+            childToInsert->previousSibling->nextSibling = 
+                childToInsert->nextSibling;
         } else {
             if (childToInsert->parentNode) {
-                childToInsert->parentNode->firstChild = childToInsert->nextSibling;
+                childToInsert->parentNode->firstChild = 
+                    childToInsert->nextSibling;
             } else {
-                childToInsert->ownerDocument->documentElement =  childToInsert->nextSibling;
+                childToInsert->ownerDocument->documentElement =
+                    childToInsert->nextSibling;
             }
         }
         if (childToInsert->nextSibling) {
-            childToInsert->nextSibling->previousSibling = childToInsert->previousSibling;
+            childToInsert->nextSibling->previousSibling = 
+                childToInsert->previousSibling;
         } else {
             if (childToInsert->parentNode) {
-                childToInsert->parentNode->lastChild = childToInsert->previousSibling;
+                childToInsert->parentNode->lastChild = 
+                    childToInsert->previousSibling;
             }
         }
     }
 
-    searchNode = node->firstChild;
-    while (searchNode) {
-        if (searchNode == referenceChild) {
-
-            childToInsert->nextSibling = referenceChild;
-            if (referenceChild->previousSibling) {
-                childToInsert->previousSibling = referenceChild->previousSibling;
-                referenceChild->previousSibling->nextSibling = childToInsert;
-            } else {
-                node->firstChild = childToInsert;
-                childToInsert->previousSibling = NULL;
-            }
-            referenceChild->previousSibling = childToInsert;
-            childToInsert->parentNode = node;
-            domSetDocument (childToInsert, node->ownerDocument);
-            node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
-            MutationEvent3(DOMNodeInsert, childToInsert, node);
-            MutationEvent2(DOMSubtreeModified, node);
-            return OK;
+    childToInsert->nextSibling = referenceChild;
+    if (referenceChild) {
+        if (referenceChild->previousSibling) {
+            childToInsert->previousSibling = referenceChild->previousSibling;
+            referenceChild->previousSibling->nextSibling = childToInsert;
+        } else {
+            node->firstChild = childToInsert;
+            childToInsert->previousSibling = NULL;
         }
-        searchNode = searchNode->nextSibling;
+        referenceChild->previousSibling = childToInsert;
+    } else {
+        if (node->lastChild) {
+            node->lastChild->nextSibling = childToInsert;
+            childToInsert->previousSibling = node->lastChild;
+        } else {
+            node->firstChild = childToInsert;
+            childToInsert->previousSibling = NULL;
+        }
+        node->lastChild = childToInsert;
     }
-    return NOT_FOUND_ERR;
+    childToInsert->parentNode = node;
+    domSetDocument (childToInsert, node->ownerDocument);
+    node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
+    MutationEvent3(DOMNodeInsert, childToInsert, node);
+    MutationEvent2(DOMSubtreeModified, node);
+    return OK;
 }
 
 
