@@ -3,7 +3,7 @@
    package. This parser extension does some tests according to the DTD
    against the data within an XML document.
 
-   Copyright (c) 2001 Rolf Ade */
+   Copyright (c) 2001-2003 Rolf Ade */
 
 #include <tdom.h>
 #include <string.h>
@@ -16,8 +16,22 @@
 # define CONST84
 #endif
 
+#ifndef TCL_THREADS
+# define TDomThreaded(x)
+#else
+# define TDomThreaded(x) x
+#endif
+
 /* The inital stack sizes must be at least 1 */
 #define TNC_INITCONTENTSTACKSIZE 512
+
+/*----------------------------------------------------------------------------
+|   local globals
+|
+\---------------------------------------------------------------------------*/
+/* Counter to generate unique validateCmd names */
+static int uniqueCounter = 0;  
+TDomThreaded(static Tcl_Mutex counterMutex;) /* Protect the counter */
 
 /* To enable some debugging output at stdout use this.
    But beware: this debugging output isn't systematic
@@ -53,20 +67,56 @@ typedef struct TNC_contentStack
 
 typedef struct TNC_data
 {
-    char             *doctypeName;
-    int               ignoreWhiteCDATAs;
-    int               ignorePCDATA;
-    Tcl_HashTable    *tagNames;
-    int               elemContentsRewriten;
-    Tcl_HashTable    *attDefsTables;
-    Tcl_HashTable    *entityDecls;
-    Tcl_HashTable    *notationDecls;
-    Tcl_HashTable    *ids;
-    Tcl_Interp       *interp;
-    Tcl_Obj          *expatObj;
-    int               contentStackSize;
-    int               contentStackPtr;
-    TNC_ContentStack *contentStack;
+    char             *doctypeName;            /* From DOCTYPE declaration */
+    int               ignoreWhiteCDATAs;      /* Flag: white space allowed in 
+                                                 current content model? */
+    int               ignorePCDATA;           /* Flag: currently mixed content
+                                                 model? */
+    Tcl_HashTable    *tagNames;               /* Hash table of all ELEMENT
+                                                 declarations of the DTD.
+                                                 Element name is the key.
+                                                 While parsing, entry points
+                                                 to the XML_Content of that
+                                                 Element, after finishing of
+                                                 DTD parsing, entry holds a
+                                                 pointer to the TNC_Content
+                                                 of that element. */
+    TNC_ElemAttInfo  *elemAttInfo;            /* TncElementStartCommand stores
+                                                 the elemAttInfo pointer of
+                                                 the current element here for
+                                                 DOM validation, to avoid two
+                                                 element name lookups. */
+    int               elemContentsRewriten;   /* Signals, if the tagNames
+                                                 entries point to
+                                                 TNC_Contents */
+    int               status;                 /* While used with expat obj:
+                                                 1 after successful parsed
+                                                 DTD, 0 otherwise.
+                                                 For validateCmd used for
+                                                 error report during
+                                                 validation: 0 OK, 1 validation
+                                                 error. */
+    int               idCheck;                /* Flag: check IDREF resolution*/
+    Tcl_HashTable    *attDefsTables;          /* Used to store ATTLIST 
+                                                 declarations while parsing.
+                                                 Keys are the element names. */
+    Tcl_HashTable    *entityDecls;            /* Used to store ENTITY
+                                                 declarations. */
+    Tcl_HashTable    *notationDecls;          /* Used to store NOTATION
+                                                 declarations. */
+    Tcl_HashTable    *ids;                    /* Used to track IDs */
+    Tcl_Interp       *interp;                 
+    Tcl_Obj          *expatObj;               /* If != NULL, points to the
+                                                 parserCmd structure. NULL
+                                                 for ValidateCmds. Used, to
+                                                 distinguish between SAX
+                                                 and DOM validation. */
+    int               contentStackSize;       /* Current size of the content
+                                                 stack */
+    int               contentStackPtr;        /* Points to the currently active
+                                                 content model on the stack */
+    TNC_ContentStack *contentStack;           /* Stack for the currently
+                                                 nested open content models. */
 } TNC_Data;
 
 typedef enum TNC_attType {
@@ -111,6 +161,15 @@ static char tnc_usage[] =
                "Usage tnc <expat parser obj> <subCommand>, where subCommand can be: \n"
                "        enable    \n"
                "        remove    \n"
+               "        getValidateCmd ?cmdName?\n"
+               ;
+
+static char validateCmd_usage[] =
+               "Usage validateCmd <method> <args>, where method can be: \n"
+               "        validateDocument <domDocument>                  \n"
+               "        validateTree <domNode>                          \n"
+               "        validateAttributes <domNode>                    \n"
+               "        delete                                          \n" 
                ;
 
 enum TNC_Error {
@@ -136,13 +195,15 @@ enum TNC_Error {
     TNC_ERROR_ATT_ENTITY_DEFAULT_MUST_BE_DECLARED,
     TNC_ERROR_NOTATION_REQUIRED,
     TNC_ERROR_NOTATION_MUST_BE_DECLARED,
-    TNC_ERROR_UNIMPOSSIBLE_DEFAULT,
+    TNC_ERROR_IMPOSSIBLE_DEFAULT,
     TNC_ERROR_ENUM_ATT_WRONG_VALUE,
     TNC_ERROR_NMTOKEN_REQUIRED,
     TNC_ERROR_NAME_REQUIRED,
+    TNC_ERROR_NAMES_REQUIRED,
     TNC_ERROR_ELEMENT_NOT_ALLOWED_HERE,
     TNC_ERROR_ELEMENT_CAN_NOT_END_HERE,
-    TNC_ERROR_INTERNAL
+    TNC_ERROR_ONLY_THREE_BYTE_UTF8,
+    TNC_ERROR_UNKNOWN_NODE_TYPE
 };
 
 const char *
@@ -175,116 +236,38 @@ TNC_ErrorString (int code)
         "Attribute hasn't one of the allowed values.",
         "Attribute value has to be a NMTOKEN.",
         "Attribute value has to be a Name.",
+        "Attribute value has to match production Names.",
         "Element is not allowed here.",
         "Element can not end here (required element(s) missing).",
         "Can only handle UTF8 chars up to 3 bytes length."
+        "Unknown or unexpected dom node type."
     };
-    if (code > 0 && code < sizeof(message)/sizeof(message[0]))
+/*      if (code > 0 && code < sizeof(message)/sizeof(message[0])) */
         return message[code];
     return 0;
 }
 
-#define UTF8_1BYTE_CHAR(c) ( 0    == ((c) & 0x80))
-#define UTF8_2BYTE_CHAR(c) ( 0xC0 == ((c) & 0xE0))
-#define UTF8_3BYTE_CHAR(c) ( 0xE0 == ((c) & 0xF0))
-#define UTF8_4BYTE_CHAR(c) ( 0xF0 == ((c) & 0xF8))
+#define CHECK_UTF_CHARLEN(d) if (!(d)) { \
+                                signalNotValid (userData, TNC_ERROR_ONLY_THREE_BYTE_UTF8);\
+                                return;\
+                             }
 
-/* The following 2 defines are out of the expat code */
+#define CHECK_UTF_CHARLENR(d) if (!(d)) { \
+                                signalNotValid (userData, TNC_ERROR_ONLY_THREE_BYTE_UTF8);\
+                                return 0;\
+                             }
 
-/* A 2 byte UTF-8 representation splits the characters 11 bits
-between the bottom 5 and 6 bits of the bytes.
-We need 8 bits to index into pages, 3 bits to add to that index and
-5 bits to generate the mask. */
-#define UTF8_GET_NAMING2(pages, byte) \
-    (namingBitmap[((pages)[(((byte)[0]) >> 2) & 7] << 3) \
-                      + ((((byte)[0]) & 3) << 1) \
-                      + ((((byte)[1]) >> 5) & 1)] \
-         & (1 << (((byte)[1]) & 0x1F)))
+#define CHECK_UTF_CHARLEN_COPY(d) if (!(d)) { \
+                                signalNotValid (userData, TNC_ERROR_ONLY_THREE_BYTE_UTF8);\
+                                FREE (copy);\
+                                return;\
+                                }
 
-/* A 3 byte UTF-8 representation splits the characters 16 bits
-between the bottom 4, 6 and 6 bits of the bytes.
-We need 8 bits to index into pages, 3 bits to add to that index and
-5 bits to generate the mask. */
-#define UTF8_GET_NAMING3(pages, byte) \
-  (namingBitmap[((pages)[((((byte)[0]) & 0xF) << 4) \
-                             + ((((byte)[1]) >> 2) & 0xF)] \
-                       << 3) \
-                      + ((((byte)[1]) & 3) << 1) \
-                      + ((((byte)[2]) >> 5) & 1)] \
-         & (1 << (((byte)[2]) & 0x1F)))
+#define SetResult(str) Tcl_ResetResult(interp); \
+                     Tcl_SetStringObj(Tcl_GetObjResult(interp), (str), -1)
 
-#define UTF8_CHAR_LEN(c) \
-  if (UTF8_1BYTE_CHAR ((c))) clen = 1 ; \
-  else if (UTF8_2BYTE_CHAR ((c)))  clen = 2 ; \
-  else if (UTF8_3BYTE_CHAR ((c)))  clen = 3 ; \
-  else {signalNotValid (userData, TNC_ERROR_INTERNAL); return;}
-
-#define UTF8_CHAR_LEN_COPY(c) \
-  if (UTF8_1BYTE_CHAR ((c))) clen = 1; \
-  else if (UTF8_2BYTE_CHAR ((c))) clen = 2; \
-  else if (UTF8_3BYTE_CHAR ((c))) clen = 3; \
-  else {signalNotValid (userData, TNC_ERROR_INTERNAL); free (copy); return;}
-
-
-#define UTF8_GET_NAMING_NMTOKEN(p, n) \
-  ((n) == 1 \
-  ? nameChar7Bit[(int)(*(p))] \
-  : ((n) == 2 \
-    ? UTF8_GET_NAMING2(nmstrtPages, (const unsigned char *)(p)) \
-    : ((n) == 3 \
-      ? UTF8_GET_NAMING3(nmstrtPages, (const unsigned char *)(p)) \
-      : 0)))
-
-#define UTF8_GET_NAMING_NAME(p, n) \
-  ((n) == 1 \
-  ? nameStart7Bit[(int)(*(p))] \
-  : ((n) == 2 \
-    ? UTF8_GET_NAMING2(namePages, (const unsigned char *)(p)) \
-    : ((n) == 3 \
-      ? UTF8_GET_NAMING3(namePages, (const unsigned char *)(p)) \
-      : 0)))
-
-
-#include <nametab.h>
-
-static const unsigned char nameChar7Bit[] = {
-/* 0x00 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x08 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x10 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x18 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x20 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x28 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00,
-/* 0x30 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x38 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x40 */    0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x48 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x50 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x58 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01,
-/* 0x60 */    0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x68 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x70 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x78 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
-
-static const unsigned char nameStart7Bit[] = {
-/* 0x00 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x08 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x10 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x18 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x20 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x28 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x30 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x38 */    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-/* 0x40 */    0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x48 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x50 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x58 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01,
-/* 0x60 */    0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x68 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x70 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-/* 0x78 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
-
+#define SetBooleanResult(i) Tcl_ResetResult(interp); \
+                     Tcl_SetBooleanObj(Tcl_GetObjResult(interp), (i))
 
 extern char *Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact);
 
@@ -295,18 +278,55 @@ signalNotValid (userData, code)
 {
     TNC_Data *tncdata = (TNC_Data *) userData;
     TclGenExpatInfo *expat;
-    char s[255];
+    char s[1000];
 
-    expat = GetExpatInfo (tncdata->interp, tncdata->expatObj);
-    expat->status = TCL_ERROR;
-    sprintf (s, "Validation error at line %d, character %d:\n\t%s",
-             XML_GetCurrentLineNumber (expat->parser),
-             XML_GetCurrentColumnNumber (expat->parser),
-             TNC_ErrorString (code));
-    expat->result = Tcl_NewStringObj (s, -1);
-    Tcl_IncrRefCount (expat->result);
+    if (tncdata->expatObj) {
+        expat = GetExpatInfo (tncdata->interp, tncdata->expatObj);
+        sprintf (s, "Validation error at line %d, character %d: %s",
+                 XML_GetCurrentLineNumber (expat->parser),
+                 XML_GetCurrentColumnNumber (expat->parser),
+                 TNC_ErrorString (code));
+        expat->status = TCL_ERROR;
+        expat->result = Tcl_NewStringObj (s, -1);
+        Tcl_IncrRefCount (expat->result);
+    } else {
+        tncdata->status = 1;
+        Tcl_SetResult (tncdata->interp, (char *)TNC_ErrorString (code),
+                       TCL_VOLATILE);
+    }
 }
 
+/*
+ *----------------------------------------------------------------------------
+ *
+ * FindUniqueCmdName --
+ *
+ *	Generate new command name. Used for getValidateCmd.
+ *
+ * Results:
+ *	Returns newly allocated Tcl object containing name.
+ *
+ * Side effects:
+ *	Allocates Tcl object.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static void
+FindUniqueCmdName(
+    Tcl_Interp *interp,
+    char       *s
+    )
+{
+    Tcl_CmdInfo info;
+    
+    TDomThreaded(Tcl_MutexLock(&counterMutex);)
+        do {
+            sprintf(s, "DTDvalidator%d", uniqueCounter++);
+            
+        } while (Tcl_GetCommandInfo(interp, s, &info));
+    TDomThreaded(Tcl_MutexUnlock(&counterMutex);)
+}
 
 /*
  *----------------------------------------------------------------------------
@@ -338,7 +358,7 @@ TncStartDoctypeDeclHandler (userData, doctypeName, sysid, pubid, has_internal_su
 #ifdef TNC_DEBUG
     printf ("TncStartDoctypeDeclHandler start\n");
 #endif
-    tncdata->doctypeName = strdup (doctypeName);
+    tncdata->doctypeName = tdomstrdup (doctypeName);
 }
 
 
@@ -368,7 +388,7 @@ TncFreeTncModel (tmodel)
         for (i = 0; i < tmodel->numchildren; i++) {
             TncFreeTncModel (&tmodel->children[i]);
         }
-        Tcl_Free ((char *) tmodel->children);
+        FREE ((char *) tmodel->children);
     }
 }
 
@@ -385,7 +405,7 @@ TncFreeTncModel (tmodel)
  *	None.
  *
  * Side effects:
- *	Allocates memory for the TNC_Content  models.
+ *	Allocates memory for the TNC_Content models.
  *
  *----------------------------------------------------------------------------
  */
@@ -408,7 +428,7 @@ TncRewriteModel (emodel, tmodel, tagNames)
     case XML_CTYPE_MIXED:
         if (emodel->quant == XML_CQUANT_REP) {
             tmodel->children = (TNC_Content *)
-                Tcl_Alloc (sizeof (TNC_Content) * emodel->numchildren);
+                MALLOC (sizeof (TNC_Content) * emodel->numchildren);
             for (i = 0; i < emodel->numchildren; i++) {
                 TncRewriteModel (&emodel->children[i], &tmodel->children[i],
                                  tagNames);
@@ -422,7 +442,7 @@ TncRewriteModel (emodel, tmodel, tagNames)
     case XML_CTYPE_SEQ:
     case XML_CTYPE_CHOICE:
         tmodel->children = (TNC_Content *)
-            Tcl_Alloc (sizeof (TNC_Content) * emodel->numchildren);
+            MALLOC (sizeof (TNC_Content) * emodel->numchildren);
         for (i = 0; i < emodel->numchildren; i++) {
             TncRewriteModel (&emodel->children[i], &tmodel->children[i],
                              tagNames);
@@ -485,7 +505,7 @@ TncEndDoctypeDeclHandler (userData)
                 entryPtr);
 #endif
         emodel = (XML_Content*) Tcl_GetHashValue (entryPtr);
-        tmodel = (TNC_Content*) Tcl_Alloc (sizeof (TNC_Content));
+        tmodel = (TNC_Content*) MALLOC (sizeof (TNC_Content));
         TncRewriteModel (emodel, tmodel, tncdata->tagNames);
         elementName = Tcl_GetHashKey (tncdata->tagNames, entryPtr);
         ePtr1 = Tcl_FindHashEntry (tncdata->attDefsTables, elementName);
@@ -522,6 +542,7 @@ TncEndDoctypeDeclHandler (userData)
         }
         entryPtr = Tcl_NextHashEntry (&search);
     }
+    tncdata->status = 1;
 }
 
 
@@ -584,12 +605,12 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
         }
     }
     if (newPtr) {
-        entityInfo = (TNC_EntityInfo *) Tcl_Alloc (sizeof (TNC_EntityInfo));
+        entityInfo = (TNC_EntityInfo *) MALLOC (sizeof (TNC_EntityInfo));
         if (notationName != NULL) {
             entityInfo->is_notation = 1;
             entryPtr1 = Tcl_CreateHashEntry (tncdata->notationDecls,
                                              notationName, &newPtr);
-            entityInfo->notationName = strdup (notationName);
+            entityInfo->notationName = tdomstrdup (notationName);
         }
         else {
             entityInfo->is_notation = 0;
@@ -730,8 +751,8 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
 
     entryPtr = Tcl_CreateHashEntry (tncdata->attDefsTables, elname, &newPtr);
     if (newPtr) {
-        elemAttInfo = (TNC_ElemAttInfo *) Tcl_Alloc (sizeof (TNC_ElemAttInfo));
-        elemAtts = (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
+        elemAttInfo = (TNC_ElemAttInfo *) MALLOC (sizeof (TNC_ElemAttInfo));
+        elemAtts = (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (elemAtts, TCL_STRING_KEYS);
         elemAttInfo->attributes = elemAtts;
         elemAttInfo->nrOfreq = 0;
@@ -745,7 +766,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
     /* Multiple Attribute declarations are allowed, but later declarations
        are ignored. See rec 3.3. */
     if (newPtr) {
-        attDecl = (TNC_AttDecl *) Tcl_Alloc (sizeof (TNC_AttDecl));
+        attDecl = (TNC_AttDecl *) MALLOC (sizeof (TNC_AttDecl));
         if (strcmp (att_type, "CDATA") == 0) {
             attDecl->att_type = TNC_ATTTYPE_CDATA;
         }
@@ -786,9 +807,9 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                as att_type "NOTATION(gif)". */
             attDecl->att_type = TNC_ATTTYPE_NOTATION;
             attDecl->lookupTable =
-                (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
+                (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
             Tcl_InitHashTable (attDecl->lookupTable, TCL_STRING_KEYS);
-            copy = strdup (att_type);
+            copy = tdomstrdup (att_type);
             start = i = 9;
             while (i) {
                 if (copy[i] == ')') {
@@ -808,7 +829,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                         printf ("NOTATION already known\n");
                     }
 #endif
-                    free (copy);
+                    FREE (copy);
                     break;
                 }
                 if (copy[i] == '|') {
@@ -831,10 +852,11 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     start = ++i;
                     continue;
                 }
-                UTF8_CHAR_LEN_COPY (copy[i]);
+                clen = UTF8_CHAR_LEN (copy[i]);
+                CHECK_UTF_CHARLEN_COPY (clen);
                 if (!UTF8_GET_NAMING_NMTOKEN (&copy[i], clen)) {
                     signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                    free (copy);
+                    FREE (copy);
                     return;
                 }
                 i += clen;
@@ -849,16 +871,16 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                Makes things easier for us. */
             attDecl->att_type = TNC_ATTTYPE_ENUMERATION;
             attDecl->lookupTable =
-                (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
+                (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
             Tcl_InitHashTable (attDecl->lookupTable, TCL_STRING_KEYS);
-            copy = strdup (att_type);
+            copy = tdomstrdup (att_type);
             start = i = 1;
             while (1) {
                 if (copy[i] == ')') {
                     copy[i] = '\0';
                     Tcl_CreateHashEntry (attDecl->lookupTable,
                                                     &copy[start], &newPtr);
-                    free (copy);
+                    FREE (copy);
                     break;
                 }
                 if (copy[i] == '|') {
@@ -868,10 +890,11 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     start = ++i;
                     continue;
                 }
-                UTF8_CHAR_LEN_COPY (copy[i]);
+                clen = UTF8_CHAR_LEN (copy[i]);
+                CHECK_UTF_CHARLEN_COPY (clen);
                 if (!UTF8_GET_NAMING_NMTOKEN (&copy[i], clen)) {
                     signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                    free (copy);
+                    FREE (copy);
                     return;
                 }
                 i += clen;
@@ -881,8 +904,9 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
             switch (attDecl->att_type) {
             case TNC_ATTTYPE_ENTITY:
             case TNC_ATTTYPE_IDREF:
-                UTF8_CHAR_LEN (*dflt);
-                if (!UTF8_GET_NAMING_NAME (dflt, clen)) {
+                clen = UTF8_CHAR_LEN (*dflt);
+                CHECK_UTF_CHARLEN (clen);
+                if (!UTF8_GET_NAME_START (dflt, clen)) {
                     signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
                     return;
                 }
@@ -891,7 +915,8 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     if (dflt[i] == '\0') {
                         break;
                     }
-                    UTF8_CHAR_LEN (dflt[i]);
+                    clen = UTF8_CHAR_LEN (dflt[i]);
+                    CHECK_UTF_CHARLEN (clen);
                     if (!UTF8_GET_NAMING_NMTOKEN (&dflt[i], clen)) {
                         signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
                         return;
@@ -920,15 +945,17 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                         start = ++i;
                     }
                     if (start == i) {
-                        UTF8_CHAR_LEN (dflt[i]);
-                        if (!UTF8_GET_NAMING_NAME (&dflt[i], clen)) {
+                        clen = UTF8_CHAR_LEN (dflt[i]);
+                        CHECK_UTF_CHARLEN (clen);
+                        if (!UTF8_GET_NAME_START (&dflt[i], clen)) {
                             signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
                             return;
                         }
                         i += clen;
                     }
                     else {
-                        UTF8_CHAR_LEN (dflt[i]);
+                        clen = UTF8_CHAR_LEN (dflt[i]);
+                        CHECK_UTF_CHARLEN (clen);
                         if (!UTF8_GET_NAMING_NMTOKEN (&dflt[i], clen)) {
                             signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
                             return;
@@ -938,11 +965,11 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                 }
                 break;
             case TNC_ATTTYPE_ENTITIES:
-                copy = strdup (dflt);
+                copy = tdomstrdup (dflt);
                 start = i = 0;
                 while (1) {
                     if (copy[i] == '\0') {
-                        free (copy);
+                        FREE (copy);
                         break;
                     }
                     if (copy[i] == ' ') {
@@ -960,19 +987,21 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                         start = ++i;
                     }
                     if (start == i) {
-                        UTF8_CHAR_LEN_COPY (copy[i]);
-                        if (!UTF8_GET_NAMING_NAME (&copy[i], clen)) {
+                        clen = UTF8_CHAR_LEN (copy[i]);
+                        CHECK_UTF_CHARLEN_COPY (clen);
+                        if (!UTF8_GET_NAME_START (&copy[i], clen)) {
                             signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
-                            free (copy);
+                            FREE (copy);
                             return;
                         }
                         i += clen;
                     }
                     else {
-                        UTF8_CHAR_LEN_COPY (copy[i]);
+                        clen = UTF8_CHAR_LEN (copy[i]);
+                        CHECK_UTF_CHARLEN_COPY (clen);
                         if (!UTF8_GET_NAMING_NMTOKEN (&copy[i], clen)) {
                             signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
-                            free (copy);
+                            FREE (copy);
                             return;
                         }
                         i += clen;
@@ -985,7 +1014,8 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     if (dflt[i] == '\0') {
                         break;
                     }
-                    UTF8_CHAR_LEN (dflt[i]);
+                    clen = UTF8_CHAR_LEN (dflt[i]);
+                    CHECK_UTF_CHARLEN (clen);
                     if (!UTF8_GET_NAMING_NMTOKEN (&dflt[i], clen)) {
                         signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                         return;
@@ -1003,7 +1033,8 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     if (dflt[i] == ' ') {
                         i++;
                     }
-                    UTF8_CHAR_LEN (dflt[i]);
+                    clen = UTF8_CHAR_LEN (dflt[i]);
+                    CHECK_UTF_CHARLEN (clen);
                     if (!UTF8_GET_NAMING_NMTOKEN (&dflt[i], clen)) {
                         signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                         return;
@@ -1014,12 +1045,12 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                 break;
             case TNC_ATTTYPE_NOTATION:
                 if (!Tcl_FindHashEntry (attDecl->lookupTable, dflt)) {
-                    signalNotValid (userData, TNC_ERROR_UNIMPOSSIBLE_DEFAULT);
+                    signalNotValid (userData, TNC_ERROR_IMPOSSIBLE_DEFAULT);
                     return;
                 }
             case TNC_ATTTYPE_ENUMERATION:
                 if (!Tcl_FindHashEntry (attDecl->lookupTable, dflt)) {
-                    signalNotValid (userData, TNC_ERROR_UNIMPOSSIBLE_DEFAULT);
+                    signalNotValid (userData, TNC_ERROR_IMPOSSIBLE_DEFAULT);
                     return;
                 }
             case TNC_ATTTYPE_CDATA:
@@ -1030,7 +1061,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                    allowed to have defaults (handled above). */
                 ;
             }
-            attDecl->dflt = strdup (dflt);
+            attDecl->dflt = tdomstrdup (dflt);
         }
         else {
             attDecl->dflt = NULL;
@@ -1104,12 +1135,13 @@ printContentStack (TNC_Data *tncdata)
  *
  * TncProbeElement --
  *
- *	This procedure checks, if the element match the
- *      content model.
+ *	This function checks, if the element match the
+ *      topmost content model on the content stack.
  *
  * Results:
  *	1 if the element match,
  *      0 if not.
+ *     -1 if not, but this isn't a validation error
  *
  * Side effects:
  *	Eventually pushes data to the contentStack (even in
@@ -1466,6 +1498,260 @@ TncProbeElement (nameId, tncdata)
     return 0;
 }
 
+/*
+ *----------------------------------------------------------------------------
+ *
+ * TncProbeAttribute --
+ *
+ *	This function checks, if the given attribute 
+ *      and it's value are allowed for this element.
+ *
+ * Results:
+ *	1 if the attribute name/value is OK,
+ *      0 if not.
+ *
+ * Side effects:
+ *	Eventually increments the required attributes counter.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static int
+TncProbeAttribute (userData, elemAtts, attrName, attrValue, nrOfreq)
+    void *userData;
+    Tcl_HashTable *elemAtts;
+    char *attrName;
+    char *attrValue;
+    int *nrOfreq;
+{
+    TNC_Data *tncdata = (TNC_Data *) userData;
+    Tcl_HashEntry *entryPtr;
+    TNC_AttDecl *attDecl;
+    char *pc, *copy, save;
+    int clen, i, start, hnew;
+    TNC_EntityInfo *entityInfo;
+
+    entryPtr = Tcl_FindHashEntry (elemAtts, attrName);
+    if (!entryPtr) {
+        signalNotValid (userData, TNC_ERROR_UNKOWN_ATTRIBUTE);
+        return 0;
+    }
+    /* NOTE: attribute uniqueness per element is a wellformed
+               constrain and therefor done by expat. */
+    attDecl = (TNC_AttDecl *) Tcl_GetHashValue (entryPtr);
+    switch (attDecl->att_type) {
+    case TNC_ATTTYPE_CDATA:
+        if (attDecl->isrequired && attDecl->dflt) {
+            if (strcmp (attDecl->dflt, attrValue) != 0) {
+                signalNotValid (userData,
+                                TNC_ERROR_WRONG_FIXED_ATTVALUE);
+                return 0;
+            }
+        }
+        break;
+
+    case TNC_ATTTYPE_ID:
+        pc = (char*)attrValue;
+        clen = UTF8_CHAR_LEN (*pc);
+        CHECK_UTF_CHARLENR (clen);
+        if (!UTF8_GET_NAME_START (pc, clen)) {
+            signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
+        }
+        pc += clen;
+        while (1) {
+            if (*pc == '\0') {
+                break;
+            }
+            clen = UTF8_CHAR_LEN (*pc);
+            CHECK_UTF_CHARLENR (clen);
+            if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
+                signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
+                return 0;
+            }
+            pc += clen;
+        }
+        entryPtr = Tcl_CreateHashEntry (tncdata->ids, attrValue, &hnew);
+        if (!hnew) {
+            if (Tcl_GetHashValue (entryPtr)) {
+                signalNotValid (userData,
+                                TNC_ERROR_DUPLICATE_ID_VALUE);
+                return 0;
+            }
+        }
+        Tcl_SetHashValue (entryPtr, (char *) 1);
+        break;
+
+    case TNC_ATTTYPE_IDREF:
+        /* Name type constraint "implicit" checked. If the
+           referenced ID exists, the type must be OK, because the
+           type of the ID's within the document are checked.
+           If there isn't such an ID, it's an error anyway. */
+        if (attrValue[0] == '\0') {
+            signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
+            return 0;
+        }
+        entryPtr = Tcl_CreateHashEntry (tncdata->ids, attrValue, &hnew);
+        break;
+
+    case TNC_ATTTYPE_IDREFS:
+        if (attrValue[0] == '\0') {
+            signalNotValid (userData, TNC_ERROR_NAMES_REQUIRED);
+            return 0;
+        }
+        /* Due to attribute value normalization (xml rec 3.3.3) this
+           is a simple list "ref ref ref ..." without leading or
+           trailing spaces and exact one space between the refs. */
+        start = i = 0;
+        while (attrValue[i]) {
+            if (attrValue[i] == ' ') {
+                save = attrValue[i];
+                attrValue[i] = '\0';
+                entryPtr = Tcl_CreateHashEntry (tncdata->ids,
+                                                &attrValue[start], &hnew);
+                attrValue[i] = save;
+                start = ++i;
+                continue;
+            }
+            i++;
+        }
+        entryPtr = Tcl_CreateHashEntry (tncdata->ids, &attrValue[start], 
+                                        &hnew);
+        break;
+
+    case TNC_ATTTYPE_ENTITY:
+        /* There is a validity constraint requesting entity attributes
+           values to be type Name. But if there would be an entity
+           declaration that doesn't fit this constraint, expat would
+           have already complained about the definition. So we go the
+           easy way and just look up the att value. If it's declared,
+           type must be OK, if not, it's an error anyway. */
+        entryPtr = Tcl_FindHashEntry (tncdata->entityDecls, attrValue);
+        if (!entryPtr) {
+            signalNotValid (userData, TNC_ERROR_ENTITY_ATTRIBUTE);
+            return 0;
+        }
+        entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
+        if (!entityInfo->is_notation) {
+            signalNotValid (userData, TNC_ERROR_ENTITY_ATTRIBUTE);
+            return 0;
+        }
+        break;
+
+    case TNC_ATTTYPE_ENTITIES:
+        /* Normalized by exapt; for type see comment to
+           TNC_ATTTYPE_ENTITIE */
+        copy = tdomstrdup (attrValue);
+        start = i = 0;
+        while (1) {
+            if (copy[i] == '\0') {
+                entryPtr = Tcl_FindHashEntry (tncdata->entityDecls,
+                                              &copy[start]);
+                if (!entryPtr) {
+                    signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
+                    FREE (copy);
+                    return 0;
+                }
+                entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
+                if (!entityInfo->is_notation) {
+                    signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
+                    FREE (copy);
+                    return 0;
+                }
+                FREE (copy);
+                break;
+            }
+            if (copy[i] == ' ') {
+                copy[i] = '\0';
+                entryPtr = Tcl_FindHashEntry (tncdata->entityDecls,
+                                              &copy[start]);
+                if (!entryPtr) {
+                    signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
+                    FREE (copy);
+                    return 0;
+                }
+                entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
+                if (!entityInfo->is_notation) {
+                    signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
+                    FREE (copy);
+                    return 0;
+                }
+                start = ++i;
+                continue;
+            }
+            i++;
+        }
+        break;
+
+    case TNC_ATTTYPE_NMTOKEN:
+        /* We assume, that the UTF-8 representation of the value is
+           valid (no partial chars, minimum encoding). This makes
+           things a little more easy and faster. I guess (but
+           haven't deeply checked - QUESTION -), expat would have
+           already complained otherwise. */
+        pc = (char*)attrValue;
+        clen = 0;
+        while (1) {
+            if (*pc == '\0') {
+                break;
+            }
+            clen = UTF8_CHAR_LEN (*pc);
+            CHECK_UTF_CHARLENR (clen);
+            if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
+                signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
+                return 0;
+            }
+            pc += clen;
+        }
+        if (!clen) 
+            signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
+        break;
+
+    case TNC_ATTTYPE_NMTOKENS:
+        pc = (char*)attrValue;
+        clen = 0;
+        while (1) {
+            if (*pc == '\0') {
+                break;
+            }
+            /* NMTOKENS are normalized by expat, so this should
+               be secure. */
+            if (*pc == ' ') {
+                pc++;
+            }
+            clen = UTF8_CHAR_LEN (*pc);
+            CHECK_UTF_CHARLENR (clen);
+            if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
+                signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
+                return 0;
+            }
+            pc += clen;
+        }
+        if (!clen)
+            signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
+        break;
+
+    case TNC_ATTTYPE_NOTATION:
+        entryPtr = Tcl_FindHashEntry (attDecl->lookupTable, attrValue);
+        if (!entryPtr) {
+            signalNotValid (userData, TNC_ERROR_NOTATION_REQUIRED);
+            return 0;
+        }
+        break;
+
+    case TNC_ATTTYPE_ENUMERATION:
+        if (!Tcl_FindHashEntry (attDecl->lookupTable, attrValue)) {
+            signalNotValid (userData, TNC_ERROR_ENUM_ATT_WRONG_VALUE);
+            return 0;
+        }
+        break;
+    }
+
+    if (attDecl->isrequired) {
+        (*nrOfreq)++;
+    }
+
+    return 1;
+}
 
 /*
  *----------------------------------------------------------------------------
@@ -1497,11 +1783,8 @@ TncElementStartCommand (userData, name, atts)
     Tcl_HashTable *elemAtts;
     const char **atPtr;
     TNC_ElemAttInfo *elemAttInfo;
-    TNC_AttDecl *attDecl;
-    TNC_EntityInfo *entityInfo;
     TNC_Content *model;
-    int i, clen, nrOfreq, start, result;
-    char *pc, *copy;
+    int result, nrOfreq;
 
 #ifdef TNC_DEBUG
     printf ("TncElementStartCommand name: %s\n", name);
@@ -1512,6 +1795,7 @@ TncElementStartCommand (userData, name, atts)
         return;
     }
     model = (TNC_Content *) Tcl_GetHashValue (entryPtr);
+
     switch (model->type) {
     case XML_CTYPE_MIXED:
     case XML_CTYPE_ANY:
@@ -1566,13 +1850,15 @@ TncElementStartCommand (userData, name, atts)
         tncdata->contentStackPtr++;
     } else {
         /* This is only in case of the root element */
-        if (!tncdata->doctypeName) {
-            signalNotValid (userData, TNC_ERROR_NO_DOCTYPE_DECL);
-            return;
-        }
-        if (strcmp (tncdata->doctypeName, name) != 0) {
-            signalNotValid (userData, TNC_ERROR_WRONG_ROOT_ELEMENT);
-            return;
+        if (atts) {
+            if (!tncdata->doctypeName) {
+                signalNotValid (userData, TNC_ERROR_NO_DOCTYPE_DECL);
+                return;
+            }
+            if (strcmp (tncdata->doctypeName, name) != 0) {
+                signalNotValid (userData, TNC_ERROR_WRONG_ROOT_ELEMENT);
+                return;
+            }
         }
         (&(tncdata->contentStack)[0])->model = model;
         (&(tncdata->contentStack)[0])->activeChild = 0;
@@ -1580,218 +1866,30 @@ TncElementStartCommand (userData, name, atts)
         (&(tncdata->contentStack)[0])->alreadymatched = 0;
         tncdata->contentStackPtr++;
     }
-
-    elemAttInfo = model->attInfo;
-    if (!elemAttInfo) {
-        if (atts[0] != NULL) {
-            signalNotValid (userData, TNC_ERROR_NO_ATTRIBUTES);
-            return;
-        }
-    } else {
-        elemAtts = elemAttInfo->attributes;
-        nrOfreq = 0;
-        for (atPtr = atts; atPtr[0]; atPtr += 2) {
-            entryPtr = Tcl_FindHashEntry (elemAtts, atPtr[0]);
-            if (!entryPtr) {
-                signalNotValid (userData, TNC_ERROR_UNKOWN_ATTRIBUTE);
+    
+    if (atts) {
+        elemAttInfo = model->attInfo;
+        if (!elemAttInfo) {
+            if (atts[0] != NULL) {
+                signalNotValid (userData, TNC_ERROR_NO_ATTRIBUTES);
                 return;
             }
-            /* NOTE: attribute uniqueness per element is a wellformed
-               constrain and therefor done by expat. */
-            attDecl = (TNC_AttDecl *) Tcl_GetHashValue (entryPtr);
-            switch (attDecl->att_type) {
-            case TNC_ATTTYPE_CDATA:
-                if (attDecl->isrequired && attDecl->dflt) {
-                    if (strcmp (attDecl->dflt, atPtr[1]) != 0) {
-                        signalNotValid (userData,
-                                        TNC_ERROR_WRONG_FIXED_ATTVALUE);
-                        return;
-                    }
-                }
-                break;
-            case TNC_ATTTYPE_ID:
-                pc = (char*)atPtr[1];
-                UTF8_CHAR_LEN (*pc);
-                if (!UTF8_GET_NAMING_NAME (pc, clen)) {
-                    signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
-                }
-                pc += clen;
-                while (1) {
-                    if (*pc == '\0') {
-                        break;
-                    }
-                    UTF8_CHAR_LEN (*pc);
-                    if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
-                        signalNotValid (userData, TNC_ERROR_NAME_REQUIRED);
-                        return;
-                    }
-                    pc += clen;
-                }
-                entryPtr = Tcl_CreateHashEntry (tncdata->ids, atPtr[1], &i);
-                if (!i) {
-                    if (Tcl_GetHashValue (entryPtr)) {
-                        signalNotValid (userData,
-                                        TNC_ERROR_DUPLICATE_ID_VALUE);
-                        return;
-                    }
-                }
-                Tcl_SetHashValue (entryPtr, (char *) 1);
-                break;
-            case TNC_ATTTYPE_IDREF:
-                /* Name type constraint "implicit" checked. If the
-                   referenced ID exists, the type must be OK, because the
-                   type of the ID's within the document are checked.
-                   If there isn't such an ID, it's an error anyway. */
-                entryPtr = Tcl_CreateHashEntry (tncdata->ids, atPtr[1], &i);
-                break;
-            case TNC_ATTTYPE_IDREFS:
-                copy = strdup (atPtr[1]);
-                start = i = 0;
-                while (1) {
-                    if (copy[i] == '\0') {
-                        entryPtr = Tcl_CreateHashEntry (tncdata->ids,
-                                                        &copy[start], &result);
-                        free (copy);
-                        break;
-                    }
-                    if (copy[i] == ' ') {
-                        copy[i] = '\0';
-                        entryPtr = Tcl_CreateHashEntry (tncdata->ids,
-                                                        &copy[start], &result);
-                        start = ++i;
-                        continue;
-                    }
-                    i++;
-                }
-                break;
-            case TNC_ATTTYPE_ENTITY:
-                /* There is a validity constraint requesting entity attributes
-                   values to be type Name. But if there would be an entity
-                   declaration that doesn't fit this constraint, expat would
-                   have already complained about the definition. So we go the
-                   easy way and just look up the att value. If it's declared,
-                   type must be OK, if not, it's an error anyway. */
-                entryPtr = Tcl_FindHashEntry (tncdata->entityDecls, atPtr[1]);
-                if (!entryPtr) {
-                    signalNotValid (userData, TNC_ERROR_ENTITY_ATTRIBUTE);
+        } else {
+            elemAtts = elemAttInfo->attributes;
+            nrOfreq = 0;
+            for (atPtr = atts; atPtr[0]; atPtr += 2) {
+                if (!TncProbeAttribute (userData, elemAtts, (char *) atPtr[0],
+                                        (char *) atPtr[1], &nrOfreq))    
                     return;
-                }
-                entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
-                if (!entityInfo->is_notation) {
-                    signalNotValid (userData, TNC_ERROR_ENTITY_ATTRIBUTE);
-                    return;
-                }
-                break;
-            case TNC_ATTTYPE_ENTITIES:
-                /* Normalized by exapt; for type see comment to
-                   TNC_ATTTYPE_ENTITIE */
-                copy = strdup (atPtr[1]);
-                start = i = 0;
-                while (1) {
-                    if (copy[i] == '\0') {
-                        entryPtr = Tcl_FindHashEntry (tncdata->entityDecls,
-                                                      &copy[start]);
-                        if (!entryPtr) {
-                            signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
-                            free (copy);
-                            return;
-                        }
-                        entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
-                        if (!entityInfo->is_notation) {
-                            signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
-                            free (copy);
-                            return;
-                        }
-                        free (copy);
-                        break;
-                    }
-                    if (copy[i] == ' ') {
-                        copy[i] = '\0';
-                        entryPtr = Tcl_FindHashEntry (tncdata->entityDecls,
-                                                      &copy[start]);
-                        if (!entryPtr) {
-                            signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
-                            free (copy);
-                            return;
-                        }
-                        entityInfo = (TNC_EntityInfo *) Tcl_GetHashValue (entryPtr);
-                        if (!entityInfo->is_notation) {
-                            signalNotValid (userData, TNC_ERROR_ENTITIES_ATTRIBUTE);
-                            free (copy);
-                            return;
-                        }
-                        start = ++i;
-                        continue;
-                    }
-                    i++;
-                }
-                break;
-            case TNC_ATTTYPE_NMTOKEN:
-                /* We assume, that the UTF-8 representation of the value is
-                   valid (no partial chars, minimum encoding). This makes
-                   things a little more easy and faster. I guess (but
-                   haven't deeply checked - QUESTION -), expat would have
-                   already complained otherwise. */
-                pc = (char*)atPtr[1];
-                clen = 0;
-                while (1) {
-                    if (*pc == '\0') {
-                        break;
-                    }
-                    UTF8_CHAR_LEN (*pc);
-                    if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
-                        signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                        return;
-                    }
-                    pc += clen;
-                }
-                if (!clen) 
-                    signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                break;
-            case TNC_ATTTYPE_NMTOKENS:
-                pc = (char*)atPtr[1];
-                clen = 0;
-                while (1) {
-                    if (*pc == '\0') {
-                        break;
-                    }
-                    /* NMTOKENS are normalized by expat, so this should
-                       be secure. */
-                    if (*pc == ' ') {
-                        pc++;
-                    }
-                    UTF8_CHAR_LEN (*pc);
-                    if (!UTF8_GET_NAMING_NMTOKEN (pc, clen)) {
-                        signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                        return;
-                    }
-                    pc += clen;
-                }
-                if (!clen)
-                    signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
-                break;
-            case TNC_ATTTYPE_NOTATION:
-                entryPtr = Tcl_FindHashEntry (attDecl->lookupTable, atPtr[1]);
-                if (!entryPtr) {
-                    signalNotValid (userData, TNC_ERROR_NOTATION_REQUIRED);
-                    return;
-                }
-                break;
-            case TNC_ATTTYPE_ENUMERATION:
-                if (!Tcl_FindHashEntry (attDecl->lookupTable, atPtr[1])) {
-                    signalNotValid (userData, TNC_ERROR_ENUM_ATT_WRONG_VALUE);
-                    return;
-                }
-                break;
             }
-            if (attDecl->isrequired) {
-                nrOfreq++;
-            }
-        }
-        if (nrOfreq != elemAttInfo->nrOfreq) {
-            signalNotValid (userData, TNC_ERROR_MISSING_REQUIRED_ATTRIBUTE);
+            if (nrOfreq != elemAttInfo->nrOfreq) {
+                signalNotValid (userData, 
+                                TNC_ERROR_MISSING_REQUIRED_ATTRIBUTE);
             return;
+            }
         }
+    } else {
+        tncdata->elemAttInfo = model->attInfo;
     }
 
 #ifdef TNC_DEBUG
@@ -1933,10 +2031,10 @@ TncProbeElementEnd (tncdata)
         /* NAME type dosen't occur at top level of a content model and is
            handled in some "shotcut" way directly in the CHOICE and SEQ cases.
            It's only here to pacify gcc -Wall. */
-        printf ("error!!! - in TncProbeElementEnd: XML_CTYPE_NAME shouldn't reached in any case.\n");
+        fprintf (stderr, "error!!! - in TncProbeElementEnd: XML_CTYPE_NAME shouldn't be reached in any case.\n");
     default:
-        printf ("error!!! - in TncProbeElementEnd: unknown content type: %d\n",
-                stackelm.model->type);
+        fprintf (stderr, "error!!! - in TncProbeElementEnd: unknown content type: %d\n",
+                 stackelm.model->type);
         return 1;
     }
 }
@@ -2011,22 +2109,23 @@ TncElementEndCommand (userData, name)
         /* This means, the root element is closed,
            therefor the place to check, if every IDREF points
            to a ID. */
-        for (entryPtr = Tcl_FirstHashEntry (tncdata->ids, &search);
-             entryPtr != NULL;
-             entryPtr = Tcl_NextHashEntry (&search)) {
+        if (tncdata->idCheck) {
+            for (entryPtr = Tcl_FirstHashEntry (tncdata->ids, &search);
+                 entryPtr != NULL;
+                 entryPtr = Tcl_NextHashEntry (&search)) {
 #ifdef TNC_DEBUG
-            printf ("check id value %s\n",
-                    Tcl_GetHashKey (tncdata->ids, entryPtr));
-            printf ("value %p\n", Tcl_GetHashValue (entryPtr));
+                printf ("check id value %s\n",
+                        Tcl_GetHashKey (tncdata->ids, entryPtr));
+                printf ("value %p\n", Tcl_GetHashValue (entryPtr));
 #endif
-            if (!Tcl_GetHashValue (entryPtr)) {
-                signalNotValid (userData, TNC_ERROR_UNKOWN_ID_REFERRED);
+                if (!Tcl_GetHashValue (entryPtr)) {
+                    signalNotValid (userData, TNC_ERROR_UNKOWN_ID_REFERRED);
                 return;
+                }
             }
         }
     }
 }
-
 
 /*
  *----------------------------------------------------------------------------
@@ -2101,6 +2200,339 @@ TncStartCdataSectionHandler (userData)
     }
 }
 
+/*
+ *----------------------------------------------------------------------------
+ *
+ * validateNodeAttributes --
+ *
+ *	Validates the attributes of the given domNode. The domNode must be
+ *      an ELEMENT_NODE.
+ *
+ * Results:
+ *	1 if OK, 0 for validation error.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static int 
+validateNodeAttributes (
+    TNC_Data        *tncdata,
+    TNC_ElemAttInfo *elemAttInfo,
+    domNode         *node
+    )
+{
+    int          nrOfreq;
+    domAttrNode *attr;
+    
+    if (!elemAttInfo) {
+        if (node->firstAttr) {
+            signalNotValid (tncdata, TNC_ERROR_NO_ATTRIBUTES);
+            return 0;
+        }
+    } else {
+        attr = node->firstAttr;
+        nrOfreq = 0;
+        while (attr) {
+            if (!TncProbeAttribute (tncdata, 
+                                    elemAttInfo->attributes,
+                                    attr->nodeName,
+                                    attr->nodeValue,
+                                    &nrOfreq))
+                return 0;
+            attr = attr->nextSibling;
+        }
+        if (nrOfreq != elemAttInfo->nrOfreq) {
+            signalNotValid (tncdata, 
+                            TNC_ERROR_MISSING_REQUIRED_ATTRIBUTE);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ *
+ * validateTree --
+ *
+ *	Validates a complete DOM (sub-)tree against a the DTD informations in
+ *      the given tncdata structure. The node argument acts as root of the
+ *      (sub-)tree.
+ *
+ * Results:
+ *	1 if OK, 0 for validation error.
+ *
+ * Side effects:
+ *	May alter the context state part of the tnc clientData (and even
+ *      mallocs additional memory for them).
+ *
+ *----------------------------------------------------------------------------
+ */
+static int validateTree (
+    TNC_Data *tncdata,
+    domNode  *node
+    )
+{
+    domNode       *child;
+
+    switch (node->nodeType) {
+    case ELEMENT_NODE:
+        TncElementStartCommand (tncdata, node->nodeName, NULL);
+        if (tncdata->status) return 0;
+        if (!validateNodeAttributes (tncdata, tncdata->elemAttInfo, node)) 
+            return 0;
+        if (node->firstChild) {
+            child = node->firstChild;
+            while (child) {
+                if (!validateTree (tncdata, child)) return 0;
+                child = child->nextSibling;
+            }
+        }
+        TncElementEndCommand (tncdata, node->nodeName);
+        if (tncdata->status) return 0;
+        break;
+    case TEXT_NODE:
+    case CDATA_SECTION_NODE:
+        TncCharacterdataCommand (tncdata, ((domTextNode*)node)->nodeValue, 
+                                 ((domTextNode*)node)->valueLength);
+        if (tncdata->status) return 0;
+        break;
+    case COMMENT_NODE:
+    case PROCESSING_INSTRUCTION_NODE:
+        break;
+    default:
+        signalNotValid (tncdata, TNC_ERROR_UNKNOWN_NODE_TYPE);
+        return 0;
+    }
+    return 1;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ *
+ * tnc_ValidateObjCmd
+ *
+ *	Implements the validateObjCmds. See the user documentation
+ *      for details.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	May alter some parts of the tnc_ValidateObjCmd clientData
+ *      structure.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static int
+tnc_ValidateObjCmd (
+    ClientData  clientData,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    *CONST objv[]
+    )
+{
+    TNC_Data        *tncdata = (TNC_Data*) clientData;
+    int              methodIndex, result = 1;
+    domNode         *node;
+    char            *errMsg = NULL;
+    Tcl_HashEntry   *entryPtr;
+    TNC_Content     *model;
+    
+    static CONST84 char *validateMethods[] = {
+        "validateTree",   "validateDocument", "validateAttributes",
+        "delete",
+        NULL
+    };
+    enum validateMethod {
+        m_validateTree, m_validateDocument, m_validateAttributes,
+        m_delete
+    };
+
+    if (objc < 2 || objc > 4) {
+        SetResult (validateCmd_usage);
+        return TCL_ERROR;
+    }
+    
+    if (Tcl_GetIndexFromObj (interp, objv[1], validateMethods, "method", 0,
+                             &methodIndex) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    
+
+    switch ((enum validateMethod) methodIndex) {
+
+    case m_validateTree:
+        if (objc < 3 || objc > 4) {
+            SetResult (validateCmd_usage);
+            return TCL_ERROR;
+        }
+        node = tcldom_getNodeFromName (
+            interp, Tcl_GetStringFromObj(objv[2], NULL), &errMsg
+            );
+        if (!node || (node->nodeType != ELEMENT_NODE)) {
+            SetResult ("The validateTree method needs a domNode as argument.");
+            return TCL_ERROR;
+        }
+        tncdata->status = 0;
+        tncdata->idCheck = 0;
+        if (tncdata->ids->numEntries) {
+            Tcl_DeleteHashTable (tncdata->ids);
+            Tcl_InitHashTable (tncdata->ids, TCL_STRING_KEYS);
+        }
+        tncdata->contentStackPtr = 0;
+        Tcl_ResetResult (interp);
+        result = validateTree (tncdata, node);
+        if (objc == 4) {
+            if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                               Tcl_GetObjResult(interp), 0) == NULL) {
+                Tcl_ResetResult(interp);
+                Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                "couldn't save msg in variable", -1);
+                return TCL_ERROR;
+            }
+        }
+        if (result) {
+            SetBooleanResult (1);
+        } else {
+            SetBooleanResult (0);
+        }
+        break;
+        
+    case m_validateDocument:
+        if (objc < 3 || objc > 4) {
+            SetResult (validateCmd_usage);
+            return TCL_ERROR;
+        }
+        node = (domNode *) tcldom_getDocumentFromName (
+            interp, Tcl_GetStringFromObj (objv[2], NULL), &errMsg
+            );
+        if (!node) {
+            SetResult ("The validateDocument method needs a domDocument as argument.");
+            return TCL_ERROR;
+        }
+        node = ((domDocument *) node)->documentElement;
+        if (!tncdata->doctypeName) {
+            signalNotValid (tncdata, TNC_ERROR_NO_DOCTYPE_DECL);
+            if (objc == 4) {
+                if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                                   Tcl_GetObjResult(interp), 0) == NULL) {
+                    Tcl_ResetResult(interp);
+                    Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                    "couldn't save msg in variable", -1);
+                    return TCL_ERROR;
+                }
+            }
+            SetBooleanResult (0);
+            return TCL_OK;
+        }
+        if (strcmp (tncdata->doctypeName, node->nodeName) != 0) {
+            signalNotValid (tncdata, TNC_ERROR_WRONG_ROOT_ELEMENT);
+            if (objc == 4) {
+                if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                                   Tcl_GetObjResult(interp), 0) == NULL) {
+                    Tcl_ResetResult(interp);
+                    Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                    "couldn't save msg in variable", -1);
+                    return TCL_ERROR;
+                }
+            }
+            SetBooleanResult (0);
+            return TCL_OK;
+        }
+        tncdata->status = 0;
+        tncdata->idCheck = 1;
+        if (tncdata->ids->numEntries) {
+            Tcl_DeleteHashTable (tncdata->ids);
+            Tcl_InitHashTable (tncdata->ids, TCL_STRING_KEYS);
+        }
+        tncdata->contentStackPtr = 0;
+        Tcl_ResetResult (interp);
+        result = validateTree (tncdata, node);
+        if (objc == 4) {
+            if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                               Tcl_GetObjResult(interp), 0) == NULL) {
+                Tcl_ResetResult(interp);
+                Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                "couldn't save msg in variable", -1);
+                return TCL_ERROR;
+            }
+        }
+        if (result) {
+            SetBooleanResult (1);
+        } else {
+            SetBooleanResult (0);
+        }
+        break;
+        
+    case m_validateAttributes:
+        if (objc < 3 || objc > 4) {
+            SetResult (validateCmd_usage);
+            return TCL_ERROR;
+        }
+        node = tcldom_getNodeFromName (
+            interp, Tcl_GetStringFromObj(objv[2], NULL), &errMsg
+            );
+        if (!node || (node->nodeType != ELEMENT_NODE)) {
+            SetResult ("The validateAttributes method needs a domNode as argument.");
+            return TCL_ERROR;
+        }
+        entryPtr = Tcl_FindHashEntry (tncdata->tagNames, node->nodeName);
+        if (!entryPtr) {
+            signalNotValid (tncdata, TNC_ERROR_UNKNOWN_ELEMENT);
+            if (objc == 4) {
+                if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                                   Tcl_GetObjResult(interp), 0) == NULL) {
+                    Tcl_ResetResult(interp);
+                    Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                    "couldn't save msg in variable", -1);
+                    return TCL_ERROR;
+                }
+            }
+            SetBooleanResult (0);
+            return TCL_OK;
+        }
+        model = (TNC_Content *) Tcl_GetHashValue (entryPtr);
+        tncdata->status = 0;
+        tncdata->idCheck = 0;
+        if (tncdata->ids->numEntries) {
+            Tcl_DeleteHashTable (tncdata->ids);
+            Tcl_InitHashTable (tncdata->ids, TCL_STRING_KEYS);
+        }
+        Tcl_ResetResult (interp);
+        result = validateNodeAttributes (tncdata, model->attInfo, node);
+        if (objc == 4) {
+            if (Tcl_ObjSetVar2(interp, objv[3], NULL,
+                               Tcl_GetObjResult(interp), 0) == NULL) {
+                Tcl_ResetResult(interp);
+                Tcl_AppendToObj(Tcl_GetObjResult(interp),  
+                                "couldn't save msg in variable", -1);
+                return TCL_ERROR;
+            }
+        }
+        if (result) {
+            SetBooleanResult (1);
+        } else {
+            SetBooleanResult (0);
+        }
+        break;
+        
+    case m_delete:
+        if (objc != 2) {
+            SetResult (validateCmd_usage);
+            return TCL_ERROR;
+        }
+        Tcl_DeleteCommand (interp, Tcl_GetStringFromObj (objv[0], NULL));
+        SetResult ("");
+        break;
+    }
+
+    return TCL_OK;
+}
 
 /*
  *----------------------------------------------------------------------------
@@ -2134,7 +2566,7 @@ FreeTncData (tncdata)
             model = Tcl_GetHashValue (entryPtr);
             if (model) {
                 TncFreeTncModel (model);
-                Tcl_Free ((char *) model);
+                FREE ((char *) model);
             }
             entryPtr = Tcl_NextHashEntry (&search);
         }
@@ -2154,18 +2586,18 @@ FreeTncData (tncdata)
                 if (attDecl->att_type == TNC_ATTTYPE_NOTATION ||
                     attDecl->att_type == TNC_ATTTYPE_ENUMERATION) {
                     Tcl_DeleteHashTable (attDecl->lookupTable);
-                    Tcl_Free ((char *) attDecl->lookupTable);
+                    FREE ((char *) attDecl->lookupTable);
                 }
                 if (attDecl->dflt) {
-                    free (attDecl->dflt);
+                    FREE (attDecl->dflt);
                 }
-                Tcl_Free ((char *) attDecl);
+                FREE ((char *) attDecl);
             }
             attentryPtr = Tcl_NextHashEntry (&attsearch);
         }
         Tcl_DeleteHashTable (elemAttInfo->attributes);
-        Tcl_Free ((char *) elemAttInfo->attributes);
-        Tcl_Free ((char *) elemAttInfo);
+        FREE ((char *) elemAttInfo->attributes);
+        FREE ((char *) elemAttInfo);
         entryPtr = Tcl_NextHashEntry (&search);
     }
     Tcl_DeleteHashTable (tncdata->attDefsTables);
@@ -2174,9 +2606,9 @@ FreeTncData (tncdata)
         entityInfo = Tcl_GetHashValue (entryPtr);
         if (entityInfo) {
             if (entityInfo->is_notation) {
-                free (entityInfo->notationName);
+                FREE (entityInfo->notationName);
             }
-            Tcl_Free ((char *) entityInfo);
+            FREE ((char *) entityInfo);
         }
         entryPtr = Tcl_NextHashEntry (&search);
     }
@@ -2184,10 +2616,9 @@ FreeTncData (tncdata)
     Tcl_DeleteHashTable (tncdata->notationDecls);
     Tcl_DeleteHashTable (tncdata->ids);
     if (tncdata->doctypeName) {
-        free (tncdata->doctypeName);
+        FREE (tncdata->doctypeName);
     }
 }
-
 
 /*
  *----------------------------------------------------------------------------
@@ -2216,6 +2647,8 @@ TncResetProc (interp, userData)
     FreeTncData (tncdata);
     Tcl_InitHashTable (tncdata->tagNames, TCL_STRING_KEYS);
     tncdata->elemContentsRewriten = 0;
+    tncdata->status = 0;
+    tncdata->idCheck = 1;
     Tcl_InitHashTable (tncdata->attDefsTables, TCL_STRING_KEYS);
     Tcl_InitHashTable (tncdata->entityDecls, TCL_STRING_KEYS);
     Tcl_InitHashTable (tncdata->notationDecls, TCL_STRING_KEYS);
@@ -2226,6 +2659,59 @@ TncResetProc (interp, userData)
     tncdata->contentStackPtr = 0;
 }
 
+/*
+ *----------------------------------------------------------------------------
+ *
+ * createTncData --
+ *
+ *	Helper proc. Allocates a TNC_Data structure and initializes it.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory allocation and initialization.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static TNC_Data *
+createTncData (
+    Tcl_Interp *interp,
+    Tcl_Obj    *expatObj
+    )
+{
+    TNC_Data *tncdata;
+    
+    tncdata = (TNC_Data *) MALLOC (sizeof (TNC_Data));
+    tncdata->tagNames = (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (tncdata->tagNames, TCL_STRING_KEYS);
+    tncdata->elemContentsRewriten = 0;
+    tncdata->status = 0;
+    tncdata->idCheck = 1;
+    tncdata->attDefsTables = 
+        (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (tncdata->attDefsTables, TCL_STRING_KEYS);
+    tncdata->entityDecls = 
+        (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (tncdata->entityDecls, TCL_STRING_KEYS);
+    tncdata->notationDecls =
+        (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (tncdata->notationDecls, TCL_STRING_KEYS);
+    tncdata->ids = (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (tncdata->ids, TCL_STRING_KEYS);
+    tncdata->doctypeName = NULL;
+    tncdata->interp = interp;
+    tncdata->expatObj = expatObj;
+    tncdata->ignoreWhiteCDATAs = 1;
+    tncdata->ignorePCDATA = 0;
+    tncdata->contentStack = (TNC_ContentStack *)
+        MALLOC (sizeof (TNC_ContentStack) * TNC_INITCONTENTSTACKSIZE);
+    tncdata->contentStackSize = TNC_INITCONTENTSTACKSIZE;
+    tncdata->contentStackPtr = 0;
+    
+    return tncdata;
+}
 
 /*
  *----------------------------------------------------------------------------
@@ -2252,15 +2738,42 @@ TncFreeProc (interp, userData)
     TNC_Data *tncdata = (TNC_Data *) userData;
 
     FreeTncData (tncdata);
-    Tcl_Free ((char *) tncdata->tagNames);
-    Tcl_Free ((char *) tncdata->attDefsTables);
-    Tcl_Free ((char *) tncdata->entityDecls);
-    Tcl_Free ((char *) tncdata->notationDecls);
-    Tcl_Free ((char *) tncdata->ids);
-    Tcl_Free ((char *) tncdata->contentStack);
-    Tcl_Free ((char *) tncdata);
+    FREE ((char *) tncdata->tagNames);
+    FREE ((char *) tncdata->attDefsTables);
+    FREE ((char *) tncdata->entityDecls);
+    FREE ((char *) tncdata->notationDecls);
+    FREE ((char *) tncdata->ids);
+    FREE ((char *) tncdata->contentStack);
+    FREE ((char *) tncdata);
 }
 
+/*
+ *----------------------------------------------------------------------------
+ *
+ * tnc_ValidateObjDeleteCmd
+ *
+ *	Called when a validateObjCmd is deleted. It's infact nothing
+ *      but a wrapper for TncFreeProc.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The clientData structure will be freed, during cleanup routine calls.
+ *
+ *----------------------------------------------------------------------------
+ */
+
+static void
+tnc_ValidateObjDeleteCmd (
+    ClientData clientData
+    )
+{
+    TNC_Data *tncdata = (TNC_Data*) clientData;
+    
+    TncFreeProc (tncdata->interp, tncdata);
+    
+}
 
 /*
  *----------------------------------------------------------------------------
@@ -2286,28 +2799,21 @@ TclTncObjCmd(dummy, interp, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-    char          *method;
+    char          *method, *cmdName, s[20];
     CHandlerSet   *handlerSet;
     int            methodIndex, result;
-    TNC_Data       *tncdata;
-
+    TNC_Data      *tncdata;
 
     static CONST84 char *tncMethods[] = {
-        "enable",  "remove",
+        "enable",  "remove", "getValidateCmd",
         NULL
     };
     enum tncMethod {
-        m_enable, m_remove
+        m_enable, m_remove, m_getValidateCmd
     };
 
-    if (objc != 3) {
-        Tcl_WrongNumArgs (interp, 1, objv, tnc_usage);
-        return TCL_ERROR;
-    }
-
     if (!CheckExpatParserObj (interp, objv[1])) {
-        Tcl_SetResult (interp,
-                       "First argument has to be a expat parser object", NULL);
+        SetResult ("First argument has to be a expat parser object");
         return TCL_ERROR;
     }
 
@@ -2315,40 +2821,18 @@ TclTncObjCmd(dummy, interp, objc, objv)
     if (Tcl_GetIndexFromObj (interp, objv[2], tncMethods, "method", 0,
                              &methodIndex) != TCL_OK)
     {
-        Tcl_SetResult (interp, tnc_usage, NULL);
         return TCL_ERROR;
     }
 
     switch ((enum tncMethod) methodIndex) {
-    case m_enable:
-        tncdata = (TNC_Data *) Tcl_Alloc (sizeof (TNC_Data));
-        tncdata->tagNames =
-            (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
-        Tcl_InitHashTable (tncdata->tagNames, TCL_STRING_KEYS);
-        tncdata->elemContentsRewriten = 0;
-        tncdata->attDefsTables =
-            (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
-        Tcl_InitHashTable (tncdata->attDefsTables, TCL_STRING_KEYS);
-        tncdata->entityDecls =
-            (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
-        Tcl_InitHashTable (tncdata->entityDecls, TCL_STRING_KEYS);
-        tncdata->notationDecls =
-            (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
-        Tcl_InitHashTable (tncdata->notationDecls, TCL_STRING_KEYS);
-        tncdata->ids = (Tcl_HashTable *) Tcl_Alloc (sizeof (Tcl_HashTable));
-        Tcl_InitHashTable (tncdata->ids, TCL_STRING_KEYS);
-        tncdata->doctypeName = NULL;
-        tncdata->interp = interp;
-        tncdata->expatObj = objv[1];
-        tncdata->ignoreWhiteCDATAs = 1;
-        tncdata->ignorePCDATA = 0;
-        tncdata->contentStack = (TNC_ContentStack *)
-            Tcl_Alloc (sizeof (TNC_ContentStack) * TNC_INITCONTENTSTACKSIZE);
-        tncdata->contentStackSize = TNC_INITCONTENTSTACKSIZE;
-        tncdata->contentStackPtr = 0;
 
+    case m_enable:
+        if (objc != 3) {
+            Tcl_WrongNumArgs (interp, 1, objv, tnc_usage);
+            return TCL_ERROR;
+        }   
         handlerSet = CHandlerSetCreate ("tnc");
-        handlerSet->userData = tncdata;
+        handlerSet->userData = createTncData (interp, objv[1]);
         handlerSet->ignoreWhiteCDATAs = 0;
         handlerSet->resetProc = TncResetProc;
         handlerSet->freeProc = TncFreeProc;
@@ -2365,25 +2849,62 @@ TclTncObjCmd(dummy, interp, objc, objv)
 
         result = CHandlerSetInstall (interp, objv[1], handlerSet);
         if (result != 0) {
-            Tcl_SetResult (interp, "already have tnc C handler set", NULL);
-            free (handlerSet->name);
-            Tcl_Free ((char *) handlerSet);
-            TncFreeProc (interp, tncdata);
+            SetResult ("already have tnc C handler set");
+            TncFreeProc (interp, handlerSet->userData);
+            FREE (handlerSet->name);
+            FREE ((char *) handlerSet);
             return TCL_ERROR;
         }
         return TCL_OK;
+
     case m_remove:
+        if (objc != 3) {
+            Tcl_WrongNumArgs (interp, 1, objv, tnc_usage);
+            return TCL_ERROR;
+        }   
         result = CHandlerSetRemove (interp, objv[1], "tnc");
         if (result == 1) {
             /* This should not happen if CheckExpatParserObj() is used. */
-            Tcl_SetResult (interp, "argument has to be a expat parser object", NULL);
+            SetResult ("argument has to be a expat parser object");
             return TCL_ERROR;
         }
         if (result == 2) {
-            Tcl_SetResult (interp, "expat parser obj hasn't a C handler set named \"tnc\"", NULL);
+            SetResult("expat parser obj hasn't a C handler set named \"tnc\"");
             return TCL_ERROR;
         }
         return TCL_OK;
+
+    case m_getValidateCmd:
+        if (objc != 3 && objc != 4) {
+            Tcl_WrongNumArgs (interp, 1, objv, tnc_usage);
+            return TCL_ERROR;
+        }
+        handlerSet = CHandlerSetGet (interp, objv[1], "tnc");
+        if (!handlerSet) {
+            SetResult("expat parser obj hasn't a C handler set named \"tnc\"");
+            return TCL_ERROR;
+        }
+        tncdata = (TNC_Data *) handlerSet->userData;
+        if (!tncdata->status) {
+            SetResult ("No complete and error free DTD data available.");
+            return TCL_ERROR;
+        }
+        /* After we finished, the validator structure is its own command,
+           there isn't a parser cmd anymore. */
+        tncdata->expatObj = NULL;
+        tncdata->status = 0;
+        handlerSet->userData = createTncData (interp, objv[1]);
+        if (objc == 4) {
+            cmdName = Tcl_GetStringFromObj (objv[3], NULL);
+        } else {
+            FindUniqueCmdName (interp, s);
+            cmdName = s;
+        }
+        Tcl_CreateObjCommand (interp, cmdName, tnc_ValidateObjCmd, tncdata,
+                              tnc_ValidateObjDeleteCmd);
+        Tcl_SetResult (interp, cmdName, TCL_VOLATILE);
+        return TCL_OK;
+
     default:
         Tcl_SetResult (interp, "unknown method", NULL);
         return TCL_ERROR;
@@ -2426,9 +2947,9 @@ Tnc_Init (interp)
         return TCL_ERROR;
     }
 #endif
-    Tcl_PkgRequire (interp, "tdom", "0.7", 0);
+    Tcl_PkgRequire (interp, "tdom", "0.7.5", 0);
     Tcl_CreateObjCommand (interp, "tnc", TclTncObjCmd, NULL, NULL );
-    Tcl_PkgProvide (interp, "tnc", "0.2.0");
+    Tcl_PkgProvide (interp, "tnc", VERSION);
     return TCL_OK;
 }
 
