@@ -169,7 +169,6 @@ int xpathEvalSteps (ast steps, xpathResultSet *nodeList,
                     xpathResultSet *result, char **errMsg);
                     
 #define xpathRSInit(x) (x)->type = EmptyResult; (x)->nr_nodes = 0;
-/*  void   xpathRSInit (xpathResultSet *rs ); */
 void   xpathRSFree (xpathResultSet *rs );
 
 int    xpathFuncBoolean  (xpathResultSet *rs);
@@ -178,7 +177,7 @@ char * xpathFuncString   (xpathResultSet *rs);
 char * xpathFuncStringForNode (domNode *node);
 int    xpathRound        (double r);
 
-char * xpathGetTextValue (domNode *node, int *strLen);
+char * xpathGetStringValue (domNode *node, int *strLen);
 
 char * xpathNodeToXPath  (domNode *node);
     
@@ -188,11 +187,10 @@ void rsSetReal      ( xpathResultSet *rs, double       d    );
 void rsSetString    ( xpathResultSet *rs, char        *s    );
 void rsAddNode      ( xpathResultSet *rs, domNode     *node );
 void rsAddNodeFast  ( xpathResultSet *rs, domNode     *node );
-void rsAddAttrNode  ( xpathResultSet *rs, domAttrNode *node );
-void rsAddAttrValue ( xpathResultSet *rs, domAttrNode *node );
-
-/*??*/ void rsPrint ( xpathResultSet *rs );
 void rsCopy         ( xpathResultSet *to, xpathResultSet *from );
+
+/* This function is only used for debugging code */
+void rsPrint        ( xpathResultSet *rs );
 
 #endif
 
