@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/03/01 01:22:14  rolf
+|   Changed parsing. [dom parse ..] now uses Tcl_GetStringFromObj(),
+|   dom parse -channel now respects the encoding of the channel.
+|
 |   Revision 1.3  2002/02/24 02:31:27  rolf
 |   Fixed UTF-8 char byte length determination
 |
@@ -107,12 +111,10 @@
 #define writeChars(var,chan,buf,len)  (chan) ? \
                      ((void)Tcl_Write ((chan), (buf), (len) )) : \
                      (Tcl_AppendToObj ((var), (buf), (len) ));
-#define TCLGETBYTES(obj,pLen) Tcl_GetStringFromObj(obj,pLen)
 #else
 #define writeChars(var,chan,buf,len)  (chan) ? \
                      ((void)Tcl_WriteChars ((chan), (buf), (len) )) : \
                      (Tcl_AppendToObj ((var), (buf), (len) ));
-#define TCLGETBYTES(obj,pLen) Tcl_GetByteArrayFromObj(obj,pLen)
 #endif          
 /*----------------------------------------------------------------------------
 |   Module Globals
@@ -869,7 +871,7 @@ int tcldom_appendXML (
     XML_Parser   parser;
     
     
-    xml_string = TCLGETBYTES( obj, &xml_string_len);
+    xml_string = Tcl_GetStringFromObj( obj, &xml_string_len);
 
 #ifdef TDOM_NO_EXPAT
     Tcl_AppendResult(interp, "tDOM was compiled without Expat!", NULL);
@@ -3144,7 +3146,7 @@ int tcldom_parse (
             SetResult (dom_usage);
             return TCL_ERROR;
         }
-        xml_string = TCLGETBYTES( objv[1], &xml_string_len);
+        xml_string = Tcl_GetStringFromObj( objv[1], &xml_string_len);
         if (objc == 3) {    
             newObjName = objv[2];
             setVariable = 1;
