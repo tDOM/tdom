@@ -308,6 +308,10 @@ node name \fIdocElemName\fR. \fIUri\fR gives the namespace of the
 document element to create. The \fIobjVar\fR controlls the
 memory handling as explained above.
 .TP
+\&\fB\fBdom\fP \fBcreateDocumentNode\fP ?\fIobjVar\fB?
+\&\fRCreates a new, 'empty' DOM document object without any element
+node. \fIobjVar\fR controlls the memory handling as explained above.
+.TP
 \&\fB\fBdom\fP \fBsetResultEncoding\fP ?\fIencodingName\fB?
 \&\fRIf \fIencodingName\fR is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
@@ -433,6 +437,16 @@ creation time decides. If TextCheck is true at creation time, the
 command will check his arguments, otherwise not.The
 \&\fIsetTextCheck\fR method set this flag. It returns the current
 TextCheck flag state. The default state for TextCheck is true.
+.TP
+\&\fB\fBdom\fP \fBsetObjectCommands\fP ?\fI(automatic|token|command=\fB?
+\&\fRControls, if documents and nodes are created as tcl commands or
+as token to be
+used with the domNode and domDoc commands. If the mode is
+\&'automatic', then methods used at tcl commands will create tcl
+commands and methods used at doc or node tokes will create tokens. If
+the mode is 'command' then always tcl commands will be created. If
+the mode is 'token', then always token will be created. The method
+returns the current mode. This method is an experimental interface.
 .TP
 \&\fB\fBdom\fP \fBisName\fP \fIname\fB
 \&\fRReturns 1, if \fIname\fR is a valid XML Name according to

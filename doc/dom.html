@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80ab088">NAME</a> · <a href="#SECTid80ab100">SYNOPSIS</a> · <a href="#SECTid80ab1c8">DESCRIPTION </a> · <a href="#SECTid80ad6a8">KEYWORDS</a>
+<a href="#SECTid80ab4d0">NAME</a> · <a href="#SECTid80ab548">SYNOPSIS</a> · <a href="#SECTid80ab610">DESCRIPTION </a> · <a href="#SECTid80adcf8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid80ab088">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80ab4d0">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid80ab100">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid80ab548">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid80ab1c8">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid80ab610">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -193,6 +193,14 @@ memory handling as explained above.</dd>
 
         
           <dt>
+<b class="cmd">dom</b> <b class="method">createDocumentNode</b>
+?<i class="m">objVar</i>?</dt>
+          <dd>Creates a new, 'empty' DOM document object without any element
+node. <i class="m">objVar</i> controlls the memory handling as explained above.</dd>
+        
+
+        
+          <dt>
 <b class="cmd">dom</b> <b class="method">setResultEncoding</b> ?<i class="m">encodingName</i>?</dt>
           <dd>If <i class="m">encodingName</i> is not given the current global
 result encoding is returned.  Otherwise the global result encoding is set to
@@ -316,7 +324,20 @@ creation time decides. If TextCheck is true at creation time, the
 command will check his arguments, otherwise not.The
 <i class="m">setTextCheck</i> method set this flag. It returns the current
 TextCheck flag state. The default state for TextCheck is true.</dd>
+      
 
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">setObjectCommands</b> ?<i class="m">(automatic|token|command=</i>?</dt>
+          <dd>Controls, if documents and nodes are created as tcl commands or
+as token to be
+used with the domNode and domDoc commands. If the mode is
+'automatic', then methods used at tcl commands will create tcl
+commands and methods used at doc or node tokes will create tokens. If
+the mode is 'command' then always tcl commands will be created. If
+the mode is 'token', then always token will be created. The method
+returns the current mode. This method is an experimental interface.</dd>
+      
 
         
           <dt>
@@ -395,7 +416,7 @@ recommendation. Otherwise it returns 0.</dd>
 
       </dl>
 
-  <h2><a name="SECTid80ad6a8">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid80adcf8">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">
