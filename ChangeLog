@@ -1,3 +1,17 @@
+2003-05-11  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/domxslt.c
+        * generic/xmlsimple.c: Renamed the documents rootNode (in the
+          sense of the XPath data model, that is not the document
+          element) from "(rootNode)" to "", in preparation for the
+          promissed 'domDoc without documentElement' feature, to fix a
+          somewhat outlying problem with xslt numbering and because
+          it's clearly more the 'right thing' according to the rec.
+
+        * generic/domxslt.c: Removed the arg xs from
+          sortNodeSetFastMerge(), because it isn't used.
+
 2003-04-20  Rolf Ade  <rolf@pointsman.de>
 
         * extensions/tdomhtml/tdomhtml.tcl: Proc newdoc: New optional
