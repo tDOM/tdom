@@ -90,6 +90,12 @@ GENERIC_HDRS	=
 AOL_DIR		= @AOL_DIR@
 
 #========================================================================
+# This are additional flags to be appended to the test suite run
+#========================================================================
+
+TESTFLAGS       = -constraints longRunning
+
+#========================================================================
 # Nothing of the variables below this line need to be changed.  Please
 # check the TARGETS section below to make sure the make targets are
 # correct.
