@@ -4,22 +4,22 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid4992">NAME</a> · <a href="#SECTid5003">SYNOPSIS</a> · <a href="#SECTid5034">DESCRIPTION</a> · <a href="#SECTid5058">COMMAND OPTIONS</a> · <a href="#SECTid5559"> COMMAND METHODS </a> · <a href="#SECTid5778">Callback Command Return Codes</a> · <a href="#SECTid5796">SEE ALSO</a> · <a href="#SECTid5805">KEYWORDS</a>
+<a href="#SECTid80ab028">NAME</a> · <a href="#SECTid80ab0a0">SYNOPSIS</a> · <a href="#SECTid80ab258">DESCRIPTION</a> · <a href="#SECTid80ab398">COMMAND OPTIONS</a> · <a href="#SECTid80acfe0"> COMMAND METHODS </a> · <a href="#SECTid80add78">Callback Command Return Codes</a> · <a href="#SECTid80ade68">SEE ALSO</a> · <a href="#SECTid80adee0">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTid4992">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTid80ab028">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTid5003">SYNOPSIS</a></h2><pre class="syntax">
+    <h2><a name="SECTid80ab0a0">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require tdom</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml::parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-    <h2><a name="SECTid5034">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTid80ab258">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
@@ -33,10 +33,10 @@ there).</p><p>Additionly, the Tcl extension code that implements this command pr
 API for adding C level coded handlers. Up to now, there exists the parser
 extension command "tdom". The handler set installed by this extension build an
 in memory "tDOM" DOM tree, while the parser is parsing the input.</p><p>It is possible to register an arbitrary amount of different handler scripts
-and C level handlers for most of the events. If the event occurs, the are
+and C level handlers for most of the events. If the event occurs, they are
 called in turn.</p>
 
-    <h2><a name="SECTid5058">COMMAND OPTIONS</a></h2><dl class="optlist">
+    <h2><a name="SECTid80ab398">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -616,7 +616,7 @@ enddoctypedeclcommand scripts, if set, are not called.</dd>
         
 
       </dl>
-    <h2><a name="SECTid5559"> COMMAND METHODS </a></h2><dl class="commandlist">
+    <h2><a name="SECTid80acfe0"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -746,7 +746,7 @@ document.</p></dd>
         
       </dl>
 
-    <h2><a name="SECTid5778">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTid80add78">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
 than "ok" or "error". All callbacks may in addition return
 "break" or "continue".</p><p>If a callback script returns an "error" error code then
@@ -759,11 +759,11 @@ processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    <h2><a name="SECTid5796">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid80ade68">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTid5805">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+    <h2><a name="SECTid80adee0">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
   </div><hr class="navsep"><div class="navbar" align="center">
 <a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>

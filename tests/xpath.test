@@ -410,6 +410,23 @@ test xpath-4.17 {tcl coded additional XPath function - return nodes} {
     set result
 } {1}
 
+# Called from ::dom::xpathFunc::errorStack 
+proc ::dom::xpathFunc::errorStack1 {} {
+    error "Some error"
+}
+
+proc ::dom::xpathFunc::errorStack {ctxNode pos nodeListNode nodeList args} {
+
+    errorStack1
+    return [list string "Not reached"]
+}
+
+test xpath-4.18 {error stack in tcl coded additional XPath function} {
+    set result [catch {$root selectNodes errorStack()} errMsg]
+    lappend result $errMsg
+} {1 {Tcl error while executing XPATH extension function 'errorStack':
+Some error}}
+
 test xpath-5.1 {erroneous XPath expr: missing right brace in predicate} {
     set result [catch {$root selectNodes {*[1}} errMsg]
     list $result $errMsg

@@ -43,7 +43,7 @@ extension command "tdom". The handler set installed by this extension build an
 in memory "tDOM" DOM tree, while the parser is parsing the input.</p>
 
 <p>It is possible to register an arbitrary amount of different handler scripts
-and C level handlers for most of the events. If the event occurs, the are
+and C level handlers for most of the events. If the event occurs, they are
 called in turn.</p>
 
     </section>

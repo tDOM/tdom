@@ -1,8 +1,8 @@
 # Features covered: XSLT transformation
 #
 # This file contains a collection of tests for the XSLT engine of
-# tDOM. It is concentrated on the tcl interface of the engine; the
-# vaste majority of xslt tests are done outside the tcltest
+# tDOM. It is focused mainly on the tcl interface of the engine; the
+# vaste majority of xslt compliance tests are done outside the tcltest
 # framework.
 #
 # Tested commands and object commands:
