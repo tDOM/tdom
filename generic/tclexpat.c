@@ -2898,7 +2898,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
       expat->parser = oldparser;
   }
   Tcl_AppendResult (expat->interp, "The -externalentitycommand script has to return a Tcl list with 3 elements.\n",
-               "Synatx: {string|channel|filename, <baseurl>, <data>}\n", NULL);
+               "Synatx: {string|channel|filename <baseurl> <data>}\n", NULL);
   TclExpatHandlerResult (expat, activeTclHandlerSet,
                          ERROR_IN_EXTREFHANDLER);
   return 0;
