@@ -5,7 +5,7 @@
 |   $Header$
 |
 |
-|   A (partial) XPath implementation (lexer/parser/evaluator) for tDOM,
+|   A XPath implementation (lexer/parser/evaluator) for tDOM,
 |   the DOM implementation for Tcl.
 |   Based on November 16 1999 Recommendation of the W3C
 |   (http://www.w3.org/TR/1999/REC-xslt-19991116) 
@@ -142,7 +142,7 @@ typedef enum {
     COMMA,  COLONCOLON, LITERAL, NSPREFIX, NSWC, INTNUMBER, REALNUMBER,
     SLASH, SLASHSLASH,
     PIPE, PLUS, MINUS, EQUAL, NOTEQ, LT, LTE, GT, GTE,
-    AND, OR, MOD, DIV, MULTIPLY, FUNCTION, VARIABLE,
+    AND, OR, MOD, DIV, MULTIPLY, FUNCTION, VARIABLE, FQVARIABLE,
     WCARDNAME, COMMENT, TEXT, PINSTR, NODE, AXISNAME, STAR, EOS
 } Token;
 
@@ -151,7 +151,7 @@ static char *token2str[] = {
     "COMMA", "COLONCOLON", "LITERAL", "NSPREFIX", "NSWC", "INTNUMBER", "REALNUMBER",
     "SLASH", "SLASHSLASH",
     "PIPE", "PLUS", "MINUS", "EQUAL", "NOTEQ", "LT", "LTE", "GT", "GTE",
-    "AND", "OR", "MOD", "DIV", "MULTIPLY", "FUNCTION", "VARIABLE",
+    "AND", "OR", "MOD", "DIV", "MULTIPLY", "FUNCTION", "VARIABLE", "FQVARIABLE",
     "WCARDNAME", "COMMENT", "TEXT", "PI", "NODE", "AXISNAME", "STAR", "EOS"
 };
 
@@ -176,7 +176,7 @@ typedef XPathToken *XPathTokens;
 static char *astType2str[] = {
     "Int", "Real", "Str", "Mult", "Div", "Mod", "UnaryMinus", "IsNSElement",
     "IsNode", "IsComment", "IsText", "IsPI", "IsSpecificPI", "IsElement",
-    "IsFQElement", "GetVar", "Literal", "ExecFunction", "Pred", "EvalSteps",
+    "IsFQElement", "GetVar", "GetFQVar", "Literal", "ExecFunction", "Pred", "EvalSteps",
     "SelectRoot", "CombineSets", "Add", "Substract", "Less", "LessOrEq",
     "Greater", "GreaterOrEq", "Equal", "NotEqual", "And", "Or", "IsNSAttr", "IsAttr",
     "AxisAncestor", "AxisAncestorOrSelf", "AxisAttribute", "AxisChild",
@@ -593,6 +593,7 @@ void printAst (int depth, ast t)
             case IsAttr:
             case ExecFunction:
             case Literal:
+            case GetFQVar:
             case GetVar:      fprintf(stderr, "'%s'", t->strvalue); break;
 
             default: break;
@@ -765,31 +766,42 @@ static XPathTokens xpathLexer (
                        }; break;
 
 
-            case '*': if ((l>0)
-                         && (tokens[l-1].token != COLONCOLON)
-                         && (tokens[l-1].token != LPAR)
-                         && (tokens[l-1].token != LBRACKET)
-                         && (tokens[l-1].token != COMMA)
-                         && (tokens[l-1].token != SLASH)
-                         && (tokens[l-1].token != SLASHSLASH)
-                      ) {
-                          token = MULTIPLY;
-                      } else {
-                          token = WCARDNAME;
-                          tokens[l].strvalue = (char*)strdup("*");
-                      }; break;
+            case '*':  if ((l>0)
+                          && (tokens[l-1].token != COLONCOLON)
+                          && (tokens[l-1].token != LPAR)
+                          && (tokens[l-1].token != LBRACKET)
+                          && (tokens[l-1].token != COMMA)
+                          && (tokens[l-1].token != SLASH)
+                          && (tokens[l-1].token != SLASHSLASH)
+                        ) {
+                           token = MULTIPLY;
+                       } else {
+                           token = WCARDNAME;
+                           tokens[l].strvalue = (char*)strdup("*");
+                       }; break;
 
             case '$':  i++;
-                       if ( isNameStart (&xpath[i])) {
+                       if ( isNCNameStart (&xpath[i])) {
                            ps = &(xpath[i]);
                            i += UTF8_CHAR_LEN (xpath[i]);
-                           while (xpath[i] && isNameChar(&xpath[i]))
+                           while (xpath[i] && isNCNameChar(&xpath[i]))
                                i +=  UTF8_CHAR_LEN(xpath[i]);
+                           if (xpath[i] == ':' && xpath[i+1] != ':') {
+                               token = FQVARIABLE;
+                               if (!isNCNameStart (&xpath[++i])) {
+                                   *errMsg = strdup ("Illegal variable name");
+                                   return NULL;
+                               }
+                               i += UTF8_CHAR_LEN (xpath[i]);
+                               while (xpath[i] && isNCNameChar (&xpath[i]))
+                                   i += UTF8_CHAR_LEN (xpath[i]);
+                           } else {
+                               token = VARIABLE;
+                           }
                            save = xpath[i];
                            xpath[i] = '\0';
                            tokens[l].strvalue = (char*)strdup(ps);
                            xpath[i--] = save;
-                           token = VARIABLE;
                        } else {
                            *errMsg = (char*)strdup("Expected variable name");
                            return NULL;
@@ -1112,6 +1124,10 @@ Production(FilterExpr)
         Consume(VARIABLE);
         a = NewStr( GetVar, STRVAL);
 
+    } else if (LA==FQVARIABLE) {
+        Consume(FQVARIABLE);
+        a = NewStr( GetFQVar, STRVAL);
+
     } else if (LA==LPAR) {
         Consume(LPAR);
         a = New1(EvalSteps, Recurse(OrExpr));
@@ -1158,6 +1174,7 @@ EndProduction
 Production(PathExpr)
 
     if ( (LA==VARIABLE)
+       ||(LA==FQVARIABLE)  
        ||(LA==LPAR)
        ||(LA==LITERAL)
        ||(LA==INTNUMBER)
@@ -3243,6 +3260,7 @@ static int xpathEvalStep (
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;
+    char            *localName, prefix[MAX_PREFIX_LEN];
 
     if (result->type == EmptyResult) useFastAdd = 1;
     else useFastAdd = 0;
@@ -3612,9 +3630,26 @@ static int xpathEvalStep (
         }
         break;
 
+    case GetFQVar:
     case GetVar:
         if (cbs->varCB) {
-            rc = (cbs->varCB)(cbs->varClientData, step->strvalue, result, errMsg);
+            if (step->type == GetFQVar) {
+                domSplitQName (step->strvalue, prefix, &localName);
+                /* There must be a prefix, otherwise the Step type would
+                   not be GetFQVar. Omit test prefix[0] != '\0'. */
+                ns = domLookupPrefix (exprContext, prefix);
+                if (!ns) {
+                    *errMsg = strdup ("There isn't a namespace bound to the prefix.");
+                    return XPATH_EVAL_ERR;
+                }
+                leftStr  = localName;
+                rightStr = ns->uri;
+            } else {
+                leftStr  = step->strvalue;
+                rightStr = NULL;
+            }
+            rc = (cbs->varCB)(cbs->varClientData, leftStr, rightStr, result,
+                              errMsg);
             CHECK_RC;
         }
         break;

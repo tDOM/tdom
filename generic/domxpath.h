@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.7  2002/05/11 16:57:29  rolf
+|   Made variable/parameter namespace aware.
+|
 |   Revision 1.6  2002/05/10 20:29:31  rolf
 |   Made key names namespace aware.
 |
@@ -92,7 +95,7 @@
 typedef enum {
     Int, Real, Str, Mult, Div, Mod, UnaryMinus, IsNSElement,
     IsNode, IsComment, IsText, IsPI, IsSpecificPI, IsElement,
-    IsFQElement, GetVar, Literal, ExecFunction, Pred, EvalSteps,
+    IsFQElement, GetVar, GetFQVar, Literal, ExecFunction, Pred, EvalSteps,
     SelectRoot, CombineSets, Add, Substract, Less, LessOrEq,
     Greater, GreaterOrEq, Equal,  NotEqual, And, Or, IsNSAttr, IsAttr,
     AxisAncestor, AxisAncestorOrSelf, AxisAttribute, AxisChild,
@@ -153,7 +156,7 @@ typedef int (*xpathFuncCallback)
                  xpathResultSet *result, char  **errMsg);
                               
 typedef int (*xpathVarCallback) 
-                (void *clientData, char *variableName, 
+                (void *clientData, char *variableName, char *varURI,
                  xpathResultSet *result, char  **errMsg);
                               
 typedef struct xpathCBs {               /* all xpath callbacks + clientData */
