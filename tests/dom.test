@@ -95,7 +95,7 @@ test dom-1.13 {createDocumentNS - check root name} {
     set result
 } "foo:root"
 
-test dom-2.1 {knownBug} {Don't quash white space at start or end of non white space content} {
+test dom-2.1 {Don't quash white space at start or end of non white space content} {knownBug} {
     set doc [dom parse {<root>
     some content
     </root>}]
@@ -105,7 +105,7 @@ test dom-2.1 {knownBug} {Don't quash white space at start or end of non white sp
     some content
     }
 
-test dom-3.1 {knownBug} {repetitived documentElement with objVar, then delete} {
+test dom-3.1 {repetitived documentElement with objVar, then delete} {knownBug} {
     dom createDocument "root" doc 
     $doc documentElement root
     $doc delete
@@ -176,16 +176,80 @@ test dom-4.4 {parse doc with default NS declaration} {
 </a>
 }
 
-
-test dom-4.3 {setAttribute} {
-    dom createDocumentNS "uri1" "p:root" doc
+test dom-4.5 {setAttributeNS} {
+    dom createDocument "root" doc
     set root [$doc documentElement]
-    $root setAttribute xmlns:p uri2
+    $root setAttributeNS ""  xmlns:p uri
+    $root setAttributeNS uri p:attr attrValue
     set result [$root asXML]
     $doc delete
     set result
-} {<p:root xmlns:p="uri2"/>
+} {<root xmlns:p="uri" p:attr="attrValue"/>
 }
+
+test dom-4.6 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS uri p:attr attrValue
+    $root setAttributeNS ""  xmlns:p uri
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<root xmlns:p="uri" p:attr="attrValue"/>
+}
+
+test dom-4.7 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS uri p:attr1 attrValue
+    set result [$root getAttributeNS uri attr1]
+    $doc delete
+    set result
+} {attrValue}
+
+test dom-4.8 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS ""  xmlns:p uri
+    $root setAttributeNS uri p:attr1 attrValue
+    set result [$root getAttributeNS uri attr1]
+    $doc delete
+    set result
+} {attrValue}
+
+test dom-4.9 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS uri p:attr1 attrValue
+    set result [$root attributes *]
+    $doc delete
+    set result
+} {{attr1 p uri}}
+
+test dom-4.10 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    set result [catch {$root setAttributeNS {} p:attr1 attrValue}]
+    $doc delete
+    set result
+} {1}
+
+test dom-4.11 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    set result [catch {$root setAttributeNS uri attr1 attrValue}]
+    $doc delete
+    set result
+} {1}
+
+test dom-4.12 {setAttributeNS - special prefix "xml"} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS "" xml:attr1 attrValue
+    set result [$root attributes *]
+    $doc delete
+    set result
+} {{attr1 xml http://www.w3.org/XML/1998/namespace}}
 
 test dom-5.1 {insert FQ Element} {
     set doc [dom parse {<root xmlns:p="uri1"/>}]
