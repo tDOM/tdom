@@ -29,6 +29,39 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2002/04/19 18:55:37  rolf
+|   Changed / enhanced namespace handling and namespace information
+|   storage. The namespace field of the domNode and domAttributeNode
+|   structurs is still set. But other than up to now, namespace attributes
+|   are now stored in the DOM tree as other, 'normal' attributes also,
+|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
+|   every 'namespace attribute' is stored befor any 'normal' attribute
+|   node, in the list of the attributes of an element. The still saved
+|   namespace index in the namespace field is used for fast access to the
+|   namespace information. To speed up the look up of the namespace info,
+|   an element or attributes contains to, the namespace index is now the
+|   index number (plus offset 1) of the corresponding namespace info in
+|   the domDoc->namespaces array. All xpath expressions with the exception
+|   of the namespace axes (still not implemented) have to ignore this
+|   'namespace attributes'. With this enhanced storage of namespace
+|   declarations, it is now possible, to find all "namespaces in scope" of
+|   an element by going up the ancestor-or-self axis and inspecting all
+|   namespace declarations. (That may be a bit expensive, for documents
+|   with lot of namespace declarations all over the place or deep
+|   documents. Something like
+|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
+|   English for that url) describes, may be an idea, if this new mechanism
+|   should not scale good enough.)
+|
+|   Changes at script level: special attributes used for declaring XML
+|   namespaces are now exposed and can be manipulated just like any other
+|   attribute. (That is now according to the DOM2 rec.) It isn't
+|   guaranteed (as it was), that the necessary namespace declarations are
+|   created during serializing. (That's also DOM2 compliant, if I read it
+|   right, even if this seems to be a bit a messy idea.) Because the old
+|   behavior have some advantages, from the viepoint of a programmer, it
+|   eventually should restored (as default or as 'asXML' option?).
+|
 |   Revision 1.5  2002/03/21 01:47:22  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -347,10 +380,13 @@ typedef int domNodeFlags;
 
 #define HAS_LINE_COLUMN           1     
 #define VISIBLE_IN_TCL            2
-#define IS_ID_ATTRIBUTE           4
 #define HAS_BASEURI               8
 #define DISABLE_OUTPUT_ESCAPING  16
-#define HAS_NS_INFO              32
+
+typedef int domAttrFlags;
+
+#define IS_ID_ATTRIBUTE           1
+#define IS_NS_NODE                2
 
 typedef int domDocFlags;
 
@@ -402,16 +438,14 @@ typedef struct domDocument {
     unsigned int      documentNumber;        
     struct domNode   *documentElement;
     struct domNode   *fragments;
-    int               nsCount;
-    struct domNS     *namespaces;
+    struct domNS    **namespaces;
+    int               nsptr;
+    int               nslen;
     struct domNode   *rootNode;
     Tcl_HashTable    *ids;
     Tcl_HashTable    *unparsedEntities;
     Tcl_HashTable    *baseURIs;
-    Tcl_HashTable    *NSscopes;
     Tcl_Obj          *extResolver;
-    struct domNS    **NSbuffer;
-    int               NSbufferLen;
 } domDocument;
 
 
@@ -421,24 +455,11 @@ typedef struct domDocument {
 \-------------------------------------------------------------------------*/
 typedef struct domNS {
 
-   int           index;
    char         *uri;
    char         *prefix;
-   int           used;
-   struct domNS *next;
+   int           index;
 
 } domNS;
-
-/*---------------------------------------------------------------------------
-|   type domNSContext
-|
-\--------------------------------------------------------------------------*/
-typedef struct domNSContext 
-{
-    int     newNS;
-    int     nrOfNS;
-    domNS **ns;
-} domNSContext;
 
 
 #define MAX_PREFIX_LEN   80
@@ -535,7 +556,7 @@ typedef struct domProcessingInstructionNode {
 typedef struct domAttrNode {
  
     domNodeType         nodeType  : 8;
-    domNodeFlags        nodeFlags : 8;
+    domAttrFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
     int                 info      : 8;
     domString           nodeName;
@@ -545,9 +566,6 @@ typedef struct domAttrNode {
     struct domAttrNode *nextSibling;
 
 } domAttrNode;
-
-
-
 
 /*--------------------------------------------------------------------------
 |   domAddCallback
@@ -611,7 +629,8 @@ domAttrNode *  domSetAttribute (domNode *node, char *attributeName,
 
 domAttrNode *  domSetAttributeNS (domNode *node, char *attributeName,
                                                  char *attributeValue,
-                                                 char *uri);
+                                                 char *uri,
+                                                 int   createNSIfNeeded);
 
 
 int            domRemoveAttribute (domNode *node, char *attributeName);

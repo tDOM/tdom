@@ -36,6 +36,39 @@
 |
 |
 |   $Log$
+|   Revision 1.9  2002/04/19 18:55:36  rolf
+|   Changed / enhanced namespace handling and namespace information
+|   storage. The namespace field of the domNode and domAttributeNode
+|   structurs is still set. But other than up to now, namespace attributes
+|   are now stored in the DOM tree as other, 'normal' attributes also,
+|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
+|   every 'namespace attribute' is stored befor any 'normal' attribute
+|   node, in the list of the attributes of an element. The still saved
+|   namespace index in the namespace field is used for fast access to the
+|   namespace information. To speed up the look up of the namespace info,
+|   an element or attributes contains to, the namespace index is now the
+|   index number (plus offset 1) of the corresponding namespace info in
+|   the domDoc->namespaces array. All xpath expressions with the exception
+|   of the namespace axes (still not implemented) have to ignore this
+|   'namespace attributes'. With this enhanced storage of namespace
+|   declarations, it is now possible, to find all "namespaces in scope" of
+|   an element by going up the ancestor-or-self axis and inspecting all
+|   namespace declarations. (That may be a bit expensive, for documents
+|   with lot of namespace declarations all over the place or deep
+|   documents. Something like
+|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
+|   English for that url) describes, may be an idea, if this new mechanism
+|   should not scale good enough.)
+|
+|   Changes at script level: special attributes used for declaring XML
+|   namespaces are now exposed and can be manipulated just like any other
+|   attribute. (That is now according to the DOM2 rec.) It isn't
+|   guaranteed (as it was), that the necessary namespace declarations are
+|   created during serializing. (That's also DOM2 compliant, if I read it
+|   right, even if this seems to be a bit a messy idea.) Because the old
+|   behavior have some advantages, from the viepoint of a programmer, it
+|   eventually should restored (as default or as 'asXML' option?).
+|
 |   Revision 1.8  2002/04/09 17:20:47  rolf
 |   Actual HEAD does not compile (!! arg). With this (intermediate) state
 |   it should. Some of the changes will be undo and replaced by others.
@@ -185,7 +218,6 @@ typedef struct _domReadInfo {
     int            feedbackAfter;
     int            lastFeedbackPosition;
     Tcl_Interp    *interp;
-    int            currentNSIndex;
     int            activeNSsize;
     int            activeNSpos;
     domActiveNS   *activeNS;
@@ -321,24 +353,6 @@ domIsNCNAME (
     return 1;
 }
 
-domNSContext *
-domCurrentNSContext (
-    domNode *node
-    )
-{
-    Tcl_HashEntry *h;
-    
-    while (node && !(node->nodeFlags & HAS_NS_INFO)) node = node->parentNode;
-    if (!node) return NULL;
-    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes, 
-                           (char *) node->nodeNumber);
-    if (!h) {
-        fprintf (stderr, "Invalid internal data in domCurrentNSContext!!!\n");
-        return NULL;
-    }
-    return (domNSContext *) Tcl_GetHashValue (h);
-}
-
 /*---------------------------------------------------------------------------
 |   domLookupNamespace
 |
@@ -351,18 +365,17 @@ domLookupNamespace (
 )
 { 
     domNS *ns;
+    int i;
 
     if (prefix==NULL) return NULL;
-    ns = doc->namespaces;
-    while (ns) {
-        
+    for (i = 0; i < doc->nsptr; i++) {
+        ns = doc->namespaces[i];
         if (   (ns->prefix != NULL) 
             && (strcmp(prefix,ns->prefix)==0)
             && (strcmp(namespaceURI, ns->uri)==0)
         ) {
             return ns;
         }
-        ns = ns->next;
     }    
     return NULL;
 }
@@ -378,71 +391,39 @@ domLookupPrefix (
     char        *prefix
     )
 {
-    domNS         *ns;
-    domNSContext  *NSContext;
-    Tcl_HashEntry *h;
-    int            i;
+    domAttrNode   *NSattr;
+    int            found;
     
+    found = 0;
     while (node) {
-        if (node->nodeFlags & HAS_NS_INFO) break;
-        node = node->parentNode;
-    }
-    if (!(node->nodeFlags & HAS_NS_INFO)) return NULL;
-    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes, 
-                           (char *) node->nodeNumber);
-    if (!h) {
-        fprintf (stderr, "Invalid internal data in domLookupPrefix!!!\n");
-        return NULL;
-    }
-    NSContext = Tcl_GetHashValue (h);
-    for (i = 0; i < NSContext->nrOfNS; i++) {
-        if (NSContext->ns[i]->prefix != NULL
-            && strcmp (prefix, NSContext->ns[i]->prefix) == 0) {
-            return NSContext->ns[i];
+        if (node->firstAttr && !(node->firstAttr->nodeFlags & IS_NS_NODE)) {
+            node = node->parentNode;
+            continue;
         }
+        NSattr = node->firstAttr;
+        while (NSattr && (NSattr->nodeFlags & IS_NS_NODE)) {
+            if (prefix[0] == '\0') {
+                if (NSattr->nodeName[5] == '\0') {
+                    found = 1;
+                    break;
+                }
+            } else {
+                if (strcmp (&NSattr->nodeName[6], prefix)==0) {
+                    found = 1;
+                    break;
+                }
+            }
+            NSattr = NSattr->nextSibling;
+        }
+        if (found) {
+            return domGetNamespaceByIndex (node->ownerDocument, 
+                                           NSattr->namespace);
+        }
+        node = node->parentNode;
     }
     return NULL;
 }
-            
-/*---------------------------------------------------------------------------
-|   domIsNodeNSInScope
-|
-\--------------------------------------------------------------------------*/
-int
-domIsNodeNSInScope (
-    domNode *node
-    )
-{
-    domNode       *n;
-    Tcl_HashEntry *h;
-    domNS         *ns;
-    domNSContext  *NSContext;
-    int            i;
-    
-    if (!node->namespace) return 1;
-    
-    if (node->nodeType == ATTRIBUTE_NODE)
-        n = ((domAttrNode *) node)->parentNode;
-    else
-        n = node;
 
-    while (n) {
-        if (n->nodeFlags & HAS_NS_INFO) break;
-        n = n->parentNode;
-    }
-    if (!n) return 0;
-    h = Tcl_FindHashEntry (n->ownerDocument->NSscopes, (char *) n->nodeNumber);
-    if (!h) {
-        fprintf (stderr, "Invalid internal data in domLookupPrefix!!!\n");
-        return 0;
-    }
-    NSContext = Tcl_GetHashValue (h);
-    for (i = 0; i < NSContext->nrOfNS; i++) {
-        if (NSContext->ns[i]->index == node->namespace) return 1;
-    }
-    return 0;
-}
-            
 /*---------------------------------------------------------------------------
 |   domIsNamespaceInScope
 |
@@ -456,9 +437,10 @@ domIsNamespaceInScope (
     )
 {
     int    i;
-    
+
     for (i = NSstackPos; i >= 0; i--) {
-        if (strcmp(NSstack[i].namespace->prefix, prefix)==0) {
+        if (NSstack[i].namespace->prefix[0] &&
+            (strcmp(NSstack[i].namespace->prefix, prefix)==0)) {
             if (strcmp(NSstack[i].namespace->uri, namespaceURI)==0) {
                 /* OK, exactly the same namespace declaration is in scope */
                 return 1;
@@ -477,53 +459,46 @@ domIsNamespaceInScope (
 |
 \--------------------------------------------------------------------------*/
 domNS *
-domLookupURIold (
-    domNode *node,
-    char        *uri
-    )
-{
-    domNS *ns;
-    
-    ns = node->ownerDocument->namespaces;
-    while (ns) {
-        if (strcmp (uri, ns->uri) == 0) {
-            return ns;
-        }
-        ns = ns->next;
-    }
-    return NULL;
-}
-
-/*---------------------------------------------------------------------------
-|   domLookupURI
-|
-\--------------------------------------------------------------------------*/
-domNS *
 domLookupURI (
     domNode *node,
     char        *uri
     )
 {
-    domNS         *ns;
-    Tcl_HashEntry *h;
-    domNSContext  *NSContext;
-    int            i;
+    domAttrNode   *NSattr;
+    int            found, alreadyHaveDefault;
     
-    ns = node->ownerDocument->namespaces;
-    while (node && !(node->nodeFlags & HAS_NS_INFO)) {
+    /* TODO: rewrite, after change of documentNS from list to arry */
+    found = 0;
+    alreadyHaveDefault = 0;
+    while (node) {
+        if (node->firstAttr && !(node->firstAttr->nodeFlags & IS_NS_NODE)) {
+            node = node->parentNode;
+            continue;
+        }
+        NSattr = node->firstAttr;
+        while (NSattr && (NSattr->nodeFlags & IS_NS_NODE)) {
+            if (NSattr->nodeName[5] == '\0') {
+                if (!alreadyHaveDefault) {
+                    if (strcmp (NSattr->nodeValue, uri)==0) {
+                        found = 1;
+                        break;
+                    } else {
+                        alreadyHaveDefault = 1;
+                    }
+                }
+            } else {
+                if (strcmp (NSattr->nodeValue, uri)==0) {
+                    found = 1;
+                    break;
+                }
+            }
+            NSattr = NSattr->nextSibling;
+        }
+        if (found) {
+            return domGetNamespaceByIndex (node->ownerDocument, 
+                                           NSattr->namespace);
+        }
         node = node->parentNode;
-    }
-    if (!node) return NULL;
-    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes,
-                           (char *) node->nodeNumber);
-    if (!h) {
-        fprintf (stderr, "Invalid internal data in domLookupURI!!!\n");
-        return NULL;
-    } else {
-        NSContext = Tcl_GetHashValue (h);
-    }
-    for (i = 0; i < NSContext->nrOfNS; i++) {
-        if (strcmp (uri, NSContext->ns[i]->uri) == 0) return NSContext->ns[i];
     }
     return NULL;
 }
@@ -539,12 +514,8 @@ domGetNamespaceByIndex (
     int          nsIndex
 )
 {
-    domNS *ns = doc->namespaces;
-    while (ns) {
-        if (ns->index == nsIndex) return ns;
-        ns = ns->next;
-    }
-    return NULL;
+    if (!nsIndex) return NULL;
+    return doc->namespaces[nsIndex-1];
 }
 
 
@@ -552,19 +523,29 @@ domGetNamespaceByIndex (
 |   domNewNamespace
 |
 \--------------------------------------------------------------------------*/
-domNS *
-domNewNamespace (
+static domNS* domNewNamespace (
     domDocument *doc,
     char        *prefix,
     char        *namespaceURI
 )
 { 
-    domNS *ns;
+    domNS *ns = NULL;
     
     DBG(fprintf(stderr, "domNewNamespace '%s' --> '%s' \n", prefix, namespaceURI);)
-
-    ns = (domNS *) Tcl_Alloc (sizeof(domNS));
-    memset(ns, 0, sizeof(domNS));
+    
+    doc->nsptr++;
+    if (doc->nsptr > 254) {
+        fprintf (stderr, "maximum number of namespaces exceeded!!!\n");
+        return NULL;
+    }
+    if (doc->nsptr >= doc->nslen) {
+        doc->namespaces = (domNS**) Tcl_Realloc ((char*) doc->namespaces,
+                                                sizeof (domNS*) * 2 * doc->nslen);
+        doc->nslen *= 2;
+    }
+    doc->namespaces[doc->nsptr] = (domNS*)Tcl_Alloc (sizeof (domNS));
+    ns = doc->namespaces[doc->nsptr];
+    
 
     if (prefix == NULL) {
         ns->prefix = strdup("");
@@ -572,10 +553,7 @@ domNewNamespace (
         ns->prefix = strdup(prefix);
     }
     ns->uri   = strdup(namespaceURI);
-    ns->index = ++doc->nsCount;
-    ns->next  = doc->namespaces;
-    
-    doc->namespaces = ns;
+    ns->index = doc->nsptr + 1;
 
     return ns;
 }
@@ -596,7 +574,7 @@ domSplitQName (
 
     s = name;
     p = prefix; 
-    prefixEnd = &(prefix[MAX_PREFIX_LEN-1]);
+    prefixEnd = &prefix[MAX_PREFIX_LEN-1];
     while (*s && (*s != ':'))  {
         if (p < prefixEnd) *p++ = *s; 
         s++;
@@ -625,22 +603,19 @@ domNamespaceURI (
 )
 {
     domAttrNode *attr;
-    domNS *ns;
+    domNS       *ns;
     
+    if (!node->namespace) return NULL;
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
-        ns = attr->parentNode->ownerDocument->namespaces;
+        ns = attr->parentNode->ownerDocument->namespaces[attr->namespace-1];
     } else 
     if (node->nodeType == ELEMENT_NODE) {
-        ns = node->ownerDocument->namespaces;
+        ns = node->ownerDocument->namespaces[node->namespace-1];
     } else {
         return NULL;
     }
-    while ((ns != NULL) && (ns->index != node->namespace)) {
-        ns = ns->next;
-    }
-    if (ns) return ns->uri;
-    return NULL;
+    return ns->uri;
 }
 
 
@@ -656,17 +631,15 @@ domNamespacePrefix (
     domAttrNode *attr;
     domNS *ns;
 
+    if (!node->namespace) return NULL;
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
-        ns = attr->parentNode->ownerDocument->namespaces;
+        ns = attr->parentNode->ownerDocument->namespaces[attr->namespace-1];
     } else 
     if (node->nodeType == ELEMENT_NODE) {
-        ns = node->ownerDocument->namespaces;
+        ns = node->ownerDocument->namespaces[node->namespace-1];
     } else {
         return NULL;
-    }
-    while ((ns != NULL) && (ns->index != node->namespace)) {
-        ns = ns->next;
     }
     if (ns) return ns->prefix;
     return NULL;
@@ -691,39 +664,6 @@ domGetLocalName (
 
 #ifndef  TDOM_NO_EXPAT
 
-/*---------------------------------------------------------------------------
-|   startNamespaceDecl
-|
-\--------------------------------------------------------------------------*/
-static void 
-startNamespaceDecl (
-    void       *userData,
-    const char *prefix,
-    const char *uri
-) 
-{
-#if 0
-    domReadInfo  *info = userData;
-    int           nsIndex;
-#endif    
-    DBG(fprintf(stderr, "startNamespaceDecl %s %s \n", prefix, uri);)
-}
-
-
-/*---------------------------------------------------------------------------
-|   endNamespaceDecl
-|
-\--------------------------------------------------------------------------*/
-static void 
-endNamespaceDecl (
-    void       *userData,
-    const char *prefix
-) 
-{
-    DBG(fprintf(stderr, "endNamespaceDecl %s \n", prefix);)
-}
-
-
 
 /*---------------------------------------------------------------------------
 |   startElement
@@ -742,14 +682,12 @@ startElement(
     domAttrNode   *attrnode, *lastAttr;
     const char   **atPtr, **idAttPtr;
     Tcl_HashEntry *h;
-    int            hnew, len, pos, idatt, newNSdecls, nrOfNSinScope;
-    int            haveDefaultNS, NSinScope, j, i;
+    int            hnew, len, pos, idatt, newNS;
     char          *xmlns, *localname;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];    
-    domNS         *ns, NS;
+    domNS         *ns;
     char           feedbackCmd[24];
-    domNSContext  *NSContext;
     GetTDomTSD();
 
     if (info->feedbackAfter) {
@@ -819,98 +757,68 @@ startElement(
     }
     
 
+    lastAttr = NULL;
     /*--------------------------------------------------------------
     |   process namespace declarations
     |
     \-------------------------------------------------------------*/    
 #ifdef TDOM_NS    
-    newNSdecls = 0;
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
         if (strncmp((char *)atPtr[0], "xmlns", 5) == 0) {
             xmlns = (char *)atPtr[0];
+            newNS = 1;
             if (xmlns[5] == ':') {
                 if (domIsNamespaceInScope (info->activeNS, info->activeNSpos,
-                                           &(xmlns[6]), (char *)atPtr[1])) 
-                    continue;
-                ns = domNewNamespace(info->document, &(xmlns[6]), (char *)atPtr[1]);
+                                           &(xmlns[6]), (char *)atPtr[1])) {
+                    ns = domLookupPrefix (info->currentNode, &(xmlns[6]));
+                    newNS = 0;
+                }
+                else {
+                    ns = domNewNamespace(info->document, &(xmlns[6]),
+                                         (char *)atPtr[1]);
+                }
             } else {
-                ns = domNewNamespace(info->document, "", (char *)atPtr[1]);
+                ns = domNewNamespace(info->document, "",
+                                          (char *)atPtr[1]);
             }
-            /* push active namespace */
-            info->activeNSpos++;
-            if (info->activeNSpos >= info->activeNSsize) {
-                info->activeNS = (domActiveNS*) Tcl_Realloc(
-                                     (char*)info->activeNS, 
-                                     sizeof(domActiveNS) * 2 * info->activeNSsize);
-                info->activeNSsize = 2 * info->activeNSsize;
+            if (newNS) {
+                /* push active namespace */
+                info->activeNSpos++;
+                if (info->activeNSpos >= info->activeNSsize) {
+                    info->activeNS = (domActiveNS*) Tcl_Realloc(
+                        (char*)info->activeNS, 
+                        sizeof(domActiveNS) * 2 * info->activeNSsize);
+                    info->activeNSsize = 2 * info->activeNSsize;
+                }
+                info->activeNS[info->activeNSpos].depth     = info->depth;
+                info->activeNS[info->activeNSpos].namespace = ns;
             }
-            info->activeNS[info->activeNSpos].depth     = info->depth;
-            info->activeNS[info->activeNSpos].namespace = ns;
-            newNSdecls++;
+
+            h = Tcl_CreateHashEntry( &TSDPTR(attrNames), (char *)atPtr[0],
+                                     &hnew);
+            attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+            memset(attrnode, 0, sizeof(domAttrNode));
+            attrnode->nodeType    = ATTRIBUTE_NODE;
+            attrnode->nodeFlags   = IS_NS_NODE;
+            attrnode->namespace   = ns->index;
+            attrnode->nodeName    = (char *)&(h->key);
+            attrnode->parentNode  = node; 
+            len = strlen((char *)atPtr[1]);
+            if (TclOnly8Bits && info->encoding_8bit) {
+                tdom_Utf8to8Bit(info->encoding_8bit, (char *)atPtr[1], &len);
+            }                                                              
+            attrnode->valueLength = len;
+            attrnode->nodeValue   = (char*)Tcl_Alloc(len+1);
+            strcpy(attrnode->nodeValue, (char *)atPtr[1]);
+            if (node->firstAttr) {
+                lastAttr->nextSibling = attrnode;
+            } else {
+                node->firstAttr = attrnode;
+            }
+            lastAttr = attrnode;
         } 
-    }
-    if (newNSdecls) {
-        if (newNSdecls > info->document->NSbufferLen) {
-            info->document->NSbuffer = (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
-                                                           sizeof (domNS *) * newNSdecls);
-            info->document->NSbufferLen = newNSdecls;
-        }
-        j = 0;
-        haveDefaultNS = 0;
-        for (i = info->activeNSpos; i > info->activeNSpos - newNSdecls; i--) {
-            ns = info->activeNS[i].namespace;
-            info->document->NSbuffer[j] = ns;
-            if (ns->prefix[0] == '\0') 
-                haveDefaultNS = 1;
-            j++;
-        }
-        nrOfNSinScope = newNSdecls;
-        for (i = info->activeNSpos - newNSdecls; i >= 0; i--) {
-            ns = info->activeNS[i].namespace;
-            if (ns->prefix[0] == '\0') {
-                if (haveDefaultNS) continue;
-                nrOfNSinScope++;
-                if (nrOfNSinScope > info->document->NSbufferLen) {
-                    info->document->NSbuffer = 
-                        (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
-                                                sizeof (domNS *) * 2 * info->document->NSbufferLen);
-                    info->document->NSbufferLen *= 2;
-                }
-                info->document->NSbuffer[nrOfNSinScope-1] = ns;
-                haveDefaultNS = 1;
-            } else {
-                NSinScope = 1;
-                for (j = i+1; j <= info->activeNSpos; j++) {
-                    if (strcmp (info->activeNS[i].namespace->prefix,
-                                info->activeNS[j].namespace->prefix)==0) {
-                        /* prefix was re-declared later and therefor we
-                           have it already. */
-                        NSinScope = 0;
-                        break;
-                    }
-                }
-                if (!NSinScope) continue;
-                nrOfNSinScope++;
-                if (nrOfNSinScope > info->document->NSbufferLen) {
-                    info->document->NSbuffer = 
-                        (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
-                                                sizeof (domNS *) * 2 * info->document->NSbufferLen);
-                    info->document->NSbufferLen *= 2;
-                }
-                info->document->NSbuffer[nrOfNSinScope-1] = ns;
-            }
-        }
-        NSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
-        NSContext->newNS = newNSdecls;
-        NSContext->nrOfNS = nrOfNSinScope;
-        NSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * nrOfNSinScope);
-        memcpy (NSContext->ns, info->document->NSbuffer, 
-                sizeof (domNS *) * nrOfNSinScope);
-        h = Tcl_CreateHashEntry (info->document->NSscopes, 
-                                 (char *) node->nodeNumber, &hnew);
-        Tcl_SetHashValue (h, NSContext);
-        node->nodeFlags |= HAS_NS_INFO;
+        
     }
     
     /*----------------------------------------------------------
@@ -923,7 +831,8 @@ startElement(
                && (strcmp(tagPrefix, info->activeNS[pos].namespace->prefix) == 0))
         ) {
             if (info->activeNS[pos].namespace->prefix[0] == '\0'
-                && info->activeNS[pos].namespace->uri[0] == '\0') {
+                && info->activeNS[pos].namespace->uri[0] == '\0'
+                && tagPrefix[0] == '\0') {
                 /* xml-names rec. 5.2: "The default namespace can be
                    set to the empty string. This has the same effect,
                    within the scope of the declaration, of there being
@@ -962,7 +871,8 @@ startElement(
     } else {
         idAttPtr = NULL;
     }
-    lastAttr = NULL;
+    /* lastAttr already set right, either to NULL above, or to the last
+       NS attribute */
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
 #ifdef TDOM_NS    
@@ -1006,31 +916,26 @@ startElement(
         |   look for attribute namespace
         \---------------------------------------------------------*/
         domSplitQName ((char*)attrnode->nodeName, prefix, &localname);
-        if ((prefix[0] == '\0') && (tagPrefix[0] != '\0')) {
-            /* does not inherit namespace of node
-             *    attrnode->namespace = node->namespace;
-             */
-        } else {
-        for (pos = info->activeNSpos; pos >= 0; pos--) {
-            if (  ((prefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0')) 
-               || ((prefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
-                   && (strcmp(prefix, info->activeNS[pos].namespace->prefix) == 0))
-            ) {
-                attrnode->namespace = info->activeNS[pos].namespace->index;
-                DBG(fprintf(stderr, "attr='%s' uri='%s' \n", 
-                            attrnode->nodeName, 
-                            info->activeNS[pos].namespace->uri);
-                )
-                break;
+        if (prefix[0] != '\0') {
+            for (pos = info->activeNSpos; pos >= 0; pos--) {
+                if (  ((prefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0')) 
+                      || ((prefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
+                          && (strcmp(prefix, info->activeNS[pos].namespace->prefix) == 0))
+                    ) {
+                    attrnode->namespace = info->activeNS[pos].namespace->index;
+                    DBG(fprintf(stderr, "attr='%s' uri='%s' \n", 
+                                attrnode->nodeName, 
+                                info->activeNS[pos].namespace->uri);
+                        )
+                    break;
+                }
             }
-        }
         }
 #endif
     }
 
     info->depth++;
 } 
-
 
 /*---------------------------------------------------------------------------
 |   endElement
@@ -1044,6 +949,7 @@ endElement (
 {
     domReadInfo  *info = userData;
 
+    info->depth--;
 #ifdef TDOM_NS
     /* pop active namespaces */
     while ( (info->activeNSpos >= 0) &&
@@ -1053,14 +959,12 @@ endElement (
     }
 #endif    
     
-    info->depth--;
-    if (info->depth != 0) {
+    if (info->depth != -1) {
         info->currentNode = info->currentNode->parentNode;    
     } else {
         info->currentNode = NULL;
     }
 }
-
 
 /*---------------------------------------------------------------------------
 |   characterDataHandler
@@ -1591,14 +1495,13 @@ domReadDocument (
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
     doc->extResolver      = extResolver;
-    doc->NSbufferLen      = 8;
-    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
+    doc->nsptr            = -1;
+    doc->nslen            =  4;
+    doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
 
     info.parser               = parser;
     info.document             = doc;
@@ -1610,17 +1513,16 @@ domReadDocument (
     info.feedbackAfter        = feedbackAfter;
     info.lastFeedbackPosition = 0;
     info.interp               = interp;    
-    info.currentNSIndex       = 0;
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
-    info.activeNS             = (domActiveNS*) Tcl_Alloc(sizeof(domActiveNS) * info.activeNSsize);
+    info.activeNS             = (domActiveNS*) Tcl_Alloc (sizeof(domActiveNS) * info.activeNSsize);
+/*      memset (info.activeNS, 0, sizeof (domActiveNS) * info.activeNSsize); */
     info.baseURI              = NULL;
     info.insideDTD            = 0;
 
     XML_SetUserData(parser, &info);
     XML_SetBase (parser, baseurl);
     XML_SetElementHandler(parser, startElement, endElement);
-    XML_SetNamespaceDeclHandler(parser, startNamespaceDecl, endNamespaceDecl);
     XML_SetCharacterDataHandler(parser, characterDataHandler); 
     XML_SetCommentHandler(parser, commentHandler); 
     XML_SetProcessingInstructionHandler(parser, processingInstructionHandler);
@@ -1729,6 +1631,8 @@ domReadDocument (
 
     return doc;
 }
+
+
 #endif /* ifndef TDOM_NO_EXPAT */
 
 
@@ -1813,14 +1717,13 @@ domCreateDoc ( )
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->documentElement  = NULL;
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
-    doc->NSbufferLen      = 8;
-    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
+    doc->nsptr            = -1;
+    doc->nslen            =  4;
+    doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), "(rootNode)", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
@@ -1855,7 +1758,6 @@ domCreateDocument (
     domDocument   *doc;
     char           prefix[MAX_PREFIX_LEN], *localName;
     domNS         *ns = NULL;
-    domNSContext  *NSContext;
     GetTDomTSD();
 
     if (uri) {
@@ -1880,37 +1782,33 @@ domCreateDocument (
     doc = domCreateDoc ();
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), documentElementTagName, &hnew); 
-    if (uri) {
-        ns = domNewNamespace (doc, prefix, uri);
-    }
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
     node->nodeFlags       = 0;
-    if (uri) {
-        node->namespace   = ns->index;
-    } else {
-        node->namespace   = 0;
-    }
     node->nodeNumber      = ++TSDPTR(domUniqueNodeNr);
     node->ownerDocument   = doc;
     node->nodeName        = (char *)&(h->key);
     doc->documentElement  = node;
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof(Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof(Tcl_HashTable));
+    doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
-    
+    Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
+    doc->nsptr            = -1;
+    doc->nslen            =  4;
+    doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
     if (uri) {
-        NSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
-        NSContext->newNS = 1;
-        NSContext->nrOfNS = 1;
-        NSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
-        NSContext->ns[0] = ns;
-        h = Tcl_CreateHashEntry (doc->NSscopes, (char*) node->nodeNumber,
-                                 &hnew);
-        Tcl_SetHashValue (h, NSContext);
-        node->nodeFlags |= HAS_NS_INFO;
+        ns = domNewNamespace (doc, prefix, uri);
+        node->namespace   = ns->index;
+        /* It's unclear (at least to me), if the DOM spec expects, that
+           also the according namespace declaration attribute is created.
+           According to what DOM 2 1.1.5 says, I'm afraid, not.
+           But this is all a real mess.
+           Setting the node->namespace to a namespace index, without
+           creating the according namespace attribute isn't exactly
+           intuitive. */
     }
     doc->rootNode->firstChild = doc->rootNode->lastChild = doc->documentElement;
 
@@ -2064,8 +1962,8 @@ domFreeDocument (
 )
 {
     domNode      *node, *next;
-    domNS        *ns, *nsNext;
-    domNSContext *NSContext;
+    domNS        *ns;
+    int           i;
     Tcl_HashEntry *entryPtr;
     Tcl_HashSearch search;
     
@@ -2099,14 +1997,14 @@ domFreeDocument (
     /*-----------------------------------------------------------
     | delete namespaces
     \-----------------------------------------------------------*/    
-    ns = doc->namespaces;
-    while (ns) {
-        nsNext = ns->next;
+    for (i = 0; i <= doc->nsptr; i++) {
+        ns = doc->namespaces[i];
         free(ns->uri);
         free(ns->prefix);
-        Tcl_Free((void*)ns);
-        ns = nsNext;
+        Tcl_Free ((char*) ns);
     }
+    Tcl_Free ((char *)doc->namespaces);
+
     /*-----------------------------------------------------------
     | delete ID hash table
     \-----------------------------------------------------------*/    
@@ -2138,28 +2036,6 @@ domFreeDocument (
     if (doc->extResolver) {
         Tcl_DecrRefCount (doc->extResolver);
     }
-
-    /*-----------------------------------------------------------
-    | delete NS scopes  hash table
-    \-----------------------------------------------------------*/    
-    if (doc->NSscopes) {
-        entryPtr = Tcl_FirstHashEntry (doc->NSscopes, &search);
-        while (entryPtr) {
-            NSContext = (domNSContext *) Tcl_GetHashValue (entryPtr);
-            Tcl_Free ((char *) NSContext->ns);
-            Tcl_Free ((char *) NSContext);
-            entryPtr = Tcl_NextHashEntry (&search);
-        }
-        Tcl_DeleteHashTable (doc->NSscopes);
-        Tcl_Free ((char *)doc->NSscopes);
-    }
-
-    /*-----------------------------------------------------------
-    | delete NS buffer array
-    \-----------------------------------------------------------*/    
-    if (doc->NSbuffer) 
-        Tcl_Free ((char *)doc->NSbuffer);
-    
 
     domFree ((void*)doc->rootNode);
     Tcl_Free ((void*)doc);
@@ -2246,32 +2122,70 @@ domSetAttribute (
 |
 \--------------------------------------------------------------------------*/
 domAttrNode *
-domSetAttributeNSold (
+domSetAttributeNS (
     domNode *node,
     char    *attributeName,
     char    *attributeValue,
-    char    *uri
+    char    *uri,
+    int      createNSIfNeeded
 )
 {
     domAttrNode   *attr, *lastAttr;
     Tcl_HashEntry *h;
-    int            hnew;
+    int            hnew, isNSAttr = 0;
     domNS         *ns;
-    char          *localname, prefix[MAX_PREFIX_LEN];
+    char          *localName, prefix[MAX_PREFIX_LEN];
+    Tcl_DString    dStr;
     GetTDomTSD();
     
+    DBG(fprintf (stderr, "domSetAttributeNS: attributeName %s, attributeValue %s, uri %s\n", attributeName, attributeValue, uri);)
     if (!node || node->nodeType != ELEMENT_NODE) {
         return NULL;
     }
     
+    domSplitQName (attributeName, prefix, &localName);
+    if (!uri) {
+        if ((prefix[0] == '\0' && strcmp (localName, "xmlns")==0)
+            || (strcmp (prefix, "xmlns")==0)) {
+            uri = attributeValue;
+            isNSAttr = 1;
+        }
+    }
+    if (!uri || uri[0]=='\0') {
+        if (prefix[0] != '\0' && strcmp (prefix, "xml")==0) {
+            uri = "http://www.w3.org/XML/1998/namespace";
+        }
+    }
     /*----------------------------------------------------
     |   try to find an existing attribute
     \---------------------------------------------------*/
     attr = node->firstAttr;
-    while (attr && strcmp(attr->nodeName, attributeName)) {
+    while (attr) {
+        if (uri) {
+            if (attr->nodeFlags & IS_NS_NODE) {
+                if (isNSAttr) {
+                    if (strcmp (attributeName, attr->nodeName)==0) {
+                        break;
+                    }
+                }
+            } else {
+                if (attr->namespace && !isNSAttr) {
+                    ns = domGetNamespaceByIndex (node->ownerDocument, 
+                                                 attr->namespace);
+                    if (strcmp (uri, ns->uri)==0) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (!attr->namespace) {
+                if (strcmp (attr->nodeName, localName)==0) break;
+            }
+        }
         attr = attr->nextSibling;
     }
     if (attr) {   
+        DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old valure: %s\n", attr->nodeName, attr->nodeValue);)
         Tcl_Free (attr->nodeValue);
         attr->valueLength = strlen(attributeValue);
         attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
@@ -2284,142 +2198,36 @@ domSetAttributeNSold (
         memset(attr, 0, sizeof(domAttrNode));       
         h = Tcl_CreateHashEntry( &TSDPTR(attrNames), attributeName, &hnew);
         attr->nodeType    = ATTRIBUTE_NODE;     
-        attr->nodeFlags   = 0;
-        attr->namespace   = 0; /* node->namespace */
-        attr->nodeName    = (char *)&(h->key);     
-        attr->parentNode  = node;        
-        attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
-        strcpy(attr->nodeValue, attributeValue);
-
-        if (node->firstAttr) {
-            lastAttr = node->firstAttr;
-            /* move to the end of the attribute list */
-            while (lastAttr->nextSibling) lastAttr = lastAttr->nextSibling;
-            lastAttr->nextSibling = attr;
-        } else {
-            node->firstAttr = attr;
-        }
-        /*--------------------------------------------------------
-        |   re-use existing namespace or create a new one
-        \-------------------------------------------------------*/
         if (uri) {
-            domSplitQName ((char*)attributeName, prefix, &localname);
-            ns = domLookupNamespace (node->ownerDocument, prefix, uri);
-            if (ns == NULL) {
-                ns = domNewNamespace(node->ownerDocument, prefix, uri);
-            }        
-            attr->namespace = ns->index;
-        }
-    }
-    MutationEvent();
-    return attr;
-}
-
-domAttrNode *
-domSetAttributeNS (
-    domNode *node,
-    char    *attributeName,
-    char    *attributeValue,
-    char    *uri
-)
-{
-    domAttrNode   *attr, *lastAttr;
-    domNode       *n;
-    Tcl_HashEntry *h;
-    int            i, j, hnew;
-    domNS         *ns;
-    char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN];
-    Tcl_DString    dStr;
-    domNSContext  *currentNSContext, *newNSContext;
-    GetTDomTSD();
-    
-    if (!node || node->nodeType != ELEMENT_NODE) {
-        return NULL;
-    }
-    
-    domSplitQName (attributeName, prefix, &localName);
-    /*----------------------------------------------------
-    |   try to find an existing attribute
-    \---------------------------------------------------*/
-    attr = node->firstAttr;
-    while (attr) {
-        if (uri) {
-            if (attr->namespace) {
-                ns = domGetNamespaceByIndex (node->ownerDocument, 
-                                             attr->namespace);
-                if (strcmp (uri, ns->uri)==0) {
-                    domSplitQName ((char*)attributeName, lprefix, &lname);
-                    if (strcmp (localName, lname)==0) break;
-                }
-            }
-        } else {
-            if (!attr->namespace) {
-                if (strcmp (attr->nodeName, localName)==0) break;
-            }
-        }
-        attr = attr->nextSibling;
-    }
-    if (attr) {   
-        Tcl_Free (attr->nodeValue);
-        attr->valueLength = strlen(attributeValue);
-        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
-        strcpy(attr->nodeValue, attributeValue);
-    } else {
-        /*--------------------------------------------------------
-        |   add a complete new attribute node
-        \-------------------------------------------------------*/
-        attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
-        memset(attr, 0, sizeof(domAttrNode));       
-        if (uri) {
-            Tcl_DStringInit (&dStr);
-            ns = domLookupURI (node, uri);
-            if (ns) {
-                Tcl_DStringAppend (&dStr, ns->prefix, -1);
-                Tcl_DStringAppend (&dStr, ":", 1);
-                Tcl_DStringAppend (&dStr, localName, -1);
+            if (isNSAttr) {
+                ns = domLookupNamespace (node->ownerDocument, localName, uri);
             } else {
-                Tcl_DStringAppend (&dStr, prefix, -1);
-                Tcl_DStringAppend (&dStr, ":", 1);
-                Tcl_DStringAppend (&dStr, localName, -1);
-                
-                ns = domNewNamespace(node->ownerDocument, prefix, uri);
-                currentNSContext = domCurrentNSContext (node);
-                newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
-                newNSContext->newNS = 1;
-                if (!currentNSContext) {
-                    newNSContext->nrOfNS = 1;
-                    newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
-                    newNSContext->ns[0] = ns;
+                ns = domLookupPrefix (node, prefix);
+            }
+            if (!ns) {
+                if (isNSAttr) {
+                    ns = domNewNamespace (node->ownerDocument, localName, uri);
                 } else {
-                    newNSContext->nrOfNS = currentNSContext->nrOfNS + 1;
-                    newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * newNSContext->nrOfNS);
-                    newNSContext->ns[0] = ns;
-                    j = 1;
-                    for (i = 0; i < currentNSContext->nrOfNS; i++) {
-                        if (strcmp (currentNSContext->ns[i]->prefix, prefix)==0) {
-                            newNSContext->nrOfNS--;
-                            continue;
+                    if (createNSIfNeeded) {
+                        ns = domNewNamespace (node->ownerDocument, prefix,
+                                              uri);
+                        if (prefix[0] == '\0') {
+                            domSetAttributeNS (node, "xmlns", uri, NULL, 0);
+                        } else {
+                            Tcl_DStringInit (&dStr);
+                            Tcl_DStringAppend (&dStr, "xmlns:", 6);
+                            Tcl_DStringAppend (&dStr, prefix, -1);
+                            domSetAttributeNS (node, Tcl_DStringValue (&dStr),
+                                               uri, NULL, 0);
                         }
-                        newNSContext->ns[j] = currentNSContext->ns[i];
-                        j++;
                     }
                 }
-                h = Tcl_CreateHashEntry (node->ownerDocument->NSscopes,
-                                         (char *) node->nodeNumber, &hnew);
-                Tcl_SetHashValue (h, newNSContext);
-                node->nodeFlags |= HAS_NS_INFO;
             }
-            h = Tcl_CreateHashEntry (&TSDPTR(attrNames),
-                                     Tcl_DStringValue (&dStr), &hnew);
-            Tcl_DStringFree (&dStr);
-        } else {
-            h = Tcl_CreateHashEntry( &TSDPTR(attrNames), attributeName, &hnew);
+            attr->namespace = ns->index;
+            if (isNSAttr) {
+                attr->nodeFlags = IS_NS_NODE;
+            }
         }
-        attr->nodeType    = ATTRIBUTE_NODE;     
-        attr->nodeFlags   = 0;
-        if (uri) attr->namespace = ns->index;
-        else attr->namespace   = 0;
         attr->nodeName    = (char *)&(h->key);     
         attr->parentNode  = node;        
         attr->valueLength = strlen(attributeValue);
@@ -2665,10 +2473,7 @@ domAppendChild (
     domNode *childToAppend
 )
 {
-    domNode       *frag_node, *n;
-    Tcl_HashEntry *h;
-    domNSContext  *NSContext, newNSContext;
-    int            i;
+    domNode *frag_node, *n;
 
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
@@ -2726,31 +2531,6 @@ domAppendChild (
             }
         }
     }
-
-    n = node;
-    while (n) {
-        if (n->nodeFlags & HAS_NS_INFO) break;
-        n = n->parentNode;
-    }
-/*      if (n) { */
-/*          h = Tcl_FindHashEntry (n->ownerDocument->NSscopes, n->nodeNumber); */
-/*          if (!h) { */
-/*              fprintf (stderr, "Invalid internal data in domAppendChild!!!\n"); */
-/*              NSContext == NULL; */
-/*          } else { */
-/*              NSContext = Tcl_GetHashValue (h); */
-/*          } */
-/*      } */
-
-/*      if (frag_node) { */
-/*          if (frag_node->namespace && !NSContext) { */
-/*              newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext)); */
-/*              newNSContext->nrOfNS = 1; */
-/*              newNSContext->newNS = 1; */
-/*              newNSContext->ns = (domNS**) Tcl_Alloc (sizeof (domNS*)); */
-/*              newNSContext->ns[0] = domGetNamespaceByIndex (childToAppend->namespace); */
-/*              childToAppend->nodeFlags */
-                                                          
 
     if (node->lastChild) {
         node->lastChild->nextSibling = childToAppend;
@@ -3180,7 +2960,7 @@ domAppendNewTextNode(
 |
 \--------------------------------------------------------------------------*/
 domNode * 
-domAppendNewElementNodeOld(
+domAppendNewElementNode(
     domNode     *parent,
     char        *tagName,
     char        *uri
@@ -3191,6 +2971,7 @@ domAppendNewElementNodeOld(
     domNS         *ns;
     int           hnew;   
     char         *localname, prefix[MAX_PREFIX_LEN];
+    Tcl_DString   dStr;
     GetTDomTSD();
 
     if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
@@ -3220,13 +3001,21 @@ domAppendNewElementNodeOld(
     |   re-use existing namespace or create a new one
     \-------------------------------------------------------*/
     if (uri) {
+        
         domSplitQName (tagName, prefix, &localname);
         DBG(fprintf(stderr, "tag '%s' has prefix='%s' \n", tagName, prefix);)
-        ns = domLookupNamespace (node->ownerDocument, prefix, uri);
-        DBG(fprintf(stderr, "lookup ns=%p for prefix='%s' uri='%s'\n", ns, prefix, uri);)
-        if (ns == NULL) {
+        ns = domLookupPrefix (node, prefix);
+        if (!ns || (strcmp (uri, ns->uri)!=0)) {
             ns = domNewNamespace(node->ownerDocument, prefix, uri);
-            DBG(fprintf(stderr, "created new ns=%p for prefix='%s' uri='%s'\n", ns, prefix, uri);)
+            if (prefix[0] == '\0') {
+                domSetAttributeNS (node, "xmlns", uri, NULL, 0);
+            } else {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, "xmlns:", 6);
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                domSetAttributeNS (node, Tcl_DStringValue (&dStr), uri, NULL,
+                                   0);
+            }
         }
         node->namespace = ns->index;
     }
@@ -3235,108 +3024,6 @@ domAppendNewElementNodeOld(
     return node;
 }
 
-domNode * 
-domAppendNewElementNode(
-    domNode     *parent,
-    char        *tagName,
-    char        *uri
-)
-{
-    Tcl_HashEntry *h;
-    domNode       *node;
-    domNS         *ns;
-    int            i, j, hnew;   
-    char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN];
-    Tcl_DString    dStr;
-    domNSContext  *currentNSContext, *newNSContext;
-    GetTDomTSD();
-
-    if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
-        
-    domSplitQName (tagName, prefix, &localName);
-
-    node = (domNode*) domAlloc(sizeof(domNode));
-    memset(node, 0, sizeof(domNode));
-    node->nodeType      = ELEMENT_NODE;
-    node->namespace     = 0;
-    node->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
-    node->ownerDocument = parent->ownerDocument;
-    
-    currentNSContext = domCurrentNSContext (parent);
-    if (uri) {
-        Tcl_DStringInit (&dStr);
-        ns = domLookupURI (node, uri);
-        if (ns) {
-            Tcl_DStringAppend (&dStr, ns->prefix, -1);
-            Tcl_DStringAppend (&dStr, ":", 1);
-            Tcl_DStringAppend (&dStr, localName, -1);
-        } else {
-            if (prefix[0] != '\0') {
-                Tcl_DStringAppend (&dStr, prefix, -1);
-                Tcl_DStringAppend (&dStr, ":", 1);
-            }
-            Tcl_DStringAppend (&dStr, localName, -1);
-            
-            ns = domNewNamespace(node->ownerDocument, prefix, uri);
-            newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
-            newNSContext->newNS = 1;
-            if (!currentNSContext) {
-                newNSContext->nrOfNS = 1;
-                newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
-                newNSContext->ns[0] = ns;
-            } else {
-                newNSContext->nrOfNS = currentNSContext->nrOfNS + 1;
-                newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * newNSContext->nrOfNS);
-                newNSContext->ns[0] = ns;
-                j = 1;
-                for (i = 0; i < currentNSContext->nrOfNS; i++) {
-                    if (strcmp (currentNSContext->ns[i]->prefix, prefix)==0
-                        || (prefix[0] == '\0' && currentNSContext->ns[i]->prefix[0]=='\0')) {
-                        newNSContext->nrOfNS--;
-                        continue;
-                    }
-                    newNSContext->ns[j] = currentNSContext->ns[i];
-                    j++;
-                }
-            }
-            h = Tcl_CreateHashEntry (node->ownerDocument->NSscopes,
-                                     (char *) node->nodeNumber, &hnew);
-            Tcl_SetHashValue (h, newNSContext);
-            node->nodeFlags |= HAS_NS_INFO;
-        }
-        h = Tcl_CreateHashEntry( &TSDPTR(tagNames), 
-                                 Tcl_DStringValue (&dStr), &hnew); 
-        Tcl_DStringFree (&dStr);
-    } else {
-        ns = NULL;
-        if (currentNSContext) {
-            for (i = 0; i < currentNSContext->nrOfNS; i++) {
-                if (currentNSContext->ns[i]->prefix == '\0') {
-                    ns = currentNSContext->ns[i];
-                    break;
-                }
-            }
-        }
-        h = Tcl_CreateHashEntry( &TSDPTR(tagNames), localName, &hnew);
-    }
-    if (ns)  node->namespace     = ns->index;
-    node->nodeName      = (char *)&(h->key);
-        
-    if (parent->lastChild) {
-        parent->lastChild->nextSibling = node;
-        node->previousSibling          = parent->lastChild;
-    } else {
-        parent->firstChild    = node;
-        node->previousSibling = NULL;
-    }
-    parent->lastChild = node;
-    node->nextSibling = NULL;
-    node->parentNode  = parent;
-
-    MutationEvent();
-    
-    return node;
-}
 
 /*  domNode *  */
 /*  domAppendNewElementNodeLiteral( */
@@ -3986,13 +3673,10 @@ tdom_resetProc (
     doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-    Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
-    doc->NSbufferLen      = 8;
-    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
+    doc->nsptr            = -1;
 
     info->document          = doc;
     info->currentNode       = NULL;
@@ -4003,7 +3687,6 @@ tdom_resetProc (
     info->feedbackAfter     = 0;
     info->lastFeedbackPosition = 0;
     info->interp            = interp;
-    info->currentNSIndex    = 0;
     info->activeNSpos       = -1;
 }
 
@@ -4080,8 +3763,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->elementstartcommand     = startElement;
         handlerSet->elementendcommand       = endElement;
         handlerSet->datacommand             = characterDataHandler;
-        handlerSet->startnsdeclcommand      = startNamespaceDecl;
-        handlerSet->endnsdeclcommand        = endNamespaceDecl;
         handlerSet->commentCommand          = commentHandler;
         handlerSet->picommand               = processingInstructionHandler;
         handlerSet->entityDeclCommand       = entityDeclHandler;
@@ -4095,13 +3776,12 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-        doc->NSscopes         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
         Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
         Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-        Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
-        doc->NSbufferLen      = 8;
-        doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
+        doc->nsptr            = -1;
+        doc->nslen            =  4;
+        doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
 
         info = (domReadInfo *) Tcl_Alloc (sizeof (domReadInfo));
         info->document          = doc;
@@ -4113,7 +3793,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->feedbackAfter     = 0;
         info->lastFeedbackPosition = 0;
         info->interp            = interp;
-        info->currentNSIndex    = 0;
         info->activeNSpos       = -1;
         info->activeNSsize      = 8;
         info->activeNS          = (domActiveNS*) Tcl_Alloc(sizeof(domActiveNS) * info->activeNSsize);
