@@ -1487,12 +1487,12 @@ externalEntityRefHandler (
             Tcl_ResetResult (info->interp);
             sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
             Tcl_AppendResult(info->interp, "error \"",
-                             XML_ErrorString(XML_GetErrorCode(parser)),
+                             XML_ErrorString(XML_GetErrorCode(extparser)),
                              "\" in entity \"", systemId,
                              "\" at line ", s, " character ", NULL);
-            sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
+            sprintf(s, "%d", XML_GetCurrentColumnNumber(extparser));
             Tcl_AppendResult(info->interp, s, NULL);
-            byteIndex = XML_GetCurrentByteIndex(parser);
+            byteIndex = XML_GetCurrentByteIndex(extparser);
             if (byteIndex != -1) {
                 Tcl_AppendResult(info->interp, "\n\"", NULL);
                 s[1] = '\0';
@@ -1511,7 +1511,8 @@ externalEntityRefHandler (
                     }
                 }
                 Tcl_AppendResult(info->interp, "\"",NULL);
-            }
+            } 
+            Tcl_DecrRefCount (resultObj);
             XML_ParserFree (extparser);
             info->parser = oldparser;
             return 0;
@@ -1521,6 +1522,15 @@ externalEntityRefHandler (
             len = Tcl_Read (chan, buf, sizeof(buf));
             done = len < sizeof(buf);
             if (!XML_Parse (extparser, buf, len, done)) {
+                Tcl_ResetResult (info->interp);
+                sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
+                Tcl_AppendResult(info->interp, "error \"",
+                                 XML_ErrorString(XML_GetErrorCode(extparser)),
+                                 "\" in entity \"", systemId,
+                                 "\" at line ", s, " character ", NULL);
+                sprintf(s, "%d", XML_GetCurrentColumnNumber(extparser));
+                Tcl_AppendResult(info->interp, s, NULL);
+                Tcl_DecrRefCount (resultObj);
                 XML_ParserFree (extparser);
                 info->parser = oldparser;
                 return 0;
@@ -1584,7 +1594,7 @@ endDoctypeDeclHandler (
     void *userData
 )
 {
-    domReadInfo                  *info = (domReadInfo *) userData;
+    domReadInfo *info = (domReadInfo *) userData;
 
     info->insideDTD = 0;
 }
@@ -1606,6 +1616,7 @@ domReadDocument (
     char       *baseurl,
     Tcl_Obj    *extResolver,
     int         useForeignDTD,
+    int         paramEntityParsing,
     Tcl_Interp *interp
 )
 {
@@ -1660,8 +1671,8 @@ domReadDocument (
     if (extResolver) {
         XML_SetExternalEntityRefHandler (parser, externalEntityRefHandler);
     }
-    XML_SetParamEntityParsing (parser,
-                               XML_PARAM_ENTITY_PARSING_UNLESS_STANDALONE);
+    XML_SetParamEntityParsing (parser, 
+                             (enum XML_ParamEntityParsing) paramEntityParsing);
     XML_SetDoctypeDeclHandler (parser, startDoctypeDeclHandler,
                                endDoctypeDeclHandler);
 
