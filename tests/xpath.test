@@ -382,12 +382,12 @@ test xpath-5.4 {erroneous XPath expr} {
 test xpath-5.5 {erroneous XPath expr} {
     catch {$root selectNodes {foo :bar}} errMsg
     set errMsg
-} {Unexpected tokens (beyond end)! for 'foo :bar' 
+} {Unexpected token ':'}
 
-Parsed symbols:
-     0 WCARDNAME        0    0.000     2  foo
--->  1 LITERAL          0    0.000     4  
-     2 WCARDNAME        0    0.000     7  bar}
+test xpath-5.6 {erroneous XPath expr} {
+    catch {$root selectNodes {:foo}} errMsg
+    set errMsg
+} {Unexpected token ':'}
 
 $doc delete
 
