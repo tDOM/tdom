@@ -1,3 +1,11 @@
+--- Release 0.8.0, 11. Aug. 2004 ---
+
+2004-08-10  Rolf Ade  <rolf@pointsman.pointsman.de>
+
+        * extensions/tnc/makefile.vc: Link against tDOM 0.8.0.
+
+        * doc/dom.*: Corrected a spelling mistake.
+
 2004-07-28  Rolf Ade  <rolf@pointsman.pointsman.de>
 
         * lib/tdom.tcl: [namespace export] the public procs in
