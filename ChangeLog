@@ -1,5 +1,9 @@
 2004-09-29  Rolf Ade  <rolf@pointsman.de>
 
+        * win/pkgIndex.tcl: First [load] the lib, which has 
+          [package provide tdom], so that a [package require tdom]
+          within the script lib doesn't loop.
+
         * generic/tcldom.c: Added the with 0.8 added doc methods to
           the doc_usage.    
 
