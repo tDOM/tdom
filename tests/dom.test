@@ -56,7 +56,7 @@ test dom-1.6 {createDocument with wrong # of args} {
 } "1 {wrong \# args: should be \"createDocument docElemName ?newObjVar?\"}"
 
 test dom-1.7 {createDocumentNS - check root name} {
-    set doc [dom createDocumentNS root "http://foo.bar"]
+    set doc [dom createDocumentNS "http://foo.bar" "root"]
     set root [$doc documentElement]
     set result [$root nodeName]
     $doc delete
@@ -64,7 +64,7 @@ test dom-1.7 {createDocumentNS - check root name} {
 } "root"
 
 test dom-1.8 {createDocumentNS - check the NS of the created root} {
-    dom createDocumentNS root "http://foo.bar" doc
+    dom createDocumentNS "http://foo.bar" "root" doc
     set root [$doc documentElement]
     set result [$root namespaceURI]
     $doc delete
@@ -72,23 +72,23 @@ test dom-1.8 {createDocumentNS - check the NS of the created root} {
 } "http://foo.bar"    
 
 test dom-1.9 {createDocumentNS with root name not a NCName} {
-    list [catch {dom createDocumentNS "foo bar" "http://foo.bar" doc} msg] $msg
+    list [catch {dom createDocumentNS "http://foo.bar" "foo bar" doc} msg] $msg
 } "1 {invalid local name}"
 
 test dom-1.10 {createDocumentNS with root name not a NCName} {
-    list [catch {dom createDocumentNS "a:b:c" "http://foo.bar" doc} msg] $msg
+    list [catch {dom createDocumentNS "http://foo.bar" "a:b:c" doc} msg] $msg
 } "1 {invalid local name}"
 
 test dom-1.11 {createDocumentNS with root name not a NCName} {
-    list [catch {dom createDocumentNS "a b:b" "http://foo.bar" doc} msg] $msg
+    list [catch {dom createDocumentNS "http://foo.bar" "a b:b" doc} msg] $msg
 } "1 {invalid prefix name}"
 
 test dom-1.12 {createDocumentNS with root name not a NCName} {
-    list [catch {dom createDocumentNS "a:a b" "http://foo.bar" doc} msg] $msg
+    list [catch {dom createDocumentNS "http://foo.bar" "a:a b" doc} msg] $msg
 } "1 {invalid local name}"
 
 test dom-1.13 {createDocumentNS - check root name} {
-    set doc [dom createDocumentNS foo:root "http://foo.bar"]
+    set doc [dom createDocumentNS "http://foo.bar" foo:root]
     set root [$doc documentElement]
     set result [$root nodeName]
     $doc delete
@@ -105,7 +105,7 @@ test dom-2.1 {knownBug} {Don't quash white space at start or end of non white sp
     some content
     }
 
-test dom-3.1 {knownBug} {repetitived createDocument with objVar, then delete} {
+test dom-3.1 {knownBug} {repetitived documentElement with objVar, then delete} {
     dom createDocument "root" doc 
     $doc documentElement root
     $doc delete
@@ -117,7 +117,91 @@ test dom-3.1 {knownBug} {repetitived createDocument with objVar, then delete} {
     set result
 } "\u00c4\u00d4\u00dc"
 
+test dom-4.1 {create nodes with same prefix, different uri's} {
+    dom createDocumentNS "uri1" "p:a" doc
+    set root [$doc documentElement]
+    set node1 [$doc createElementNS "uri2" "p:b"]
+    $root appendChild $node1
+    set node2 [$doc createElementNS "uri1" "p:c"]
+    $node1 appendChild $node2
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<p:a xmlns:p="uri1">
+    <p:b xmlns:p="uri2">
+        <p:c xmlns:p="uri1"/>
+    </p:b>
+</p:a>
+}
+
+test dom-4.2 {parse doc with various re-declaration of a prefix} {
+    set doc [dom parse {<p:a xmlns:p="uri1">
+    <p:b xmlns:p="uri2">
+        <p:c xmlns:p="uri1"/>
+    </p:b>
+</p:a>}]
+    set root [$doc documentElement]
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<p:a xmlns:p="uri1">
+    <p:b xmlns:p="uri2">
+        <p:c xmlns:p="uri1"/>
+    </p:b>
+</p:a>
+}
+
+test dom-4.3 {setAttribute} {
+    dom createDocumentNS "uri1" "p:root" doc
+    set root [$doc documentElement]
+    $root setAttribute attr1 attr1Value
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<p:root xmlns:p="uri1" attr1="attr1Value"/>
+}
+
+test dom-4.4 {parse doc with default NS declaration} {
+    set doc [dom parse {<a xmlns:p="uri">
+    <p:b/>
+    <p:b/>
+</a>}]
+    set root [$doc documentElement]
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<a xmlns:p="uri">
+    <p:b/>
+    <p:b/>
+</a>
+}
+
+
+test dom-4.3 {setAttribute} {
+    dom createDocumentNS "uri1" "p:root" doc
+    set root [$doc documentElement]
+    $root setAttribute xmlns:p uri2
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<p:root xmlns:p="uri2"/>
+}
+
+test dom-5.1 {insert FQ Element} {
+    set doc [dom parse {<root xmlns:p="uri1"/>}]
+    set root [$doc documentElement]
+    set newNode [$doc createElementNS uri2 p:foo]
+    $root appendChild $newNode
+    set result [$root asXML]
+    $doc delete
+    set result
+} {<root xmlns:p="uri1">
+    <p:foo xmlns:p="uri2"/>
+</root>
+}
 
 # cleanup
 ::tcltest::cleanupTests
 return
+
+
