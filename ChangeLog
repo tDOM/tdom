@@ -1,3 +1,11 @@
+2003-02-21  Rolf Ade  <rolf@pointsman.de>
+
+        * configure.in
+        * Makefile.in
+        * configure
+        * configure-tcl8.0.5: Don't remove tdomConfig.sh with a 'make
+          clean', only with a 'make distclean'.
+    
 2003-02-09  Rolf Ade  <rolf@pointsman.de>
 
         * expat/*: Update to expat 1.95.6.
