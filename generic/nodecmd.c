@@ -2,8 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +-----------------------------------------------------------------------------
 |
-|   $Header$
-|
+|   Rcsid: @(#)$Id$
 |
 |   The contents of this file are subject to the Mozilla Public License
 |   Version 1.1 (the "License"); you may not use this file except in
@@ -17,15 +16,21 @@
 |
 |   The Original Code is tDOM.
 |
-|   The Initial Developer of the Original Code is Jochen Loewer
+|   The Initial Developer of the Original Code is Jochen Loewer.
+|
 |   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
 |   Jochen Loewer. All Rights Reserved.
 |
-|   Contributor(s):
-|       July00  Zoran Vasiljevic  Added this file.
+|   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
+|   Jochen Loewer. All Rights Reserved.
 |
+|   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
+|   Zoran Vasiljevic. All Rights Reserved.
 |
-|   written by Zoran Vasiljevic
+|   Portions created by Rolf Ade are Copyright (C) 1999-2002
+|   Rolf Ade. All Rights Reserved.
+|
+|   Written by Zoran Vasiljevic
 |   July 12, 2000
 |
 \---------------------------------------------------------------------------*/
@@ -77,17 +82,17 @@ typedef struct CurrentStack {
 |   Forward declarations
 |
 \---------------------------------------------------------------------------*/
-static void * StackPush _ANSI_ARGS_((void *element));
-static void * StackPop  _ANSI_ARGS_((void));
-static void * StackTop  _ANSI_ARGS_((void));
-static int NodeObjCmd _ANSI_ARGS_((ClientData,Tcl_Interp*,int,Tcl_Obj *CONST o[]));
+static void * StackPush  _ANSI_ARGS_((void *));
+static void * StackPop   _ANSI_ARGS_((void));
+static void * StackTop   _ANSI_ARGS_((void));
+static int    NodeObjCmd _ANSI_ARGS_((ClientData,Tcl_Interp*,int,Tcl_Obj *CONST o[]));
 static void  domAppendChild1(domNode*, domNode *);
 
 #ifdef TCL_THREADS
-static void   StackFinalize _ANSI_ARGS_((ClientData clientData));
+static void   StackFinalize _ANSI_ARGS_((ClientData));
 #endif
 
-extern int tcldom_appendXML ( Tcl_Interp *interp, domNode *node, Tcl_Obj *obj);
+extern int tcldom_appendXML (Tcl_Interp*, domNode*, Tcl_Obj*);
 
 
 /*----------------------------------------------------------------------------
@@ -198,9 +203,9 @@ NodeObjCmd (arg, interp, objc, objv)
     int             objc;               /* Number of arguments. */
     Tcl_Obj *CONST  objv[];             /* Argument objects. */
 {
-    int len, dlen, i, ret, disableOutputEscaping = 0, index = 1;
+    int type, len, dlen, i, ret, disableOutputEscaping = 0, index = 1;
     char *tag, *p, *tval, *aval;
-    domNode *parent, *newNode;
+    domNode *parent, *newNode = NULL;
     domDocument *doc;
     Tcl_Obj *cmdObj, **opts;
 
@@ -224,9 +229,10 @@ NodeObjCmd (arg, interp, objc, objv)
     |
     \-----------------------------------------------------------------------*/
 
-    ret = TCL_OK;
+    ret  = TCL_OK;
+    type = (int)(arg);
 
-    switch ((int)arg) {
+    switch (abs(type)) {
     case CDATA_SECTION_NODE: /* FALL-THRU */
     case COMMENT_NODE:       /* FALL-THRU */
     case TEXT_NODE:
@@ -330,6 +336,12 @@ NodeObjCmd (arg, interp, objc, objv)
         break;
     }
 
+    if (type < 0 && newNode != NULL) {
+        char buf[64];
+        tcldom_createNodeObj(interp, newNode, buf);
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, strlen(buf)));
+    }
+
     return ret;
 }
 
@@ -341,16 +353,20 @@ NodeObjCmd (arg, interp, objc, objv)
 |   generate tDOM nodes. These new commands can only be called within
 |   the context of the domNode command, however.
 |
-|   Syntax: dom createNodeCmd <elementType> commandName
+|   Syntax: dom createNodeCmd ?-returnNodeCmd? <elementType> cmdName
 |
 |           where <elementType> can be one of:
 |              elementNode, commentNode, textNode, cdataNode or piNode
 |
+|   The optional "-returnNodeCmd" parameter, if given, instructs the
+|   command to return the object-based node command of the newly generated
+|   node. Without the parameter, the command returns current interp result.
+|
 |   Example:
 |
-|      % dom createNodeCmd elementNode html::body
-|      % dom createNodeCmd elementNode html::title
-|      % dom createNodeCmd textNode    html::t
+|      % dom createNodeCmd                elementNode html::body
+|      % dom createNodeCmd -returnNodeCmd elementNode html::title
+|      % dom createNodeCmd                textNode    html::t
 |
 |   And usage:
 |
@@ -358,7 +374,8 @@ NodeObjCmd (arg, interp, objc, objv)
 |      % set n [$d documentElement]
 |      % $n appendFromScript {
 |           html::body {
-|           html::title {html::t "This is an example"}
+|           set title [html::title {html::t "This is an example"}]
+|           $title setAttribute dummy 1
 |      }
 |      % puts [$n asHTML]
 |
@@ -370,9 +387,15 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     int             objc;               /* Number of arguments. */
     Tcl_Obj *CONST  objv[];             /* Argument objects. */
 {
-    int index, ret, type;
-    char *nsName;
+    int ix, index, ret, type, nodecmd = 0;
+    char *nsName, buf[64];
     Tcl_DString cmdName;
+
+    /*
+     * Syntax:  
+     *
+     *     dom createNodeCmd ?-returnNodeCmd? elementType commandName
+     */
 
     enum {
         ELM_NODE, TXT_NODE, CDS_NODE, CMT_NODE, PIC_NODE, PRS_NODE
@@ -383,11 +406,20 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
         "parserNode", NULL
     };
 
-    if (objc != 3) {
-        Tcl_WrongNumArgs(interp, 1, objv, "option ?arg ...?");
-        return TCL_ERROR;
+    if (objc != 3 && objc != 4) {
+        goto usage;
     }
-    ret = Tcl_GetIndexFromObj(interp, objv[1], subcmd, "option", 0, &index);
+    if (objc == 4) {
+        if (strcmp(Tcl_GetStringFromObj(objv[1], NULL), "-returnNodeCmd")) {
+            goto usage;
+        }
+        nodecmd = 1;
+        ix = 2;
+    } else {
+        nodecmd = 0;
+        ix = 1;
+    }
+    ret = Tcl_GetIndexFromObj(interp, objv[ix], subcmd, "option", 0, &index);
     if (ret != TCL_OK) {
         return ret;
     }
@@ -396,8 +428,9 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     |   Construct fully qualified command name using current namespace
     |
     \-------------------------------------------------------------------*/
-    Tcl_DStringInit (&cmdName);
-    ret = Tcl_Eval (interp, "namespace current");
+    Tcl_DStringInit(&cmdName);
+    strcpy(buf, "namespace current");
+    ret = Tcl_Eval(interp, buf);
     if (ret != TCL_OK) {
         return ret;
     }
@@ -406,7 +439,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     if (strcmp(nsName, "::")) {
         Tcl_DStringAppend(&cmdName, "::", 2);
     }
-    Tcl_DStringAppend(&cmdName, Tcl_GetStringFromObj(objv[2], NULL), -1);
+    Tcl_DStringAppend(&cmdName, Tcl_GetStringFromObj(objv[ix+1], NULL), -1);
 
     switch (index) {
     case PRS_NODE: type = PARSER_NODE;                 break;
@@ -416,12 +449,22 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     case CMT_NODE: type = COMMENT_NODE;                break;
     case PIC_NODE: type = PROCESSING_INSTRUCTION_NODE; break;
     }
+
+    if (nodecmd) {
+        type *= -1; /* Signal this fact */
+    }
     Tcl_CreateObjCommand(interp, Tcl_DStringValue(&cmdName), NodeObjCmd,
                          (ClientData)type, NULL);
     Tcl_DStringResult(interp, &cmdName);
     Tcl_DStringFree(&cmdName);
 
     return TCL_OK;
+
+ usage:
+    Tcl_AppendResult(interp, 
+                     "dom createNodeCmd ?-returnNodeCmd? elementType cmdName",
+                     NULL);
+    return TCL_ERROR;
 }
 
 
@@ -481,3 +524,13 @@ domAppendChild1 (domNode *node, domNode *childToAppend)
     childToAppend->parentNode = node;
     node->ownerDocument->fragments = NULL;
 }
+
+/* EOF $RCSfile $ */
+
+/* Emacs Setup Variables */
+/* Local Variables:      */
+/* mode: C               */
+/* indent-tabs-mode: nil */
+/* c-basic-offset: 4     */
+/* End:                  */
+

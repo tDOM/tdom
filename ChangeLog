@@ -1,3 +1,10 @@
 2002-10-29 Zoran Vasiljevic <zoran@archiware.com>
 
+	* dom/tcldom.c
+	* dom/nodecmd.c
+	* dom/nodecmd.h: modified "dom createNodeCmd" to accept the
+	"-returnNodeCmd" optional argument. All commands created
+	with this option willreturn the dom object command for accessing 
+	the generated node.
+	
 	* ChangeLog: added this file
