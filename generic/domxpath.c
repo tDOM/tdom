@@ -806,15 +806,12 @@ static XPathTokens xpathLexer (
                        /* DOT followed by digit, ie a REAL.
                           Handled by default. Fall throu */
 
-            default:   if ( (isalpha(xpath[i])) || (xpath[i]== '_') ) {
-                           ps = &(xpath[i++]);
-                           while (xpath[i] &&
-                                  (isalnum(xpath[i]) ||
-                                   (xpath[i]== '_')  ||
-                                   (xpath[i]== '-')  ||
-                                   (xpath[i]== '.')
-                                  )
-                                 ) i++;
+            default:   if ( isNCNameStart (&xpath[i])) {
+                           ps = &(xpath[i]);
+                           i += UTF8_CHAR_LEN (xpath[i]);
+                           while (xpath[i] && isNCNameChar(&xpath[i])) {
+                               i += UTF8_CHAR_LEN(xpath[i]);
+                           }
 
                            k = i;
                            if (xpath[i] == ':') {
