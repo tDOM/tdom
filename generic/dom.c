@@ -3876,7 +3876,9 @@ domAppendNewTextNode(
     }
     parent->lastChild = (domNode*)node;
     node->nextSibling = NULL;
-    node->parentNode  = parent;
+    if (parent != parent->ownerDocument->rootNode) {
+        node->parentNode  = parent;
+    }
 
     MutationEvent();
     return node;
@@ -3927,7 +3929,9 @@ domAppendNewElementNode(
     }
     parent->lastChild = node;
     node->nextSibling = NULL;
-    node->parentNode  = parent;
+    if (parent != parent->ownerDocument->rootNode) {
+        node->parentNode  = parent;
+    }
 
     /*--------------------------------------------------------
     |   re-use existing namespace or create a new one
@@ -4258,7 +4262,9 @@ domAppendLiteralNode(
     }
     parent->lastChild = node;
     node->nextSibling = NULL;
-    node->parentNode  = parent;
+    if (parent != parent->ownerDocument->rootNode) {
+        node->parentNode  = parent;
+    }
 
     MutationEvent();
     return node;
