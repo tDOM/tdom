@@ -1,12 +1,17 @@
 # Features covered: XSLT transformation
 #
 # This file contains a collection of tests for the XSLT engine of
-# tDOM.
+# tDOM. It is concentrated on the tcl interface of the engine; the
+# vaste majority of xslt tests are done outside the tcltest
+# framework.
+#
 # Tested commands and object commands:
 #    xslt-1.*: xpath Lexer/parser tests
 #    xslt-2.*: xslt method command variants, -parameters option
 #    xslt-3.*: xslt vars, scope, parameters
 #    xslt-4.*: xslt transformations on modified/created from the scratch docs
+#    xslt-5.*: xslt document()
+#    xslt-6.*: xsl:output
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -465,6 +470,25 @@ test xslt-2.19 {xslt -xsltmessagecmd} {
     set ::terminatingMsg
 } {1}
 
+test xslt-2.20 {xslt top level parameter: use top level param to set a top level var} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        version="1.0">
+        <xsl:param name="sortentity"></xsl:param>
+        <xsl:variable name="sortcolumn" select="$sortentity"/>
+        <xsl:template match="/">
+          <out><xsl:value-of select="$sortcolumn"/></out>
+        </xsl:template>
+        </xsl:stylesheet>}]
+    $xml xslt -parameters {sortentity "the parameter value"} $xslt resultDoc
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xml delete
+    $xslt delete
+    set result
+} {<out>the parameter value</out>}
+
 test xslt-3.1 {xslt variable scope} {
     set xml [dom parse {<root/>}]
     set xslt [dom parse {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -495,7 +519,7 @@ test xslt-3.2 {xslt error msg of variable redeclaration in one template} {
     set xslt [dom parse {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:template match="/">
     <xsl:variable name="var" select="'first valule'"/>
-    <xsl:variable name="var" select="'first valule'"/>
+    <xsl:variable name="var" select="'second valule'"/>
     <xsl:value-of select="$var"/>    
   </xsl:template>
         </xsl:stylesheet>}]
@@ -504,6 +528,25 @@ test xslt-3.2 {xslt error msg of variable redeclaration in one template} {
     $xslt delete
     set errMsg
 } {Variable 'var' is already declared in this template}
+
+test xslt-3.3 {use top level var to set a top level var} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        version="1.0">
+        <xsl:variable name="var1" select="'var1Value'"></xsl:variable>
+        <xsl:variable name="var2" select="$var1"/>
+        <xsl:template match="/">
+          <out><xsl:value-of select="$var2"/></out>
+        </xsl:template>
+        </xsl:stylesheet>}]
+    $xml xslt $xslt resultDoc
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xml delete
+    $xslt delete
+    set result
+} {<out>var1Value</out>}
 
 test xslt-4.1 {xslt transformation of a source which was modifed after parsing} {
     dom parse -baseurl file:///tmp/abc.xml {<test/>} doc
@@ -524,6 +567,79 @@ test xslt-4.1 {xslt transformation of a source which was modifed after parsing} 
     $newDoc delete
     set result
 } {<test><child/></test>}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      exclude-result-prefixes="my"
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      
+      xmlns:my="http://my.data">
+      
+      <xsl:template match="/">
+        <out><xsl:value-of select="document('')/*/my:data"/></out>
+      </xsl:template>
+
+      <my:data>Data stored in the stylesheet</my:data>
+    
+    </xsl:stylesheet>}
+
+proc 5.1-extref {baseURI systemId publicId} {
+    if {$baseURI != ""} {
+        error "baseURI not empty"
+    }
+    if {$systemId != ""} {
+        error "systemId not empty"
+    }
+    return [list string "" $::xslt]
+}
+
+test xslt-5.1 {xslt document('') with empty baseURI} {
+    dom parse <dontMatter/> xmldoc
+    dom parse -externalentitycommand 5.1-extref $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xsltdoc delete
+    $xmldoc delete
+    set result
+} {<out>Data stored in the stylesheet</out>}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    
+    <xsl:output
+      indent="yes"
+      omit-xml-declaration="no"
+      method="text"
+      encoding="ISO-8859-1"
+      standalone="yes"
+      media-type="text/foo"
+      />
+    
+    <xsl:template match="/">
+      <out/>
+    </xsl:template>
+    </xsl:stylesheet>
+}
+
+test xslt-6.1 {xsl:output} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set result [$resultDoc indent]
+    lappend result [$resultDoc omit-xml-declaration]
+    lappend result [$resultDoc encoding]
+    lappend result [$resultDoc mediaType]
+    lappend result [$resultDoc standalone]
+    lappend result [$resultDoc getDefaultOutputMethod]
+    $resultDoc delete
+    $xsltdoc delete
+    $xmldoc delete
+    set result
+} {1 0 ISO-8859-1 text/foo 1 text}
 
 # cleanup
 ::tcltest::cleanupTests
