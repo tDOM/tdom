@@ -21,7 +21,7 @@ You'll need to run vcvars32.bat from Developer Studio, first, to setup^
 the environment.
 !error $(MSG)
 !endif
-
+# emacs: '
 
 # Set this to the appropriate value of /MACHINE: for your platform
 MACHINE                = IX86
@@ -78,6 +78,8 @@ TDOMLIB         = $(OUTDIR)\$(NAMEPREFIX)$(VERSION)$(DBGX).lib
 TDOMDLLNAME     = $(NAMEPREFIX)$(VERSION)$(DBGX).dll
 TDOMDLL         = $(OUTDIR)\$(TDOMDLLNAME)
 
+TDOMSTUBLIB     = $(TMPDIR)\$(NAMEPREFIX)stub$(VERSION).lib
+
 MKDIR           = .\mkd.bat
 RM              = del
 
@@ -100,7 +102,11 @@ TDOMOBJS = $(TMPDIR)\xmlrole.obj    \
            $(TMPDIR)\domxpath.obj   \
            $(TMPDIR)\tclexpat.obj   \
            $(TMPDIR)\tcldom.obj     \
+           $(TMPDIR)\tdomStubInit.obj \
+           $(TMPDIR)\tdomStubLib.obj \
            $(TMPDIR)\tdominit.obj
+
+TDOMSTUBOBJS = $(TMP_DIR)\tdomStubLib.obj
 
 cc32           = "$(TOOLS32)\bin\cl.exe"
 link32         = "$(TOOLS32)\bin\link.exe"
@@ -187,8 +193,8 @@ conlibsdll  = $(libcdll) $(baselibs)
 #
 #-------------------------------------------------------------------------
 
+all:       dlls $(TDOMSTUBLIB)
 dlls:      $(TDOMDLL)
-all:       dlls
 
 install:   all
 	@echo installing tDOM
@@ -200,16 +206,28 @@ install:   all
 
 $(TDOMLIB): $(TDOMDLL)
 
+
+$(TDOMSTUBLIB): $(TDOMSTUBOBJS)
+	$(lib32) -nologo -out:$@ $(TCLSTUBOBJS) @<<
+$**
+<<
+
+
+
 $(TDOMDLL): $(TDOMOBJS)
        $(link32) $(ldebug) $(dlllflags) \
                -out:$@ $(guilibsdll) @<<
 $(TDOMOBJS)
 <<
 
+
+$(TMP_DIR)\tdomStubLib.obj: $(GENERICDIR)\tdomStubLib.c
+	$(cc32) $(cdebug) $(cflags) -Zl -DSTATIC_BUILD $(TCL_INCLUDES) -Fo$@ $?
+
+
 #---------------------------------------------------------------------
 # Dedependency rules
 #---------------------------------------------------------------------
-
 
 
 #-------------------------------------------------------------------------
