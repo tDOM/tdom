@@ -1,34 +1,52 @@
-#--------------------------------------------------------------------
+#!/bin/bash -norc
+dnl	This file is an input file used by the GNU "autoconf" program to
+dnl	generate the file "configure", which is run during Tcl installation
+dnl	to configure the system for the local environment.
+#
+# RCS: @(#) $Id$
+
+#-----------------------------------------------------------------------
+# Sample configure.in for Tcl Extensions.  The only places you should
+# need to modify this file are marked by the string __CHANGE__
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+# __CHANGE__
 # This very first macro is used to verify that the configure script can 
 # find the sources.  The argument to AC_INIT should be a unique filename
 # for this package, and can be a relative path, such as:
 #
-# AC_INIT(../generic/tcl.h)
-#--------------------------------------------------------------------
+# AC_INIT(generic/tcl.h)
+#-----------------------------------------------------------------------
 
-AC_INIT(../../generic/tclexpat.h)
+AC_INIT(example.c)
 
-TDOM_SRC_DIR=../..
+AC_CONFIG_AUX_DIR(../../tclconfig)
+CONFIGDIR=${srcdir}/../../tclconfig
+AC_SUBST(CONFIGDIR)
 
-#--------------------------------------------------------------------
-# Set your version numbers here.  The NODOT_VERSION is required
-# for constructing the library name on systems that don't like dots
-# in library names (Windows).  The VERSION variable is used on the
+#----------------------------------------------------------------------
+# __CHANGE__
+# Set your package name and version numbers here.  The NODOT_VERSION is
+# required for constructing the library name on systems that don't like
+# dots in library names (Windows).  The VERSION variable is used on the
 # other systems.
-#--------------------------------------------------------------------
-
-MAJOR_VERSION=0
-MINOR_VERSION=1
-PATCHLEVEL=0
-VERSION=${MAJOR_VERSION}.${MINOR_VERSION}
+#----------------------------------------------------------------------
 
 PACKAGE=example
 
-AC_SUBST(MAJOR_VERSION)
-AC_SUBST(MINOR_VERSION)
+MAJOR_VERSION=1
+MINOR_VERSION=0
+PATCHLEVEL=0
+
+VERSION=${MAJOR_VERSION}.${MINOR_VERSION}.${PATCHLEVEL}
+NODOT_VERSION=${MAJOR_VERSION}${MINOR_VERSION}${PATCHLEVEL}
+
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
-NODOT_VERSION=${MAJOR_VERSION}${MINOR_VERSION}
+
+# This package name must be replaced statically for AC_SUBST to work
+AC_SUBST(example_LIB_FILE)
 
 #--------------------------------------------------------------------
 # We put this here so that you can compile with -DVERSION="1.2" to
@@ -37,367 +55,179 @@ NODOT_VERSION=${MAJOR_VERSION}${MINOR_VERSION}
 
 eval AC_DEFINE_UNQUOTED(VERSION, "${VERSION}")
 
-
 #--------------------------------------------------------------------
-#  determine ANSI-C compiler switches
-#--------------------------------------------------------------------
-AC_DEFUN([CF_ANSI_CC_CHECK],
-[
-AC_MSG_CHECKING(for ${CC-cc} option to accept ANSI C)
-AC_CACHE_VAL(cf_cv_ansi_cc,[
-cf_cv_ansi_cc=no
-cf_save_CFLAGS="$CFLAGS"
-# Don't try gcc -ansi; that turns off useful extensions and
-# breaks some systems' header files.
-# AIX			-qlanglvl=ansi
-# Ultrix and OSF/1	-std1
-# HP-UX			-Aa -D_HPUX_SOURCE
-# SVR4			-Xc
-# UnixWare 1.2		(cannot use -Xc, since ANSI/POSIX clashes)
-for cf_arg in "-DCC_HAS_PROTOS" "" -qlanglvl=ansi -std1 "-Aa -D_HPUX_SOURCE" -Xc
-do
-	CFLAGS="$cf_save_CFLAGS $cf_arg"
-	AC_TRY_COMPILE(
-[
-#ifndef CC_HAS_PROTOS
-#if !defined(__STDC__) || __STDC__ != 1
-choke me
-#endif
-#endif
-],[
-	int test (int i, double x);
-	struct s1 {int (*f) (int a);};
-	struct s2 {int (*f) (double a);};],
-	[cf_cv_ansi_cc="$cf_arg"; break])
-done
-CFLAGS="$cf_save_CFLAGS"
-])
-AC_MSG_RESULT($cf_cv_ansi_cc)
-
-if test "$cf_cv_ansi_cc" != "no"; then
-if test ".$cf_cv_ansi_cc" != ".-DCC_HAS_PROTOS"; then
-	CFLAGS="$CFLAGS $cf_cv_ansi_cc"
-else
-	AC_DEFINE(CC_HAS_PROTOS)
-fi
-fi
-])dnl
-
-CF_ANSI_CC_CHECK
-ANSI_C_FLAGS="$CFLAGS"
-
-
-#--------------------------------------------------------------------
-# Check whether --enable-gcc or --disable-gcc was given.  Do this 
-# before AC_CYGWIN is called so the compiler can 
-# be fully tested by built-in autoconf tools.
-# This macro also calls AC_PROG_CC to set the compiler if --enable-gcc
-# was not used.
-#--------------------------------------------------------------------
-SC_ENABLE_GCC
-AC_PROG_INSTALL
-
-
-#--------------------------------------------------------------------
-# Checks to see if the make program sets the $MAKE variable.
+# Call TEA_INIT as the first TEA_ macro to set up initial vars.
+# This will define a ${TEA_PLATFORM} variable == "unix" or "windows".
 #--------------------------------------------------------------------
 
-AC_PROG_MAKE_SET
-
-#--------------------------------------------------------------------
-# Find ranlib
-#--------------------------------------------------------------------
-
-AC_PROG_RANLIB
-
-#--------------------------------------------------------------------
-# This macro performs additional compiler tests.
-#--------------------------------------------------------------------
-
-AC_CYGWIN
-
-
-#--------------------------------------------------------------------
-# Determines the correct binary file extension (.o, .obj, .exe etc.)
-#--------------------------------------------------------------------
-
-AC_OBJEXT
-AC_EXEEXT
-
-
-#--------------------------------------------------------------------
-# "cygpath" is used on windows to generate native path names for include
-# files.
-# These variables should only be used with the compiler and linker since
-# they generate native path names.
-#
-# Unix tclConfig.sh points SRC_DIR at the top-level directory of
-# the Tcl sources, while the Windows tclConfig.sh points SRC_DIR at
-# the win subdirectory.  Hence the different usages of SRC_DIR below.
-#
-# This must be done before calling SC_PUBLIC_TCL_HEADERS
-#--------------------------------------------------------------------
-
-case "`uname -s`" in
-    *win32* | *WIN32* | *CYGWIN_NT*)
-        CYGPATH="cygpath -w"
-    ;;
-    *)
-        CYGPATH=echo
-    ;;
-esac
-
-AC_SUBST(CYGPATH)  
-
+TEA_INIT
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file
 #--------------------------------------------------------------------
 
-SC_PATH_TCLCONFIG
-SC_LOAD_TCLCONFIG
-
-SC_PUBLIC_TCL_HEADERS
-
+TEA_PATH_TCLCONFIG
+TEA_LOAD_TCLCONFIG
 
 #--------------------------------------------------------------------
-# Set some values that point to parts of the Tcl source tree.  Many
-# extensions require headers/source files that Tcl doesn't normally
-# export.
-#
-# "cygpath" is used on windows to generate native path names for include
-# files.
+# Load the tdomConfig.sh file
 #--------------------------------------------------------------------
-
-case "`uname -s`" in
-    *win32* | *WIN32* | *CYGWIN_NT*)
-	CYGPATH="cygpath -w"
-	RELPATH=".. .. bin"
-	TCL_TOP_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/..`\"
-	TCL_GENERIC_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/../generic`\"
-	TCL_UNIX_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/../unix`\"
-	TCL_WIN_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/../win`\"
-	TCL_BMAP_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/../bitmaps`\"
-	TCL_TOOL_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/../tools`\"
-	eval "INCLUDE_DIR=${includedir}"
-	eval "LIB_DIR=${libdir}"
-	SHLIB_LDFLAGS="-libpath:\"`${CYGPATH} ${LIB_DIR}`\""
-	INCLUDE_DIR_NATIVE=\"`${CYGPATH} ${INCLUDE_DIR}`\"
-    ;;
-    *)
-	CYGPATH=echo
-	RELPATH=..
-	TCL_TOP_DIR_NATIVE=${TCL_SRC_DIR}
-	TCL_GENERIC_DIR_NATIVE='$(TCL_TOP_DIR_NATIVE)/generic'
-	TCL_UNIX_DIR_NATIVE='$(TCL_TOP_DIR_NATIVE)/unix'
-	TCL_WIN_DIR_NATIVE='$(TCL_TOP_DIR_NATIVE)/win'
-	TCL_BMAP_DIR_NATIVE='$(TCL_TOP_DIR_NATIVE)/bitmaps'
-	TCL_TOOL_DIR_NATIVE='$(TCL_TOP_DIR_NATIVE)/tools'
-	INCLUDE_DIR_NATIVE="${includedir}"
-    ;;
-esac
+if test "${TEA_PLATFORM}" = "windows" ; then
+    TDOM_BIN_DIR=../../win
+else
+    TDOM_BIN_DIR=../../unix
+fi
+TDOM_LOAD_CONFIG
 
 #--------------------------------------------------------------------
-# Locate the platform-specific piece of the Tcl source tree.
+# Load the tkConfig.sh file if necessary (Tk extension)
 #--------------------------------------------------------------------
 
-case "`uname -s`" in
-    *win32* | *WIN32* | *CYGWIN_NT*)
-	TCL_PLATFORM_DIR_NATIVE=${TCL_WIN_DIR_NATIVE}
-    ;;
-    *)
-	TCL_PLATFORM_DIR_NATIVE=${TCL_UNIX_DIR_NATIVE}
-    ;;
-esac
+#TEA_PATH_TKCONFIG
+#TEA_LOAD_TKCONFIG
+
+#-----------------------------------------------------------------------
+# Handle the --prefix=... option by defaulting to what Tcl gave.
+# Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
+#-----------------------------------------------------------------------
+
+TEA_PREFIX
+
+#-----------------------------------------------------------------------
+# Standard compiler checks.
+# This sets up CC by using the CC env var, or looks for gcc otherwise.
+# This also calls AC_PROG_CC, AC_PROG_INSTALL and a few others to create
+# the basic setup necessary to compile executables.
+#-----------------------------------------------------------------------
+
+TEA_SETUP_COMPILER
 
 #--------------------------------------------------------------------
-# Other libraries that we need for this module
+# __CHANGE__
+# Choose which headers you need.  Extension authors should try very
+# hard to only rely on the Tcl public header files.  Internal headers
+# contain private data structures and are subject to change without
+# notice.
+# This MUST be called after TEA_LOAD_TCLCONFIG / TEA_LOAD_TKCONFIG
 #--------------------------------------------------------------------
 
-#SC_LIB_SPEC(tclstub)
-#SC_LIB_SPEC(expat)
+TEA_PUBLIC_TCL_HEADERS
+#TEA_PRIVATE_TCL_HEADERS
+
+#TEA_PUBLIC_TK_HEADERS
+#TEA_PRIVATE_TK_HEADERS
 
 #--------------------------------------------------------------------
-# Put all of these in the Makefile so we can add them to the compiler's
-# include line.
-#--------------------------------------------------------------------
-
-AC_SUBST(TCL_TOP_DIR_NATIVE)
-AC_SUBST(TCL_GENERIC_DIR_NATIVE)
-AC_SUBST(TCL_UNIX_DIR_NATIVE)
-AC_SUBST(TCL_WIN_DIR_NATIVE)
-AC_SUBST(TCL_BMAP_DIR_NATIVE)
-AC_SUBST(TCL_TOOL_DIR_NATIVE)
-AC_SUBST(TCL_PLATFORM_DIR_NATIVE)
-AC_SUBST(TCL_BIN_DIR_NATIVE)
-AC_SUBST(INCLUDE_DIR_NATIVE)
-AC_SUBST(CYGPATH)
-AC_SUBST(RELPATH)
-
-#--------------------------------------------------------------------
+# __CHANGE__
 # A few miscellaneous platform-specific items:
 #
-# Define a special symbol for Windows (BUILD_expat in this case) so
-# that we create the export library with the dll.  See expat.h on how
+# Define a special symbol for Windows (BUILD_sample in this case) so
+# that we create the export library with the dll.  See sha1.h on how
 # to use this.
 #
 # Windows creates a few extra files that need to be cleaned up.
+# You can add more files to clean if your extension creates any extra
+# files.
+#
+# Define any extra compiler flags in the PACKAGE_CFLAGS variable.
+# These will be appended to the current set of compiler flags for
+# your system.
 #--------------------------------------------------------------------
 
-case "`uname -s`" in
-    *win32* | *WIN32* | *CYGWIN_NT*)
-	AC_DEFINE(BUILD_expat)
-	CLEANFILES="*.lib *.dll *.exp *.ilk *.pdb vc50.pch"
-	AC_SUBST(CLEANFILES)
-    ;;
-    *)
-    ;;
-esac
+if test "${TEA_PLATFORM}" = "windows" ; then
+    AC_DEFINE(BUILD_example)
+    CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
+    EXTRA_SOURCES='$(WIN_SOURCES)'
+else
+    CLEANFILES="pkgIndex.tcl"
+    EXTRA_SOURCES='$(UNIX_SOURCES)'
+fi
+AC_SUBST(CLEANFILES)
+AC_SUBST(EXTRA_SOURCES)
 
 #--------------------------------------------------------------------
 # Check whether --enable-threads or --disable-threads was given.
-# So far only Tcl responds to this one.
 #--------------------------------------------------------------------
 
-SC_ENABLE_THREADS
+TEA_ENABLE_THREADS
 
 #--------------------------------------------------------------------
 # The statement below defines a collection of symbols related to
 # building as a shared library instead of a static library.
 #--------------------------------------------------------------------
 
-SC_ENABLE_SHARED
+TEA_ENABLE_SHARED
 
 #--------------------------------------------------------------------
 # This macro figures out what flags to use with the compiler/linker
 # when building shared/static debug/optimized objects.  This information
-# is all taken from the tclConfig.sh file.
+# can be taken from the tclConfig.sh file, but this figures it all out.
 #--------------------------------------------------------------------
 
-CFLAGS_DEBUG="$ANSI_C_FLAGS $TCL_CFLAGS_DEBUG"
-CFLAGS_OPTIMIZE="$ANSI_C_FLAGS $TCL_CFLAGS_OPTIMIZE"
-#eval LDFLAGS_DEBUG="${TCL_LD_FLAGS} ${TCL_LDFLAGS_DEBUG}"
-#eval LDFLAGS_OPTIMIZE="${TCL_LD_FLAGS} ${TCL_LDFLAGS_OPTIMIZE}"
-LD_SEARCH_FLAGS="${TCL_LD_SEARCH_FLAGS}"
-SHLIB_LD=${TCL_SHLIB_LD}
-STLIB_LD=${TCL_STLIB_LD}
-SHLIB_CFLAGS=${TCL_SHLIB_CFLAGS}
-
+TEA_CONFIG_CFLAGS
 
 #--------------------------------------------------------------------
-# Set the default compiler switches based on the --enable-symbols 
-# option.
+# Set the default compiler switches based on the --enable-symbols option.
 #--------------------------------------------------------------------
 
-SC_ENABLE_SYMBOLS
+TEA_ENABLE_SYMBOLS
 
 if test "${SHARED_BUILD}" = "1" ; then
-    CFLAGS="${CFLAGS_DEFAULT} ${CFLAGS_WARNING} ${SHLIB_CFLAGS}"
+    CFLAGS='${CFLAGS_DEFAULT} ${CFLAGS_WARNING} ${SHLIB_CFLAGS}'
 else
-    CFLAGS="${CFLAGS_DEFAULT} ${CFLAGS_WARNING}"
+    CFLAGS='${CFLAGS_DEFAULT} ${CFLAGS_WARNING}'
 fi
-
-if test "${SHARED_BUILD}" = "1" ; then
-    LDFLAGS="${LDFLAGS_DEFAULT} ${SHLIB_LD}"
-else
-    LDFLAGS="${LDFLAGS_DEFAULT}"
-fi
+AC_SUBST(SHARED_BUILD)
 
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you
 # can't for some reason, remove this definition.  If you aren't using
 # stubs, you also need to modify the SHLIB_LD_LIBS setting below to
-# link against the non-stubbed Tcl library.
+# link against the non-stubbed Tcl library.  Add Tk too if necessary.
 #--------------------------------------------------------------------
 
 AC_DEFINE(USE_TCL_STUBS)
+#AC_DEFINE(USE_TK_STUBS)
 
 #--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
-# depends on values set by the SC_ENABLE_SHARED, SC_ENABLE_SYMBOLS,
-# and SC_LOAD_TCLCONFIG macros above.
+# depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
+# and TEA_LOAD_TCLCONFIG macros above.
+# For tDOM we always build both, static and shared libraries
 #--------------------------------------------------------------------
 
-SC_MAKE_LIB
+TEA_MAKE_LIB
 
 #--------------------------------------------------------------------
-# eval these two values to dereference the ${DBGX} variable.
+# __CHANGE__
+# Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
 #--------------------------------------------------------------------
 
-eval "SHARED_LIB_SUFFIX=${TCL_SHARED_LIB_SUFFIX}"
-eval "UNSHARED_LIB_SUFFIX=${TCL_UNSHARED_LIB_SUFFIX}"
-
+#LIBS="${LIBS} --lsuperfly"
 
 #--------------------------------------------------------------------
-# Shared libraries and static libraries have different names.
+# Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
+# file during the install process.  Don't run the TCLSH_PROG through
+# ${CYGPATH} because it's being used directly by make.
+# Require that we use a tclsh shell version 8.2 or later since earlier
+# versions have bugs in the pkg_mkIndex routine.
+# Add WISH as well if this is a Tk extension.
 #--------------------------------------------------------------------
 
-case "`uname -s`" in
-    *win32* | *WIN32* | *CYGWIN_NT*)
-        eval "EXAMPLE_SHLIB_FILE=example${SHARED_LIB_SUFFIX}"
-        eval "EXAMPLE_LIB_FILE=example${UNSHARED_LIB_SUFFIX}"
-	if test "${SHARED_BUILD}" = "1" ; then
-	    RANLIB=:
-	fi
-	#if test "${SHARED_BUILD}" = "1" ; then
-	#    #SHLIB_LD_LIBS="${tclstub_LIB_SPEC} ${expat_LIB_SPEC}"
-	#    SHLIB_LD_LIBS="${tclstub_LIB_SPEC}"
-	#    eval "EXAMPLE_LIB_FILE=example${SHARED_LIB_SUFFIX}"
-	#    RANLIB=:
-	#else
-	#    eval "EXAMPLE_LIB_FILE=example${UNSHARED_LIB_SUFFIX}"
-	#fi
-	;;
-    *)
-        eval "EXAMPLE_SHLIB_FILE=example${SHARED_LIB_SUFFIX}"
-        eval "EXAMPLE_LIB_FILE=example${UNSHARED_LIB_SUFFIX}"
-	if test "${SHARED_BUILD}" = "1" ; then
-	    RANLIB=:
-	fi
-	#if test "${SHARED_BUILD}" = "1" ; then
-	#    #SHLIB_LD_LIBS="${tclstub_LIB_SPEC} ${expat_LIB_SPEC}"
-	#    SHLIB_LD_LIBS="${tclstub_LIB_SPEC}"
-	#    eval "EXAMPLE_LIB_FILE=example${SHARED_LIB_SUFFIX}"
-	#    RANLIB=:
-	#else
-	#    eval "EXAMPLE_LIB_FILE=example${UNSHARED_LIB_SUFFIX}"
-	#fi
-	;;
-esac
-
-AC_SUBST(CFLAGS_DEBUG)
-AC_SUBST(CFLAGS_OPTIMIZE)
-AC_SUBST(CFLAGS)
-AC_SUBST(STLIB_LD)
-AC_SUBST(SHLIB_LD)
-AC_SUBST(SHLIB_CFLAGS)
-AC_SUBST(SHLIB_LDFLAGS)
-AC_SUBST(LD_SEARCH_FLAGS)
-
-AC_SUBST(EXAMPLE_SHLIB_FILE)
-AC_SUBST(SHLIB_LD_LIBS)
-AC_SUBST(TDOM_SRC_DIR)
-
-AC_SUBST(LDFLAGS_OPTIMIZE)
-
-#echo "CFLAGS=$CFLAGS"
-#echo "LDFLAGS=$LDFLAGS"
-#echo "LDFLAGS_DEFAULT=$LDFLAGS_DEFAULT"
-#echo "LDFLAGS_DEBUG=$LDFLAGS_DEBUG"
-#echo "LDFLAGS_OPTIMIZE=$LDFLAGS_OPTIMIZE"
-#echo "SHLIB_LDFLAGS=$SHLIB_LDFLAGS"
-#echo "LD_SEARCH_FLAGS=$LD_SEARCH_FLAGS"
+TEA_PROG_TCLSH
+#TEA_PROG_WISH
 
 #--------------------------------------------------------------------
-# Find a working Tcl intperpreter so we can generate the pkgIndex.tcl file
+# Add some private include directories
 #--------------------------------------------------------------------
 
-SC_PROG_TCLSH
+EXAMPLE_INCLUDES="-I${srcdir}/../../generic -I${srcdir}/../../expat"
+AC_SUBST(EXAMPLE_INCLUDES)
 
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the Makefile.
+# You may alternatively have a special pkgIndex.tcl.in or other files
+# which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile \
-	pkgIndex.tcl],
-	chmod +x ${srcdir}/install-sh ${srcdir}/mkinstalldirs)
+AC_OUTPUT([Makefile])

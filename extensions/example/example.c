@@ -1,9 +1,16 @@
 
 #include <tcl.h>
 #include <string.h>
-/*#include <xmlparse.h>*/
 #include <expat.h>
 #include <tclexpat.h>
+
+/*
+ * Beginning with 8.4, Tcl API is CONST'ified
+ */
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
+# define CONST84
+#endif
+
 
 typedef struct simpleCounter 
 {
@@ -25,7 +32,7 @@ static char example_usage[] =
  * ExampleElementStartCommand --
  *
  *	This procedure is called for every element start event
- *      while parsing XML Data with a "example" enabled tclexpat
+ *      while parsing XML Data with an "example" enabled tclexpat
  *      parser.
  *
  * Results:
@@ -134,7 +141,7 @@ TclExampleObjCmd(dummy, interp, objc, objv)
     simpleCounter *counter;
     
 
-    static char *exampleMethods[] = {
+    static CONST84 char *exampleMethods[] = {
         "enable", "getresult", "remove",
         NULL
     };

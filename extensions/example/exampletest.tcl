@@ -1,7 +1,7 @@
 #!tclsh
 
-load ../../unix/tdom0.6.so
-load ./example0.1.so
+load ../../unix/libtdom0.7.5.so
+load ./libexample1.0.0.so
 
 set counter1 0
 set counter2 0
@@ -24,7 +24,7 @@ $parser configure -elementstartcommand eh1 \
 example $parser enable
 tdom $parser enable
 
-set fd [open ../../tests/books.xml]
+set fd [open ../../tests/data/books.xml]
 $parser parse [read $fd]
 
 puts "First tcl element start handler has counted the elements"
