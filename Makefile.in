@@ -373,7 +373,7 @@ pkgIndex.tcl-hand:
 # You may need to tweak this target to make it work correctly.
 #========================================================================
 
-COMPRESS	= tar zcf $(DIST_FILE) $(PKG_DIR)
+COMPRESS	= tar zcf $(DIST_FILE) --exclude='CVS' --exclude='\.*' $(PKG_DIR)
 DIST_ROOT	= $(top_builddir)/dist
 DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
 DIST_FILE	= $(PKG_DIR).tar.gz
