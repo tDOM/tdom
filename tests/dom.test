@@ -308,6 +308,61 @@ test dom-6.1 {appendChild} {
     set result
 } {1}
 
+set doc [dom parse {<root><a/><b/><a/><c/></root>}]
+set root [$doc documentElement]
+
+test dom-7.1 {getElementsByTagName - doc method} {
+    llength [$doc getElementsByTagName a]
+} {2}
+
+test dom-7.2 {getElementsByTagName - doc method} {
+    llength [$doc getElementsByTagName c]
+} {1}
+
+test dom-7.3 {getElementsByTagName - doc method} {
+    llength [$doc getElementsByTagName foo]
+} {0}
+
+test dom-7.4 {getElementsByTagName - node method} {
+    llength [$root getElementsByTagName a]
+} {2}
+
+test dom-7.5 {getElementsByTagName - node method} {
+    llength [$root getElementsByTagName c]
+} {1}
+
+test dom-7.6 {getElementsByTagName - node method} {
+    llength [$root getElementsByTagName foo]
+} {0}
+
+$doc delete
+
+set doc [dom parse {<?xml version="1.0"?>
+<soap:Envelope
+xmlns:soap="http://www.w3.org/2001/12/soap-envelope"
+soap:encodingStyle="http://www.w3.org/2001/12/soap-encoding">
+  <soap:Body xmlns:m="http://www.stock.org/stock">
+    <m:GetStockPrice>
+      <m:StockName>IBM</m:StockName>
+    </m:GetStockPrice>
+  </soap:Body>
+</soap:Envelope>}]
+set root [$doc documentElement]
+
+test dom-7.8 {getElementsByTagNameNS -} {
+    [$root getElementsByTagNameNS "http://www.stock.org/stock" GetStockPrice] nodeName
+} {m:GetStockPrice}
+
+test dom-7.9 {getElementsByTagNameNS} {
+    [$root getElementsByTagNameNS "*" GetStockPrice] nodeName
+} {m:GetStockPrice}
+
+test dom-7.10 {getElementsByTagNameNS} {
+    llength [$root getElementsByTagNameNS "http://www.stock.org/stock" *]
+} {2}
+
+$doc delete 
+
 # cleanup
 ::tcltest::cleanupTests
 return
