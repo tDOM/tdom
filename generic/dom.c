@@ -1502,6 +1502,16 @@ startDoctypeDeclHandler (
 {
     domReadInfo                  *info = (domReadInfo *) userData;
 
+    if (pubid) {
+        info->document->doctype = MALLOC (sizeof (domDoctype));
+        memset (info->document->doctype, 0, sizeof (domDoctype));
+        info->document->doctype->systemId = tdomstrdup (sysid);
+        info->document->doctype->publicId = tdomstrdup (pubid);
+    } else if (sysid) {
+        info->document->doctype = MALLOC (sizeof (domDoctype));
+        memset (info->document->doctype, 0, sizeof (domDoctype));
+        info->document->doctype->systemId = tdomstrdup (sysid);
+    }
     info->insideDTD = 1;
 }
 
@@ -2163,6 +2173,16 @@ domFreeDocument (
     FREE ((char *)doc->namespaces);
 
     /*-----------------------------------------------------------
+    | delete doctype info
+    \-----------------------------------------------------------*/
+    if (doc->doctype) {
+        if (doc->doctype->systemId) FREE(doc->doctype->systemId);
+        if (doc->doctype->publicId) FREE(doc->doctype->publicId);
+        if (doc->doctype->internalSubset) FREE(doc->doctype->internalSubset);
+        FREE((char*) doc->doctype);
+    }
+
+    /*-----------------------------------------------------------
     | delete ID hash table
     \-----------------------------------------------------------*/
     Tcl_DeleteHashTable (&doc->ids);
@@ -2244,7 +2264,6 @@ domSetAttribute (
     domAttrNode   *attr, *lastAttr;
     Tcl_HashEntry *h;
     int            hnew;
-    domNode       *tmp;
 
     if (!node || node->nodeType != ELEMENT_NODE) {
         return NULL;
@@ -2261,12 +2280,11 @@ domSetAttribute (
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
             h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
             if (h) {
-                tmp = (domNode *)Tcl_GetHashValue (h);
                 Tcl_DeleteHashEntry (h);
                 h = Tcl_CreateHashEntry (&node->ownerDocument->ids,
                                          attributeValue, &hnew);
                 /* XXX what to do, if hnew = 0  ??? */
-                Tcl_SetHashValue (h, tmp);
+                Tcl_SetHashValue (h, node);
             }
         }
         FREE (attr->nodeValue);
@@ -2382,6 +2400,16 @@ domSetAttributeNS (
     }
     if (attr) {
         DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old valure: %s\n", attr->nodeName, attr->nodeValue);)
+        if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
+            h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
+            if (h) {
+                Tcl_DeleteHashEntry (h);
+                h = Tcl_CreateHashEntry (&node->ownerDocument->ids,
+                                         attributeValue, &hnew);
+                /* XXX what to do, if hnew = 0  ??? */
+                Tcl_SetHashValue (h, node);
+            }
+        }
         FREE (attr->nodeValue);
         attr->valueLength = strlen(attributeValue);
         attr->nodeValue   = (char*)MALLOC(attr->valueLength+1);
@@ -2479,6 +2507,7 @@ domRemoveAttribute (
 )
 {
     domAttrNode *attr, *previous = NULL;
+    Tcl_HashEntry *h;
 
     if (!node || node->nodeType != ELEMENT_NODE) {
         return -1;
@@ -2498,11 +2527,11 @@ domRemoveAttribute (
         } else {
             attr->parentNode->firstAttr = attr->nextSibling;
         }
-        /* no more lastAttr
-        if (!attr->nextSibling) {
-            attr->parentNode->lastAttr = previous;
+
+        if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
+            h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
+            if (h) Tcl_DeleteHashEntry (h);
         }
-        */
         FREE (attr->nodeValue);
         MutationEvent();
 
@@ -2527,6 +2556,7 @@ domRemoveAttributeNS (
     domAttrNode *attr, *previous = NULL;
     domNS *ns = NULL;
     char  *str, prefix[MAX_PREFIX_LEN];
+    Tcl_HashEntry *h;
 
     if (!node || node->nodeType != ELEMENT_NODE) {
         return -1;
@@ -2544,6 +2574,11 @@ domRemoveAttributeNS (
                     attr->parentNode->firstAttr = attr->nextSibling;
                 }
 
+                if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
+                    h = Tcl_FindHashEntry (&node->ownerDocument->ids, 
+                                           attr->nodeValue);
+                    if (h) Tcl_DeleteHashEntry (h);
+                }
                 FREE (attr->nodeValue);
                 MutationEvent();
                 domFree ((void*)attr);
