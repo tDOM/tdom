@@ -1,3 +1,13 @@
+# Features covered: Namespace related DOM actions.
+#
+# This file contains a collection of tests for some namespace related
+# actions.
+#
+#    domnamespace-1.*: misc tests
+#    domnamespace-2.*: moving namespaced nodes from one document to another
+#
+# Copyright (c) 2002 Rolf Ade.
+
 source [file join [file dir [info script]] loadtdom.tcl]
 
 test domnamespace-1.1 {multiple definition of the same namespace (same prefix/uri)} {
@@ -10,6 +20,231 @@ test domnamespace-1.1 {multiple definition of the same namespace (same prefix/ur
     llength $nodes
 } {35}
 
+test domnamespace-2.1 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS1"><doc1elem/></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    $root2 appendChild [$root1 firstChild]
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns="NS1"/></root>}
+
+test domnamespace-2.2 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS1"><doc1elem/></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns="NS1"/></root>}
+
+test domnamespace-2.3 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS1"><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns="NS1"><a/></doc1elem></root>}
+
+test domnamespace-2.4 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns=""><a/></doc1elem></root>}
+
+test domnamespace-2.5 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [llength [$root2 getElementsByTagNameNS "" *]]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {2}
+
+test domnamespace-2.6 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}
+
+test domnamespace-2.7 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    $root2 appendChild [[$root1 firstChild] cloneNode -deep]
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}
+
+test domnamespace-2.8 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    $root2 appendChild [$root1 firstChild]
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}
+
+test domnamespace-2.9 {moving namespaced nodes between documents} {
+    set doc1 [dom parse {<root xmlns="NS2"><doc1elem><a/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns:p="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    $root2 appendChild [$root1 firstChild]
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns:p="NS2"><doc1elem xmlns="NS2"><a/></doc1elem></root>}
+
+test domnamespace-2.10 {moving nodes with attributes between documents} {
+    set doc1 [dom parse {<root><doc1elem><a b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns=""><a b="c"/></doc1elem></root>}
+
+test domnamespace-2.11 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns=""><a xmlns:p="foo" p:b="c"/></doc1elem></root>}
+
+test domnamespace-2.11 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><doc1elem xmlns=""><a xmlns:p="foo" p:b="c"/></doc1elem></root>}
+
+test domnamespace-2.12 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 appendChild $node
+    $root2 setAttributeNS "" "xmlns:p" "foo"
+    set result [$root2 selectNodes {//@p:*}]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {{p:b c}}
+
+test domnamespace-2.13 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"/>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    $root2 setAttributeNS "" "xmlns:p" "foo"
+    $root2 appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2" xmlns:p="foo"><doc1elem xmlns=""><a p:b="c"/></doc1elem></root>}
+
+test domnamespace-2.14 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns="NS1" xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"><e xmlns=""/></root>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    [$root2 firstChild] appendChild $node
+    set result [$root2 asXML -indent none]
+    $doc1 delete
+    $doc2 delete
+    set result
+} {<root xmlns="NS2"><e xmlns=""><doc1elem xmlns="NS1"><a xmlns:p="foo" p:b="c"/></doc1elem></e></root>}
+
+test domnamespace-2.14 {moving nodes with namespaced attributes between documents} {
+    set doc1 [dom parse {<root xmlns="NS1" xmlns:p="foo"><doc1elem><a p:b="c"/></doc1elem></root>}]
+    set root1 [$doc1 documentElement]
+    set doc2 [dom parse {<root xmlns="NS2"><e xmlns=""/></root>}]
+    set root2 [$doc2 documentElement]
+    
+    set node [$root1 removeChild [$root1 firstChild]]
+    [$root2 firstChild] appendChild $node
+    set nodes [$doc2 getElementsByTagNameNS "NS1" *]
+    catch {unset result}
+    foreach node $nodes {
+        lappend result [$node nodeName]
+    }
+    $doc1 delete
+    $doc2 delete
+    set result
+} {doc1elem a}
 
 # cleanup
 ::tcltest::cleanupTests
