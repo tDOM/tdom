@@ -1,6 +1,10 @@
+2003-10-07  Rolf Ade  <rolf@pointsman.de>
+
+        Added method insertBeforeFromScript to domNode commands.
+
 2003-10-04  Rolf Ade  <rolf@pointsman.de>
 
-        Added method "asText" to domDoc and domNode commands.
+        Added method asText to domDoc and domNode commands.
 
 2003-09-22  Rolf Ade  <rolf@pointsman.de>
 
