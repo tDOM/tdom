@@ -1,22 +1,22 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domDoc</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domDoc</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1293">SEE ALSO</a> · <a href="#SECTnode1302">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid908">DESCRIPTION </a> · <a href="#SECTid1352">SEE ALSO</a> · <a href="#SECTid1361">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTnode908">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
+  <h2><a name="SECTid908">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
-methods should closely conform to the W3C recommendation &quot;Document Object Model
-(Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
+methods should closely conform to the W3C recommendation "Document Object Model
+(Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
 at these documents for a deeper understanding of the functionality.</p><p>The valid methods are:</p><dl class="commandlist">
         
           <dt>
@@ -174,12 +174,13 @@ value.</dd>
       
         <dt>
 <b class="method">xslt</b> <b class="option">?-parameters
-parameterList?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
+parameterList?</b> <b class="option">?-ignoreUndeclaredParameters?</b>
+<b class="option">?-xsltmessagecmd script?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
 </dt>
         <dd>Applies an XSLT transformation on the whole document of the node
 object using the XSLT <i class="m">stylesheet</i> (given as domDoc). Returns a document
-object containing the result document of that transformation and stores it in
-optional <i class="m">outputVar</i>.
+object containing the result document of the transformation and stores that
+document object in the optional <i class="m">outputVar</i>, if that was given.
 
 <p>The optional <i class="m">-parameters</i> option sets top level
 &lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a tcl
@@ -196,21 +197,44 @@ in the stylesheet. The actual command consists of the script, given as argument
 to the option, appended with the XML Fragment from instantiating the
 xsl:message element content as string (as if the XPath string() function would
 have been applied to the XML Fragment) and a flag, which indicates, if the
-xsl:message has an attribute &quot;terminate&quot; with the value &quot;yes&quot;.</p>
+xsl:message has an attribute "terminate" with the value "yes".</p>
 </dd>
       
 
+      
+        <dt>
+<b class="method">toXSLTcmd</b> ?<i class="m">objVar</i>?</dt>
+     
+        <dd>If the DOM tree represents a valid XSLT stylesheet, this method
+transforms the DOM tree into a xslt command, otherwise it returns error. The
+created xsltCmd is returnd and stored in the <i class="m">objVar</i>, if a var name was
+given. A successful transformation of the DOM tree to a xsltCmd removes the
+domDoc cmd and all nodeCmds of the document. 
+
+<p>The syntax of the created xsltCmd is:</p>
+ 
+<pre class="syntax">
+<b class="cmd">xsltCmd</b> <b class="option">?-parameters parameterList?</b> <b class="option">?-ignoreUndeclaredParameters?</b> <b class="option">?-xsltmessagecmd script?</b> <i class="m">docNode</i> <i class="m">?outputVar?</i>
+</pre>
+
+<p>The options are the same as for the domDoc <i class="m">xslt</i> method; see there for
+a description. The <i class="m">docNode</i> argument is the XML document to transform
+(given as domDoc). The command returns a document object containing the result
+document of the transformation and stores it in the optional <i class="m">outputVar</i>,
+if that was given.</p>
+ </dd>
+      
       </dl><p>Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace <tt class="samp">::dom::domDoc</tt> is
 tried to be executed. This allows quick method additions on Tcl level.</p><p>Newly created nodes are appended to a hidden fragment list. If there
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTnode1293">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid1352">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTnode1302">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTid1361">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
