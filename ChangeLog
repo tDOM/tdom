@@ -1,3 +1,33 @@
+2003-04-04  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c 
+        * generic/dom.h: Added domIsQNAME.
+
+        * generic/dom.c: Bug fix: For textNodes getLine/getColumn
+          method report the position of the first char of the text
+          node.
+
+        * generic/domxpath.c: Bug fix: Detects now some erroneous
+          XPath expressions. Added parameter number check to XPath
+          functions substring and concat (the last two XPath
+          functions, without such check, they must have slipped thou
+          somehow, up to now).
+
+        * generic/domxslt.c: Improved interal function reportError(),
+          can now be used with all kind of nodes not only element
+          nodes. Improved behavior in case of dubious numbering
+          (negative roman number or latin letters fall back to default
+          latin numbers). Fixed a potential memory leak (in case of
+          overwriting named templates without match attribute with an
+          other named template). Improved error reports: for more
+          detected errors there is now a line/column number
+          given. Plenty of improvements in detecting erroneous
+          stylesheets: more checks for format-number formatting
+          patters (although especically format-number patterns are
+          still a can of worms), added parameter number check for
+          additional XPath function current(), template, paramter,
+          variable, sort, choose, copy, and message elements.
+
 2003-03-26  Rolf Ade  <rolf@pointsman.de>
         
         * generic/domxslt.c: Fixed some memory problems, mostly in
