@@ -64,10 +64,10 @@
 |
 \---------------------------------------------------------------------------*/
 #include <tcl.h>
-#include <dom.h>
 #include <ctype.h>
 #include <string.h>
 #include <domalloc.h>
+#include <dom.h>
 
 
 /*----------------------------------------------------------------------------
@@ -523,6 +523,9 @@ XML_SimpleParse (
                 }
                 doc->rootNode = rootNode;
 
+#ifdef TDOM_NS
+                Tcl_Free ((char *) activeNS);
+#endif                
                 return TCL_OK;
             }
             continue;
@@ -1027,6 +1030,9 @@ XML_SimpleParse (
                 }
                 doc->rootNode = rootNode;
 
+#ifdef TDOM_NS
+                Tcl_Free ((char *) activeNS);
+#endif                
                 return TCL_OK;
             }
             if (*x=='>') {
