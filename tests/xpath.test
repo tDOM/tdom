@@ -8,6 +8,7 @@
 #    xpath-3.*: NaN/Inf
 #    xpath-4.*: Tcl coded XPath functions and additional Tcl coded
 #               XPath functions
+#    xpath-5.*: erroneous XPath exprs
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -299,6 +300,38 @@ test xpath-4.11 {tcl coded additional XPath function - return nodes} {
     }
     set result
 } {1}
+
+test xpath-5.1 {erroneous XPath expr: missing right brace in predicate} {
+    set result [catch {$root selectNodes {*[1}} errMsg]
+    # emacs: ]
+    list $result $errMsg
+} {1 {Predicate: Expected "RBRACKET" for '*[1' 
+
+Parsed symbols:
+     0 WCARDNAME        0    0.000     0  *
+     1 LBRACKET         0    0.000     1  
+     2 INTNUMBER        1    1.000     2  }}
+#emacs: }
+
+test xpath-5.2 {erroneous XPath expr: missing right brace in predicate} {
+    set result [catch {$root selectNodes {*[1][@attr}} errMsg]
+    # emacs: ]
+    list $result $errMsg
+} {1 {Predicate: Expected "RBRACKET" for '*[1][@attr' 
+
+Parsed symbols:
+     0 WCARDNAME        0    0.000     0  *
+     1 LBRACKET         0    0.000     1  
+     2 INTNUMBER        1    1.000     2  
+     3 RBRACKET         0    0.000     3  
+     4 LBRACKET         0    0.000     4  
+     5 ATTRIBUTE        0    0.000     9  attr}}
+#emacs: }
+
+test xpath-5.3 {erroneous XPath expr: missing left brace in predicate} {
+    catch {$root selectNodes {*1]}}
+} {1}
+
 
 $doc delete
 
