@@ -1,3 +1,8 @@
+# Features covered: international issues 
+#
+# Copyright (c) 2002 Rolf Ade.
+#
+# RCS: @(#) $Id$
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
