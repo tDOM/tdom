@@ -362,7 +362,7 @@ TclExpatObjCmd(dummy, interp, objc, objv)
     genexpat->name = FindUniqueCmdName(interp);
   } else {
     genexpat->name = objv[1];
-    if (*(Tcl_GetStringFromObj(genexpat->name, NULL)) != '-') {
+    if (*(Tcl_GetString(genexpat->name)) != '-') {
       Tcl_IncrRefCount(genexpat->name);
       objv++;
       objc--;
@@ -379,7 +379,7 @@ TclExpatObjCmd(dummy, interp, objc, objv)
   genexpat->paramentityparsing = XML_PARAM_ENTITY_PARSING_NEVER;
   
   if (objc > 1) {
-      nsoption = Tcl_GetStringFromObj(objv[1], NULL);
+      nsoption = Tcl_GetString(objv[1]);
       if (strcmp(nsoption,"-namespace")==0) {
           ns_mode = 1;
           objv++;
@@ -398,7 +398,7 @@ TclExpatObjCmd(dummy, interp, objc, objv)
    * Register a Tcl command for this parser instance.
    */
 
-  Tcl_CreateObjCommand(interp, Tcl_GetStringFromObj(genexpat->name,NULL),
+  Tcl_CreateObjCommand(interp, Tcl_GetString(genexpat->name),
                                TclExpatInstanceCmd, (ClientData) genexpat,
                                TclExpatDeleteCmd);
   /*
@@ -450,7 +450,7 @@ FindUniqueCmdName(interp)
     TDomThreaded(Tcl_MutexUnlock(&counterMutex);)
     Tcl_SetStringObj(name, s, -1);
 
-  } while (Tcl_GetCommandInfo(interp, Tcl_GetStringFromObj(name, NULL), &info));
+  } while (Tcl_GetCommandInfo(interp, Tcl_GetString(name), &info));
 
   return name;
 }
@@ -666,7 +666,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
 
         CheckArgs (2,2,1,"");
 	/* ericm@scriptics.com, 1999.9.13 */
-	Tcl_DeleteCommand(interp, Tcl_GetStringFromObj(expat->name,NULL));
+	Tcl_DeleteCommand(interp, Tcl_GetString(expat->name));
 	result = TCL_OK;
 	break;
 
@@ -686,14 +686,14 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_PARSECHANNEL:
 
       CheckArgs (3,3,2,"<Tcl-Channel>");
-      data = Tcl_GetStringFromObj (objv[2], NULL);
+      data = Tcl_GetString(objv[2]);
       result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_CHANNEL);
       break;
 
     case EXPAT_PARSEFILE:
 
       CheckArgs (3,3,2, "<filename>");
-      data = Tcl_GetStringFromObj (objv[2], NULL);
+      data = Tcl_GetString(objv[2]);
       result = TclExpatParse (interp, expat, data, len, EXPAT_INPUT_FILENAME);
       break;
 
@@ -1070,7 +1070,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 
       case EXPAT_BASE:			/* -base */
 
-	if (XML_SetBase(expat->parser, Tcl_GetStringFromObj(objPtr[1],NULL))
+	if (XML_SetBase(expat->parser, Tcl_GetString(objPtr[1]))
             == 0) {
             Tcl_SetResult(interp, "unable to set base URL", NULL);
             return TCL_ERROR;
@@ -1086,8 +1086,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 
 	activeTclHandlerSet->elementstartcommand = objPtr[1];
 	Tcl_IncrRefCount(activeTclHandlerSet->elementstartcommand);
-        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL),
-                                 &cmdInfo);
+        rc = Tcl_GetCommandInfo(interp, Tcl_GetString(objPtr[1]), &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
             DBG(fprintf(stderr, "cmdInfo.objProc=%x \n", 
                         (unsigned int)cmdInfo.objProc);)
@@ -1109,8 +1108,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 
 	activeTclHandlerSet->elementendcommand = objPtr[1];
 	Tcl_IncrRefCount(activeTclHandlerSet->elementendcommand);
-        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL),
-                                 &cmdInfo);
+        rc = Tcl_GetCommandInfo(interp, Tcl_GetString(objPtr[1]), &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
             activeTclHandlerSet->elementendObjProc = cmdInfo.objProc;
             activeTclHandlerSet->elementendclientData = cmdInfo.objClientData;
@@ -1153,7 +1151,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 
 	activeTclHandlerSet->datacommand = objPtr[1];
 	Tcl_IncrRefCount(activeTclHandlerSet->datacommand);
-        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL), &cmdInfo);
+        rc = Tcl_GetCommandInfo (interp, Tcl_GetString(objPtr[1]), &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
             activeTclHandlerSet->datacommandObjProc = cmdInfo.objProc;
             activeTclHandlerSet->datacommandclientData = cmdInfo.objClientData;
@@ -1397,7 +1395,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 	  break;
 
     case EXPAT_HANDLERSET:
-        if ((handlerSetName = Tcl_GetStringFromObj (objPtr[1], NULL)) == NULL) {
+        if ((handlerSetName = Tcl_GetString(objPtr[1])) == NULL) {
             return TCL_ERROR;
         }
         activeTclHandlerSet = expat->firstTclHandlerSet;
@@ -1556,7 +1554,7 @@ TclExpatCget (interp, expat, objc, objv)
         return TCL_OK;
     }
     if ((enum switches) optionIndex == EXPAT_HANDLERSET) {
-        handlerSetName = Tcl_GetStringFromObj(objv[1], NULL);
+        handlerSetName = Tcl_GetString(objv[1]);
         objPtr = objv[2];
     } else {
         handlerSetName = "default";
@@ -1818,9 +1816,9 @@ TclExpatCget (interp, expat, objc, objv)
         
     default:
 
-        Tcl_ResetResult(interp);  
-        Tcl_AppendResult(interp, "invalid configuration option: ", \
-                         Tcl_GetStringFromObj(objPtr, NULL), NULL);  
+        Tcl_ResetResult(interp);
+        Tcl_AppendResult(interp, "invalid configuration option: ",
+                         Tcl_GetString(objPtr), NULL);  
         return TCL_ERROR;
 
     }
@@ -3232,7 +3230,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
       if (result != TCL_OK) {
           goto wrongScriptResult;
       }
-      resultType = Tcl_GetStringFromObj (resultTypeObj, NULL);
+      resultType = Tcl_GetString(resultTypeObj);
       if (strcmp (resultType, "string") == 0) {
           inputType = EXPAT_INPUT_STRING;
       } else if (strcmp (resultType, "channel") == 0) {
@@ -3247,7 +3245,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
       if (result != TCL_OK) {
           goto wrongScriptResult;
       }
-      extbase = Tcl_GetStringFromObj (extbaseObj, NULL);
+      extbase = Tcl_GetString(extbaseObj);
 
       if (!extparser) {
           Tcl_DecrRefCount (resultObj);
@@ -4413,8 +4411,7 @@ CheckExpatParserObj (interp, nameObj)
     Tcl_CmdInfo info;
 
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (nameObj, NULL),
-                             &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(nameObj), &info)) {
         return 0;
     }
     if (!info.isNativeObjectProc || info.objProc != TclExpatInstanceCmd) {
@@ -4433,8 +4430,7 @@ CHandlerSetInstall (interp, expatObj, handlerSet)
     TclGenExpatInfo *expat;
     CHandlerSet *activeCHandlerSet;
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL),
-                             &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(expatObj), &info)) {
         return 1;
     }
     expat = (TclGenExpatInfo *) info.objClientData;
@@ -4472,7 +4468,7 @@ CHandlerSetRemove (interp, expatObj, handlerSetName)
     TclGenExpatInfo *expat;
     CHandlerSet *activeCHandlerSet, *parentHandlerSet = NULL;
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(expatObj), &info)) {
         return 1;
     }
     expat = (TclGenExpatInfo *) info.objClientData;
@@ -4512,7 +4508,7 @@ CHandlerSetGet (interp, expatObj, handlerSetName)
     TclGenExpatInfo *expat;
     CHandlerSet *activeCHandlerSet;
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(expatObj), &info)) {
         return NULL;
     }
     expat = (TclGenExpatInfo *) info.objClientData;
@@ -4539,7 +4535,7 @@ CHandlerSetGetUserData (interp, expatObj, handlerSetName)
     TclGenExpatInfo *expat;
     CHandlerSet *activeCHandlerSet;
 
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(expatObj), &info)) {
         return NULL;
     }
     expat = (TclGenExpatInfo *) info.objClientData;
@@ -4562,7 +4558,7 @@ GetExpatInfo (interp, expatObj)
     Tcl_Obj *CONST expatObj;
 {
     Tcl_CmdInfo info;
-    if (!Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj (expatObj, NULL), &info)) {
+    if (!Tcl_GetCommandInfo (interp, Tcl_GetString(expatObj), &info)) {
         return NULL;
     }
     return (TclGenExpatInfo *) info.objClientData;

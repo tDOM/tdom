@@ -5624,7 +5624,7 @@ getExternalDocument (
     if (result != TCL_OK) {
         goto wrongScriptResult;
     }
-    resultType = Tcl_GetStringFromObj (resultTypeObj, NULL);
+    resultType = Tcl_GetString(resultTypeObj);
     if (strcmp (resultType, "string") == 0) {
         result = Tcl_ListObjIndex (interp, resultObj, 2, &xmlstringObj);
         xmlstring = Tcl_GetStringFromObj (xmlstringObj, &len);
@@ -5633,7 +5633,7 @@ getExternalDocument (
         xmlstring = NULL;
         len = 0;
         result = Tcl_ListObjIndex (interp, resultObj, 2, &channelIdObj);
-        channelId = Tcl_GetStringFromObj (channelIdObj, NULL);
+        channelId = Tcl_GetString(channelIdObj);
         chan = Tcl_GetChannel (interp, channelId, &mode);
         if (chan == (Tcl_Channel) NULL) {
             goto wrongScriptResult;
@@ -5649,7 +5649,7 @@ getExternalDocument (
         goto wrongScriptResult;
     }
     result = Tcl_ListObjIndex (interp, resultObj, 1, &extbaseObj);
-    extbase = Tcl_GetStringFromObj (extbaseObj, NULL);
+    extbase = Tcl_GetString(extbaseObj);
 
     /* Since stylesheets and source docouments have different white space
        stripping rules, an already parsed tree could only reused, if the

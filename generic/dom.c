@@ -1563,18 +1563,18 @@ externalEntityRefHandler (
     if (result != TCL_OK) {
         goto wrongScriptResult;
     }
-    resultType = Tcl_GetStringFromObj (resultTypeObj, NULL);
+    resultType = Tcl_GetString(resultTypeObj);
 
     if (strcmp (resultType, "string") == 0) {
         result = Tcl_ListObjIndex (info->interp, resultObj, 2, &xmlstringObj);
-        xmlstring = Tcl_GetStringFromObj (xmlstringObj, NULL);
+        xmlstring = Tcl_GetString(xmlstringObj);
         len = strlen (xmlstring);
         chan = NULL;
     } else if (strcmp (resultType, "channel") == 0) {
         xmlstring = NULL;
         len = 0;
         result = Tcl_ListObjIndex (info->interp, resultObj, 2, &channelIdObj);
-        channelId = Tcl_GetStringFromObj (channelIdObj, NULL);
+        channelId = Tcl_GetString(channelIdObj);
         chan = Tcl_GetChannel (info->interp, channelId, &mode);
         if (chan == (Tcl_Channel) NULL) {
             goto wrongScriptResult;
@@ -1593,7 +1593,7 @@ externalEntityRefHandler (
     if (result != TCL_OK) {
         goto wrongScriptResult;
     }
-    extbase = Tcl_GetStringFromObj (extbaseObj, NULL);
+    extbase = Tcl_GetString(extbaseObj);
 
     /* TODO: what to do, if this document was already parsed before ? */
 
@@ -1830,7 +1830,7 @@ domReadDocument (
             do {
                 len = Tcl_ReadChars (channel, bufObj, 1024, 0);
                 done = (len < 1024);
-                str = Tcl_GetStringFromObj (bufObj, &len);
+                str = Tcl_GetString(bufObj);
                 if (!XML_Parse (parser, str, len, done)) {
                     FREE ( (char*) info.activeNS );
                     domFreeDocument (doc, NULL, NULL);
@@ -2433,7 +2433,20 @@ domFreeDocument (
     FREE ((char*)doc);
 }
 
-
+/*---------------------------------------------------------------------------
+|   domDeleteDocument
+|
+\--------------------------------------------------------------------------*/
+domException
+domDeleteDocument (
+    domDocument     * doc,
+    domFreeCallback   freeCB,
+    void            * clientData
+)
+{
+    domFreeDocument(doc, freeCB, clientData);
+    return OK;
+}
 /*---------------------------------------------------------------------------
 |   domSetAttribute
 |
@@ -4658,7 +4671,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         return TCL_ERROR;
     }
 
-    method = Tcl_GetStringFromObj (objv[2], NULL);
+    method = Tcl_GetString(objv[2]);
     if (Tcl_GetIndexFromObj (interp, objv[2], tdomMethods, "method", 0,
                              &methodIndex) != TCL_OK)
     {
@@ -4750,12 +4763,12 @@ TclTdomObjCmd (dummy, interp, objc, objv)
                               NULL);
         }
         if (objc == 4) {
-            encodingName = Tcl_GetStringFromObj (objv[3], NULL);
+            encodingName = Tcl_GetString(objv[3]);
 
-            if ( (strcmp(encodingName, "UTF-8")==0)
-                 ||(strcmp(encodingName, "UTF8")==0)
-                 ||(strcmp(encodingName, "utf-8")==0)
-                 ||(strcmp(encodingName, "utf8")==0)) {
+            if (   (strcmp(encodingName, "UTF-8") == 0)
+                 ||(strcmp(encodingName, "UTF8" ) == 0)
+                 ||(strcmp(encodingName, "utf-8") == 0)
+                 ||(strcmp(encodingName, "utf8" ) == 0)) {
 
                 info->encoding_8bit = NULL;
             } else {
