@@ -1196,7 +1196,8 @@ characterDataHandler (
     }
     parentNode = info->currentNode;
 
-    if (parentNode->lastChild && parentNode->lastChild->nodeType == TEXT_NODE) {
+    if (   parentNode->lastChild 
+        && parentNode->lastChild->nodeType == TEXT_NODE) {
 
         /* normalize text node, i.e. there are no adjacent text nodes */
         node = (domTextNode*)parentNode->lastChild;
@@ -1374,6 +1375,12 @@ processingInstructionHandler(
     int                           len,hnew;
     Tcl_HashEntry                *h;
 
+    if (info->insideDTD) {
+        DBG(fprintf (stderr, 
+                     "processingInstructionHandler: insideDTD, skipping\n");)
+        return;
+    }
+    
     parentNode = info->currentNode;
 
     if (info->storeLineColumn) {
@@ -1710,13 +1717,13 @@ startDoctypeDeclHandler (
     domReadInfo                  *info = (domReadInfo *) userData;
 
     if (pubid) {
-        info->document->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
-        memset (info->document->doctype, 0, sizeof (domDoctype));
+        info->document->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+        memset (info->document->doctype, 0, sizeof (domDocInfo));
         info->document->doctype->systemId = tdomstrdup (sysid);
         info->document->doctype->publicId = tdomstrdup (pubid);
     } else if (sysid) {
-        info->document->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
-        memset (info->document->doctype, 0, sizeof (domDoctype));
+        info->document->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+        memset (info->document->doctype, 0, sizeof (domDocInfo));
         info->document->doctype->systemId = tdomstrdup (sysid);
     }
     info->insideDTD = 1;
@@ -1769,7 +1776,6 @@ domReadDocument (
 #endif
     domDocument   *doc = domCreateDoc(baseurl, storeLineColumn);
 
-    doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
     if (extResolver) {
         doc->extResolver = extResolver;
         Tcl_IncrRefCount(extResolver);
@@ -2233,7 +2239,7 @@ domDeleteNode (
     domDocument *doc;
 
     if (node->nodeType == ATTRIBUTE_NODE) {
-        Tcl_Panic("domDeleteNode on ATTRIBUTE_NODE not supported!");
+        domPanic("domDeleteNode on ATTRIBUTE_NODE not supported!");
     }
     TDomThreaded (
         shared = node->ownerDocument->refCount > 1;
@@ -2373,6 +2379,9 @@ domFreeDocument (
         if (doc->doctype->systemId) FREE(doc->doctype->systemId);
         if (doc->doctype->publicId) FREE(doc->doctype->publicId);
         if (doc->doctype->internalSubset) FREE(doc->doctype->internalSubset);
+        if (doc->doctype->encoding) FREE(doc->doctype->encoding);
+        if (doc->doctype->mediaType) FREE(doc->doctype->mediaType);
+        if (doc->doctype->method) FREE(doc->doctype->method);
         FREE((char*) doc->doctype);
     }
 
@@ -2406,7 +2415,7 @@ domFreeDocument (
     }
 
     if (doc->rootNode) {
-        if (doc->rootNode->firstAttr) 
+        if (doc->rootNode->firstAttr)
             domFree ((void*)doc->rootNode->firstAttr);
         domFree ((void*)doc->rootNode);
     }
@@ -4572,6 +4581,34 @@ domXPointerAncestor (
 }
 
 
+
+/*---------------------------------------------------------------------------
+|   type tdomCmdReadInfo
+|
+\--------------------------------------------------------------------------*/
+typedef struct _tdomCmdReadInfo {
+
+    XML_Parser     parser;
+    domDocument   *document;
+    domNode       *currentNode;
+    int            depth;
+    int            ignoreWhiteSpaces;
+    TEncoding     *encoding_8bit;
+    int            storeLineColumn;
+    int            feedbackAfter;
+    int            lastFeedbackPosition;
+    Tcl_Interp    *interp;
+    int            activeNSsize;
+    int            activeNSpos;
+    domActiveNS   *activeNS;
+    int            baseURIHasChanged;
+    int            insideDTD;
+    /* Now the tdom cmd specific elements */
+    int            tdomStatus;
+    Tcl_Obj       *extResolver;
+
+} tdomCmdReadInfo;
+
 EXTERN int tcldom_returnDocumentObj (Tcl_Interp *interp, domDocument *document,
                                 int setVariable, Tcl_Obj *var_name, int trace);
 
@@ -4581,7 +4618,7 @@ tdom_freeProc (
     void       *userData
 )
 {
-    domReadInfo *info = (domReadInfo *) userData;
+    tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
 
     if (info->document) {
         domFreeDocument (info->document, NULL, NULL);
@@ -4589,33 +4626,10 @@ tdom_freeProc (
     if (info->activeNS) {
         FREE ( (char *) info->activeNS);
     }
-    FREE ( (char *) info);
-}
-
-void
-tdom_resetProc (
-    Tcl_Interp *interp,
-    void       *userData
-)
-{
-    domReadInfo *info = (domReadInfo *) userData;
-
-    if (info->document) {
-        domFreeDocument (info->document, NULL, NULL);
+    if (info->extResolver) {
+        Tcl_DecrRefCount (info->extResolver);
     }
-
-    info->document          = NULL;
-    info->currentNode       = NULL;
-    info->depth             = 0;
-    info->ignoreWhiteSpaces = 1;
-    info->encoding_8bit     = 0;
-    info->storeLineColumn   = 0;
-    info->feedbackAfter     = 0;
-    info->lastFeedbackPosition = 0;
-    info->interp            = interp;
-    info->activeNSpos       = -1;
-    info->baseURIHasChanged = 1;
-    info->insideDTD         = 0;
+    FREE ( (char *) info);
 }
 
 void
@@ -4624,23 +4638,55 @@ tdom_parserResetProc (
     void      *userData
 )
 {
-    domReadInfo *info = (domReadInfo *) userData;
+    tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
 
     info->parser = parser;
+    info->baseURIHasChanged = 1;
+}
+
+void
+tdom_resetProc (
+    Tcl_Interp *interp,
+    void       *userData
+)
+{
+    tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
+
+    if (!info->tdomStatus) return;
+
+    if (info->document) {
+        domFreeDocument (info->document, NULL, NULL);
+    }
+
+    info->document          = NULL;
+    info->currentNode       = NULL;
+    info->depth             = 0;
+    info->feedbackAfter     = 0;
+    info->lastFeedbackPosition = 0;
+    info->interp            = interp;
+    info->activeNSpos       = -1;
+    info->baseURIHasChanged = 1;
+    info->insideDTD         = 0;
+    info->tdomStatus        = 0;
+
 }
 
 void
 tdom_initParseProc (
-    TclGenExpatInfo *expat,
-    void            *userData
+    Tcl_Interp *interp,
+    void       *userData
     )
 {
-    domReadInfo *info = (domReadInfo *) userData;
-    domDocument *doc;
+    tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
 
-    doc = domCreateDoc((char *)XML_GetBase (info->parser), 
-                       info->storeLineColumn);
-    info->document = doc;
+    info->document   = domCreateDoc((char *)XML_GetBase (info->parser), 
+                                    info->storeLineColumn);
+    if (info->extResolver) {
+        info->document->extResolver = info->extResolver;
+        Tcl_IncrRefCount (info->document->extResolver);
+    }
+    info->tdomStatus = 2;
+    
 }
 
 int
@@ -4654,7 +4700,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     CHandlerSet     *handlerSet;
     int              methodIndex, result, bool;
     domNode         *rootNode;
-    domReadInfo     *info;
+    tdomCmdReadInfo *info;
     TclGenExpatInfo *expat;
     Tcl_Obj         *newObjName = NULL;
     TEncoding       *encoding;
@@ -4699,6 +4745,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
 
     case m_enable:
         handlerSet = CHandlerSetCreate ("tdom");
+        handlerSet->ignoreWhiteCDATAs       = 1;
         handlerSet->resetProc               = tdom_resetProc;
         handlerSet->freeProc                = tdom_freeProc;
         handlerSet->parserResetProc         = tdom_parserResetProc;
@@ -4712,7 +4759,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->startDoctypeDeclCommand = startDoctypeDeclHandler;
         handlerSet->endDoctypeDeclCommand   = endDoctypeDeclHandler;
 
-        info = (domReadInfo *) MALLOC (sizeof (domReadInfo));
+        expat = GetExpatInfo (interp, objv[1]);
+
+        info = (tdomCmdReadInfo *) MALLOC (sizeof (tdomCmdReadInfo));
+        info->parser            = expat->parser;
         info->document          = NULL;
         info->currentNode       = NULL;
         info->depth             = 0;
@@ -4724,12 +4774,12 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->interp            = interp;
         info->activeNSpos       = -1;
         info->activeNSsize      = 8;
-        info->activeNS          = (domActiveNS*) MALLOC(sizeof(domActiveNS) * info->activeNSsize);
+        info->activeNS          = 
+            (domActiveNS*) MALLOC(sizeof(domActiveNS) * info->activeNSsize);
         info->baseURIHasChanged = 1;
         info->insideDTD         = 0;
-
-        expat = GetExpatInfo (interp, objv[1]);
-        info->parser = expat->parser;
+        info->tdomStatus        = 0;
+        info->extResolver       = NULL;
 
         handlerSet->userData    = info;
 
@@ -4742,18 +4792,21 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "parser object isn't tdom enabled.", NULL);
             return TCL_ERROR;
         }
-        if (!info->document) {
+        expat = GetExpatInfo (interp, objv[1]);
+        if (info->tdomStatus != 2 || !expat->finished) {
             Tcl_SetResult (interp, "No DOM tree avaliable.", NULL);
             return TCL_ERROR;
         }
         rootNode = info->document->rootNode;
-        rootNode->firstChild = info->document->documentElement;
-        while (rootNode->firstChild->previousSibling) {
-            rootNode->firstChild = rootNode->firstChild->previousSibling;
-        }
-        rootNode->lastChild = info->document->documentElement;
-        while (rootNode->lastChild->nextSibling) {
-            rootNode->lastChild = rootNode->lastChild->nextSibling;
+        if (info->document->documentElement) {
+            rootNode->firstChild = info->document->documentElement;
+            while (rootNode->firstChild->previousSibling) {
+                rootNode->firstChild = rootNode->firstChild->previousSibling;
+            }
+            rootNode->lastChild = info->document->documentElement;
+            while (rootNode->lastChild->nextSibling) {
+                rootNode->lastChild = rootNode->lastChild->nextSibling;
+            }
         }
         result = tcldom_returnDocumentObj (interp, info->document, 0,
                                            newObjName, 1);
@@ -4792,6 +4845,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
                 info->encoding_8bit = encoding;
             }
         }
+        info->tdomStatus = 1;
         break;
         
     case m_setStoreLineColumn:
@@ -4805,6 +4859,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_GetBooleanFromObj (interp, objv[3], &bool);
             info->storeLineColumn = bool;
         }
+        info->tdomStatus = 1;
         break;
         
     case m_remove:
@@ -4825,8 +4880,17 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "parser object isn't tdom enabled.", NULL);
             return TCL_ERROR;
         }
-        info->document->extResolver = objv[3];
-        Tcl_IncrRefCount (objv[3]);
+        if (info->extResolver) {
+            Tcl_DecrRefCount (info->extResolver);
+        }
+        if (strcmp (Tcl_GetString (objv[3]), "") == 0) {
+            info->extResolver = NULL;
+        } else {
+
+            info->extResolver = objv[3];
+            Tcl_IncrRefCount (info->extResolver);
+        }
+        info->tdomStatus = 1;
         break;
 
     case m_keepEmpties:
@@ -4835,14 +4899,17 @@ TclTdomObjCmd (dummy, interp, objc, objv)
                            NULL);
             return TCL_ERROR;
         }
-        info = CHandlerSetGetUserData (interp, objv[1], "tdom");
+        handlerSet = CHandlerSetGet (interp, objv[1], "tdom");
+        info = handlerSet->userData;
         if (!info) {
             Tcl_SetResult (interp, "parser object isn't tdom enabled.", NULL);
             return TCL_ERROR;
         }
         Tcl_SetIntObj (Tcl_GetObjResult (interp), info->ignoreWhiteSpaces);
         Tcl_GetBooleanFromObj (interp, objv[3], &bool);
-        info->ignoreWhiteSpaces = bool;
+        info->ignoreWhiteSpaces = !bool;
+        handlerSet->ignoreWhiteCDATAs = !bool;
+        info->tdomStatus = 1;
         break;
     }
 
