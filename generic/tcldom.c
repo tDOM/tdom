@@ -325,7 +325,7 @@ void tcldom_initialize()
     if (!tcldomInitialized) {
         Tcl_MutexLock(&tableMutex);
         if (!tcldomInitialized) {
-            Tcl_InitHashTable(&sharedDocs, TCL_STRING_KEYS);
+            Tcl_InitHashTable(&sharedDocs, TCL_ONE_WORD_KEYS);
             Tcl_CreateExitHandler(tcldom_finalize, NULL);
             tcldomInitialized = 1;
         }
@@ -400,8 +400,7 @@ void tcldom_docCmdDeleteProc  (
             return; /* Because doc has still users attached */
         }
         /* Document has only one thread attached: the current thread */
-        DOC_CMD(objCmdName, dinfo->document);
-        entryPtr = Tcl_FindHashEntry(&sharedDocs, objCmdName);
+        entryPtr = Tcl_FindHashEntry(&sharedDocs, (char *)dinfo->document);
         if (entryPtr) {
             Tcl_DeleteHashEntry(entryPtr);
             DBG(fprintf(stderr,
@@ -674,10 +673,8 @@ int tcldom_returnDocumentObj (
         
         Tcl_MutexLock(&tableMutex);
         refCount = ++document->refCount;
-        entryPtr = Tcl_CreateHashEntry(&sharedDocs, objCmdName, &newEntry);
-        if (newEntry) {
-            Tcl_SetHashValue(entryPtr, (ClientData)dinfo->document);
-        }
+        entryPtr = Tcl_CreateHashEntry(&sharedDocs, (char *)document,
+                                       &newEntry);
         Tcl_MutexUnlock(&tableMutex);
         DBG(fprintf(stderr,
                     "--> document %p %s shared table with refcount %d\n",
@@ -1008,34 +1005,21 @@ domDocument * tcldom_getDocumentFromName (
 )
 {
     Tcl_CmdInfo  cmdInfo;
-    domDocument *doc;
     int          result;
     TcldomDocDeleteInfo * dinfo;
 
-    if (strncmp(docName, "domDoc", 6)!=0) {
-        DBG(fprintf(stderr, "-%s- %d \n",docName, strncmp(docName, "domDoc", 6) );)
+    result = Tcl_GetCommandInfo (interp, docName, &cmdInfo);
+    if (!result) {
         *errMsg = "parameter not a domDoc!";
         return NULL;
     }
-    if (    (docName[6]!='0')
-         || (docName[7]!='x')
-         || (sscanf(&docName[8], "%x", (unsigned int*)&doc) !=1 )
-       )
-    {
-        result = Tcl_GetCommandInfo (interp, docName, &cmdInfo);
-        if (!result) {
-           *errMsg = "parameter not a domDoc!";
-           return NULL;
-        }
-        if (   (!cmdInfo.isNativeObjectProc)
-            || (cmdInfo.objProc != (Tcl_ObjCmdProc*)tcldom_DocObjCmd)) {
-
-            *errMsg = "not a document object!";
-            return NULL;
-        }
-        dinfo = (TcldomDocDeleteInfo*)cmdInfo.objClientData;
-        return dinfo->document;
+    if (   (!cmdInfo.isNativeObjectProc)
+           || (cmdInfo.objProc != (Tcl_ObjCmdProc*)tcldom_DocObjCmd)) {
+        
+        *errMsg = "not a document object!";
+        return NULL;
     }
+    dinfo = (TcldomDocDeleteInfo*)cmdInfo.objClientData;
 
     TDomThreaded (
         {
@@ -1043,21 +1027,18 @@ domDocument * tcldom_getDocumentFromName (
             domDocument *tabDoc;
 
             Tcl_MutexLock(&tableMutex);
-            entryPtr = Tcl_FindHashEntry(&sharedDocs, docName);
+            entryPtr = Tcl_FindHashEntry(&sharedDocs, 
+                                         (char *) dinfo->document);
             if (entryPtr == NULL) {
                 Tcl_MutexUnlock(&tableMutex);
                 *errMsg = "not a shared document object!";
                 return NULL;
             }
-            tabDoc = (domDocument*)Tcl_GetHashValue(entryPtr);
             Tcl_MutexUnlock(&tableMutex);
-            if (doc != tabDoc) {
-                Tcl_Panic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
-            }
         }
     )
 
-    return doc;
+    return dinfo->document;
 }
 
 

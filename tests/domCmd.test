@@ -93,6 +93,17 @@ test domCmd-1.13 {createDocumentNS - check root name} {
     set result
 } "foo:root"
 
+test domCmd-1.14 {createDocument - rename the doc cmd} {
+    set doc [dom createDocument root]
+    if {[info commands fooCmd] == "fooCmd"} {
+        rename fooCmd {}
+    }
+    rename $doc fooCmd
+    set result [[fooCmd documentElement] nodeName]
+    fooCmd delete
+    set result
+} {root}
+
 test domCmd-2.1 {Don't quash white space at start or end of non white space content} {knownBug} {
     set doc [dom parse {<root>
     some content
@@ -313,6 +324,17 @@ test domCmd-2.18 {parse document with nodes before and after the documentElement
     $doc delete
     set result
 } {<!-- First comment --><doc><!-- Front comment --><inner/><!-- Back comment --></doc><!-- Last comment -->}
+
+test domCmd-2.19 {parse document - rename docCmd} {
+    set doc [dom parse {<root>foo<child/></root>}]
+    if {[info commands fooCmd] == "fooCmd"} {
+        rename fooCmd {}
+    }
+    rename $doc fooCmd
+    set result [fooCmd asXML -indent none]
+    fooCmd delete
+    set result
+} {<root>foo<child/></root>}
 
 test domCmd-3.1 {isName} {
     dom isName ":foo"
