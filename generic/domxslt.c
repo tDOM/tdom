@@ -73,7 +73,7 @@
 |   Macros
 |
 \---------------------------------------------------------------------------*/
-#define DBG(x)            
+#define DBG(x)              
 #define TRACE(x)            DBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)         DBG(fprintf(stderr,(x),(a)))
 #define TRACE2(x,a,b)       DBG(fprintf(stderr,(x),(a),(b)))
@@ -84,6 +84,7 @@
 #define CHECK_RC            if (rc < 0) return rc
 #define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}       
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
+#define SETSCOPESTART       xs->varFramesStack[xs->varFramesStackPtr].stop=1
 
 #if defined(_MSC_VER)
 # define STRCASECMP(a,b)  stricmp (a,b)
@@ -232,6 +233,7 @@ typedef struct xsltVarFrame {
     int                   polluted;
     int                   nrOfVars;
     int                   varStartIndex;
+    int                   stop;
 
 } xsltVarFrame;
 
@@ -545,7 +547,7 @@ reportError (
 
         Tcl_DStringAppend (&dStr, buffer, -1);
     } else {
-        Tcl_DStringAppend (&dStr, ": ", 2);
+        if (baseURI) Tcl_DStringAppend (&dStr, ": ", 2);
         Tcl_DStringAppend (&dStr, str, -1);
     }
     *errMsg = strdup (Tcl_DStringValue (&dStr));
@@ -707,6 +709,7 @@ static void xsltPushVarFrame (
     currentFrame->polluted = 0;
     currentFrame->nrOfVars = 0;
     currentFrame->varStartIndex = -1;
+    currentFrame->stop = 0;
 
     xs->varFrames = currentFrame;
     
@@ -2083,7 +2086,6 @@ static int sortNodeSetFastMerge(
 \---------------------------------------------------------------------------*/
 static int xsltSetVar (
     xsltState       * xs,
-    int               forNextLevel,
     char            * variableName,
     xpathResultSet  * context,
     domNode         * currentNode,
@@ -2104,10 +2106,6 @@ static int xsltSetVar (
 
     TRACE1("xsltSetVar variableName='%s' \n", variableName);
     if (select!=NULL) {
-        if (forNextLevel) {
-            /* hide new variable frame */
-            xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr - 1]);
-        }
         TRACE2("xsltSetVar variableName='%s' select='%s'\n", variableName, select);
         savedCurrent = xs->current;
         xs->current = currentNode;    
@@ -2115,10 +2113,6 @@ static int xsltSetVar (
                         errMsg);
         xs->current = savedCurrent;
         CHECK_RC;
-        if (forNextLevel) {
-            /* show new variable frame again */
-            xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr]);
-        }
     } else {
         if (!actionNode->firstChild) {
             xpathRSInit (&rs);
@@ -2260,7 +2254,6 @@ static int xsltGetVar (
     }
     for (i = xs->varFramesStackPtr - d; i >= 0; i--) {
         frame = &(xs->varFramesStack[i]);
-        if (!frame->nrOfVars) continue;
         for (j = frame->varStartIndex;
              j < frame->varStartIndex + frame->nrOfVars;
              j++) {
@@ -2273,7 +2266,9 @@ static int xsltGetVar (
                 return XPATH_OK;
             }
         }
+        if (frame->stop && (i > 1)) i = 1;
     }
+    
     if (xs->varsInProcess) {
         h = Tcl_FindHashEntry (&xs->topLevelVars, variableName);
         if (h) {
@@ -2298,7 +2293,7 @@ static int xsltGetVar (
             savedCurrentXSLTNode = xs->currentXSLTNode;
             xs->currentXSLTNode = topLevelVar->node;
             select = getAttr (topLevelVar->node, "select", a_select);
-            rc = xsltSetVar (xs, 0, variableName, &nodeList, xs->xmlRootNode,
+            rc = xsltSetVar (xs, variableName, &nodeList, xs->xmlRootNode,
                              0, select, topLevelVar->node, 1, errMsg);
             xpathRSFree ( &nodeList );
             CHECK_RC;
@@ -2615,7 +2610,7 @@ static int setParamVars (
                     xs->currentXSLTNode = child;
                     select = getAttr(child, "select", a_select);
                     TRACE1("with-param select='%s'\n", select);
-                    rc = xsltSetVar(xs, 1, str, context, currentNode,
+                    rc = xsltSetVar(xs, str, context, currentNode,
                                     currentPos, select, child, 0, errMsg);
                     CHECK_RC;
                 } else {
@@ -3171,6 +3166,7 @@ static int ExecAction (
             }
             
             xsltPushVarFrame (xs);
+            SETSCOPESTART;
             currentTplRule = xs->currentTplRule;
             xs->currentTplRule = tplChoosen;
             rc = ExecActions(xs, context, currentNode, currentPos, 
@@ -3367,6 +3363,7 @@ static int ExecAction (
                 rc = setParamVars (xs, context, currentNode, currentPos,
                                    actionNode, errMsg);
                 CHECK_RC; 
+                SETSCOPESTART;
                 rc = ExecActions(xs, context, currentNode, currentPos, 
                                  tplChoosen->content->firstChild, errMsg);
                 TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
@@ -3807,7 +3804,7 @@ static int ExecAction (
                     TRACE1("setting param '%s': yes \n", str);
                     select = getAttr(actionNode, "select", a_select);
                     TRACE1("param select='%s'\n", select);
-                    rc = xsltSetVar(xs, 0, str, context, currentNode,
+                    rc = xsltSetVar(xs, str, context, currentNode,
                                     currentPos, select, actionNode, 0, errMsg);
                     CHECK_RC;
                 }
@@ -3898,7 +3895,7 @@ static int ExecAction (
                 }
                 select = getAttr(actionNode, "select", a_select);
                 TRACE1("variable select='%s'\n", select);
-                rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
+                rc = xsltSetVar(xs, str, context, currentNode, currentPos, 
                                 select, actionNode, 0, errMsg);
                 CHECK_RC;
             } else {
@@ -4269,6 +4266,7 @@ int ApplyTemplates (
                 rc = setParamVars (xs, context, currentNode, currentPos,
                                    actionNode, errMsg);
                 CHECK_RC;
+                SETSCOPESTART;
                 xs->varFrames->polluted = 0;
             }
             rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode,
@@ -4717,7 +4715,7 @@ static int processTopLevelVars (
                 xs->varFramesStack->varStartIndex = xs->varStackPtr;
             }
             xs->varFramesStack->nrOfVars++;
-            var->name   = strdup (parameters[i]);
+            var->name   = parameters[i];
             var->node   = topLevelVar->node;
             var->rs     = rs;
 
@@ -4738,7 +4736,7 @@ static int processTopLevelVars (
         
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
-        rc = xsltSetVar(xs, 0, str, &nodeList, xmlNode, 0, select,
+        rc = xsltSetVar(xs, str, &nodeList, xmlNode, 0, select,
                         topLevelVar->node, 1, errMsg);
         CHECK_RC;
     }
@@ -4864,6 +4862,7 @@ static int processTopLevel (
                     }
                     if (df == NULL) {
                         df = malloc(sizeof(xsltDecimalFormat));
+                        memset (df, 0, sizeof (xsltDecimalFormat));
                         df->name = strdup(str);
                         /* prepend into list of decimal format 
                            after the default one */
@@ -5283,8 +5282,8 @@ xsltFreeState (
         dfsave = df;
         df = df->next;
         if (dfsave->name) free(dfsave->name);
-        free(dfsave->infinity);
-        free(dfsave->NaN);
+        if (dfsave->infinity) free(dfsave->infinity);
+        if (dfsave->NaN) free(dfsave->NaN);
         free(dfsave);
     }
     
@@ -5372,7 +5371,7 @@ int xsltProcess (
     void              * clientData,
     char             ** errMsg,
     domDocument      ** resultDoc   
-)
+    )
 { 
     xpathResultSet  nodeList;
     domNode        *node;
@@ -5484,34 +5483,23 @@ int xsltProcess (
         str = getAttr (node, "version", a_version);
         if (!str) {
             reportError (node, "missing mandatory attribute \"version\".", errMsg);
-            return -1;
+            goto error;
         }
         rc = addExcludeNS (sdoc, node, errMsg);
-        if (rc < 0) {
-            xsltFreeState (&xs);
-            return rc;
-        }
+        if (rc < 0) goto error;
     }
     
     precedence = 1.0;
     precedenceLowBound = 0.0;
     rc = processTopLevel (clientData, node, xmlNode, &xs, precedence,
                           &precedenceLowBound, errMsg);
-    if (rc != 0) {
-        xsltFreeState (&xs);
-        return rc;
-    }
+    if (rc != 0) goto error;
     
-
     /*  strip space, if allowed, from the XSLT documents,
      *  but not from the XML document (last one in list)
      */
     sdoc = xs.subDocs;
-#if 1  
     while (sdoc && sdoc->next) {
-#else
-    while (sdoc) {
-#endif    
         StripSpace (&xs, sdoc->doc->documentElement);
         sdoc = sdoc->next;
     }
@@ -5520,20 +5508,13 @@ int xsltProcess (
     }
 
     rc = processTopLevelVars (xmlNode, &xs, parameters, errMsg);
-    if (rc != 0) {
-        xsltFreeState (&xs);
-        return rc;
-    }
+    if (rc != 0) goto error;
 
     rc = ApplyTemplates (&xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,
                          NULL, errMsg);
-    if (rc != 0) {
-        xsltFreeState (&xs);
-        return rc;
-    }
+    if (rc != 0) goto error;
 
     xsltPopVarFrame (&xs);
-    xpathRSFree( &nodeList );
 
     /* Rudimentary xsl:output support */
     if (xs.outputMethod) {
@@ -5584,8 +5565,15 @@ int xsltProcess (
     xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
     *resultDoc = xs.resultDoc;
 
+    xpathRSFree( &nodeList );
     xsltFreeState (&xs);
     return 0;
+
+ error:
+    xpathRSFree( &nodeList );
+    xsltFreeState (&xs);
+    domFreeDocument (xs.resultDoc, NULL, NULL);
+    return -1;
 
 } /* xsltProcess */
 
