@@ -5815,7 +5815,8 @@ getExternalDocument (
         DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
                      strlen (xmlstring), xmlstring);)
         Tcl_DStringInit (&dStr);
-        Tcl_DStringAppend (&dStr, "Error while accessing \"", -1);
+        Tcl_DStringAppend (&dStr, "Error while processing external entity \"",
+                           -1);
         Tcl_DStringAppend (&dStr, href, -1);
         Tcl_DStringAppend (&dStr, "\":\n", -1);
         str = Tcl_GetStringResult (interp);
