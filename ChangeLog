@@ -1,3 +1,13 @@
+2003-10-26  Rolf Ade  <rolf@pointsman.de>
+
+        * domxpath.c: number() bug fix: Now works according to the
+          XPath rec understanding of a Number, not with the libc
+          understanding of a double.    
+
+        * domxpath.c
+        * dom.h
+        * domxslt.c: Globalized the macro IS_XML_WHITESPACE.
+
 2003-10-24  Rolf Ade  <rolf@pointsman.de>
 
         * domxslt.c: Bug fix for document() func, if called with 2
