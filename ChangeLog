@@ -1,3 +1,10 @@
+2003-04-05  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tclexpat.c: Bug fix: If the parsing state is already
+          not TCL_OK return in the notstandalonehandler immediately
+          success, otherwise the error msg will be overwritten with a
+          false diagnostic. A few editorial changes.
+
 2003-04-04  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c 
