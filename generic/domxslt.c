@@ -362,6 +362,7 @@ typedef struct {
     Tcl_HashTable       topLevelVars;
     Tcl_HashTable       keyInfos;
     xsltNSAlias       * nsAliases;
+    int                 nsUniqeNr;
     xsltVarInProcess  * varsInProcess;
     char              * outputMethod;
     char              * outputEncoding;
@@ -662,7 +663,6 @@ static void xsltPopVarFrame (
 {
     int             i;
 
-    DBG (fprintf (stderr, "start of xsltPopVarFrame. xs->varFrames = %p\n", xs->varFrames);)
     if (xs->varFrames) {    
         if (xs->varFrames->nrOfVars) {
             for (i = xs->varFrames->varStartIndex;
@@ -674,9 +674,7 @@ static void xsltPopVarFrame (
         xs->varStackPtr -= xs->varFrames->nrOfVars;
         xs->varFramesStackPtr--;
         xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr]);
-        DBG (fprintf (stderr, "xsltPopVarFrame: xs->varFramesStackPtr: %d\n", xs->varFramesStackPtr);)
     }
-    DBG (fprintf (stderr, "end of xsltPopVarFrame. xs->varFrames = %p\n", xs->varFrames);)
 }
 
 
@@ -2328,7 +2326,6 @@ static int xsltAddTemplate (
     return 0;           
 }
 
-
 /*----------------------------------------------------------------------------
 |   ExecUseAttributeSets
 |
@@ -2379,8 +2376,6 @@ int ExecUseAttributeSets (
     }
     return 0; 
 }
-
-
 
 /*----------------------------------------------------------------------------
 |   evalAttrTemplates
@@ -3096,27 +3091,46 @@ static int ExecAction (
                                     str, &str2, errMsg);
             CHECK_RC;
             nsStr = NULL;
+            domSplitQName (str2, prefix, &localName);
+            if (prefix[0] != '\0') {
+                if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
+            } else {
+                if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
+            }
             Tcl_DStringInit (&dStr);
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         nsAT, &nsStr, errMsg);
                 CHECK_RC;
-                ns = domLookupURI (actionNode, nsStr);
-                if (ns) {
-                    Tcl_DStringAppend (&dStr, ns->prefix, -1);
-                    Tcl_DStringAppend (&dStr, ":", 1);
-                    Tcl_DStringAppend (&dStr, str2, -1);
-                } else goto ignoreAttribute;
-            } else {
-                domSplitQName (str2, prefix, &localName);
-                if (prefix[0] != '\0') {
-                    if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
-                    ns = domLookupPrefix (actionNode, prefix);
-                    if (ns) nsStr = ns->uri;
-                    else goto ignoreAttribute;
+                if (nsStr[0] == '\0') {
+                    if (prefix[0] != '\0') {
+                        Tcl_DStringAppend (&dStr, localName, -1);
+                    } else {
+                        Tcl_DStringAppend (&dStr, str2, -1);
+                    }
+                    free (nsStr);
+                    nsStr = NULL;
                 } else {
-                    if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
+                    if (prefix[0] == '\0') {
+                        ns = domLookupURI (xs->lastNode, nsStr);
+                        if (ns && (ns->prefix[0] != '\0')) {
+                            Tcl_DStringAppend (&dStr, ns->prefix, -1);
+                            Tcl_DStringAppend (&dStr, ":", 1);
+                        } else {
+                            sprintf (prefix, "ns%d", xs->nsUniqeNr);
+                            xs->nsUniqeNr++;
+                            Tcl_DStringAppend (&dStr, prefix, -1);
+                            Tcl_DStringAppend (&dStr, ":", 1);
+                        }
+                    }
+                    Tcl_DStringAppend (&dStr, str2, -1);
                 }
+            } else {
+                if (prefix[0] != '\0') {
+                    ns = domLookupPrefix (actionNode, prefix);
+                    if (ns) nsStr = strdup (ns->uri);
+                    else goto ignoreAttribute;
+                } 
                 Tcl_DStringAppend (&dStr, str2, -1);
             }
                 
@@ -3129,6 +3143,7 @@ static int ExecAction (
             xsltPopVarFrame (xs);
             CHECK_RC;
             pc = xpathGetTextValue (xs->lastNode, &len);
+            DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, nsStr);)
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
                                nsStr, 1);
             free(pc);
@@ -3136,6 +3151,7 @@ static int ExecAction (
             domDeleteNode (xs->lastNode, NULL, NULL);
             xs->lastNode = savedLastNode;
     ignoreAttribute:
+            if (nsStr) free (nsStr);
             free(str2);
             break;
             
@@ -3297,13 +3313,13 @@ static int ExecAction (
                                                 domNamespaceURI(currentNode) );
                     xs->lastNode = n;
                     str = getAttr(actionNode, "use-attribute-sets",
-                                  a_useAttributeSets);
+                              a_useAttributeSets);
                     if (str) {
                         rc = ExecUseAttributeSets (xs, context, currentNode,
                                                    currentPos, str, errMsg);
                         CHECK_RC;
                     }
-                }            
+                }
             } else 
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
                 pi = (domProcessingInstructionNode*)currentNode;
@@ -4226,11 +4242,7 @@ parseList (
             save = *pc;
             *pc = '\0';
             excludeNS = (xsltExcludeNS *) Tcl_Alloc (sizeof (xsltExcludeNS));
-            if (!docData->excludeNS) {
-                excludeNS->next = NULL;
-            } else {
-                excludeNS->next = docData->excludeNS;
-            }
+            excludeNS->next = docData->excludeNS;
             docData->excludeNS = excludeNS;
             if (strcmp (start, "#default")==0) {
                 fprintf (stderr, "exclude default namespace\n");
@@ -4542,7 +4554,7 @@ static int processTopLevel (
     xsltDecimalFormat *df;
     xsltTopLevelVar   *topLevelVar;
     xsltNSAlias       *nsAlias;
-    domNS             *nsFrom, *nsTo;
+    domNS             *ns, *nsFrom, *nsTo;
     Tcl_HashEntry     *h;
 
     xpathRSInit( &nodeList );
@@ -4556,11 +4568,18 @@ static int processTopLevel (
             case attributeSet:
                 str = getAttr(node, "name", a_name);
                 if (str) {
-                    attrSet = (xsltAttrSet*)malloc(sizeof(xsltAttrSet));
-                    attrSet->next    = xs->attrSets;
+                    if (xs->attrSets) {
+                        attrSet = xs->attrSets;
+                        while (attrSet->next) attrSet = attrSet->next;
+                        attrSet->next = (xsltAttrSet*)malloc(sizeof(xsltAttrSet));
+                        attrSet = attrSet->next;
+                    } else {
+                        attrSet = (xsltAttrSet*)malloc(sizeof(xsltAttrSet));
+                        xs->attrSets = attrSet;
+                    }
+                    attrSet->next    = NULL;
                     attrSet->content = node;
                     attrSet->name    = str;
-                    xs->attrSets = attrSet;
                 } else {
                     reportError (node, "xsl:attribute-set: missing mandatory attribute \"name\".", errMsg);
                     return -1;
@@ -4790,13 +4809,10 @@ static int processTopLevel (
                 } else {
                     nsAlias = (xsltNSAlias *) Tcl_Alloc (sizeof (xsltNSAlias));
                     nsAlias->fromUri = strdup (nsFrom->uri);
-                    if (xs->nsAliases) nsAlias->next = xs->nsAliases;
-                    else nsAlias->next = NULL;
+                    nsAlias->next = xs->nsAliases;
                     xs->nsAliases = nsAlias;
                 }
                 nsAlias->toUri = strdup (nsTo->uri);
-                
-                /* mandatory attributes: stylesheet-prefix result-prefix */
                 break;
                 
             case output:
@@ -4877,6 +4893,16 @@ static int processTopLevel (
                 break;
                 
             default:
+                if (node->nodeType == ELEMENT_NODE) {
+                    if (!node->namespace) {
+                        reportError (node, "Top level elements must have a non-null namespace URI.", errMsg);
+                        return -1;
+                    }
+                    if (strcmp (XSLT_NAMESPACE, domNamespaceURI (node))==0) {
+                        reportError (node, "Unknown XSLT element.", errMsg);
+                        return -1;
+                    }
+                }
                 break;
         }
         node = node->nextSibling;
@@ -5142,6 +5168,7 @@ int xsltProcess (
     xs.xsltDoc             = xsltDoc;
     xs.varsInProcess       = NULL;
     xs.nsAliases           = NULL;
+    xs.nsUniqeNr           = 0;
     Tcl_InitHashTable ( &(xs.stripInfo.NCNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.FQNames), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.stripInfo.NSWildcards), TCL_STRING_KEYS);
