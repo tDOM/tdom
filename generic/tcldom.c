@@ -2105,7 +2105,10 @@ int tcldom_NodeObjCmd (
             xsltDoc = tcldom_getDocumentFromName (interp, str, &errMsg);
             if (xsltDoc == NULL) {
                 SetResult ( errMsg );
-                if (parameters) Tcl_Free ((char *) parameters);
+                if (parameters) {
+                    Tcl_DecrRefCount (localListPtr);
+                    Tcl_Free ((char *) parameters);
+                }
                 return TCL_ERROR;
             }
             result = xsltProcess (xsltDoc, node, parameters,
