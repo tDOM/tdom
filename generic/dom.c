@@ -340,7 +340,7 @@ domRenumberTree (
 domNS *
 domLookupPrefix (
     domNode *node,
-    char        *prefix
+    char    *prefix
     )
 {
     domAttrNode   *NSattr;
@@ -1653,7 +1653,7 @@ domReadDocument (
             domFreeDocument (doc, NULL, NULL);
             return NULL;
         }
-        if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
+        if (strcmp (Tcl_DStringValue (&dStr), "identity")==0 ) useBinary = 1;
         else useBinary = 0;
         Tcl_DStringFree (&dStr);
         if (useBinary) {
@@ -3700,7 +3700,9 @@ domCopyTo (
     if (node->namespace) {
         ns = node->ownerDocument->namespaces[node->namespace-1];
         ns1 = domLookupPrefix (n, ns->prefix);
-        n->namespace = ns1->index;
+        if (ns1) {
+            n->namespace = ns1->index;
+        }
     }
 
 
@@ -3728,7 +3730,9 @@ domCopyTo (
             if (attr->namespace) {
                 ns = node->ownerDocument->namespaces[attr->namespace-1];
                 ns1 = domLookupPrefix (n, ns->prefix);
-                nattr->namespace = ns1->index;
+                if (ns1) {
+                    nattr->namespace = ns1->index;
+                }
             }
         }
         attr = attr->nextSibling;
