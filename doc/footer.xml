@@ -1,0 +1,7 @@
+<!-- footer.html: Standard navigational footer -->
+<div class="navbar" align="center">
+	<a class="navaid" href="index.html"		>Table of Contents</a>
+ &#183;	<a class="navaid" href="category-index.html"	>Index</a>
+ &#183;	<a class="navaid" href="keyword-index.html"	>Keywords</a>
+</div>
+

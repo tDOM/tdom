@@ -1,0 +1,179 @@
+<manpage id="dom" cat="cmd" title="dom">
+  <namesection>
+    <name>dom</name>
+    <desc>Create an in-memory DOM tree from XML</desc>
+  </namesection>
+  <!--
+  
+  Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
+  
+  See the file "LICENSE" for information on usage and redistribution
+  of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+  
+  -->
+  <synopsis>
+    <syntax><cmd>dom</cmd> <m>method</m> ?<m>arg arg ...</m>?</syntax>
+  </synopsis>
+
+  <section>
+    <title>DESCRIPTION </title>    
+
+    <p>This command provides the creation of complete DOM trees in memory. In
+the usual case a string containing a XML information is parsed and converted
+into a DOM tree. <m>method</m> indicates a specific subcommand. </p>
+
+    <p>The valid methods are:</p>
+
+      <commandlist>
+        <commanddef>
+          <command><cmd>dom</cmd> <method>parse</method> ?<m>options</m>? ?<m>data</m>?</command>
+          <desc>
+            <p>Parses the XML information and builds up the DOM tree in memory
+providing a Tcl object command to this DOM document object. Example:</p>
+
+      <example>
+dom parse $xml doc
+$doc documentElement root</example>
+
+      <p>parses the XML in the variable xml, creates the DOM tree in memory,
+make a reference to the document object, visible in Tcl as a document object
+command, and assigns this new object name to the variable doc. When doc gets
+freed, the DOM tree and the associated Tcl command object (document and all
+node objects) are freed automatically.</p>
+      
+      <example>
+set document [dom parse $xml]
+set root     [$document documentElement]</example>
+
+      <p>parses the XML in the variable xml, creates the DOM tree in memory,
+make a reference to the document object, visible in Tcl as a document object
+command, and returns this new object name, which is then stored in
+<samp>document</samp>.  To free the underlying DOM tree and the associative Tcl
+object commands (document + nodes + fragment nodes) the document object command
+has to be explicitly deleted by:</p>
+
+      <example>
+$document delete
+</example>or<example>
+rename $document ""</example>
+
+<p>The valid options are:</p>
+<optlist>
+              <optdef>
+                <optname>-simple</optname> 
+                <desc>If <m>-simple</m> is
+specified, a simple but fast parser is used (conforms not fully to XML
+recommendation). That should double parsing and DOM generation speed. UTF-8 is
+not generated internally with that parser. Currently this parser does not
+handle namespaces.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-html</optname>
+                <desc>If <m>-html</m> is specified, a fast HTML parser is used, which tries
+to even parse badly formed HTML into a DOM tree.</desc>
+              </optdef>
+       
+              <optdef>
+                <optname>-keepEmpties</optname> 
+                <desc>If <m>-keepEmpties</m> is
+specified, text nodes, which contain only whitespaces, will be part of the
+resulting DOM tree. In default case (<m>-keepEmpties</m> not given) those empty
+text nodes are removed at parsing time.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-channel</optname>
+                <optarg>&lt;channel-ID&gt;</optarg>
+
+                <desc>If <m>-channel &lt;channel-ID&gt;</m> is specified, the
+input to be parsed is read from the specified channel. The input is read from
+the channel in "raw" (binary) mode from the channel, ignoring any encoding
+setting via -fconfigure of the channel.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-baseurl</optname>
+                <optarg>&lt;baseURI&gt;</optarg>
+                
+                <desc>If <m>-baseurl &lt;baseURI&gt;</m> is specified, the
+baseURI is used as the base URI of the document. External entities referenced
+in the document are resolved relative to this base URI. This base URI is also
+stored within the DOM tree.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-feedbackAfter</optname>
+                <optarg>&lt;#bytes&gt;</optarg>
+
+                <desc>If <m>-feedbackAfter &lt;#bytes&gt;</m> is specified, the
+tcl command ::dom::domParseFeedback is evaluated after parsing every #bytes. If
+you use this option, you have to create a tcl proc named
+::dom::domParseFeedback, otherwise you will get an error. Please notice, that
+the calls of ::dom::domParseFeedback are not done exactly every #bytes, but
+always at the first element start after every #bytes.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-externalentitycommand</optname>
+                <optarg>&lt;script&gt;</optarg>
+
+                <desc>If <m>-externalentitycommand &lt;script&gt;</m> is
+specified, the specified tcl script is called to resolve any external entities
+of the document. The actual evaluated command consists of this option followed
+by three arguments: the base uri, the system identifier of the entity and the
+public identifier of the entity. The base uri and the public identifier may be
+the empty list. The script has to return a tcl list consisting of three
+elements. The first element of this list signals, how the external entity is
+returned to the processor. At the moment, the two allowed types are "string"
+and "channel". The second element of the list has to be the (absolute) base URI
+of the external entity to be parsed.  The third element of the list are data,
+either the already read data out of the external entity as string in the case
+of type "string", or the name of a tcl channel, in the case of type
+"channel".</desc>
+              </optdef>
+            </optlist>
+<p/>
+</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>createDocument</method>
+<m>docElemName</m> ?<m>objVar</m>?</command>
+
+          <desc><p>Creates a new DOM document object with one element node with
+node name <samp>docElemName</samp>. The <samp>objVar</samp> controlls the
+memory handling as explained above.</p>
+</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>setResultEncoding</method> ?<m>encodingName</m>?</command>
+
+          <desc><p>If <samp>encodingName</samp> is not given the current global
+result encoding is returned.  Otherwise the global result encoding is set to
+<samp>encodingName</samp>.  All character data, attribute values, etc. will
+then be converted from UTF-8, which is delivered from the Expat XML parser, to
+the given 8 bit encoding at XML/DOM parse time.  Valid values for
+<samp>encodingName</samp> are: utf-8, ascii, cp1250, cp1251, cp1252, cp1253,
+cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
+iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</p>
+</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>createNodeCmd</method>
+<m>(element|comment|text|cdata|pi)Node</m> <m>commandName</m></command>
+          <desc><p>...todo...</p></desc>
+        </commanddef>
+      </commandlist>
+  </section>
+
+  <keywords>
+    <keyword>XML</keyword>
+    <keyword>DOM</keyword>
+    <keyword>Document</keyword>
+    <keyword>node</keyword>
+    <keyword>parsing</keyword>
+  </keywords>
+</manpage>

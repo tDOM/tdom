@@ -1,0 +1,72 @@
+<manpage id="tnc" cat="cmd" title="tnc">
+  <namesection>
+    <name>tnc</name>
+    <desc>tnc is an expat parser object extension, that validates the XML
+stream according the document DTD while parsing.</desc>
+  </namesection>
+  
+  <synopsis>
+    <syntax>package require tdom
+package require tnc
+
+set parser [expat]
+
+tnc $parser enable</syntax>
+  </synopsis>
+
+  <section>
+    <title>DESCRIPTION</title>
+    
+    <p><m>tnc</m> adds the C handler set &quot;tnc&quot; to an tcl expat parser
+obj. This handler set is a simple DTD validator. If the validator detects the
+first validation error, it sets the interp result, signals error and stops
+parsing. There isn't any validation error recovering. As a consequence, only
+valid documents are completely parsed.</p>
+
+    <p>This handler set has only two methods:</p>
+
+    <commandlist>
+      <commanddef>
+        <command><cmd>tnc</cmd> <m>parserObj</m> <method>enable</method></command>
+
+        <desc><p>Adds the tnc C handler set to a Tcl expat parser object.</p></desc>
+      </commanddef>
+
+      <commanddef>
+        <command><cmd>tnc</cmd> <m>parserObj</m> <method>remove</method></command>
+
+        <desc></desc>
+      </commanddef>
+    </commandlist>
+  </section>
+
+  <section>
+    <title>BUGS</title>
+
+    <p>The validation error reports could be much more informative and
+user-friendly.</p>
+
+    <p>The validator doesn't detect ambiguous content models (see XML
+recomendation Section 3.2.1 and Appendix E). Some Java validators also doesn't,
+but handle such content models right anyhow. Tnc does not; if your DTD has
+such ambiguous content models, tnc can not used to validate documents against
+such (not completely XML spec compliant) DTDs.</p>
+
+    <p>There are a few bugs (two that I'm aware of, a third one is somehow
+fixed in the expat sources used by tDOM) in the underlying expat parser, that
+results either in "not well-formed" errors, although the document is
+well-formed or in passing the parsing step silently, although the document
+isn't well-formed in some rarely cases.</p>
+
+  </section>
+  <keywords>
+    <keyword>Validation</keyword>
+  </keywords>
+  
+</manpage>
+
+
+
+
+
+

@@ -1,0 +1,496 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+</head><body>
+<div class="header">
+<div class="navbar" align="center">
+<a href="#SECTnode6">NAME</a> · <a href="#SECTnode17">SYNOPSIS</a> · <a href="#SECTnode28"> DESCRIPTION </a> · <a href="#SECTnode940">PORTABILITY ISSUES</a> · <a href="#SECTnode946">SEE ALSO</a> · <a href="#SECTnode955">KEYWORDS</a>
+</div><hr class="navsep">
+</div><div class="body">
+  <h2><a name="SECTnode6">NAME</a></h2><p class="namesection">
+<b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
+
+
+
+  <h2><a name="SECTnode17">SYNOPSIS</a></h2>
+    <pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+</pre>
+  
+  
+    <h2><a name="SECTnode28"> DESCRIPTION </a></h2>
+
+    <p>This command manipulates one particular instance of a DOM node object.
+<i class="m">method</i> indicates a specific method of the node class. These methods
+should closely conform to the W3C recommendation &quot;Document Object Model
+(Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
+as well to parts of the W3C draft &quot;XML Pointer Language (XPointer)&quot;
+(<a href="http://www.w3.org/TR/1998/WD-xptr-19980303">http://www.w3.org/TR/1998/WD-xptr-19980303</a>).</p>
+
+    <p>The selectNodes method implements (partially) the &quot;XML Path
+Language (XPath) Version 1.0&quot; W3C recommendation 16 November 1999 (<a href="http://www.w3.org/TR/1999/REC-xpath-19991116">http://www.w3.org/TR/1999/REC-xpath-19991116</a>). Look
+at these documents for a deeper understanding of the functionality.</p>
+
+    <p>The valid methods are:</p>
+
+    <dl class="commandlist">
+      
+        <dt><b class="method">nodeType</b></dt>
+        <dd> Returns the node type of that node object. This can be:
+ELEMENT_NODE, ATTRIBUTE_NODE, TEXT_NODE, or CDATA_SECTION_NODE.</dd>
+      
+
+      
+        <dt><b class="method">nodeName</b></dt>
+        <dd> Returns the node name of that node object. This is the element
+(tag) name for element nodes (type ELEMENT_NODE), &quot;#text&quot; for text
+node or &quot;#cdata&quot; for cdata section nodes.</dd>
+      
+
+      
+        <dt><b class="method">nodeValue</b></dt>
+        <dd> Returns the value of that node object. This is the the text or
+the data for element nodes of type TEXT_NODE or CDATA_SECTION_NODE). Otherwise
+it is empty.</dd>
+      
+
+      
+        <dt><b class="method">hasChildNodes</b></dt>
+        <dd> Returns 1 if the has children. Otherwise 0 is returned.</dd>
+      
+
+      
+        <dt><b class="method">parentNodes</b></dt>
+        <dd> Returns the parent node.</dd>
+      
+
+      
+        <dt><b class="method">childNodes</b></dt>
+        <dd> Returns a list of direct children node objects.</dd>
+      
+
+      
+        <dt><b class="method">childNodes</b></dt>
+        <dd> Returns a &quot;live&quot; nodeList object of the child nodes of
+the node in the sense of the DOM recommendation. This nodeList object is
+&quot;live&quot; in the sense that, for instance, changes to the children of
+the node object that it was created from are immediately reflected in the nodes
+returned by the NodeList accessors; it is not a static snapshot of the content
+of the node. The both accessors know by the nodeList object are &quot;item
+&lt;index&gt;&quot;, which returns the indexth item in the collection, and
+&quot;length&quot;, which returns the number of nodes in the list.</dd>
+      
+
+      
+        <dt>
+<b class="method">firstChild</b> <b class="variable">objVar</b>
+</dt>
+        <dd> Returns the first child as a node object.</dd>
+      
+
+      
+        <dt>
+<b class="method">lastChild</b> <b class="variable">objVar</b>
+</dt>
+        <dd> Returns the last child as a node object.</dd>
+      
+      
+      
+        <dt>
+<b class="method">nextSibling</b>  <b class="variable">objVar</b>
+</dt>
+        <dd> Returns the next sibling relativ to the current node as a node
+object.</dd>
+      
+
+      
+        <dt>
+<b class="method">previousSibling</b> <b class="variable">objVar</b>
+</dt>
+        <dd> Returns the next sibling relativ to the current node as a node
+object.</dd>
+      
+
+      
+        <dt>
+<b class="method">getElementsByTagName</b> <i class="m">name</i>
+</dt>
+        <dd> Returns a list of all elements in the subtree matching (glob
+style) <i class="m">name</i>.</dd>
+      
+
+      
+        <dt>
+<b class="method">getElementsByTagNameNS</b> <i class="m">uri</i> <i class="m">name</i>
+</dt>
+        <dd> ...todo...  Returns a list of all elements in the subtree
+matching (glob style) <i class="m">name</i> and having the given namespace
+<i class="m">uri</i>.</dd>
+      
+
+      
+        <dt>
+<b class="method">getElementById</b> <i class="m">id</i>
+</dt>
+        <dd> Returns the node having a id attribute with value
+<i class="m">id</i>.</dd>
+      
+
+      
+        <dt>
+<b class="method">hasAttribute</b> <i class="m">attributeName</i>
+</dt>
+        <dd> Returns 1 iff the object node contains an attribute with name
+<i class="m">attributeName</i> . Otherwise 0 is returned.</dd>
+      
+
+      
+        <dt>
+<b class="method">getAttribute</b> <i class="m">attributeName</i> <b class="option">defaultValue</b>
+</dt>
+        <dd> Returns the value of the attribute <i class="m">attributeName</i>. If
+attribute is not available <i class="m">defaultValue</i> is returned.</dd>
+      
+
+      
+        <dt>
+<b class="method">setAttribute</b> <i class="m">attributeName</i> <i class="m">newValue</i>
+?<i class="m">attributeName</i> <i class="m">newValue</i>
+</dt>
+        <dd> Sets the value for an attribute <i class="m">attributeName</i> to
+<i class="m">newValue</i>. This will create a new attribute, if it wasn't avialble
+before.</dd>
+      
+
+      
+        <dt>
+<b class="method">removeAttribute</b> <i class="m">attributeName</i>
+</dt>
+        <dd> Removes the attribute <i class="m">attributeName</i>.</dd>
+      
+
+      
+        <dt>
+<b class="method">hasAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+</dt>
+        <dd> ...todo...  Returns 1 if the object node contains an attribute
+with name <i class="m">attributeName</i> and a namespace URI <i class="m">uri</i>.  Otherwise 0 is
+returned.</dd>
+      
+
+      
+        <dt>
+<b class="method">getAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+<b class="option">defaultValue</b>
+</dt>
+        <dd> ...todo...  Returns the value of the attribute
+<i class="m">attributeName</i> having the URI <i class="m">uri</i>. If attribute is not available
+<i class="m">defaultValue</i> is returned.</dd>
+      
+
+      
+        <dt>
+<b class="method">setAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+<i class="m">newValue</i>
+</dt>
+        <dd> ...todo...  Sets the value for an attribute <i class="m">attributeName</i>
+with the namespace URI <i class="m">uri</i> to <i class="m">newValue</i>. This will create a new
+attribute, if it wasn't avialble before.
+        </dd>
+      
+
+      
+        <dt>
+<b class="method">removeAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+</dt>
+        <dd> ...todo...  Removes the attribute <i class="m">attributeName</i> having
+the namespace URI <i class="m">uri</i>.</dd>
+      
+
+      
+        <dt>
+<b class="method">attributes</b> <b class="option">attributeNamePattern</b>
+</dt>
+        <dd> Returns all attributes matching the <i class="m">attributeNamePattern</i>.
+If <i class="m">attributeNamePattern</i> isn't given all attributes are returned as a Tcl
+list.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendChild</b> <i class="m">newChild</i>
+</dt>
+        <dd> Append <i class="m">newChild</i> to the end of the child list of the
+node. <i class="m">newChild</i> must be in the document fragment list.</dd>
+      
+
+      
+        <dt>
+<b class="method">insertBefore</b> <i class="m">newChild</i>  <i class="m">refChild</i>
+</dt>
+        <dd> Insert <i class="m">newChild</i> before the <i class="m">refChild</i> in list of
+children of that node. <i class="m">newChild</i> must be in the document fragment list.</dd>
+      
+
+      
+        <dt>
+<b class="method">replaceChild</b> <i class="m">newChild</i>  <i class="m">oldChild</i>
+</dt>
+        <dd> Replace <i class="m">newChild</i> with <i class="m">oldChild</i> in list of children
+of that node.  <i class="m">newChild</i> must be in the document fragment list.
+<i class="m">oldChild</i> will be part of the document fragment list after this
+operation.</dd>
+      
+
+      
+        <dt>
+<b class="method">removeChild</b> <i class="m">child</i>
+</dt>
+        <dd> Removes <i class="m">child</i> from the list of children of that node
+<i class="m">child</i> will be part of the document fragment list after this
+operation. It is not physically deleted.</dd>
+      
+
+      
+        <dt><b class="method">delete</b></dt>
+        <dd> ...todo...  Deletes the given node and its complete child tree
+and frees the complete internal memory. The affected nodes are not accessible
+through the document fragment list.</dd>
+      
+
+      
+        <dt>
+<b class="method">cloneNode</b> <b class="option">-deep</b>
+</dt>
+        <dd> Clones this node and adds the new create node into the document
+fragment list. If the <i class="m">-deep</i> option is specified, all descendant nodes
+are also cloned.</dd>
+      
+
+      
+        <dt><b class="method">ownerDocument</b></dt>
+        <dd> Returns the document object of the document this node belongs
+to.</dd>
+      
+
+      
+        <dt>
+<b class="method">find</b> <i class="m">attrName</i> <i class="m">attrVal</i>
+<b class="option">objVar</b>
+</dt>
+        <dd> Finds the node with the attribute name <i class="m">attrName</i>, and
+attribute value <i class="m">attrVal</i> in the subtree starting the current node.</dd>
+      
+
+      
+        <dt>
+<b class="method">child</b> <i class="m">number|all</i> <b class="option">type</b>
+<b class="option">attrName attrValue</b>
+</dt>
+        <dd> (XPointer) child</dd>
+      
+      
+      
+        <dt>
+<b class="method">descendant</b> <i class="m">number|all</i> <b class="option">type</b>
+<b class="option">attrName attrValue</b>
+</dt>
+        <dd> (XPointer) descendant</dd>
+      
+
+      
+        <dt>
+<b class="method">ancestor</b> <i class="m">number|all</i> <b class="option">type</b>
+<b class="option">attrName attrValue</b>
+</dt>
+        <dd> (XPointer) ancestor</dd>
+      
+
+      
+        <dt>
+<b class="method">fsibling</b> <i class="m">number|all</i> <b class="option">type</b>
+<b class="option">attrName attrValue</b>
+</dt>
+        <dd> (XPointer) fsibling</dd>
+      
+
+      
+        <dt>
+<b class="method">psibling</b> <i class="m">number|all</i> <b class="option">type</b>
+<b class="option">attrName attrValue</b>
+</dt>
+        <dd> (XPointer) psibling</dd>
+      
+
+      
+        <dt>
+<b class="method">root</b>  <b class="option">objVar</b>
+</dt>
+        <dd> (XPointer) root</dd>
+      
+
+      
+        <dt><b class="method">text</b></dt>
+        <dd> Returns all text node children of that current node combined,
+i.e. appended into one string.</dd>
+      
+
+      
+        <dt><b class="method">target</b></dt>
+        <dd> For a processing instruction node the target part is returned.
+Otherwise an error is generated.</dd>
+      
+
+      
+        <dt><b class="method">data</b></dt>
+        <dd> For a processing instruction node the data part is returned.
+Otherwise an error is generated.</dd>
+      
+
+      
+        <dt><b class="method">prefix</b></dt>
+        <dd> ...todo...  Returns the namespace prefix.</dd>
+      
+
+      
+        <dt><b class="method">namespaceURI</b></dt>
+        <dd> ...todo...  Returns the URI from the namespace of the given
+node.</dd>
+      
+
+      
+        <dt><b class="method">namespaceURI</b></dt>
+        <dd> ...todo...  Returns the localName from the tag name of the given
+node.</dd>
+      
+
+      
+        <dt>
+<b class="method">selectNodes</b> <i class="m">xpathQuery</i> <b class="option">typeVar</b>
+</dt>
+        <dd> Returns the result of applying the XPath query <i class="m">xpathQuery</i>
+to the subtree. This can be a string/value, a list of strings, a list of nodes,
+a list of attribute name and a list of attribute name / value pairs. If
+<i class="m">typeVar</i> is given the result type name is store into that variable
+(empty, bool, number, string, nodes, attrnodes, attrvalues).
+
+      <pre class="example">set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
+foreach paragraph $paragraphNodes {
+    lappend  values [$paragraph selectNodes attribute::type]
+}
+      </pre>
+</dd>
+      
+
+      
+        <dt><b class="method">getLine</b></dt>
+        <dd> Returns the line number of that node in the orignal parsed
+XML.</dd>
+      
+      
+      
+        <dt><b class="method">getColumn</b></dt>
+        <dd> Returns the column number of that node in the orignal parsed
+XML.</dd>
+      
+
+      
+        <dt><b class="method">asList</b></dt>
+        <dd> Returns the DOM substree starting form the current node as a
+nested Tcl list.</dd>
+      
+
+      
+        <dt>
+<b class="method">asXML</b> <b class="option">-indent none/1..8</b>
+<b class="option">-channel channelId</b>
+</dt>
+        <dd> ...todo...  Returns the DOM substree starting form the current
+node as an indented XML string or sends the output directly to the given
+channelId in order to save memory.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendFromList</b> <i class="m">list</i>
+</dt>
+        <dd> Parses <i class="m">list</i> , creates an according DOM subtree and
+appends this subtree to the current node.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendFromScript</b> <i class="m">tclScript</i>
+</dt>
+        <dd> ...todo...  Appends the nodes created in the <i class="m">tclScript</i> by
+Tcl functions, which have been built using <i class="m">dom createNodeCmd</i>, to the
+given node.</dd>
+      
+
+      
+        <dt>
+<b class="method">appendXML</b> <i class="m">XMLstring</i>
+</dt>
+        <dd> Parses <i class="m">XMLstring</i>, creates an according DOM subtree and
+appends this subtree to the current node.</dd>
+      
+
+      
+        <dt>
+<b class="method">simpleTranslate</b> <i class="m">outputVar</i>
+<i class="m">specifications</i>
+</dt>
+        <dd> Translate the subtree starting at the object node according to
+the specifications in <i class="m">specifications</i> and outputs the result in the
+variable <i class="m">outputVar</i> . The translation is very similar to Cost Simple
+mode.</dd>
+      
+
+      
+        <dt><b class="method">toXPath</b></dt>
+        <dd> ...todo...  Returns a XPath, which exactly addresses the given
+node in its document. This XPath is only valid as there are no changes to DOM
+tree made later one.</dd>
+      
+
+      
+        <dt><b class="method">xslt</b></dt>
+        <dd> ...todo...  Applies a XSLT transformation on the whole document
+of the node object using the XSLT document of the given node. Returns a
+document object containing the result document of that transformation.</dd>
+      
+
+      
+        <dt><i class="m">attrName</i></dt>
+        <dd> Returns the value of the attribute <i class="m">attrName</i>.  Short cut
+for <i class="m">getAttribute</i>.</dd>
+      
+    </dl>
+
+    <p>Otherwise, if an unknown method name is given, the command with the same
+name as the given method within the namespace <tt class="l">::dom::domNode</tt> is tried to
+be executed. This allows quick method additions on Tcl level.</p>
+
+  
+
+
+  
+    <h2><a name="SECTnode940">PORTABILITY ISSUES</a></h2>
+  
+
+  <h2><a name="SECTnode946">SEE ALSO</a></h2><p class="seealso">
+<a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
+</p>
+  
+  <h2><a name="SECTnode955">KEYWORDS</a></h2><p class="keywords">
+<a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
+</p>
+  
+</div><div class="footer">
+<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
+	<a class="navaid" href="index.html">Table of Contents</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
+</div>
+</div>
+</body>
+</html>
