@@ -208,6 +208,8 @@ TEA_ENABLE_SHARED
 #--------------------------------------------------------------------
 
 TEA_CONFIG_CFLAGS
+TDOM_LD_SEARCH_FLAGS=${LD_SEARCH_FLAGS}
+AC_SUBST(TDOM_LD_SEARCH_FLAGS)
 
 #--------------------------------------------------------------------
 # Set the default compiler switches based on the --enable-symbols option.
@@ -288,7 +290,6 @@ TDOM_ENABLE_DTD
 TDOM_ENABLE_NS
 TDOM_ENABLE_UNKNOWN
 TDOM_ENABLE_TDOMALLOC
-sinclude(tclconfig/ac_c_bigendian_cross.m4)
 AC_C_BIGENDIAN_CROSS
 AC_SUBST(BYTEORDER)
 

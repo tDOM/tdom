@@ -3407,6 +3407,8 @@ fi
     
     
 
+TDOM_LD_SEARCH_FLAGS=${LD_SEARCH_FLAGS}
+
 
 #--------------------------------------------------------------------
 # Set the default compiler switches based on the --enable-symbols option.
@@ -3425,7 +3427,7 @@ fi
     fi
 
     echo $ac_n "checking for build with symbols""... $ac_c" 1>&6
-echo "configure:3429: checking for build with symbols" >&5
+echo "configure:3431: checking for build with symbols" >&5
     # Check whether --enable-symbols or --disable-symbols was given.
 if test "${enable_symbols+set}" = set; then
   enableval="$enable_symbols"
@@ -3557,7 +3559,7 @@ EOF
 
 
     echo $ac_n "checking for tclsh""... $ac_c" 1>&6
-echo "configure:3561: checking for tclsh" >&5
+echo "configure:3563: checking for tclsh" >&5
 
     if eval "test \"`echo '$''{'ac_cv_path_tclsh'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -3602,7 +3604,7 @@ TDOM_INCLUDES="-I${srcdir}/generic -I${srcdir}/expat"
 
 
     echo $ac_n "checking for AOLserver configuration""... $ac_c" 1>&6
-echo "configure:3606: checking for AOLserver configuration" >&5
+echo "configure:3608: checking for AOLserver configuration" >&5
     # Check whether --with-aol or --without-aol was given.
 if test "${with_aol+set}" = set; then
   withval="$with_aol"
@@ -3654,7 +3656,7 @@ fi
 
 
     echo $ac_n "checking wether to enable dtd support""... $ac_c" 1>&6
-echo "configure:3658: checking wether to enable dtd support" >&5
+echo "configure:3660: checking wether to enable dtd support" >&5
     # Check whether --enable-dtd or --disable-dtd was given.
 if test "${enable_dtd+set}" = set; then
   enableval="$enable_dtd"
@@ -3683,7 +3685,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable namespace support""... $ac_c" 1>&6
-echo "configure:3687: checking wether to enable namespace support" >&5
+echo "configure:3689: checking wether to enable namespace support" >&5
     # Check whether --enable-ns or --disable-ns was given.
 if test "${enable_ns+set}" = set; then
   enableval="$enable_ns"
@@ -3712,7 +3714,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable built-in unknown command""... $ac_c" 1>&6
-echo "configure:3716: checking wether to enable built-in unknown command" >&5
+echo "configure:3718: checking wether to enable built-in unknown command" >&5
     # Check whether --enable-ucmd or --disable-ucmd was given.
 if test "${enable_ucmd+set}" = set; then
   enableval="$enable_ucmd"
@@ -3741,7 +3743,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable tDOMs block allocator""... $ac_c" 1>&6
-echo "configure:3745: checking wether to enable tDOMs block allocator" >&5
+echo "configure:3747: checking wether to enable tDOMs block allocator" >&5
     # Check whether --enable-tdomalloc or --disable-tdomalloc was given.
 if test "${enable_tdomalloc+set}" = set; then
   enableval="$enable_tdomalloc"
@@ -3767,8 +3769,6 @@ fi
 EOF
 
     fi
-
-
 
 echo $ac_n "checking whether byte ordering is bigendian""... $ac_c" 1>&6
 echo "configure:3775: checking whether byte ordering is bigendian" >&5
@@ -4104,6 +4104,7 @@ s%@SHLIB_LDFLAGS@%$SHLIB_LDFLAGS%g
 s%@SHLIB_LD_LIBS@%$SHLIB_LD_LIBS%g
 s%@LDFLAGS_DEBUG@%$LDFLAGS_DEBUG%g
 s%@LDFLAGS_OPTIMIZE@%$LDFLAGS_OPTIMIZE%g
+s%@TDOM_LD_SEARCH_FLAGS@%$TDOM_LD_SEARCH_FLAGS%g
 s%@TCL_DBGX@%$TCL_DBGX%g
 s%@CFLAGS_DEFAULT@%$CFLAGS_DEFAULT%g
 s%@LDFLAGS_DEFAULT@%$LDFLAGS_DEFAULT%g
