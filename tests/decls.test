@@ -29,12 +29,12 @@ proc CData data {
 }
 
 proc extRefH {base systemId publicId} {
-    if {![regexp {^[a-zA-Z]+:/} $systemId]}  {
-        regsub {^[a-zA-Z]+:} $base {} base
+    if {![regexp {^[a-zA-Z]+://} $systemId]}  {
+        regsub {^[a-zA-Z]+://} $base {} base
         set basedir [file dirname $base]
         set systemId "[set basedir]/[set systemId]"
     } else {
-        regsub {^[a-zA-Z]+:} $systemId systemId
+        regsub {^[a-zA-Z]+://} $systemId systemId
     }
     if {[catch {set fd [open $systemId]}]} {
         return -code error \
@@ -44,12 +44,12 @@ proc extRefH {base systemId publicId} {
 }
 
 proc extRefHstr {base systemId publicId} {
-    if {![regexp {^[a-zA-Z]+:/} $systemId]}  {
-        regsub {^[a-zA-Z]+:} $base {} base
+    if {![regexp {^[a-zA-Z]+://} $systemId]}  {
+        regsub {^[a-zA-Z]+://} $base {} base
         set basedir [file dirname $base]
         set systemId "[set basedir]/[set systemId]"
     } else {
-        regsub {^[a-zA-Z]+:} $systemId systemId
+        regsub {^[a-zA-Z]+://} $systemId systemId
     }
     if {[catch {set fd [open $systemId]}]} {
         return -code error \
