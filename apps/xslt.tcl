@@ -96,7 +96,6 @@ switch $outputOpt {
     }
     asText -
     text {
-        set resultRoot [$resultDoc documentElement]
         puts [$resultDoc asText]
     }
     default {
