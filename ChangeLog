@@ -1,3 +1,8 @@
+2002-21-17  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/expat.*: We don't have a 'provide expat' anymore, it's
+          all tdom. Fixed a typo.
+
 2002-11-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Report error, if xsl:import elements not
