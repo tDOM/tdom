@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2002/05/10 20:29:31  rolf
+|   Made key names namespace aware.
+|
 |   Revision 1.5  2002/05/04 01:30:10  rolf
 |   Inlined xpathRSInit (for speed).
 |
@@ -146,7 +149,7 @@ typedef xpathResultSet *xpathResultSets;
 typedef int (*xpathFuncCallback) 
                 (void *clientData, char *functionName, 
                  domNode *ctxNode, int position, xpathResultSet *nodeList,
-                 int argc, xpathResultSets *args,
+                 domNode *exprContext, int argc, xpathResultSets *args,
                  xpathResultSet *result, char  **errMsg);
                               
 typedef int (*xpathVarCallback) 

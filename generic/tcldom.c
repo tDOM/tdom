@@ -1010,6 +1010,7 @@ int tcldom_xpathFuncCallBack (
     domNode         *ctxNode,
     int              position,
     xpathResultSet  *nodeList,
+    domNode         *exprContext,
     int              argc,
     xpathResultSets *args,
     xpathResultSet  *result, 

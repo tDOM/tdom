@@ -1512,6 +1512,7 @@ static int xsltXPathFuncs (
     domNode         * ctxNode,
     int               ctxPos,
     xpathResultSet  * ctx,
+    domNode         * exprContext, 
     int               argc,
     xpathResultSets * argv,
     xpathResultSet  * result,
@@ -1520,6 +1521,7 @@ static int xsltXPathFuncs (
 {
     xsltState     * xs = clientData;
     char          * keyId, *filterValue, *str, *baseURI, tmp[5];
+    char          * localName, prefix[MAX_PREFIX_LEN]; 
     int             rc, i, len, NaN, freeStr;
     double          n;
     xsltKeyValue  * value;
@@ -1527,8 +1529,10 @@ static int xsltXPathFuncs (
     Tcl_HashEntry * h;
     Tcl_HashTable * docKeyData;
     xsltSubDoc    * sdoc;
+    Tcl_DString     dStr;
+    domNS         * ns;
 
-    /* fprintf(stderr,"xsltXPathFuncs funcName='%s'\n",funcName); */
+    DBG ( fprintf(stderr,"xsltXPathFuncs funcName='%s'\n",funcName); )
  
     if (strcmp(funcName, "key")==0) {
         /*--------------------------------------------------------------------
@@ -1542,6 +1546,21 @@ static int xsltXPathFuncs (
         /* check, if there is a key definition with the given name */
         keyId = xpathFuncString(argv[0]);
         TRACE1("keyId='%s' \n", keyId);
+        domSplitQName (keyId, prefix, &localName);
+        Tcl_DStringInit (&dStr);
+        if (prefix[0] != '\0') {
+            ns = domLookupPrefix (exprContext, prefix);
+            if (!ns) {
+                *errMsg = strdup("There is not namespace bound to the prefix.");
+                free (keyId);
+                return 1;
+            }
+            Tcl_DStringAppend (&dStr, ns->uri, -1);
+        }
+        Tcl_DStringAppend (&dStr, localName, -1);
+        free (keyId);
+        keyId = strdup (Tcl_DStringValue (&dStr));
+        Tcl_DStringFree (&dStr);
         h = Tcl_FindHashEntry (&xs->keyInfos, keyId);
         if (!h) {
             *errMsg = strdup("Unkown key in key() function call!");
@@ -1771,8 +1790,8 @@ static int xsltXPathFuncs (
         /* chain back to original callback */
         if (xs->orig_funcCB) {
             return (xs->orig_funcCB)(xs->orig_funcClientData, funcName,
-                                     ctxNode, ctxPos, ctx, argc, argv,
-                                     result, errMsg);
+                                     ctxNode, ctxPos, ctx, exprContext, 
+                                     argc, argv, result, errMsg);
         }
     }
     return 0;    
@@ -4705,6 +4724,7 @@ static int processTopLevel (
     xsltNSAlias       *nsAlias;
     domNS             *ns, *nsFrom, *nsTo;
     Tcl_HashEntry     *h;
+    Tcl_DString        dStr;
 
     xpathRSInit( &nodeList );
     rsAddNode( &nodeList, xmlNode); 
@@ -4906,7 +4926,20 @@ static int processTopLevel (
                 keyInfo->use       = use;
                 rc = xpathParse (use, errMsg, &(keyInfo->useAst), 0);
                 CHECK_RC1(keyInfo);
-                h = Tcl_CreateHashEntry (&(xs->keyInfos), name, &hnew);
+                domSplitQName (name, prefix, &localName);
+                Tcl_DStringInit (&dStr);
+                if (prefix[0] != '\0') {
+                    ns = domLookupPrefix (node, prefix);
+                    if (!ns) {
+                        reportError (node, "There is not namespace bound to the prefix.", errMsg);
+                        ckfree ((char*) keyInfo);
+                        return -1;
+                    }
+                    Tcl_DStringAppend (&dStr, ns->uri, -1);
+                }
+                Tcl_DStringAppend (&dStr, localName, -1);
+                h = Tcl_CreateHashEntry (&(xs->keyInfos), 
+                                         Tcl_DStringValue (&dStr), &hnew);
                 if (hnew) {
                     keyInfo->next  = NULL;
                 } else {
