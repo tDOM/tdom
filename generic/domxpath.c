@@ -38,6 +38,11 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.3  2002/03/07 22:16:21  rolf
+|   Improved recognition of REALs (of the form .123). Made variable name
+|   recognition UTF-8 save.
+|   Freeze of actual state, befor feeding stuff to Jochen.
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -139,8 +144,6 @@
 
 #define CHECK_RC          if (rc) return rc
 
-
-
 /*----------------------------------------------------------------------------
 |   Types for Lexer
 |
@@ -194,7 +197,7 @@ static char *astType2str[] = {
     "GetContextNode", "GetParentNode",
     
     "CombinePath", "IsRoot", "ToParent", "ToAncestors", "FillNodeList",
-     "FillWithCurrentNode",
+    "FillWithCurrentNode",
     "ExecIdKey"
 };
 
@@ -687,13 +690,6 @@ static XPathTokens xpathLexer (
             case '[':  token = LBRACKET; break;
             case ']':  token = RBRACKET; break;
 
-            case '.':  if (xpath[i+1] == '.') {
-                           token = DOTDOT;
-                           i++;
-                       } else {
-                           token = DOT;
-                       }; break;
-
             case '@':  i++;
                        if ( (isalpha(xpath[i])) || (xpath[i]== '_') ) {
                            ps = &(xpath[i++]);
@@ -794,15 +790,11 @@ static XPathTokens xpathLexer (
                       }; break;
 
             case '$':  i++;
-                       if (isalpha(xpath[i]) || xpath[i] == '_') {
-                           ps = &(xpath[i++]);
-                           while (xpath[i] &&
-                                  (isalnum(xpath[i]) ||
-                                   (xpath[i]== '_')  ||
-                                   (xpath[i]== '-')  ||
-                                   (xpath[i]== '.')
-                                  )
-                                 ) i++;
+                       if ( isNameStart (&xpath[i])) {
+                           ps = &(xpath[i]);
+                           i += UTF8_CHAR_LEN (xpath[i]);
+                           while (xpath[i] && isNameChar(&xpath[i]))
+                               i +=  UTF8_CHAR_LEN(xpath[i]);
                            save = xpath[i];
                            xpath[i] = '\0';
                            tokens[l].strvalue = (char*)strdup(ps);
@@ -812,7 +804,18 @@ static XPathTokens xpathLexer (
                            free(tokens);
                            *errMsg = (char*)strdup("Expected variable name");
                            return NULL;
-                       } break;
+                       }; break;
+
+            case '.':  if (xpath[i+1] == '.') {
+                           token = DOTDOT;
+                           i++;
+                           break;
+                       } else if (!isdigit(xpath[i+1])) {
+                           token = DOT;
+                           break;
+                       }
+                       /* DOT followed by digit, ie a REAL.
+                          Handled by default. Fall throu */
 
             default:   if ( (isalpha(xpath[i])) || (xpath[i]== '_') ) {
                            ps = &(xpath[i++]);
@@ -933,9 +936,13 @@ static XPathTokens xpathLexer (
                                xpath[i] = save;
                            }
                            i--;
-                       } else if (isdigit(xpath[i])) {
+                       } else if (isdigit(xpath[i]) || (xpath[i] == '.')) {
+                           if (xpath[i] == '.') {
+                               token = REALNUMBER;
+                           } else {
+                               token = INTNUMBER;
+                           }
                            ps = &(xpath[i++]);
-                           token = INTNUMBER;
                            while (xpath[i] && isdigit(xpath[i]))  i++;
                            if (xpath[i]=='.') {
                                token = REALNUMBER;
@@ -1850,6 +1857,8 @@ int xpathNodeTest (
         return 0;
     } else
     if (step->child->type == IsFQElement) {
+        if (node->nodeType != ELEMENT_NODE && node->nodeType != ATTRIBUTE_NODE) 
+            return 0;
         contextNS = domLookupPrefix (exprContext, step->child->strvalue);
         if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
         nodeUri = domNamespaceURI (node);
@@ -2299,29 +2308,29 @@ static int xpathEvalStep (
         startingNode = ctxNode;
         node = ctxNode->firstChild;
         while (node && node != startingNode) {
-           if (xpathNodeTest(node, exprContext, step)) rsAddNode( result, node);
-           if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
-               node = node->firstChild;
-               continue;
-           }
-           if (node->nextSibling) {
-               node = node->nextSibling;
-               continue;
-           }
-           while ( node->parentNode &&
-                  (node->parentNode != startingNode) &&
-                  (node->parentNode->nextSibling == NULL) ) {
-
-               node = node->parentNode;
-           }
-           if ((node != startingNode) &&
-               (node->parentNode)     &&
-               (node->parentNode != startingNode)
-           ) {
-               node = node->parentNode->nextSibling;
-           } else {
-               break;
-           }
+            if (xpathNodeTest(node, exprContext, step)) rsAddNode( result, node);
+            if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
+                node = node->firstChild;
+                continue;
+            }
+            if (node->nextSibling) {
+                node = node->nextSibling;
+                continue;
+            }
+            while ( node->parentNode &&
+                    (node->parentNode != startingNode) &&
+                    (node->parentNode->nextSibling == NULL) ) {
+                
+                node = node->parentNode;
+            }
+            if ((node != startingNode) &&
+                (node->parentNode)     &&
+                (node->parentNode != startingNode)
+                ) {
+                node = node->parentNode->nextSibling;
+            } else {
+                break;
+            }
         }
     } else
 
