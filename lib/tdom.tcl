@@ -573,10 +573,10 @@ proc ::dom::xpathFunc::element-available { ctxNode pos
         xsl:message -
         xsl:decimal-format -
         xsl:namespace-alias -
+        xsl:output -
         xsl:fallback {
             return [list bool true]
         }
-        xsl:output -
         default {
             return [list bool false]
         }
