@@ -1,3 +1,11 @@
+2002-11-28  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Reuse already parsed trees only if it is
+          requested again for the same matter (as stylesheet or as
+          source dir), otherwise create a new tree, because of the
+          different white space stripping rules for stylesheets and
+          source documents.    
+
 2002-11-27  Rolf Ade  <rolf@pointsman.de>
          
         * win/makefile805.vc: Added this file. VC++ 6.0 makefile to
@@ -5,7 +13,9 @@
 
         * generic/domxpath.c: FQ names with a localname equal to a
           XPath 'keyword' (for example ns1:div) are now recognized as
-          node test (they raised error up to now).
+          node test (they raised error up to now). Changed
+          generate-id() to return the more generic named 'id<idstr>'
+          instead of the up to now used 'node<idstr>'.
 
 2002-11-24  Rolf Ade  <rolf@pointsman.de>
 
