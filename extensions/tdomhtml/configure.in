@@ -57,7 +57,7 @@ eval AC_DEFINE_UNQUOTED(VERSION, "${VERSION}")
 # This will define a ${TEA_PLATFORM} variable == "unix" or "windows".
 #--------------------------------------------------------------------
 
-TEA_INIT
+#TEA_INIT
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file
