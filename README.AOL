@@ -25,7 +25,7 @@ COMPILING tDOM
         sh CONFIG
         make
 
-    Depending on wether you use the AOLserver 3.x or 4.x series, you
+    Depending on whether you use the AOLserver 3.x or 4.x series, you
     need to install the library in a different way.
 
     For AOLserver 3.x:
@@ -36,7 +36,7 @@ COMPILING tDOM
 
     For AOLserver 4.x:
 
-      This version supports standard Tcl "pacakge require" mechanism
+      This version supports standard Tcl "package require" mechanism
       so you can just:
 
         make install

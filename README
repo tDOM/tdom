@@ -18,7 +18,7 @@ License) thread-safe extension to Tcl/Tk called tDOM.
 tDOM contains:
 
     *  the newest version of Expat, the XML parser from James Clark,
-       including namesspace and DTD support.
+       including namespace and DTD support.
 
     *  a modified version of Steve Ball's Tclexpat, the Tcl interface to 
        expat, for event-like (SAX-like) XML parsing. The modifications
