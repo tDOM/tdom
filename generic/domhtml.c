@@ -1200,7 +1200,7 @@ HTML_SimpleParse (
             /*-----------------------------------------------------------
             |   create new DOM element node
             \----------------------------------------------------------*/
-            h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), e, &hnew);
+            h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_tagNames), e, &hnew);
 
             node = (domNode*) domAlloc(sizeof(domNode));
             memset(node, 0, sizeof(domNode));
@@ -1301,7 +1301,8 @@ HTML_SimpleParse (
                 /*--------------------------------------------------
                 |   allocate new attribute node
                 \--------------------------------------------------*/
-                h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
+                h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_attrNames),
+                                        ArgName, &hnew);
                 attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
                 memset(attrnode, 0, sizeof(domAttrNode));
                 attrnode->parentNode  = node;

@@ -86,8 +86,8 @@
 #ifndef TCL_THREADS
   unsigned int domUniqueNodeNr = 0;
   unsigned int domUniqueDocNr  = 0;
-  Tcl_HashTable tagNames;
-  Tcl_HashTable attrNames;
+  Tcl_HashTable tdom_tagNames;
+  Tcl_HashTable tdom_attrNames;
 #endif
 
 static int domModuleIsInitialized = 0;
@@ -185,19 +185,19 @@ domModuleFinalize(ClientData unused)
     Tcl_HashEntry *entryPtr;
     Tcl_HashSearch search;
 
-    entryPtr = Tcl_FirstHashEntry(&tagNames, &search);
+    entryPtr = Tcl_FirstHashEntry(&tdom_tagNames, &search);
     while (entryPtr) {
         Tcl_DeleteHashEntry(entryPtr);
         entryPtr = Tcl_NextHashEntry(&search);
     }
-    Tcl_DeleteHashTable(&tagNames);
+    Tcl_DeleteHashTable(&tdom_tagNames);
 
-    entryPtr = Tcl_FirstHashEntry(&attrNames, &search);
+    entryPtr = Tcl_FirstHashEntry(&tdom_attrNames, &search);
     while (entryPtr) {
         Tcl_DeleteHashEntry(entryPtr);
         entryPtr = Tcl_NextHashEntry(&search);
     }
-    Tcl_DeleteHashTable(&attrNames);
+    Tcl_DeleteHashTable(&tdom_attrNames);
 
     return;
 }
@@ -216,8 +216,8 @@ domModuleInitialize (
         if (domModuleIsInitialized == 0) {
             domAllocInit();
             TDomNotThreaded (
-                Tcl_InitHashTable(&tagNames, TCL_STRING_KEYS);
-                Tcl_InitHashTable(&attrNames, TCL_STRING_KEYS);
+                Tcl_InitHashTable(&tdom_tagNames, TCL_STRING_KEYS);
+                Tcl_InitHashTable(&tdom_attrNames, TCL_STRING_KEYS);
                 Tcl_CreateExitHandler(domModuleFinalize, NULL);
             )
             TDomThreaded(
@@ -1038,7 +1038,8 @@ startElement(
 
     DispatchPCDATA (info);
     
-    h = Tcl_CreateHashEntry(&HASHTAB(info->document,tagNames), name, &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(info->document,tdom_tagNames), name,
+                            &hnew);
     if (info->storeLineColumn) {
         node = (domNode*) domAlloc(sizeof(domNode)
                                     + sizeof(domLineColumn));
@@ -1141,7 +1142,7 @@ startElement(
                 info->activeNS[info->activeNSpos].namespace = ns;
             }
 
-            h = Tcl_CreateHashEntry(&HASHTAB(info->document, attrNames),
+            h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
                                      (char *)atPtr[0], &hnew);
             attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
             memset(attrnode, 0, sizeof(domAttrNode));
@@ -1240,7 +1241,7 @@ startElement(
             continue;
         }
 #endif
-        h = Tcl_CreateHashEntry(&HASHTAB(info->document, attrNames),
+        h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
                                  (char *)atPtr[0], &hnew);
         attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
         memset(attrnode, 0, sizeof(domAttrNode));
@@ -1905,7 +1906,7 @@ externalEntityRefHandler (
 |   startDoctypeDeclHandler
 |
 \--------------------------------------------------------------------------*/
-void
+static void
 startDoctypeDeclHandler (
     void       *userData,
     const char *doctypeName,
@@ -1933,7 +1934,7 @@ startDoctypeDeclHandler (
 |   endDoctypeDeclHandler
 |
 \--------------------------------------------------------------------------*/
-void
+static void
 endDoctypeDeclHandler (
     void *userData
 )
@@ -2185,7 +2186,7 @@ domCreateXMLNamespaceNode (
 
     attr = (domAttrNode *) domAlloc (sizeof (domAttrNode));
     memset (attr, 0, sizeof (domAttrNode));
-    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,attrNames),
+    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tdom_attrNames),
                             "xmlns:xml", &hnew);
     ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
     attr->nodeType      = ATTRIBUTE_NODE;
@@ -2245,8 +2246,8 @@ domCreateDoc (
 
     TDomThreaded(
         domLocksAttach(doc);
-        Tcl_InitHashTable(&doc->tagNames, TCL_STRING_KEYS);
-        Tcl_InitHashTable(&doc->attrNames, TCL_STRING_KEYS);
+        Tcl_InitHashTable(&doc->tdom_tagNames, TCL_STRING_KEYS);
+        Tcl_InitHashTable(&doc->tdom_attrNames, TCL_STRING_KEYS);
     )
 
     if (storeLineColumn) {
@@ -2264,7 +2265,7 @@ domCreateDoc (
         rootNode->nodeFlags = 0;
     }
     rootNode->namespace     = 0;
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_tagNames), "", &hnew);
     rootNode->nodeName      = (char *)&(h->key);
     rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->ownerDocument = doc;
@@ -2334,8 +2335,8 @@ domCreateDocument (
     }
     doc = domCreateDoc (NULL, 0);
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), documentElementTagName,
-                            &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc, tdom_tagNames),
+                            documentElementTagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
@@ -2678,18 +2679,18 @@ domFreeDocument (
         {
             Tcl_HashEntry *entryPtr;
             Tcl_HashSearch search;
-            entryPtr = Tcl_FirstHashEntry(&doc->tagNames, &search);
+            entryPtr = Tcl_FirstHashEntry(&doc->tdom_tagNames, &search);
             while (entryPtr) {
                 Tcl_DeleteHashEntry(entryPtr);
                 entryPtr = Tcl_NextHashEntry(&search);
             }
-            Tcl_DeleteHashTable(&doc->tagNames);
-            entryPtr = Tcl_FirstHashEntry(&doc->attrNames, &search);
+            Tcl_DeleteHashTable(&doc->tdom_tagNames);
+            entryPtr = Tcl_FirstHashEntry(&doc->tdom_attrNames, &search);
             while (entryPtr) {
                 Tcl_DeleteHashEntry(entryPtr);
                 entryPtr = Tcl_NextHashEntry(&search);
             }
-            Tcl_DeleteHashTable(&doc->attrNames);
+            Tcl_DeleteHashTable(&doc->tdom_attrNames);
             domLocksDetach(doc);
             node = doc->deletedNodes;
             while (node) {
@@ -2750,7 +2751,7 @@ domSetAttribute (
         \----------------------------------------------*/
         attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
         memset(attr, 0, sizeof(domAttrNode));
-        h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,attrNames),
+        h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,tdom_attrNames),
                                 attributeName, &hnew);
         attr->nodeType    = ATTRIBUTE_NODE;
         attr->nodeFlags   = 0;
@@ -2881,7 +2882,7 @@ domSetAttributeNS (
         \-------------------------------------------------------*/
         attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
         memset(attr, 0, sizeof(domAttrNode));
-        h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,attrNames),
+        h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,tdom_attrNames),
                                 attributeName, &hnew);
         attr->nodeType = ATTRIBUTE_NODE;
         if (hasUri) {
@@ -3123,11 +3124,16 @@ domSetDocument (
                 
         TDomThreaded (
             if (origDoc != doc) {
-                /* Make hash table entries as necessary for tagNames and attrNames. */
-                h = Tcl_CreateHashEntry(&doc->tagNames, node->nodeName, &hnew);
+                /* Make hash table entries as necessary for
+                 * tdom_tagNames and tdom_attrNames. */
+                h = Tcl_CreateHashEntry(&doc->tdom_tagNames, node->nodeName,
+                                        &hnew);
                 node->nodeName = (domString) &(h->key);
-                for (attr = node->firstAttr; attr != NULL; attr = attr->nextSibling) {
-                    h = Tcl_CreateHashEntry(&doc->attrNames, attr->nodeName, &hnew);
+                for (attr = node->firstAttr; 
+                     attr != NULL; 
+                     attr = attr->nextSibling) {
+                    h = Tcl_CreateHashEntry(&doc->tdom_attrNames, 
+                                            attr->nodeName, &hnew);
                     attr->nodeName = (domString) &(h->key);
                 }
             }
@@ -3885,8 +3891,8 @@ domAppendNewElementNode(
         return NULL;
     }
 
-    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tagNames), tagName,
-                            &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tdom_tagNames),
+                            tagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = ELEMENT_NODE;
@@ -4167,7 +4173,7 @@ domAddNSToNode (
     /* Add new namespace attribute */
     attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
     memset(attr, 0, sizeof(domAttrNode));
-    h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,attrNames),
+    h = Tcl_CreateHashEntry(&HASHTAB(node->ownerDocument,tdom_attrNames),
                             Tcl_DStringValue(&dStr), &hnew);
     attr->nodeType    = ATTRIBUTE_NODE;
     attr->nodeFlags   = IS_NS_NODE;
@@ -4216,7 +4222,7 @@ domAppendLiteralNode(
         return NULL;
     }
 
-    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument, tagNames),
+    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument, tdom_tagNames),
                              literalNode->nodeName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
@@ -4301,7 +4307,7 @@ domNewElementNode(
     Tcl_HashEntry *h;
     int           hnew;
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), tagName, &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc, tdom_tagNames), tagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = nodeType;
@@ -4341,7 +4347,7 @@ domNewElementNodeNS (
     char           prefix[MAX_PREFIX_LEN], *localname;
     domNS         *ns;
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), tagName, &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc, tdom_tagNames), tagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = nodeType;

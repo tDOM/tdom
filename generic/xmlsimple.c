@@ -769,7 +769,8 @@ XML_SimpleParse (
             /*------------------------------------------------------
             |   create new DOM element node
             \-----------------------------------------------------*/
-            h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), start+1, &hnew);
+            h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_tagNames), start+1,
+                                    &hnew);
             node = (domNode*) domAlloc(sizeof(domNode));
             memset(node, 0, sizeof(domNode));
             node->nodeType      = ELEMENT_NODE;
@@ -880,7 +881,8 @@ XML_SimpleParse (
                     xmlns = ArgName;
                     newNS = 1;
                     
-                    h = Tcl_CreateHashEntry(&HASHTAB(doc, attrNames),ArgName, &hnew); 
+                    h = Tcl_CreateHashEntry(&HASHTAB(doc, tdom_attrNames),
+                                            ArgName, &hnew); 
                     attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
                     memset(attrnode, 0, sizeof(domAttrNode));
                     attrnode->parentNode  = node;
@@ -941,7 +943,8 @@ XML_SimpleParse (
                     /*------------------------------------------------------------
                     |   allocate new attribute node
                     \------------------------------------------------------------*/
-                    h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
+                    h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_attrNames),
+                                            ArgName, &hnew);
                     attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
                     memset(attrnode, 0, sizeof(domAttrNode));
                     attrnode->parentNode  = node;
