@@ -2968,6 +2968,9 @@ xpathEvalFunction (
 
     case f_id:
         XPATH_ARITYCHECK(step,1,errMsg);
+        if (!ctxNode->ownerDocument->ids) {
+            break;
+        }
         xpathRSInit (&leftResult);
         rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
                             nodeList, cbs, &leftResult, docOrder, errMsg);
@@ -2985,7 +2988,7 @@ xpathEvalFunction (
         if (leftResult.type == xNodeSetResult) {
             for (i=0; i < leftResult.nr_nodes; i++) {
                 leftStr = xpathFuncStringForNode (leftResult.nodes[i]);
-                entryPtr = Tcl_FindHashEntry (&ctxNode->ownerDocument->ids,
+                entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
                                               leftStr);
                 if (entryPtr) {
                     node = (domNode*) Tcl_GetHashValue (entryPtr);
@@ -3011,7 +3014,7 @@ xpathEvalFunction (
                         continue;
                     }
                     *pto = '\0';
-                    entryPtr = Tcl_FindHashEntry (&ctxNode->ownerDocument->ids,
+                    entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
                                                   pfrom);
                     if (entryPtr) {
                         node = (domNode*) Tcl_GetHashValue (entryPtr);
@@ -3033,7 +3036,7 @@ xpathEvalFunction (
                 }
             }
             if (!pwhite) {
-                entryPtr = Tcl_FindHashEntry (&ctxNode->ownerDocument->ids,
+                entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
                                               pfrom);
                 if (entryPtr) {
                     node = (domNode*) Tcl_GetHashValue (entryPtr);
@@ -3445,6 +3448,9 @@ xpathEvalFunction (
 
     case f_unparsedEntityUri:
         XPATH_ARITYCHECK(step,1,errMsg);
+        if (!ctxNode->ownerDocument->unparsedEntities) {
+            break;
+        }
         xpathRSInit (&leftResult);
         rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
                             nodeList, cbs, &leftResult, docOrder, errMsg);
@@ -3453,7 +3459,7 @@ xpathEvalFunction (
             return rc;
         }
         leftStr = xpathFuncString (&leftResult);
-        entryPtr = Tcl_FindHashEntry (&ctxNode->ownerDocument->unparsedEntities,
+        entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->unparsedEntities,
                                       leftStr);
         if (entryPtr) {
             rsSetString (result, (char *)Tcl_GetHashValue (entryPtr));
@@ -5092,25 +5098,39 @@ int xpathEval (
     char             * xpath,
     char            ** prefixMappings,
     xpathCBs         * cbs,
+    Tcl_HashTable    * cache,
     char            ** errMsg,
     xpathResultSet   * result
 )
 {
     xpathResultSet nodeList;
-    int            rc, docOrder = 1;
+    int            rc, hnew = 1, docOrder = 1;
     ast            t;
+    Tcl_HashEntry *h;
 
     *errMsg = NULL;
-    rc = xpathParse(xpath, exprContext, XPATH_EXPR, prefixMappings, &t,
-                    errMsg);
-    CHECK_RC;
-
+    if (cache) {
+        h = Tcl_CreateHashEntry (cache, xpath, &hnew);
+    }
+    if (hnew) {
+        rc = xpathParse(xpath, exprContext, XPATH_EXPR, prefixMappings, &t,
+                        errMsg);
+        CHECK_RC;
+        if (cache) {
+            Tcl_SetHashValue(h, t);
+        }
+    } else {
+        t = (ast)Tcl_GetHashValue(h);
+    }
+    
     xpathRSInit( &nodeList);
     rsAddNodeFast( &nodeList, node);
 
     rc = xpathEvalSteps( t, &nodeList, node, exprContext, 1, &docOrder, cbs,
                          result, errMsg);
-    freeAst(t);
+    if (!cache) {
+        freeAst(t);
+    }
     xpathRSFree( &nodeList );
     CHECK_RC;
 
