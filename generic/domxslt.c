@@ -1374,7 +1374,6 @@ static int buildKeyInfoForDoc (
 }
 
 
-/*  #define GETNUMBERNODE(x) (x)->nodeType == ATTRIBUTE_NODE ? ((domAttrNode * (x))->parentNode : (x) */
 /*----------------------------------------------------------------------------
 |   sortNodeSetByNodeNumber
 |
@@ -1384,15 +1383,30 @@ static void sortNodeSetByNodeNumber(
     int      n
 )
 {
-    domNode *tmp;
+    domNode *tmp, *nrnodea, *nrnodeb;
     int i, j, ln, rn;
 
-    /* TODO: ATTRIBUTE_NODE? */
     while (n > 1) {
         tmp = nodes[0]; nodes[0] = nodes[n/2]; nodes[n/2] = tmp;
         for (i = 0, j = n; ; ) {
-            do --j; while (nodes[j]->nodeNumber > nodes[0]->nodeNumber);
-            do ++i; while (i < j && nodes[0]->nodeNumber > nodes[i]->nodeNumber);
+            do {
+                --j;
+                nrnodea = (nodes[j]->nodeType == ATTRIBUTE_NODE ? 
+                           ((domAttrNode *) nodes[j])->parentNode :
+                           nodes[j]);
+                nrnodeb = (nodes[0]->nodeType == ATTRIBUTE_NODE ? 
+                           ((domAttrNode *) nodes[0])->parentNode :
+                           nodes[0]);
+            } while (nrnodea->nodeNumber > nrnodeb->nodeNumber);
+            do {
+                ++i;
+                nrnodea = (nodes[0]->nodeType == ATTRIBUTE_NODE ?
+                           ((domAttrNode *) nodes[0])->parentNode :
+                           nodes[0]);
+                nrnodeb = (nodes[i]->nodeType == ATTRIBUTE_NODE ?
+                           ((domAttrNode *) nodes[i])->parentNode :
+                           nodes[i]);
+            } while (i < j && nrnodea->nodeNumber > nrnodeb->nodeNumber);
             if (i >= j)  break;
             tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp;
         }
