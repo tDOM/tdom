@@ -3365,8 +3365,9 @@ static int xsltNumber (
     int               rc, vs[20], NaN, hnew, i, useFormatToken, vVals = 0;
     int              *v, *vd = NULL;
     long              groupingSize = 0;
-    char             *value, *level, *count, *from, *str, *format;
-    char             *groupingSeparator, *groupingSizeStr;
+    char             *value, *level, *count, *from, *str, *str1, *format;
+    char             *groupingSeparator = NULL, *groupingSizeStr = NULL;
+    char             *tail;
     ast               t_count, t_from;
     domNode          *node, *start;
     Tcl_HashEntry    *h;
@@ -3385,27 +3386,33 @@ static int xsltNumber (
         FREE(format);
         return -1;
     }
-    groupingSeparator = getAttr(actionNode, "grouping-separator",
-                                a_groupingSeparator);
-    if (groupingSeparator) {
-        groupingSizeStr = getAttr(actionNode, "grouping-size", a_groupingSize);
-        if (groupingSizeStr) {
-            groupingSize = strtol (groupingSizeStr, (char **)NULL, 10);
+    str = getAttr(actionNode, "grouping-separator", a_groupingSeparator);
+    if (str) {
+        str1 = getAttr (actionNode, "grouping-size", a_groupingSize);
+        if (str1) {
+            rc = evalAttrTemplates (xs, context, currentNode, currentPos, str,
+                                    &groupingSeparator, errMsg);
+            if (rc < 0) goto xsltNumberError;
+            rc = evalAttrTemplates (xs, context, currentNode, currentPos, str1,
+                                    &groupingSizeStr, errMsg);
+            if (rc < 0) goto xsltNumberError;
+            groupingSize = strtol (groupingSizeStr, &tail, 10);
             if (groupingSize <= 0) {
-                reportError (actionNode, "xsl:number: do not understand the value of attribute \"grouping-size\"", errMsg);
-                return -1;
+                /* This covers both cases: non integer value after evaluation
+                   and wrong (<= 0) integer value. */
+                reportError (actionNode, 
+                             "The value of \"grouping-size\" must evalute to a positiv integer.",
+                             errMsg);
             }
-        } else {
-            groupingSeparator = NULL;
         }
     }
-
+    
     if (value) {
         TRACE2("xsltNumber value='%s' format='%s' \n", value, format);
         xs->current = currentNode;
         rc = evalXPath(xs, context, currentNode, currentPos,
                        value, &rs, errMsg);
-        CHECK_RC;
+        if (rc < 0) goto xsltNumberError;
         vVals = 1;
         v[0] = xpathRound(xpathFuncNumber( &rs, &NaN ));
         if (NaN) v[0] = 0;
@@ -3422,7 +3429,7 @@ static int xsltNumber (
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (count, errMsg, &t_count, 1);
-                CHECK_RC;
+                if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_count);
             }
         } else {
@@ -3454,7 +3461,10 @@ static int xsltNumber (
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (Tcl_DStringValue (&dStr), errMsg, &t_count, 1);
-                CHECK_RC;
+                if (rc < 0) {
+                    Tcl_DStringFree (&dStr);
+                    goto xsltNumberError;
+                }
                 Tcl_SetHashValue (h, t_count);
             }
             Tcl_DStringFree (&dStr);
@@ -3465,7 +3475,7 @@ static int xsltNumber (
                 t_from = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (from, errMsg, &t_from, 1);
-                CHECK_RC;
+                if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_from);
             }
         }
@@ -3476,7 +3486,7 @@ static int xsltNumber (
             if (from) {
                 while (node) {
                     rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
-                    CHECK_RC;
+                    if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                     if (node->nodeType == ATTRIBUTE_NODE) 
                         node = ((domAttrNode *)node)->parentNode;
@@ -3486,7 +3496,7 @@ static int xsltNumber (
             node = currentNode;
             while (node != start) {
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
-                CHECK_RC;
+                if (rc < 0) goto xsltNumberError;
                 if (rc) break;
                 if (node->nodeType == ATTRIBUTE_NODE) 
                     node = ((domAttrNode *)node)->parentNode;
@@ -3502,7 +3512,7 @@ static int xsltNumber (
                 node = node->previousSibling;
                 while (node) {
                     rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
-                    CHECK_RC;
+                    if (rc < 0) goto xsltNumberError;
                     if (rc) v[0]++;
                     node = node->previousSibling;
                 }
@@ -3514,11 +3524,11 @@ static int xsltNumber (
             while (node) {
                 if (from) {
                     rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
-                    CHECK_RC;
+                    if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                 }
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
-                CHECK_RC;
+                if (rc < 0) goto xsltNumberError;
                 if (rc) rsAddNode (&rs, node);
                 if (node->nodeType == ATTRIBUTE_NODE) 
                     node = ((domAttrNode *)node)->parentNode;
@@ -3535,7 +3545,7 @@ static int xsltNumber (
                 v[i] = 1;
                 while (node) {
                     rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
-                    CHECK_RC;
+                    if (rc < 0) goto xsltNumberError;
                     if (rc) v[i]++;
                     node = node->previousSibling;
                 }
@@ -3549,11 +3559,11 @@ static int xsltNumber (
             while (node) {
                 if (from) {
                     rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
-                    CHECK_RC;
+                    if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                 }
                 rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
-                CHECK_RC;
+                if (rc < 0) goto xsltNumberError;
                 if (rc) v[0]++;
 
                 if (node->previousSibling) {
@@ -3597,6 +3607,12 @@ static int xsltNumber (
     }
     Tcl_DStringFree (&dStr);
     return 0;
+
+ xsltNumberError:
+    if (format) FREE (format);
+    if (groupingSeparator) FREE (groupingSeparator);
+    if (groupingSizeStr) FREE (groupingSizeStr);
+    return -1;
 }
 
 
