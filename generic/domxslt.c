@@ -2384,7 +2384,7 @@ static int evalXPath (
     if (!hnew) {
         t = (ast)Tcl_GetHashValue(h);
     } else {
-        rc = xpathParse(xpath, errMsg, &t, 0);
+        rc = xpathParse(xpath, errMsg, &t, XPATH_EXPR);
         if (rc < 0) {
             reportError (xs->currentXSLTNode, *errMsg, errMsg);
             return rc;
@@ -3123,7 +3123,8 @@ static int xsltAddTemplate (
     
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        rc = xpathParse(tpl->match, errMsg, &(tpl->freeAst), 1);
+        rc = xpathParse(tpl->match, errMsg, &(tpl->freeAst), 
+                        XPATH_TEMPMATCH_PATTERN);
         if (rc < 0) {
             reportError (node, *errMsg, errMsg);
         } else {
@@ -3601,7 +3602,8 @@ static int xsltNumber (
             if (!hnew) {
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (count, errMsg, &t_count, 1);
+                rc = xpathParse (count, errMsg, &t_count, 
+                                 XPATH_FORMAT_PATTERN);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_count);
             }
@@ -3636,7 +3638,8 @@ static int xsltNumber (
             if (!hnew) {
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (Tcl_DStringValue (&dStr), errMsg, &t_count, 1);
+                rc = xpathParse (Tcl_DStringValue (&dStr), errMsg, &t_count, 
+                                 XPATH_FORMAT_PATTERN);
                 if (rc < 0) {
                     Tcl_DStringFree (&dStr);
                     goto xsltNumberError;
@@ -3650,7 +3653,7 @@ static int xsltNumber (
             if (!hnew) {
                 t_from = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (from, errMsg, &t_from, 1);
+                rc = xpathParse (from, errMsg, &t_from, XPATH_FORMAT_PATTERN);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_from);
             }
@@ -6372,14 +6375,16 @@ static int processTopLevel (
 
                 keyInfo = (xsltKeyInfo *)MALLOC(sizeof(xsltKeyInfo));
                 keyInfo->node = node;
-                rc = xpathParse (match, errMsg, &(keyInfo->matchAst), 1);
+                rc = xpathParse (match, errMsg, &(keyInfo->matchAst), 
+                                 XPATH_KEY_MATCH_PATTERN);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     free ((char*)keyInfo);
                     return rc;
                 }
                 keyInfo->use       = use;
-                rc = xpathParse (use, errMsg, &(keyInfo->useAst), 0);
+                rc = xpathParse (use, errMsg, &(keyInfo->useAst), 
+                                 XPATH_KEY_USE_EXPR);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     free ((char*)keyInfo);
@@ -7091,9 +7096,11 @@ xsltCompileStylesheet (
         tpl->precedence = 1.0;
         tpl->next       = NULL;
         tpl->sDoc       = sdoc;
-        xpathParse (tpl->match, errMsg, &(tpl->freeAst), 1);
+        rc = xpathParse (tpl->match, errMsg, &(tpl->freeAst), 
+                         XPATH_TEMPMATCH_PATTERN);
         tpl->ast        = tpl->freeAst;
         xs->templates = tpl;
+        if (rc < 0) goto error;
     } else {
         rc = addExclExtNS (sdoc, node, errMsg);
         if (rc < 0) goto error;

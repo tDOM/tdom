@@ -13,6 +13,8 @@
 #    xslt-5.*: xslt document()
 #    xslt-6.*: xsl:output
 #    xslt-7.*: tests related to the created result doc
+#    xslt-8.*: Additional xslt rec compliance tests (details not covered by
+#              by the external xslt compliance test suite).
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -827,7 +829,80 @@ test xslt-7.8 {namespaces in the result doc} {
     set result
 } {my:element my:foo}
 
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+      
+    <xsl:template match="*[current() != 'notthis']">
+          <out/>
+    </xsl:template>
+    </xsl:stylesheet>}
 
+set xml {<dontMatter/>}
+
+test xslt-8.1 {current() not allowed in pattern} {
+    dom parse $xml xmldoc
+    dom parse $xslt xsltdoc
+    catch {$xmldoc xslt $xsltdoc resultDoc} errMsg
+    $xmldoc delete
+    $xsltdoc delete
+    set errMsg
+} {The 'current' function is not allowed in Pattern. for '*[current() != 'notthis']' 
+
+Parsed symbols:
+     0 WCARDNAME        0    0.000     0  *
+     1 LBRACKET         0    0.000     1  
+     2 FUNCTION         0    0.000     8  current
+     3 LPAR             0    0.000     9  
+     4 RPAR             0    0.000    10  
+     5 NOTEQ            0    0.000    13  
+     6 LITERAL          0    0.000    23  notthis
+     7 RBRACKET         0    0.000    24  }
+
+
+# Below is code, which replaces the dom cmd with a version, which parses
+# the xml into a dom tree, then transformations this dom tree with the
+# xslt identity transformation and returns the result tree of that
+# transformation. This is used to test, that the result tree of an xslt
+# transformation could be used as any 'ordinary' tree created with
+# [dom parse]. It is here, because I didn't want to hold them seperated.
+# It is commented out, because some of the tests in the sourced test files
+# need line/column or basURI Information, to work correctly, and this
+# information is not preserved by an xslt identity transformation and
+# I was up to now to lazy, to trick around this few tests with some
+# test constraints.
+# 
+# set identityTransformation [dom parse {<xsl:stylesheet version="1.0"
+#  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+# <xsl:template match="@*|node()">
+#   <xsl:copy>
+#     <xsl:apply-templates select="@*|node()"/>
+#   </xsl:copy>
+# </xsl:template>
+#     </xsl:stylesheet>}]
+
+# rename dom _dom
+
+# proc dom {args} {
+#     global identityTransformation
+
+#     switch [lindex $args 0] {
+#         "parse" {
+#             set resultdoc [uplevel 1 [linsert $args 0 _dom]]
+#             return [$resultdoc xslt $identityTransformation]
+#         }
+#         default {
+#             return [uplevel 1 [linsert $args 0 _dom]]
+#         }
+#     }
+# }            
+
+# source [file join [file dir [info script]] i18n.test]
+# source [file join [file dir [info script]] dom.test]
+
+# rename dom {}
+# rename _dom dom
 
 # cleanup
 ::tcltest::cleanupTests
