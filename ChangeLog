@@ -1,3 +1,8 @@
+2002-11-16  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc
+        * extensions/tnc/makefile.vc: A bit final tweaking for 0.7.5.    
+
 2002-11-16  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/dom.h
