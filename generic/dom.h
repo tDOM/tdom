@@ -157,39 +157,60 @@ We need 8 bits to index into pages, 3 bits to add to that index and
   ((n) == 1 \
   ? nameChar7Bit[(int)(*(p))] \
   : ((n) == 2 \
-    ? UTF8_GET_NAMING2(nmstrtPages, (const unsigned char *)(p)) \
+    ? UTF8_GET_NAMING2(namePages, (const unsigned char *)(p)) \
     : ((n) == 3 \
-      ? UTF8_GET_NAMING3(nmstrtPages, (const unsigned char *)(p)) \
+      ? UTF8_GET_NAMING3(namePages, (const unsigned char *)(p)) \
       : 0)))
 
 #define UTF8_GET_NAMING_NCNMTOKEN(p, n) \
   ((n) == 1 \
   ? NCnameChar7Bit[(int)(*(p))] \
   : ((n) == 2 \
+    ? UTF8_GET_NAMING2(namePages, (const unsigned char *)(p)) \
+    : ((n) == 3 \
+      ? UTF8_GET_NAMING3(namePages, (const unsigned char *)(p)) \
+      : 0)))
+
+#define UTF8_GET_NAME_START(p, n) \
+  ((n) == 1 \
+  ? nameStart7Bit[(int)(*(p))] \
+  : ((n) == 2 \
     ? UTF8_GET_NAMING2(nmstrtPages, (const unsigned char *)(p)) \
     : ((n) == 3 \
       ? UTF8_GET_NAMING3(nmstrtPages, (const unsigned char *)(p)) \
       : 0)))
 
-
-#define UTF8_GET_NAMING_NAME(p, n) \
-  ((n) == 1 \
-  ? nameStart7Bit[(int)(*(p))] \
-  : ((n) == 2 \
-    ? UTF8_GET_NAMING2(namePages, (const unsigned char *)(p)) \
-    : ((n) == 3 \
-      ? UTF8_GET_NAMING3(namePages, (const unsigned char *)(p)) \
-      : 0)))
-
-#define UTF8_GET_NAMING_NCNAME(p, n) \
+#define UTF8_GET_NCNAME_START(p, n) \
   ((n) == 1 \
   ? NCnameStart7Bit[(int)(*(p))] \
   : ((n) == 2 \
-    ? UTF8_GET_NAMING2(namePages, (const unsigned char *)(p)) \
+    ? UTF8_GET_NAMING2(nmstrtPages, (const unsigned char *)(p)) \
     : ((n) == 3 \
-      ? UTF8_GET_NAMING3(namePages, (const unsigned char *)(p)) \
+      ? UTF8_GET_NAMING3(nmstrtPages, (const unsigned char *)(p)) \
       : 0)))
 
+#if TclOnly8Bits 
+#  define UTF8_XMLCHAR(p,n) \
+ (*(p) < 0x80 ? CharBit[(int)(*(p))] : 1)
+#else  
+#  define UTF8_XMLCHAR3(p) \
+  (*(p) == 0xED  \
+   ? ((p)[1] < 0xA0 ? 1 : 0) \
+   : (*(p) == 0xEF \
+      ? ((p)[1] == 0xBF \
+         ? ((p)[2] == 0xBE || (p)[2] == 0xBF ? 0 : 1) \
+         : 1) \
+      : 1)) \
+    
+#  define UTF8_XMLCHAR(p, n) \
+  ((n) == 1 \
+  ? CharBit[(int)(*(p))] \
+  : ((n) == 2 \
+    ? 1 \
+    : ((n) == 3 \
+      ? (UTF8_XMLCHAR3(p)) \
+      : 0)))
+#endif
 
 #include "../expat/nametab.h"
 
@@ -271,6 +292,25 @@ static const unsigned char NCnameStart7Bit[] = {
 /* 0x78 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+static const unsigned char CharBit[] = {
+/* 0x00 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+/* 0x08 */    0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00,
+/* 0x10 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+/* 0x18 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+/* 0x20 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x28 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x30 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x38 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x40 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x48 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x50 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x58 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x60 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x68 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x70 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* 0x78 */    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+};
+
 
 #if TclOnly8Bits == 1
 #  define isNameStart(x) (isalpha(*x) || ((*x)=='_') || ((*x)==':'))
@@ -282,13 +322,13 @@ static int isNameStart(char *c)
 {
     int clen;
     clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NAMING_NAME(c, clen));
+    return (UTF8_GET_NAME_START(c, clen));
 }
 static int isNCNameStart(char *c)
 {
     int clen;
     clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NAMING_NCNAME(c, clen));
+    return (UTF8_GET_NCNAME_START(c, clen));
 }
 static int isNameChar(char *c)
 {
@@ -673,6 +713,7 @@ char *         findBaseURI (domNode *node);
 void           tcldom_tolower (char *str, char *str_out, int  len);
 int            domIsNAME (char *name);
 int            domIsNCNAME (char *name);
+int            domIsChar (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 
