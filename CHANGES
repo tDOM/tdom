@@ -1,3 +1,9 @@
+2003-03-19  Rolf Ade  <rolf@pointsman.de>
+
+        Added option -useForeignDTD to dom parse and expat. Added
+        domNode method 'startBefore', to compare the relative order of
+        two nodes out of the same document.
+
 2003-02-22  Rolf Ade  <rolf@pointsman.de>
 
         Added posteriori (DOM) validation capabilities. See the tnc
@@ -22,7 +28,7 @@
         as saxon (which I regard as the currently most 'rule-setting'
         xslt processor) does it. In theory (from an XML viewpoint)
         this should not make a difference, but if somebody postprocess
-        some tDOM output with other toots, there is a small risk, that
+        some tDOM output with other tools, there is a small risk, that
         things (slightly) breaks, therefor:
         *** POTENTIAL INCOMPATIBILITY ***
 

@@ -1,3 +1,58 @@
+2003-03-19  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c    
+        * generic/domxslt.c    
+        * generic/dom.h    
+        * generic/dom.c: Replaced a few exit() code with Tcl_Panic(),
+          which ensures, that even windows users get a usefull error
+          msg.
+
+        * generic/dom.c: Fixed a mem leak in handling external
+          entities.
+
+        * doc/expat.*
+        * doc/dom.*
+        * tests/domCmd.test
+        * tests/data/domCmd1.dtd
+        * tests/data/domCmd2.dtd
+        * tests/entity.test
+        * lib/tdom.tcl  
+        * tests/domCmd.test
+        * generic/tclexpat.c  
+        * generic/tcldom.c  
+        * generic/domxslt.c
+        * generic/dom.h
+        * generic/dom.c: Added option -useForeignDTD to dom parse 
+          and expat.
+
+        * generic/domxslt.c: Fixed several potential memory leaks
+          while processing erroneous stylesheets. Bug fix: added
+          missing memory clean to grouping-separator/grouping-size
+          support.
+
+        * generic/tcldom.c: Fixed potential memory problem while
+          processing erroneous stylesheet. Improved error msg in
+          case of script errors in the -externalentitycommand
+          script.
+
+        * doc/domNode.*
+        * tests/dom.test
+        * generic/tcldom.c: Added method 'startBefore', to compare the
+          relative order of two nodes out of the same document.
+  
+        * generic/nodecmd.c: Added explicit memory clean up of the
+          nodecmd stack, to reduce 'noice' while memory leak
+          debugging.
+
+        * tests/dom.test: Added a reminder for a minor known memory
+          problem.  
+
+        * tests/data/mondial-europe.xml: Added this file (used by the
+          usage example of xe).
+          
+        * xe/xe-input: Changed pathes to point to the location of
+          mondial-europe.xml.
+  
 2003-03-19  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* Makefile.in: installs the tdomConfig.sh into the
