@@ -143,9 +143,7 @@ cdebug = -Z7 -Od
 !ENDIF
 
 # declarations common to all compiler options
-cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DUSE_TCL_STUBS -DVERSION="\"1.95.1\""
-#cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DUSE_TCL_STUBS -DCOMPILED_FROM_DSP -DVERSION="\"1.95.1\""
-#cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DCOMPILED_FROM_DSP -DVERSION="\"1.95.1\""
+cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DTDOM_NO_UNKNOWN_CMD -DUSE_TCL_STUBS -DVERSION="\"1.95.1\""
 cvarsdll = -MD$(DBGX)
 
 TCL_CFLAGS     = $(cdebug) $(cflags) $(cvarsdll) $(include32) \
