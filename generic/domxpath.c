@@ -915,18 +915,13 @@ static XPathTokens xpathLexer (
                                    ADD_TOKEN (token);
                                    ps = &(xpath[++i]);
                                    if (!(isNCNameStart (&xpath[i]))) {
-                                       *errMsg = tdomstrdup ("Illegal node name");
+                                       *errMsg = tdomstrdup ("Illegal character in localname");
                                        return tokens;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
                                    while (xpath[i] && isNCNameChar (&xpath[i]))
                                        i += UTF8_CHAR_LEN (xpath[i]);
-                                   save = xpath[i];
-                                   xpath[i] = '\0';
-                                   token = WCARDNAME;
-                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
-                                   xpath[i--] = save;
-                                   break;
+                                   k = i;
                                }
                            }
                            /* read over white space */
@@ -935,6 +930,16 @@ static XPathTokens xpathLexer (
                                   (xpath[k] == '\r') ||
                                   (xpath[k] == '\t')   )  k++;
 
+                           if (l>0 && tokens[l-1].token == NSPREFIX) {
+                               if (xpath[k]!='(') token = WCARDNAME;
+                               else               token = FUNCTION;
+                               save = xpath[i];
+                               xpath[i] = '\0';
+                               tokens[l].strvalue = (char*)tdomstrdup(ps);
+                               xpath[i--] = save;
+                               break;
+                           }
+                               
                            if (xpath[k]=='(') {
                                save = xpath[i];
                                xpath[i] = '\0'; /* terminate */
