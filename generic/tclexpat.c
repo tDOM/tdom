@@ -3731,7 +3731,7 @@ TclGenExpatXmlDeclHandler (userData, version, encoding, standalone)
  *
  * TclExpatDeleteCmd --
  *
- *	Called when a expat parser is deleted.
+ *	Called when an expat parser is deleted.
  *
  * Results:
  *	None.
