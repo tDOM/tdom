@@ -3812,6 +3812,7 @@ static int xpathEvalStep (
             }
             if (leftResult.type == EmptyResult) {
                 rsSetInt (result, 0);
+                return XPATH_OK;
             } 
             if (leftResult.type != xNodeSetResult) {
                 *errMsg = (char*)strdup("count() requires a node set!");
@@ -3822,7 +3823,7 @@ static int xpathEvalStep (
             return XPATH_OK;
         } else 
 
-        if (IS_FUNC('u',"unparsed-entry-uri")) {
+        if (IS_FUNC('u',"unparsed-entity-uri")) {
             XPATH_ARITYCHECK(step,1,errMsg);
             xpathRSInit (&leftResult);
             rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
