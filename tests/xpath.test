@@ -27,6 +27,67 @@ test xpath-1.1 {function normalize-space} {
     string length $r
 } {1}
 
+set doc [dom createDocument foo]
+set root [$doc documentElement]
+
+test xpath-1.2 {starts-with, according errata to section 4.2} {
+    $root selectNodes {starts-with('someString','')}
+} {1}
+
+test xpath-1.3 {starts-with, according errata to section 4.2} {
+    $root selectNodes {starts-with('','')}
+} {1}
+
+test xpath-1.4 {contains, according errata to section 4.2} {
+    $root selectNodes {contains('someString','')}
+} {1}
+
+test xpath-1.5 {contains, according errata to section 4.2} {
+    $root selectNodes {contains('','')}
+} {1}
+
+test xpath-1.6 {substring-before, according errata to section 4.2} {
+    $root selectNodes {substring-before('someString','')}
+} {}
+
+test xpath-1.7 {substring-before, according errata to section 4.2} {
+    $root selectNodes {substring-before('','')}
+} {}
+
+test xpath-1.8 {substring-after, according errata to section 4.2} {
+    $root selectNodes {substring-after('someString','')}
+} {someString}
+
+test xpath-1.9 {substring-after, according errata to section 4.2} {
+    $root selectNodes {substring-after('','')}
+} {}
+
+test xpath-1.10 {floor, according errata to section 4.4} {
+    $root selectNodes {floor('notANumber')}
+} {NaN}
+
+test xpath-1.11 {floor, according errata to section 4.4} {
+    $root selectNodes {floor('+3.2')}
+} {NaN}
+
+test xpath-1.12 {floor, according errata to section 4.4} {
+    $root selectNodes {floor('3.2e2')}
+} {NaN}
+
+test xpath-1.13 {ceiling, according errata to section 4.4} {
+    $root selectNodes {ceiling('notANumber')}
+} {NaN}
+
+test xpath-1.14 {ceiling, according errata to section 4.4} {
+    $root selectNodes {ceiling('+3.2')}
+} {NaN}
+
+test xpath-1.15 {ceiling, according errata to section 4.4} {
+    $root selectNodes {ceiling('3.2e2')}
+} {NaN}
+
+$doc delete
+
 test xpath-2.1 {non ASCII chars in element names} {
      set doc [dom parse "<\u00e4\u00f6\u00fc\u00df/>"]
      set root [$doc documentElement]
