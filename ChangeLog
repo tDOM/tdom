@@ -1,6 +1,6 @@
 2003-10-26  Rolf Ade  <rolf@pointsman.de>
         
-        * apps/xslt.tcl: Removed not needed code.    
+        * apps/xslt.tcl: Removed not needed code.
 
         * generic/dom.c
         * tests/dom.test: Bug fix: Under some circumstances it was
