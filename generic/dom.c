@@ -36,6 +36,11 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/03/01 01:30:20  rolf
+|   No real code changes. Only to log additional change in 1.3:
+|   Fixed namespace overflow throu repeated (identical in prefix and uri)
+|   namespace declarations.
+|
 |   Revision 1.3  2002/03/01 01:18:22  rolf
 |   Changed parsing. [dom parse ..] now uses Tcl_GetStringFromObj(),
 |   dom parse -channel now respects the encoding of the channel.
