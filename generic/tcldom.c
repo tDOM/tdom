@@ -3529,16 +3529,16 @@ int tcldom_NodeObjCmd (
                 SetResult ( errMsg );
                 return TCL_ERROR;
             }
-            if (node->parentNode && (node->parentNode == child->parentNode)) {
-                SetResult ( "child already appended!");
-                return TCL_ERROR;
-            }
 
             nodeName = Tcl_GetStringFromObj (objv[3], NULL);
-            refChild = tcldom_getNodeFromName (interp, nodeName, &errMsg);
-            if (refChild == NULL) {
-                SetResult ( errMsg );
-                return TCL_ERROR;
+            if (nodeName[0] == '\0') {
+                refChild = NULL;
+            } else {
+                refChild = tcldom_getNodeFromName (interp, nodeName, &errMsg);
+                if (refChild == NULL) {
+                    SetResult ( errMsg );
+                    return TCL_ERROR;
+                }
             }
             exception = domInsertBefore (node, child, refChild);
             if (exception != OK) {
