@@ -10,7 +10,7 @@
 #    xslt-2.*: xslt method command variants, -parameters option
 #    xslt-3.*: xslt vars, scope, parameters
 #    xslt-4.*: xslt transformations on modified/created from the scratch docs
-#    xslt-5.*: xslt document()
+#    xslt-5.*: External documents: document(), xsl:import, xsl:include
 #    xslt-6.*: xsl:output
 #    xslt-7.*: tests related to the created result doc
 #    xslt-8.*: Additional xslt rec compliance tests (details not covered by
@@ -712,6 +712,26 @@ test xslt-5.4 {xslt document() with script error in -externalentitycommand} {
 } {1 {Error while processing external entity "secondlevel":
 At line 1 character 15: not well-formed (invalid token)}}
 
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+      <xsl:import href=""/>
+
+      <xsl:template match="/">
+        <out>foo</out>
+      </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-5.5 {xsl:import href == ""} {
+    dom parse <dontMatter/> xmldoc
+    dom parse -externalentitycommand xslt-5.4 $xslt xsltdoc
+    set result [catch {$xmldoc xslt $xsltdoc resultDoc} errMsg]
+    $xmldoc delete
+    $xsltdoc delete
+    lappend result $errMsg
+} {1 {Recursive import/include: stylesheet tries to access itself.}}
 
 set xslt {
     <xsl:stylesheet

@@ -5,6 +5,7 @@
 # for errors.  No output means no errors were found.
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
+# Copyright (c) 2002-2005 Rolf Ade
 #
 # $Id$
 
@@ -122,6 +123,51 @@ test element-2.3 {declare handler proc later} {
     $p free
     list $::eshcounter $::eehcounter
 } {3 3}
+
+proc esh-3.1-1 {args} {
+    $::p configure -elementstartcommand esh-3.1-2
+    incr ::esh-3.1-1
+    incr ::eshcounter
+}
+
+proc esh-3.1-2 {args} {
+    $::p configure -elementstartcommand esh-3.1-1
+    incr ::esh-3.1-2
+    incr ::eshcounter
+}
+
+test element-3.1 {change handler from handler callback} {
+    set ::esh-3.1-1 0
+    set ::esh-3.1-2 0
+    set ::eshcounter 0
+    set p [expat -elementstartcommand esh-3.1-1]
+    $p parse {<root><a/><b><c/><c/></b><d/>foo bar</root>}
+    $p free
+    list ${::esh-3.1-1} ${::esh-3.1-2} $::eshcounter
+} {3 3 6}
+
+proc esh-3.2-1 {p args} {
+    $p configure -elementstartcommand [list esh-3.2-2 $p]
+    incr ::esh-3.2-1
+    incr ::eshcounter
+}
+
+proc esh-3.2-2 {p args} {
+    $p configure -elementstartcommand [list esh-3.2-1 $p]
+    incr ::esh-3.2-2
+    incr ::eshcounter
+}
+
+test element-3.2 {change handler from handler callback} {
+    set ::esh-3.2-1 0
+    set ::esh-3.2-2 0
+    set ::eshcounter 0
+    set p [expat]
+    $p configure -elementstartcommand [list esh-3.2-1 $p]
+    $p parse {<root><a/><b><c/><c/><c/></b><d/>foo bar</root>}
+    $p free
+    list ${::esh-3.2-1} ${::esh-3.2-2} $::eshcounter
+} {4 3 7}
 
 foreach parser [info commands element-*] {
     $parser free
