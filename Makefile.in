@@ -293,11 +293,11 @@ install-doc: doc
 
 test: binaries libraries
 	@for i in $(RUNTIME_SOURCES); do \
-	  cp $(srcdir)/lib/$$i $(top_builddir)/ \
+	  cp $(srcdir)/lib/$$i $(top_builddir)/; \
 	done
 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
 	@for i in $(RUNTIME_SOURCES); do \
-	  rm -rf $(top_builddir)/$$ii \
+	  rm -rf $(top_builddir)/$$i; \
 	done
 
 shell: binaries libraries
