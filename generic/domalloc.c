@@ -162,9 +162,10 @@ fillHashTable (
         block->hashIndex2 = i;
         block->hashNext2  = bins.hashedBlocks[i];
     } else {
-        fprintf(stderr, "\ntoo many hash entries for %x %x->%d %d,%d!\n",
-                        (unsigned int)block,
-                        (unsigned int)mem, i, block->hashIndex1, block->hashIndex2);
+        DBG(
+            fprintf(stderr, "\ntoo many hash entries for %x %x->%d %d,%d!\n",
+                    (unsigned int)block,
+                    (unsigned int)mem, i, block->hashIndex1, block->hashIndex2);)
     }
     bins.hashedBlocks[i] = block;
 }
@@ -190,7 +191,7 @@ domAlloc (
     DBG(fprintf(stderr, "\ndomAlloc %d \n", size);)
 
     if (size >= MAX_BINS) {
-        fprintf(stderr, "\nSize too large as used for bin!\n");
+        DBG(fprintf(stderr, "\nSize too large as used for bin!\n");)
         return NULL;
     }
 
@@ -311,7 +312,7 @@ domAlloc (
                         hashedBlock = block->bin->freeBlocks;
                         while (hashedBlock) {
                             if (hashedBlock == block) {
-                                fprintf(stderr, "strange block still in free list \n");
+                                DBG(fprintf(stderr, "strange block still in free list \n");)
                             }
                             hashedBlock = hashedBlock->next;
                         }
@@ -339,7 +340,7 @@ domAlloc (
 
     /* TDomThreaded(Tcl_MutexUnlock(&binMutex);) */
 
-    fprintf(stderr, "\ndomAlloc: can't happen! \n");
+    DBG(fprintf(stderr, "\ndomAlloc: can't happen! \n");)
     *((char*)0) = 0; /* Use Tcl_Panic() for this ? */
     return NULL;
 }
@@ -405,7 +406,7 @@ domFree (
     }
 
     if (block == NULL) {
-        fprintf(stderr, "\n unable to free mem %x !\n", (unsigned int)mem);
+        DBG(fprintf(stderr, "\n unable to free mem %x !\n", (unsigned int)mem);)
         TDomThreaded(Tcl_MutexUnlock(&binMutex);)
         return;
     }

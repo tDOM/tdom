@@ -2808,8 +2808,8 @@ static int xsltGetVar (
                in the list, shouldn't it? */
             varInProcess = xs->varsInProcess;
             if (varInProcess != &thisVarInProcess) {
-                fprintf (stderr, "error in top level vars processing\n");
-                exit(1);
+                DBG(fprintf (stderr, "error in top level vars processing\n");)
+                exit(1); /* FIXME */
             }
             xs->varsInProcess = varInProcess->next;
             xs->currentXSLTNode = savedCurrentXSLTNode;
@@ -4504,7 +4504,7 @@ static int ExecAction (
             CHECK_RC;
 
             str2 = xpathGetTextValue(fragmentNode, &len);
-            fprintf (stderr, "xsl:message %s\n", str2);
+            DBG(fprintf (stderr, "xsl:message %s\n", str2);)
             FREE(str2);
             xs->lastNode = savedLastNode;
             domDeleteNode (fragmentNode, NULL, NULL);
@@ -5478,8 +5478,8 @@ getExternalDocument (
                            chan, extbase, xsltDoc->extResolver, interp);
 
     if (doc == NULL) {
-        fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
-                 strlen (xmlstring), xmlstring);
+        DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
+                     strlen (xmlstring), xmlstring);)
         Tcl_DStringInit (&dStr);
         Tcl_DStringAppend (&dStr, "Error while accessing \"", -1);
         Tcl_DStringAppend (&dStr, href, -1);
