@@ -28,108 +28,6 @@
 |   Contributor(s):
 |
 |
-|   $Log$
-|   Revision 1.15  2002/07/28 08:43:48  zoran
-|   Fixed reference to old expat directory
-|
-|   Revision 1.14  2002/07/28 08:27:50  zoran
-|   Moved to new memory allocation macros.
-|
-|   Revision 1.13  2002/07/02 19:25:07  zoran
-|   Fixed references to CONS'ified Tcl API (8.4 and later)
-|   Also, fixed (disappeared) NODE_NO references which broke the
-|   threaded build (mainly in the dom.c)
-|
-|   Revision 1.12  2002/06/21 10:38:24  zoran
-|   Fixed node numbering to use document-private node-counter when compiled
-|   with -DTCL_THREADS. Node Tcl-command names are still defined in the
-|   usual fashion, by using the (unsigned int)(domNode*) in order to get
-|   unique command names within the process and accross thread/interp combi.
-|
-|   Revision 1.11  2002/06/02 06:36:23  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
-|
-|   Revision 1.10  2002/05/10 02:30:30  rolf
-|   A few things at one: Made attribute set names namespace aware. If a
-|   literal result node has no namespace, and at the insertion point of
-|   the result tree is a default namespace in scope, unset the default
-|   namespace, while adding the node.  Enhanced domSetDocument, that it
-|   not only set the ownerDocument right, but also resets the namespace
-|   indexes.
-|
-|   Revision 1.9  2002/04/28 22:27:11  rolf
-|   Improved xsl:elements: non QNAME name as element name is detected
-|   now. Bug Fix in domSetAttributeNS(). Small improvement of domCopyTo():
-|   don't copy namespace attribute if it isn't necessary. Bug fix for
-|   xsl:copy.
-|
-|   Revision 1.8  2002/04/26 01:14:44  rolf
-|   Improved namespace support. New domCopyTo() for XSLT. Little
-|   improvement of xpathGetPrio().
-|
-|   Revision 1.7  2002/04/22 00:54:15  rolf
-|   Improved handling of literal result elements: now namespaces in scope
-|   are also copied to the result tree, if needed. exclude-result-prefixes
-|   and extension-element-prefixes of xsl:stylesheet elements are
-|   respected. (Still to do: xsl:extension-element-prefixes and
-|   xsl:exclude-result-prefixes attributes of literal elements.)
-|
-|   Revision 1.6  2002/04/19 18:55:37  rolf
-|   Changed / enhanced namespace handling and namespace information
-|   storage. The namespace field of the domNode and domAttributeNode
-|   structurs is still set. But other than up to now, namespace attributes
-|   are now stored in the DOM tree as other, 'normal' attributes also,
-|   only with the nodeFlag set to "IS_NS_NODE". It is taken care, that
-|   every 'namespace attribute' is stored befor any 'normal' attribute
-|   node, in the list of the attributes of an element. The still saved
-|   namespace index in the namespace field is used for fast access to the
-|   namespace information. To speed up the look up of the namespace info,
-|   an element or attributes contains to, the namespace index is now the
-|   index number (plus offset 1) of the corresponding namespace info in
-|   the domDoc->namespaces array. All xpath expressions with the exception
-|   of the namespace axes (still not implemented) have to ignore this
-|   'namespace attributes'. With this enhanced storage of namespace
-|   declarations, it is now possible, to find all "namespaces in scope" of
-|   an element by going up the ancestor-or-self axis and inspecting all
-|   namespace declarations. (That may be a bit expensive, for documents
-|   with lot of namespace declarations all over the place or deep
-|   documents. Something like
-|   http://linux.rice.edu/~rahul/hbaker/ShallowBinding.html (thanks to Joe
-|   English for that url) describes, may be an idea, if this new mechanism
-|   should not scale good enough.)
-|
-|   Changes at script level: special attributes used for declaring XML
-|   namespaces are now exposed and can be manipulated just like any other
-|   attribute. (That is now according to the DOM2 rec.) It isn't
-|   guaranteed (as it was), that the necessary namespace declarations are
-|   created during serializing. (That's also DOM2 compliant, if I read it
-|   right, even if this seems to be a bit a messy idea.) Because the old
-|   behavior have some advantages, from the viepoint of a programmer, it
-|   eventually should restored (as default or as 'asXML' option?).
-|
-|   Revision 1.5  2002/03/21 01:47:22  rolf
-|   Collected the various nodeSet Result types into "nodeSetResult" (there
-|   still exists a seperate emptyResult type). Reworked
-|   xpathEvalStep. Fixed memory leak in xpathMatches, added
-|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
-|   already in the nodeSet.
-|
-|   Revision 1.4  2002/03/10 01:14:57  rolf
-|   Introduced distinction between XML Name and XML NC Name.
-|
-|   Revision 1.3  2002/03/07 22:09:46  rolf
-|   Added infrastructur to be able to do NCNAME tests.
-|   Freeze of actual state, befor feeding stuff to Jochen.
-|
-|   Revision 1.2  2002/02/24 02:31:27  rolf
-|   Fixed UTF-8 char byte length determination
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|
 |   written by Jochen Loewer
 |   April 5, 1999
 |
@@ -776,6 +674,7 @@ void           tcldom_tolower (char *str, char *str_out, int  len);
 int            domIsNAME (char *name);
 int            domIsNCNAME (char *name);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
+domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 
 #ifdef TCL_THREADS
 void           domLocksLock(domlock *dl, int how);
