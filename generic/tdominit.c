@@ -27,40 +27,6 @@
 |   Contributor(s):
 |
 |
-|   $Log$
-|   Revision 1.9  2002/07/14 07:07:56  zoran
-|   Was including WRONG stub file (should test more before commit!)
-|
-|   Revision 1.8  2002/07/14 07:00:35  zoran
-|   Added small comment describing what aolstub.cpp does.
-|
-|   Revision 1.7  2002/07/02 19:25:08  zoran
-|   Fixed references to CONS'ified Tcl API (8.4 and later)
-|   Also, fixed (disappeared) NODE_NO references which broke the
-|   threaded build (mainly in the dom.c)
-|
-|   Revision 1.6  2002/06/20 13:14:01  loewerj
-|   fixed compile warnings
-|
-|   Revision 1.5  2002/06/02 06:36:24  zoran
-|   Added thread safety with capability of sharing DOM trees between
-|   threads and ability to read/write-lock DOM documents
-|
-|   Revision 1.4  2002/05/16 13:16:00  rolf
-|   There's something wrong, with the header files (well, at least VC++6.0
-|   thinks so). Seems, it works in this include order.
-|
-|   Revision 1.3  2002/05/16 12:03:30  rolf
-|   Corrected tdom stubs table export.
-|
-|   Revision 1.2  2002/02/23 01:13:33  rolf
-|   Some code tweaking for a mostly warning free MS build
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|
 |   written by Jochen Loewer
 |   April, 1999
 |
