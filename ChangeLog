@@ -1,3 +1,18 @@
+2003-09-14  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* Makefile.in
+	* configure
+	* configure.in: made more TEA-2 compatible by moving the
+	  tcldomsh target out. Also, honour the MATH_LIBS as
+	  calculated by the tcl.m4 instead of plumbing our own.
+	  Also, fixed "make dist" to produce distribution file.
+
+	* tclconfig/ChangeLog
+	* tclconfig/tcl.m4: imported fresh new versions from SF
+
+	* unix/CONFIG: cleanup
+	* macosx/README: cleanup
+
 2003-09-14  Rolf Ade  <rolf@pointsman.de>
 
         Merged fixes of 0.7.8 back to HEAD. This includes:
