@@ -80,25 +80,22 @@ proc dom {args} {
         "setStoreLineColumn" {
             tdom $::_main_parser setStoreLineColumn [lindex $args 1]
         }
-        "createNodeCmd" {
+        default {
             # Because the original command may be executed within a
             # namespace eval, we do an uplevel, to get the same context
-            uplevel 1 eval [linsert $args 0 _dom]
-        }
-        default {
-            return [uplevel 1 eval [linsert $args 0 _dom]]
+            return [uplevel 1 [linsert $args 0 _dom]]
         }
     }
 }
 
 source [file join [file dir [info script]] i18n.test]
-source [file join [file dir [info script]] dom.test]
+source [file join [file dir [info script]] domNode.test]
 source [file join [file dir [info script]] xslt.test]
 
 # Un-comment this, to test tdom cmd together with expat parsing in chunks
 # set parse_in_chunks 1
 # source [file join [file dir [info script]] i18n.test]
-# source [file join [file dir [info script]] dom.test]
+# source [file join [file dir [info script]] domNode.test]
 # source [file join [file dir [info script]] xslt.test]
 
 rename dom {}
