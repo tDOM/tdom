@@ -5,6 +5,7 @@
 #    dom-1.*:  domNode command syntax
 #    dom-3.*:  documentElement
 #    dom-4.*:  setAttributeNS
+#    dom-5.*:  removeChild
 #    dom-6.*:  appendChild
 #    dom-7.*:  getElementsByTagName
 #    dom-8.*:  getElementsByTagNameNS
@@ -33,7 +34,7 @@
 #    dom-31.*: insertBefore
 #    dom-999.* Misc Tests 
 #
-# Copyright (c) 2002 Rolf Ade.
+# Copyright (c) 2002, 2003 Rolf Ade.
 #
 # RCS: @(#) $Id$
 
@@ -237,7 +238,37 @@ test dom-4.16 {setAttributeNS - set multiple Attributes at once} {
 } {<p1:root xmlns:p1="uri1" xmlns:p2="uri2" p1:a1="1" p1:a2="2" p2:a3="3" a4="4"/>
 }
 
-test dom-6.1 {insert FQ Element} {
+test dom-5.1 {removeChild} {
+    dom parse {<root><child/></root>} doc
+    $doc documentElement root
+    $root removeChild [$root firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root/>}
+
+test dom-5.2 {removeChild - child to remove is not a child of node} {
+    dom parse {<root><one><oneone/></one><two/></root>} doc
+    $doc documentElement root
+    set one [$root firstChild]
+    set two [$root lastChild]
+    set result [catch {$one removeChild $two} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 NOT_FOUND_ERR}
+
+test dom-5.3 {removeChild - child to remove is not a child of node} {
+    dom parse {<root><one/><two/></root>} doc
+    $doc documentElement root
+    set newNode [$doc createElement new]
+    set result [catch {$root removeChild $newNode} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 NOT_FOUND_ERR}
+
+test dom-6.1 {appendChild insert FQ Element} {
     set doc [dom parse {<root xmlns:p="uri1"/>}]
     set root [$doc documentElement]
     set newNode [$doc createElementNS uri2 p:foo]
@@ -271,6 +302,147 @@ test dom-6.2 {appendChild} {
     $doc delete
     set result
 } {1}
+
+test dom-6.3 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [$root firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><two/><three/><one/></root>}
+
+test dom-6.4 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [$root lastChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><one/><two/><three/></root>}
+
+test dom-6.5 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [lindex [$root childNodes] 1]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><one/><three/><two/></root>}
+
+test dom-6.6 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set node [$root appendChild [$root firstChild]]
+    catch {unset result}
+    lappend result [[$node parentNode] nodeName]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {root one three two}
+
+test dom-6.7 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set node [$root appendChild [$root lastChild]]
+    catch {unset result}
+    lappend result [[$node parentNode] nodeName]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {root three two one}
+
+test dom-6.8 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set node [$root appendChild [lindex [$root childNodes] 1]]
+    catch {unset result}
+    lappend result [[$node parentNode] nodeName]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {root two three one}
+
+test dom-6.9 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [$root firstChild]
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {two three one}
+
+test dom-6.10 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [$root lastChild]
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {one two three}
+
+test dom-6.11 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    $root appendChild [lindex [$root childNodes] 1]
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {one three two}
+
+test dom-6.12 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set one [$root firstChild]
+    $one appendChild [$root lastChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><one><three/></one><two/></root>}
+
+test dom-6.13 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set one [$root firstChild]
+    set result [catch {$one appendChild $root} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 HIERARCHY_REQUEST_ERR}
+
+test dom-6.14 {appendChild} {
+    dom parse {<root><one/><two/><three/></root>} doc
+    $doc documentElement root
+    set one [$root firstChild]
+    set result [catch {$one appendChild $one} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 HIERARCHY_REQUEST_ERR}
 
 set doc [dom parse {<root><foobar/><barfoo/><foobaz/><a/><b/><a/><c/></root>}]
 set root [$doc documentElement]
@@ -1354,6 +1526,80 @@ test dom-23.1 {replaceChild} {
     set result
 } {<root><e1/></root>}
 
+test dom-23.2 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2>text</e2></root>}]
+    set root [$doc documentElement]
+    $root replaceChild [$root lastChild] [$root firstChild]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e2>text</e2></root>}
+
+test dom-23.3 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2>text</e2></root>}]
+    set root [$doc documentElement]
+    set e1 [$root firstChild]
+    set e2 [$root lastChild]
+    $e2 replaceChild $e1 [$e2 firstChild]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e2><e1/></e2></root>}
+
+test dom-23.4 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2/><e3/><e4/></root>}]
+    set root [$doc documentElement]
+    set childNodes [$root childNodes]
+    for {set i 1} {$i < 4} {incr i} {
+        $root removeChild [lindex $childNodes $i]
+    }
+    $root replaceChild [lindex $childNodes 1] [$root firstChild]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e2/></root>}
+
+test dom-23.5 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2/><e3/><e4/></root>}]
+    set root [$doc documentElement]
+    set childNodes [$root childNodes]
+    for {set i 1} {$i < 4} {incr i} {
+        $root removeChild [lindex $childNodes $i]
+    }
+    $root replaceChild [lindex $childNodes 2] [$root firstChild]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e3/></root>}
+
+test dom-23.6 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2/><e3/><e4/></root>}]
+    set root [$doc documentElement]
+    set childNodes [$root childNodes]
+    for {set i 1} {$i < 4} {incr i} {
+        $root removeChild [lindex $childNodes $i]
+    }
+    $root replaceChild [lindex $childNodes 3] [$root firstChild]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e4/></root>}
+
+test dom-23.7 {replaceChild} {
+    set doc [dom parse {<root><e1/><e2/><e3/><e4/><e5/></root>}]
+    set root [$doc documentElement]
+    set childNodes [$root childNodes]
+    for {set i 1} {$i < 4} {incr i} {
+        $root removeChild [lindex $childNodes $i]
+    }
+    foreach child $childNodes {
+        $root replaceChild $child [$root firstChild]
+    }
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><e5/></root>}
+
 test dom-24.1 {getLine} {
     set doc [dom parse <root/>]
     set root [$doc documentElement]
@@ -1853,6 +2099,26 @@ test dom-31.28 {insertBefore - empty ref node} {
     $doc delete
     set result
 } {<root><a><aa/><aa/><b><bb/></b></a></root>}
+
+test dom-31.29 {insertBefore - ref node is a node out of the fragment list} {
+    dom parse {<root><a/><b/></root>} doc
+    $doc documentElement root
+    set newNode [$doc createElement new]
+    set result [catch {$root insertBefore [$root lastChild] $newNode} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 NOT_FOUND_ERR}
+
+test dom-31.30 {insertBefore - ref node not a node child, equal to new node} {
+    dom parse {<root><a/></root>} doc
+    $doc documentElement root
+    set newNode [$doc createElement new]
+    set result [catch {$root insertBefore $newNode $newNode} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 NOT_FOUND_ERR}
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]

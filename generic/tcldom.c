@@ -3482,10 +3482,6 @@ int tcldom_NodeObjCmd (
                 SetResult ( errMsg );
                 return TCL_ERROR;
             }
-            if (node->parentNode && (node->parentNode == child->parentNode)) {
-                SetResult ( "child already appended!");
-                return TCL_ERROR;
-            }
             exception = domAppendChild (node, child);
             if (exception != OK) {
                 SetResult (domException2String(exception));
@@ -3512,11 +3508,9 @@ int tcldom_NodeObjCmd (
                 SetResult ( errMsg );
                 return TCL_ERROR;
             }
-            result = domRemoveChild (node, child);
-            if (result) {
-                SetResult ( "NOT_FOUND_ERR : can't remove child '");
-                AppendResult (nodeName);
-                AppendResult ("'");
+            exception = domRemoveChild (node, child);
+            if (exception != OK) {
+                SetResult (domException2String (exception));
                 return TCL_ERROR;
             }
             return tcldom_returnNodeObj (interp, child, 0, NULL);
