@@ -2924,15 +2924,32 @@ copyNS (
     domNode *to
     )
 {
-    domNode     *n;
-    domAttrNode *attr;
-    
+    domNode     *n, *n1;
+    domNS       *ns, *ns1;
+    domAttrNode *attr, *attr1;
+    int          skip;
+
     n = from;
     while (n) {
         attr = n->firstAttr;
         while (attr && (attr->nodeFlags & IS_NS_NODE)) {
-            domAddNSToNode (to,
-                            n->ownerDocument->namespaces[attr->namespace-1]);
+            ns = n->ownerDocument->namespaces[attr->namespace-1];
+            skip = 0;
+            n1 = from;
+            while (n1 != n) {
+                attr1 = n1->firstAttr;
+                while (attr1 && (attr1->nodeFlags & IS_NS_NODE)) {
+                    ns1 = n1->ownerDocument->namespaces[attr1->namespace-1];
+                    if (strcmp (ns1->prefix, ns->prefix)==0) {
+                        skip = 1;
+                        break;
+                    }
+                    attr1 = attr1->nextSibling;
+                }
+                if (skip) break;
+                n1 = n1->parentNode;
+            }
+            if (!skip) domAddNSToNode (to, ns);
             attr = attr->nextSibling;
         }
         n = n->parentNode;
@@ -2952,11 +2969,11 @@ static int ExecAction (
     char           ** errMsg
 )
 {
-    domNode        *child, *n, *savedLastNode, *fragmentNode;
+    domNode        *child, *n, *n1, *savedLastNode, *fragmentNode;
     xsltTemplate   *tpl, *currentTplRule, *tplChoosen;
-    domAttrNode    *attr;
+    domAttrNode    *attr, *attr1;
     domTextNode    *tnode;
-    domNS          *ns;
+    domNS          *ns, *ns1;
     xsltSubDoc     *sDoc;
     xsltExcludeNS  *excludeNS;
     xsltNSAlias    *nsAlias;
@@ -3507,14 +3524,15 @@ static int ExecAction (
                 CHECK_RC;
             } else {
                 domSplitQName (str2, prefix, &localName);
-                if (prefix[0] != '\0') {
-                    if (!domIsNCNAME (localName)) {
-                        reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
-                        return -1;
-                    }
-                    ns = domLookupPrefix (actionNode, prefix);
-                    if (ns) nsStr = ns->uri;
-                    else {
+                if (((prefix[0] != '\0') &&  !domIsNCNAME (prefix))
+                    || !domIsNCNAME (localName)) {
+                    reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                    return -1;
+                }
+                ns = domLookupPrefix (actionNode, prefix);
+                if (ns) nsStr = ns->uri;
+                else {
+                    if (prefix[0] != '\0') {
                         reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
                         return -1;
                     }
@@ -3819,7 +3837,7 @@ static int ExecAction (
                 sDoc = sDoc->next;
             }
             if (!sDoc) {
-                *errMsg = strdup ("Internal Error");
+                *errMsg = strdup ("While copying literal result elements: Internal Error");
                 return -1;
             }
             while (n) {
@@ -3830,7 +3848,27 @@ static int ExecAction (
                         attr = attr->nextSibling;
                         continue;
                     }
-                    ns = actionNode->ownerDocument->namespaces[attr->namespace-1];
+                    ns = n->ownerDocument->namespaces[attr->namespace-1];
+                    rc = 0;
+                    n1 = actionNode;
+                    while (n1 != n) {
+                        attr1 = n1->firstAttr;
+                        while (attr1 && (attr1->nodeFlags & IS_NS_NODE)) {
+                            ns1 = n1->ownerDocument->namespaces[attr1->namespace-1];
+                            if (strcmp (ns1->prefix, ns->prefix)==0) {
+                                rc = 1;
+                                break;
+                            }
+                            attr1 = attr1->nextSibling;
+                        }
+                        if (rc) break;
+                        n1 = n1->parentNode;
+                    }
+                    if (rc) {
+                        attr = attr->nextSibling;
+                        continue;
+                    }
+
                     uri = ns->uri;
                     nsAlias = xs->nsAliases;
                     while (nsAlias) {
