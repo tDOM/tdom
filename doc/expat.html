@@ -1,60 +1,42 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode6">NAME</a> Â· <a href="#SECTnode17">SYNOPSIS</a> Â· <a href="#SECTnode50">DESCRIPTION</a> Â· <a href="#SECTnode74">COMMAND OPTIONS</a> Â· <a href="#SECTnode563"> COMMAND METHODS </a> Â· <a href="#SECTnode762">Callback Command Return Codes</a> Â· <a href="#SECTnode780">SEE ALSO</a> Â· <a href="#SECTnode789">KEYWORDS</a>
+<a href="#SECTnode10042">NAME</a> · <a href="#SECTnode10053">SYNOPSIS</a> · <a href="#SECTnode10086">DESCRIPTION</a> · <a href="#SECTnode10110">COMMAND OPTIONS</a> · <a href="#SECTnode10599"> COMMAND METHODS </a> · <a href="#SECTnode10798">Callback Command Return Codes</a> · <a href="#SECTnode10816">SEE ALSO</a> · <a href="#SECTnode10825">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTnode6">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTnode10042">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTnode17">SYNOPSIS</a></h2>
-      <pre class="syntax">
+    <h2><a name="SECTnode10053">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require expat</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml:parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-
-
-    
-    
-      <h2><a name="SECTnode50">DESCRIPTION</a></h2>
-
-      <p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTnode10086">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
 starting the parse. These handler scripts are called when the parser discovers
 the associated structures in the document being parsed.  A start tag is an
 example of the kind of structures for which you may register a handler
-script.</p>
-
-<p>The parsers do not validate the XML document. They do parse the internal DTD
+script.</p><p>The parsers do not validate the XML document. They do parse the internal DTD
 and, at request, external DTD and external entities, if you resolve the
 identifier of the external entities with the -externalentitycommand (see
-there).</p>
-
-<p>Additionly, the Tcl extension code that implements this command provides an
+there).</p><p>Additionly, the Tcl extension code that implements this command provides an
 API for adding C level coded handlers. Up to now, there exists the parser
 extension command &quot;tdom&quot;. The handler set installed by this extension build an
-in memory &quot;tDOM&quot; DOM tree, while the parser is parsing the input.</p>
-
-<p>It is possible to register an arbitrary amount of different handler scripts
+in memory &quot;tDOM&quot; DOM tree, while the parser is parsing the input.</p><p>It is possible to register an arbitrary amount of different handler scripts
 and C level handlers for most of the events. If the event occurs, the are
 called in turn.</p>
 
-    
-
-    
-      <h2><a name="SECTnode74">COMMAND OPTIONS</a></h2>
-
-      <dl class="optlist">
+    <h2><a name="SECTnode10110">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -616,11 +598,7 @@ default handler.</p>
             </dd>
         
       </dl>
-    
-    
-      <h2><a name="SECTnode563"> COMMAND METHODS </a></h2>
-
-      <dl class="commandlist">
+    <h2><a name="SECTnode10599"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -710,8 +688,9 @@ scripts will be called, as there triggering events happens.</p></dd>
 </dt>
           <dd><p>Reads the XML data out of the tcl channel <i class="m">channelID</i>
 (starting at the current access position, without any seek) up to the end of
-file condition and parses that data. The channel is read in &quot;raw&quot; mode, without
-respect to the channel encoding.</p></dd>
+file condition and parses that data. The channel encoding is respected. Use the
+helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
+you want to use this method.</p></dd>
         
 
         
@@ -719,8 +698,10 @@ respect to the channel encoding.</p></dd>
 <b class="cmd">parser</b> <b class="method">parsefile</b> <i class="m">filename</i>
 </dt>
 
-          <dd><p>Reads the XML data out of the file with the filename
-<i class="m">filename</i> and parses that data.</p></dd>
+          <dd><p>Reads the XML data directly out of the file with the
+filename <i class="m">filename</i> and parses that data. This is done with low level file
+operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
+applicable, this is the fastest way, to parse XML data.</p></dd>
         
 
         
@@ -732,42 +713,30 @@ respect to the channel encoding.</p></dd>
 document.</p></dd>
         
       </dl>
-    
 
-    
-      <h2><a name="SECTnode762">Callback Command Return Codes</a></h2> 
-
-      <p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTnode10798">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
 than &quot;ok&quot; or &quot;error&quot;. All callbacks may in addition return
-&quot;break&quot; or &quot;continue&quot;.</p>
-
-      <p>If a callback script returns an &quot;error&quot; error code then
+&quot;break&quot; or &quot;continue&quot;.</p><p>If a callback script returns an &quot;error&quot; error code then
 processing of the document is terminated and the error is propagated in the
-usual fashion.</p>
-
-      <p>If a callback script returns a &quot;break&quot; error code then all
+usual fashion.</p><p>If a callback script returns a &quot;break&quot; error code then all
 further processing of every handler script out of this Tcl handler set is
 suppressed for the further parsing. This does not influence any other handler
-set.</p>
-
-      <p>If a callback script returns a &quot;continue&quot; error code then
+set.</p><p>If a callback script returns a &quot;continue&quot; error code then
 processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    
-
-    <h2><a name="SECTnode780">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode10816">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTnode789">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+    <h2><a name="SECTnode10825">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
   </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
 	<a class="navaid" href="index.html">Table of Contents</a>
- Â·	<a class="navaid" href="category-index.html">Index</a>
- Â·	<a class="navaid" href="keyword-index.html">Keywords</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </div>
 </body>

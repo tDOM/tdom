@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1900">SEE ALSO</a> · <a href="#SECTnode1909">KEYWORDS</a>
+<a href="#SECTnode2706">NAME</a> · <a href="#SECTnode2717">SYNOPSIS</a> · <a href="#SECTnode2728"> DESCRIPTION </a> · <a href="#SECTnode3736">SEE ALSO</a> · <a href="#SECTnode3745">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode2706">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTnode2717">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode905"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTnode2728"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -429,9 +429,19 @@ nested Tcl list.</dd>
 <b class="method">asXML</b> <b class="option">-indent none/1..8</b>
 <b class="option">-channel channelId</b>
 </dt>
-        <dd>Returns the DOM substree starting form the current
-node as an indented XML string or sends the output directly to the given
-channelId in order to save memory.</dd>
+        <dd>Returns the DOM substree starting from the current node as the
+root node of the result as an (optional indented) XML string or sends the
+output directly to the given channelId.</dd>
+      
+
+      
+        <dt>
+<b class="method">asHTML</b> <b class="option">-channel channelId</b>
+</dt>
+        <dd>Returns the DOM substree starting from the current node as the
+root node of the result serialized acording to HTML rules (HTML elements are
+recognized regardless of case, without end tags for emtpy HTML elements etc.),
+as string or sends the output directly to the given channelId.</dd>
       
 
       
@@ -489,8 +499,10 @@ tree made later one.</dd>
         <dd>This method works only for text nodes; for every other nodes it
 returns error. Without the optional argument it returns, if disabling output
 escaping is on. The return value 0 means, the characters of the text node will
-be escaped, to gerenerate valid XML, if serialized. This is the default for
-every parsed or created text node. The return value 1 means, that output
+be escaped, to generate valid XML, if serialized. This is the default for
+every parsed or created text node (with the exception of that text nodes in a
+result tree of an XSLT transformation, for which disabling output escaping was
+requested explicitely in the stylesheet). The return value 1 means, that output
 escaping is disabled for this text node. If such a text node is serialized
 (with asXML or asHTML), it is literarily written, without escaping of the
 special XML characters. If the optional boolean value <i class="m">boolean</i> is given,
@@ -521,11 +533,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode1900">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode3736">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode1909">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode3745">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   

@@ -273,6 +273,16 @@ and the underlying DOM tree.
 Returns the default output method of the document. This is
 usually a result of a XSLT transformation.
 .RE
+.TP
+\&\fB\fBasXML\fP \fB-indent none/1..8\fP \fB-channel channelId\fP
+\&\fRReturns the document as an (optional indented) XML string or
+sends the output directly to the given channelId.
+.TP
+\&\fB\fBasHTML\fP \fB-channel channelId\fP
+\&\fRReturns the document serialized acording to HTML rules (HTML
+elements are recognized regardless of case, without end tags for emtpy HTML
+elements etc.), as string or sends the output directly to the given
+channelId.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is

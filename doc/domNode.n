@@ -434,9 +434,15 @@ XML.
 nested Tcl list.
 .TP
 \&\fB\fBasXML\fP \fB-indent none/1..8\fP \fB-channel channelId\fP
-\&\fRReturns the DOM substree starting form the current
-node as an indented XML string or sends the output directly to the given
-channelId in order to save memory.
+\&\fRReturns the DOM substree starting from the current node as the
+root node of the result as an (optional indented) XML string or sends the
+output directly to the given channelId.
+.TP
+\&\fB\fBasHTML\fP \fB-channel channelId\fP
+\&\fRReturns the DOM substree starting from the current node as the
+root node of the result serialized acording to HTML rules (HTML elements are
+recognized regardless of case, without end tags for emtpy HTML elements etc.),
+as string or sends the output directly to the given channelId.
 .TP
 \&\fB\fBappendFromList\fP \fIlist\fB
 \&\fRParses \fIlist\fR , creates an according DOM subtree and
@@ -469,8 +475,10 @@ tree made later one.
 \&\fRThis method works only for text nodes; for every other nodes it
 returns error. Without the optional argument it returns, if disabling output
 escaping is on. The return value 0 means, the characters of the text node will
-be escaped, to gerenerate valid XML, if serialized. This is the default for
-every parsed or created text node. The return value 1 means, that output
+be escaped, to generate valid XML, if serialized. This is the default for
+every parsed or created text node (with the exception of that text nodes in a
+result tree of an XSLT transformation, for which disabling output escaping was
+requested explicitely in the stylesheet). The return value 1 means, that output
 escaping is disabled for this text node. If such a text node is serialized
 (with asXML or asHTML), it is literarily written, without escaping of the
 special XML characters. If the optional boolean value \fIboolean\fR is given,
