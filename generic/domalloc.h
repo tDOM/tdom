@@ -29,13 +29,6 @@
 |   Contributor(s):
 |
 |
-|
-|   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
-|
-|
-|
 |   written by Jochen Loewer
 |   October, 2000
 |

@@ -29,16 +29,6 @@
 |   Contributor(s):
 |
 |
-|
-|   $Log$
-|   Revision 1.2  2002/03/08 23:49:25  rolf
-|   Fixed small, obvious bug in DBG code.
-|
-|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-|   tDOM0.7test with Jochens first set of patches
-|
-|
-|
 |   written by Jochen Loewer
 |   October, 2000
 |
