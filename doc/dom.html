@@ -4,16 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid908">DESCRIPTION </a> · <a href="#SECTid1425">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid909">DESCRIPTION </a> · <a href="#SECTid1450">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid908">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid909">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -136,15 +137,34 @@ of type "string", or the name of a tcl channel, in the case of type
 
               
                 <dt>
-<b>-useForeignDTD</b> <i>&lt;boolen&gt;</i>
+<b>-useForeignDTD</b> <i>&lt;boolean&gt;</i>
 </dt>
                 
-                <dd>If &lt;boolen&gt; is true and the document does not have
+                <dd>If &lt;boolean&gt; is true and the document does not have
 an external subset, the parser will call the -externalentitycommand script with
 empty values for the systemId and publicID arguments. Pleace notice, that, if
 the document also doesn't have an internal subset, the
 -startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
-called.</dd>
+called. The <i class="m">-useForeignDTD</i> respects </dd>
+              
+
+              
+                <dt>
+<b>-paramentityparsing</b> <i>&lt;always|never|notstandalone&gt;</i>
+</dt>
+                
+                <dd>The <i class="m">-paramentityparsing</i> option controls, if the
+parser tries to resolve the external entities (including the external DTD
+subset) of the document, while building the DOM
+tree. <i class="m">-paramentityparsing</i> requires an argument, which must be either
+"always", "never", or "notstandalone". The value "always" means, that the
+parser tries to resolves (recursively) all external entities of the XML
+source. This is the default, in case <i class="m">-paramentityparsing</i> is omitted. The
+value "never" means, that only the given XML source is parsed and no external
+entity (including the external subset) will be resolved and parsed. The value
+"notstandalone" means, that all external entities will be resolved and parsed,
+with the execption of documents, which explicitly states standalone="yes" in
+their XML declaration.</dd>
               
 
             </dl>
@@ -308,7 +328,7 @@ recommendation. Otherwise it returns 0.</dd>
 
       </dl>
 
-  <h2><a name="SECTid1425">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid1450">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">
