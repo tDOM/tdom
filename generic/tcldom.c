@@ -1065,7 +1065,7 @@ int tcldom_appendXML (
     XML_ParserFree(parser);
 
     domAppendChild (node, doc->documentElement);
-    FREE((void*)doc);
+    domFreeDocument (doc, NULL, interp);
 
     return tcldom_returnNodeObj (interp, node, 0, NULL);
 #endif
@@ -2768,8 +2768,8 @@ int tcldom_NodeObjCmd (
         case m_attributes:
             CheckArgs(2,3,2,"?nameFilter?");
             if (node->nodeType != ELEMENT_NODE) {
-                SetResult ( "NOT_AN_ELEMENT : there are no attributes");
-                return TCL_ERROR;
+                SetResult ( "");
+                return TCL_OK;
             }
             if (objc == 3) {
                 filter = Tcl_GetStringFromObj (objv[2], NULL);
@@ -2974,33 +2974,13 @@ int tcldom_NodeObjCmd (
                 domSplitQName (attrs->nodeName, prefix, &str);
                 if (strcmp(localName,str)==0) {
                     ns = domGetNamespaceByIndex(node->ownerDocument, attrs->namespace);
-                    if (strcmp(ns->uri, uri)==0) {
+                    if (ns && strcmp(ns->uri, uri)==0) {
                         SetResult("1");
                         return TCL_OK;
                     }
                 }
                 attrs = attrs->nextSibling;
             }
-#if 0
-            attr_name = Tcl_GetStringFromObj (objv[3], NULL);
-            domSplitQName ((char*)attr_name, prefix, &localName);
-            ns = domLookupNamespace (node->ownerDocument, prefix, uri);
-            if (ns == NULL) {
-                SetResult ("0");
-                return TCL_OK;
-            }
-            attrs = node->firstAttr;
-            while (attrs &&
-                   strcmp(attrs->nodeName, attr_name) &&
-                   (attrs->namespace != ns->index)
-            ) {
-                attrs = attrs->nextSibling;
-            }
-            if (attrs) {
-                SetResult ( "1" );
-                return TCL_OK;
-            }
-#endif
             SetResult ( "0");
             return TCL_OK;
 
