@@ -1,3 +1,24 @@
+2005-02-03  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Bug fix: current() did not work in
+          xsl:key use expressions. Moved setting of xs->current from
+          all about the place into evalXPath. A bit code massage, to
+          avoid bogus compiler warning.
+
+        * doc/domDoc.*
+        * tests/domDoc.test  
+        * generic/dom.c
+        * generic/domxslt.c
+        * generic/tcldom.c: Added support for xsl:output
+          cdata-section-elements attribute. Added method
+          cdataSectionElements to domDocs, as tcl interface to
+          cdata-section-elements.
+
+        * doc/domDoc.*: Added documentation for the domDoc method
+          internalSubset.
+
+        * generic/domxpath.c: Editorial changes.
+
 2005-02-02  Rolf Ade  <rolf@pointsman.de>
 
         * win/makefile.vc: Updated to provide the new defines
