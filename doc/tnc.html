@@ -1,38 +1,29 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: tnc</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: tnc</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode6">NAME</a> Â· <a href="#SECTnode15">SYNOPSIS</a> Â· <a href="#SECTnode21">DESCRIPTION</a> Â· <a href="#SECTnode70">BUGS</a> Â· <a href="#SECTnode85">KEYWORDS</a>
+<a href="#SECTnode14992">NAME</a> · <a href="#SECTnode15001">SYNOPSIS</a> · <a href="#SECTnode15007">DESCRIPTION</a> · <a href="#SECTnode15056">BUGS</a> · <a href="#SECTnode15071">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode6">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode14992">NAME</a></h2><p class="namesection">
 <b class="names">tnc - </b><br>tnc is an expat parser object extension, that validates the XML
 stream according the document DTD while parsing.</p>
   
-  <h2><a name="SECTnode15">SYNOPSIS</a></h2>
-    <pre class="syntax">package require tdom
+  <h2><a name="SECTnode15001">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 package require tnc
 
 set parser [expat]
 
 tnc $parser enable</pre>
-  
 
-  
-    <h2><a name="SECTnode21">DESCRIPTION</a></h2>
-    
-    <p>
+  <h2><a name="SECTnode15007">DESCRIPTION</a></h2><p>
 <i class="m">tnc</i> adds the C handler set &quot;tnc&quot; to an tcl expat parser
 obj. This handler set is a simple DTD validator. If the validator detects the
 first validation error, it sets the interp result, signals error and stops
 parsing. There isn't any validation error recovering. As a consequence, only
-valid documents are completely parsed.</p>
-
-    <p>This handler set has only two methods:</p>
-
-    <dl class="commandlist">
+valid documents are completely parsed.</p><p>This handler set has only two methods:</p><dl class="commandlist">
       
         <dt>
 <b class="cmd">tnc</b> <i class="m">parserObj</i> <b class="method">enable</b>
@@ -49,34 +40,24 @@ valid documents are completely parsed.</p>
         <dd></dd>
       
     </dl>
-  
 
-  
-    <h2><a name="SECTnode70">BUGS</a></h2>
-
-    <p>The validation error reports could be much more informative and
-user-friendly.</p>
-
-    <p>The validator doesn't detect ambiguous content models (see XML
+  <h2><a name="SECTnode15056">BUGS</a></h2><p>The validation error reports could be much more informative and
+user-friendly.</p><p>The validator doesn't detect ambiguous content models (see XML
 recomendation Section 3.2.1 and Appendix E). Some Java validators also doesn't,
 but handle such content models right anyhow. Tnc does not; if your DTD has
 such ambiguous content models, tnc can not used to validate documents against
-such (not completely XML spec compliant) DTDs.</p>
-
-    <p>There are a few bugs (two that I'm aware of, a third one is somehow
+such (not completely XML spec compliant) DTDs.</p><p>There are a few bugs (two that I'm aware of, a third one is somehow
 fixed in the expat sources used by tDOM) in the underlying expat parser, that
 results either in &quot;not well-formed&quot; errors, although the document is
 well-formed or in passing the parsing step silently, although the document
 isn't well-formed in some rarely cases.</p>
-
-  
-  <h2><a name="SECTnode85">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-Validation">Validation</a></p>
+  <h2><a name="SECTnode15071">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-Validation">Validation</a></p>
   
 </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
 	<a class="navaid" href="index.html">Table of Contents</a>
- Â·	<a class="navaid" href="category-index.html">Index</a>
- Â·	<a class="navaid" href="keyword-index.html">Keywords</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </div>
 </body>
