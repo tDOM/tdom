@@ -3,6 +3,8 @@
         * generic/domxslt.c: Report error, if xsl:import elements not
           come first.
 
+        * doc/tnc.*: Better wording.
+  
 2002-11-16  Rolf Ade  <rolf@pointsman.de>
 
         * win/makefile.vc
