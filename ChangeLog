@@ -1,3 +1,13 @@
+2005-01-11  Rolf Ade  <rolf@pointsman.de>
+
+       * lib/tdom.tcl: Scripted xpath function element-available:
+         moved xsl:output to the avaliable elements, since it's in
+         fact avaliable in the meantime (with exception of the
+         'version' and 'cdata-section-elements' attributes) - the
+         output options can be queried from the result doc, but it's
+         the responsibility of the application, to serialize the tree
+         according to that settings.
+
 2005-01-10  Rolf Ade  <rolf@pointsman.de>
 
        * doc/dom.*: Corrected typo.     
