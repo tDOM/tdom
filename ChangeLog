@@ -30,6 +30,10 @@
           registered C handler sets while reseting the expat parser
           command.
 
+        * lib/tdom.tcl: Smaller fixes. Changed the values of the
+          system-properties xsl:vendor (included me) and
+          xsl:vendor-url (to http://www.tdom.org).
+  
 2003-02-22  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/dom.h: Added (char*) cast to argument of Tcl_Free
