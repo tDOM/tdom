@@ -29,7 +29,7 @@
 #    dom-27.*: target, data
 #    dom-28.*: getAttributeNS
 #    dom-29.*: ownerDocument 
-#    dom-30.*: startBefore
+#    dom-30.*: precedes
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
@@ -1480,59 +1480,59 @@ test dom-29.1 {ownerDocument} {
 set doc [dom parse {<root><e/>text<!-- comment --><e><e/></e></root>}]
 set root [$doc documentElement]
 
-test dom-30.1 {startBefore} {
-    catch {$root startBefore} 
+test dom-30.1 {precedes} {
+    catch {$root precedes} 
 } {1}
 
-test dom-30.2 {startBefore} {
+test dom-30.2 {precedes} {
     set firstChild [$root firstChild]
     catch {$root start $firstChild foo}
 } {1}
 
-test dom-30.3 {startBefore} {
-    set result [catch {$root startBefore notaNode} errMsg]
+test dom-30.3 {precedes} {
+    set result [catch {$root precedes notaNode} errMsg]
     lappend result $errMsg
 } {1 {parameter not a domNode!}}
 
-test dom-30.4 {startBefore} {
+test dom-30.4 {precedes} {
     set firstChild [$root firstChild]
-    $root startBefore $firstChild
+    $root precedes $firstChild
 } {1}
 
-test dom-30.5 {startBefore} {
+test dom-30.5 {precedes} {
     set firstChild [$root firstChild]
-    $root startBefore $firstChild
+    $root precedes $firstChild
 } {1}
 
-test dom-30.6 {startBefore} {
+test dom-30.6 {precedes} {
     set firstChild [$root firstChild]
-    $firstChild startBefore $root
-} {-1}
-
-test dom-30.7 {startBefore} {
-    set firstChild [$root firstChild]
-    $firstChild startBefore $firstChild
+    $firstChild precedes $root
 } {0}
 
-test dom-30.8 {startBefore} {
+test dom-30.7 {precedes} {
+    set firstChild [$root firstChild]
+    $firstChild precedes $firstChild
+} {0}
+
+test dom-30.8 {precedes} {
     set doc1 [dom parse <root/>]
     set root1 [$doc1 documentElement]
-    set result [catch {$root startBefore $root1} errMsg]
+    set result [catch {$root precedes $root1} errMsg]
     lappend result $errMsg
     $doc1 delete
     set result
 } {1 {Cannot compare the relative order of nodes out of different documents.}}
 
-test dom-30.9 {startBefore} {
+test dom-30.9 {precedes} {
     set firstChild [$root firstChild]
     set newNode [$doc createElement newNode]
     $root insertBefore $newNode $firstChild
-    $newNode startBefore $firstChild
+    $newNode precedes $firstChild
 } {1}
 
-test dom-30.10 {startBefore} {
+test dom-30.10 {precedes} {
     set newNode [$doc createTextNode "new text node"]
-    set result [catch {$root startBefore $newNode} errMsg]
+    set result [catch {$root precedes $newNode} errMsg]
     lappend result $errMsg
 } {1 {Cannot compare the relative order of a node with a node out of the fragment list.}}
 
