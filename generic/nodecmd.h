@@ -41,6 +41,11 @@ int nodecmd_appendFromScript (Tcl_Interp *interp,
                               domNode    *node,
                               Tcl_Obj    *cmdObj);
 
+int nodecmd_insertBeforeFromScript (Tcl_Interp *interp, 
+                                    domNode    *node,
+                                    Tcl_Obj    *cmdObj,
+                                    domNode    *refChild);
+
 /* EOF $RCSfile $ */
 
 /* Emacs Setup Variables */
