@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.8  2002/04/02 00:36:20  rolf
+|   Escape '\n' in Attribute Values while serializing, to fulfill the
+|   note in xslt rec. 7.1.3.
+|
 |   Revision 1.7  2002/03/21 01:47:23  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -1416,7 +1420,8 @@ void tcldom_AppendEscaped (
     Tcl_Obj    *xmlString,
     Tcl_Channel chan,
     char       *value,
-    int         value_length
+    int         value_length,
+    int         forAttr
 )
 {
 #define APESC_BUF_SIZE 512
@@ -1442,6 +1447,8 @@ void tcldom_AppendEscaped (
         if (*pc == '<') { AP('&') AP('l') AP('t') AP(';')
         } else 
         if (*pc == '>') { AP('&') AP('g') AP('t') AP(';')
+        } else 
+        if (forAttr && (*pc == '\n')) { AP('&') AP('#') AP('x') AP('A') AP(';')
 #if TclOnly8Bits                              
         } else {
             AP(*pc)
@@ -1473,7 +1480,6 @@ void tcldom_AppendEscaped (
         writeChars(xmlString, chan, buf, b - buf);
     }
 }
-
 
 /*----------------------------------------------------------------------------
 |   tcldom_tolower
@@ -1523,7 +1529,7 @@ void tcldom_treeAsHTML (
         } else {
             tcldom_AppendEscaped (htmlString, chan,
                                   ((domTextNode*)node)->nodeValue, 
-                                  ((domTextNode*)node)->valueLength);
+                                  ((domTextNode*)node)->valueLength, 0);
         }
         return;
     }
@@ -1547,7 +1553,7 @@ void tcldom_treeAsHTML (
         writeChars (htmlString, chan, " ", 1);
         writeChars (htmlString, chan, attrName, -1);
         writeChars (htmlString, chan, "=\"", 2);
-        tcldom_AppendEscaped (htmlString, chan, attrs->nodeValue, -1);
+        tcldom_AppendEscaped (htmlString, chan, attrs->nodeValue, -1, 1);
         writeChars (htmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -1668,7 +1674,7 @@ void tcldom_oldtreeAsXML (
         } else {
             tcldom_AppendEscaped (xmlString, chan,
                                   ((domTextNode*)node)->nodeValue, 
-                                  ((domTextNode*)node)->valueLength);
+                                  ((domTextNode*)node)->valueLength, 0);
         }
         return;
     }
@@ -1758,7 +1764,7 @@ void tcldom_oldtreeAsXML (
         writeChars (xmlString, chan, " ", 1);
         writeChars (xmlString, chan, attrs->nodeName, -1);
         writeChars (xmlString, chan, "=\"", 2);
-        tcldom_AppendEscaped (xmlString, chan, attrs->nodeValue, -1);
+        tcldom_AppendEscaped (xmlString, chan, attrs->nodeValue, -1, 1);
         writeChars (xmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -1847,7 +1853,7 @@ void tcldom_treeAsXML (
         } else {
             tcldom_AppendEscaped (xmlString, chan,
                                   ((domTextNode*)node)->nodeValue, 
-                                  ((domTextNode*)node)->valueLength);
+                                  ((domTextNode*)node)->valueLength, 0);
         }
         return;
     }
@@ -1895,7 +1901,7 @@ void tcldom_treeAsXML (
         h = Tcl_FindHashEntry (node->ownerDocument->NSscopes,
                                (char *) node->nodeNumber);
         if (!h) {
-            fprintf (stderr, "node has HAS_NS_INFO flag, but isn't found in NSscopes hash table!!!\n");
+            fprintf (stderr, "tcldom_treeAsXML: node has HAS_NS_INFO flag, but isn't found in NSscopes hash table!!!\n");
         } else {
             NSContext = Tcl_GetHashValue (h);
             for (i = 0; i < NSContext->newNS; i++) {
@@ -1919,7 +1925,7 @@ void tcldom_treeAsXML (
         writeChars (xmlString, chan, " ", 1);
         writeChars (xmlString, chan, attrs->nodeName, -1);
         writeChars (xmlString, chan, "=\"", 2);
-        tcldom_AppendEscaped (xmlString, chan, attrs->nodeValue, -1);
+        tcldom_AppendEscaped (xmlString, chan, attrs->nodeValue, -1, 1);
         writeChars (xmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -2347,7 +2353,8 @@ int tcldom_NodeObjCmd (
             resultPtr = Tcl_GetObjResult(interp);
             Tcl_SetStringObj (resultPtr, "", -1);
             tcldom_initNamespaceHandling(node);
-            tcldom_oldtreeAsXML(resultPtr, node, indent, 0, 1, chan);
+/*              tcldom_oldtreeAsXML(resultPtr, node, indent, 0, 1, chan); */
+            tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan);
             break;
 
         case m_asHTML:
