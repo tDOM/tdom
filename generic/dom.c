@@ -3744,7 +3744,6 @@ domNormalize (
             domNormalize (child, forXPath, freeCB, clientData);
             break;
         case TEXT_NODE:
-            fprintf (stderr, "TEXT_NODE\n");
             if (child->previousSibling 
                 && child->previousSibling->nodeType == TEXT_NODE) {
                 merge = 1;
@@ -3758,9 +3757,7 @@ domNormalize (
             }
             break;
         case CDATA_SECTION_NODE:
-            fprintf (stderr, "CDATA_SECTION_NODE\n");
             if (forXPath) {
-                fprintf (stderr, "with forXPath\n");
                 if (child->previousSibling
                     && child->previousSibling->nodeType == TEXT_NODE) {
                     merge = 1;
@@ -3778,7 +3775,6 @@ domNormalize (
         default:
             break;
         }
-        fprintf (stderr, "merge: %d\n", merge);
         if (merge) {
             domAppendData ( (domTextNode *)(child->previousSibling),
                             ((domTextNode *)child)->nodeValue,
