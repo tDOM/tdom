@@ -25,6 +25,10 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
+|   Revision 1.3  2002/06/20 13:15:09  loewerj
+|
+|   fixed compile warnings
+|
 |   Revision 1.2  2002/06/02 06:36:24  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -68,7 +72,6 @@ typedef struct StackSlot {
 |   For non-threaded environments, it's a regular static.
 |
 \---------------------------------------------------------------------------*/
-
 typedef struct CurrentStack {
     StackSlot *elementStack;
     StackSlot *currentSlot;
@@ -86,14 +89,18 @@ typedef struct CurrentStack {
 |   Forward declarations
 |
 \---------------------------------------------------------------------------*/
-
 static void * StackPush _ANSI_ARGS_((void *element));
 static void * StackPop  _ANSI_ARGS_((void));
 static void * StackTop  _ANSI_ARGS_((void));
-static void   StackFinalize _ANSI_ARGS_((ClientData clientData));
-
 static int NodeObjCmd _ANSI_ARGS_((ClientData,Tcl_Interp*,int,Tcl_Obj *CONST o[]));
 static void  domAppendChild1(domNode*, domNode *);
+
+#ifdef TCL_THREADS
+static void   StackFinalize _ANSI_ARGS_((ClientData clientData));
+#endif
+
+extern int tcldom_appendXML ( Tcl_Interp *interp, domNode *node, Tcl_Obj *obj);
+
 
 /*----------------------------------------------------------------------------
 |   StackPush
@@ -173,6 +180,7 @@ StackTop ()
 }
 
 
+#ifdef TDOM_THREADS
 /*----------------------------------------------------------------------------
 |   StackFinalize - reclaims stack memory (slots only, not elements)
 |
@@ -189,6 +197,7 @@ StackFinalize (clientData)
         stack = tmp;
     }
 }
+#endif
 
 /*----------------------------------------------------------------------------
 |   NodeObjCmd
