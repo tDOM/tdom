@@ -1,5 +1,17 @@
+--- Release 0.7.7, 25. Mar. 2003 ---
+
 2003-03-25  Rolf Ade  <rolf@pointsman.de>
         
+        * configure.in
+        * configure
+        * configure-tcl8.0.5
+        * README
+        * README.AOL
+        * extensions/tnc/makefile.vc
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h
+        * mac/tDOM_OSX.prj.xml: Bumped the version number to 0.7.7.
+
         * generic/tcldom.c: Fixed error, which prevents building 0.7.6
           with -DTCL_THREADS=1. (Arrrg.)
 
