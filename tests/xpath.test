@@ -439,6 +439,24 @@ test xpath-7.2 {following-sibling axis with documentElement als current node} {
 
 $doc delete
 
+test xpath-7.3 {NCName equal to an operator in a union expr} {
+    dom parse {<root><div/></root>} doc
+    $doc documentElement root
+    set node [$root selectNodes {p|div}]
+    set result [$node nodeName]
+    $doc delete
+    set result
+} {div}
+
+test xpath-7.4 {Name test * in a union expr} {
+    dom parse {<root><div/></root>} doc
+    $doc documentElement root
+    set node [$root selectNodes {processing-instruction()|*}]
+    set result [$node nodeName]
+    $doc delete
+    set result
+} {div}
+
 # cleanup
 ::tcltest::cleanupTests
 return
