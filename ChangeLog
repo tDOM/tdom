@@ -1,3 +1,12 @@
+2003-12-24  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in
+        * win/pkgIndex.tcl:     
+        * extensions/tnc/pkgIndex.tcl.in
+        * extensions/tdomhtml/pkgIndex.tcl.in
+        * extensions/example/pkgIndex.tcl.in: Bug fix: Protect against
+          spaces in the path to the package.
+
 2003-12-20  Rolf Ade  <rolf@pointsman.de>
 
         * win/pkgIndex.tcl: Also updated to new version nr 0.8.0.
