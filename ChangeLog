@@ -1,3 +1,18 @@
+2002-11-15  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/dom.test: Added some tests for as yet not covered node
+          methods.
+
+        * tests/htmlreader.test: Minor fix: added tcltest cleanup.
+
+        * generic/tcldom.c: Changed 'attributes' method to return the
+          empty string as result for non element nodes, according to
+          the DOM 2 rec, chapter "Interface Node". Fixed a seg fault
+          in hasAttributeNS. Closed a mem leak in appendXML.
+
+        * lib/tdom.tcl: Added simple debugging feature to
+          tDOM::extRefHandler.
+
 2002-11-14  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/tcldom.c: fixed UMR report from Purify
