@@ -1,3 +1,9 @@
+2003-03-03  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/dom.test    
+        * generic/tcldom.c: Fixed bug with using the 'domNode' cmd
+          without argument (spotted by Bernard Desgraupes).
+
 2003-02-27  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: xsl:number attributes grouping-separator
