@@ -330,6 +330,16 @@ a description. The \fIdocNode\fR argument is the XML document to transform
 document of the transformation and stores it in the optional \fIoutputVar\fR,
 if that was given.
 .RE
+.TP
+\&\fB\fBnormalize\fP \fI?-forXPath?\fB
+\&\fRPuts all Text nodes in the document
+into a "normal" form where only structure (e.g., elements,
+comments, processing instructions and CDATA
+sections) separates Text nodes, i.e., there
+are neither adjacent Text nodes nor empty Text nodes. If the option
+\&\fI-forXPath\fR is given, all CDATA sections in the nodes are
+converted to text nodes, as a first step before the
+normalization.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is

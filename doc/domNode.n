@@ -516,6 +516,16 @@ nodes must be part of the same documents and not out of the fragment list of
 the document. Returns true, if node is in document order (in the sense of the
 XPath 1.0 recommendation) before \fIrefnode\fR and false otherwise.
 .TP
+\&\fB\fBnormalize\fP \fI?-forXPath?\fB
+\&\fRPuts all Text nodes in the full depth of the sub-tree underneath
+this Node into a "normal" form where only structure (e.g., elements,
+comments, processing instructions and CDATA
+sections) separates Text nodes, i.e., there
+are neither adjacent Text nodes nor empty Text nodes. If the option
+\&\fI-forXPath\fR is given, all CDATA sections in the nodes are
+converted to text nodes, as a first step before the
+normalization.
+.TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the document using the XSLT
 \&\fIstylesheet\fR (given as domDoc). Returns a document object containing the
