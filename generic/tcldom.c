@@ -1990,7 +1990,9 @@ char *findBaseURI (
 {
     char *baseURI = NULL;
     Tcl_HashEntry *entryPtr;
-
+    domNode       *orgNode;
+    
+    orgNode = node;
     do {
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
@@ -2005,6 +2007,14 @@ char *findBaseURI (
             node = node->parentNode;
         }
     } while (node);
+    if (!baseURI) {
+        node = orgNode->ownerDocument->rootNode;
+        if (node->nodeFlags & HAS_BASEURI) {
+            entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
+                                          (char*)node->nodeNumber);
+            baseURI = (char *)Tcl_GetHashValue (entryPtr);
+        }
+    }
     return baseURI;
 }
 
@@ -3285,7 +3295,6 @@ int tcldom_parse (
     int          ignoreWhiteSpaces   = 1;
     int          takeSimpleParser    = 0;
     int          takeHTMLParser      = 0;
-    int          takeNameSpaceParser = 0;
     int          setVariable         = 0;
     int          feedbackAfter       = 0;
     domDocument *doc;
@@ -3307,10 +3316,6 @@ int tcldom_parse (
         if (strcmp(option,"-html")==0) {
             takeSimpleParser = 1;
             takeHTMLParser = 1;
-            objv++;  objc--; continue;
-        }
-        if (strcmp(option,"-ns")==0) {
-            takeNameSpaceParser = 1;
             objv++;  objc--; continue;
         }
         if (strcmp(option,"-feedbackAfter")==0) {
@@ -3404,6 +3409,7 @@ int tcldom_parse (
                                            &byteIndex, &errStr);
         } else {
             doc = XML_SimpleParseDocument(xml_string, ignoreWhiteSpaces,
+                                          baseURI, extResolver,
                                           &byteIndex, &errStr);
         }
         if (errStr != NULL) {
@@ -3444,11 +3450,7 @@ int tcldom_parse (
     Tcl_AppendResult(interp, "tDOM was compiled without Expat!", NULL);
     return TCL_ERROR;
 #else
-    if (takeNameSpaceParser) {
-        parser = XML_ParserCreateNS(NULL, ':');
-    } else {
-        parser = XML_ParserCreate(NULL);
-    }
+    parser = XML_ParserCreate(NULL);
 
     doc = domReadDocument (parser, xml_string,
                                    xml_string_len,
