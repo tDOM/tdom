@@ -9,10 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define Tcl_Alloc(x) malloc((x))
-#define Tcl_Free(x)  free((x))
-#define Tcl_Realloc(x,y) realloc((x),(y))
-
 /* The inital stack sizes must be at least 1 */
 #define TNC_INITCONTENTSTACKSIZE 512
 
@@ -27,6 +23,7 @@
    Tcl_HashEntry entry within the "tagNames" Hashtable (see TNC_Data)
    and not the element name. This should be much more efficient. */
 typedef struct TNC_cp TNC_Content;
+typedef struct TNC_elemAttInfo TNC_ElemAttInfo;
 
 struct TNC_cp
 {
@@ -35,6 +32,7 @@ struct TNC_cp
     Tcl_HashEntry          *nameId;
     unsigned int            numchildren;
     TNC_Content            *children;
+    TNC_ElemAttInfo        *attInfo;
 };
 
 typedef struct TNC_contentStack
@@ -77,12 +75,12 @@ typedef enum TNC_attType {
     TNC_ATTTYPE_ENUMERATION,
 } TNC_AttType;
 
-typedef struct TNC_elemAttInfo
+struct TNC_elemAttInfo
 {
     Tcl_HashTable *attributes;
     int            nrOfreq;
     int            nrOfIdAtts;
-} TNC_ElemAttInfo;
+};
 
 typedef struct TNC_attDecl
 {
@@ -240,7 +238,7 @@ We need 8 bits to index into pages, 3 bits to add to that index and
       : 0)))
 
 
-#include "../../expat-1.95.1/nametab.h"
+#include <nametab.h>
 
 static const unsigned char nameChar7Bit[] = {
 /* 0x00 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -466,10 +464,11 @@ TncEndDoctypeDeclHandler (userData)
     void *userData;
 {
     TNC_Data *tncdata = (TNC_Data *) userData;
-    Tcl_HashEntry *entryPtr;
+    Tcl_HashEntry *entryPtr, *ePtr1;
     Tcl_HashSearch search;
     XML_Content   *emodel;
     TNC_Content   *tmodel = NULL;
+    char *elementName;
 
     entryPtr = Tcl_FirstHashEntry (tncdata->tagNames, &search);
     while (entryPtr != NULL) {
@@ -478,9 +477,16 @@ TncEndDoctypeDeclHandler (userData)
                 Tcl_GetHashKey (tncdata->tagNames, entryPtr),
                 entryPtr);
 #endif
-        emodel = (XML_Content*) Tcl_GetHashValue(entryPtr);
+        emodel = (XML_Content*) Tcl_GetHashValue (entryPtr);
         tmodel = (TNC_Content*) Tcl_Alloc (sizeof (TNC_Content));
         TncRewriteModel (emodel, tmodel, tncdata->tagNames);
+        elementName = Tcl_GetHashKey (tncdata->tagNames, entryPtr);
+        ePtr1 = Tcl_FindHashEntry (tncdata->attDefsTables, elementName);
+        if (ePtr1) {
+            tmodel->attInfo = (TNC_ElemAttInfo *) Tcl_GetHashValue (ePtr1);
+        } else {
+            tmodel->attInfo = NULL;
+        }
         Tcl_SetHashValue (entryPtr, tmodel);
         entryPtr = Tcl_NextHashEntry (&search);
     }
@@ -1568,14 +1574,13 @@ TncElementStartCommand (userData, name, atts)
         tncdata->contentStackPtr++;
     }
 
-    entryPtr = Tcl_FindHashEntry (tncdata->attDefsTables, name);
-    if (!entryPtr) {
+    elemAttInfo = model->attInfo;
+    if (!elemAttInfo) {
         if (atts[0] != NULL) {
             signalNotValid (userData, TNC_ERROR_NO_ATTRIBUTES);
             return;
         }
     } else {
-        elemAttInfo = (TNC_ElemAttInfo *) Tcl_GetHashValue (entryPtr);
         elemAtts = elemAttInfo->attributes;
         nrOfreq = 0;
         for (atPtr = atts; atPtr[0]; atPtr += 2) {
@@ -2416,7 +2421,7 @@ Tnc_Init (interp)
 #endif
     Tcl_PkgRequire (interp, "tdom", "0.7", 0);
     Tcl_CreateObjCommand (interp, "tnc", TclTncObjCmd, NULL, NULL );
-    Tcl_PkgProvide (interp, "tnc", "0.1");
+    Tcl_PkgProvide (interp, "tnc", "0.2.0");
     return TCL_OK;
 }
 
