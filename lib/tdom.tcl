@@ -29,6 +29,10 @@
 #
 #
 #   $Log$
+#   Revision 1.4  2002/05/16 20:34:59  rolf
+#   Added helper proc's, that read xml declaration, detect the encoding of
+#   the XML data and configures the input channel.
+#
 #   Revision 1.3  2002/02/28 00:39:00  rolf
 #   Added tcl coded xpath function element-avaliable. Changed
 #   function-avaliable accordingly.
@@ -67,7 +71,7 @@ namespace eval ::dom {
     }
 }
 
-
+namespace eval ::tDOM { }
 
 #----------------------------------------------------------------------------
 #   hasFeature (DOMImplementation method)
@@ -648,4 +652,220 @@ proc ::dom::xpathFunc::system-property { ctxNode pos
             return [list string ""]
         }
     }
+}
+
+
+#----------------------------------------------------------------------------
+#   IANAEncoding2TclEncoding
+#
+#----------------------------------------------------------------------------
+
+# As of version 8.3.4 tcl supports 
+# cp860 cp861 cp862 cp863 tis-620 cp864 cp865 cp866 gb12345 cp949
+# cp950 cp869 dingbats ksc5601 macCentEuro cp874 macUkraine jis0201
+# gb2312 euc-cn euc-jp iso8859-10 macThai jis0208 iso2022-jp
+# macIceland iso2022 iso8859-13 iso8859-14 jis0212 iso8859-15 cp737
+# iso8859-16 big5 euc-kr macRomania macTurkish gb1988 iso2022-kr
+# macGreek ascii cp437 macRoman iso8859-1 iso8859-2 iso8859-3 ebcdic
+# macCroatian koi8-r iso8859-4 iso8859-5 cp1250 macCyrillic iso8859-6
+# cp1251 koi8-u macDingbats iso8859-7 cp1252 iso8859-8 cp1253
+# iso8859-9 cp1254 cp1255 cp850 cp1256 cp932 identity cp1257 cp852
+# macJapan cp1258 shiftjis utf-8 cp855 cp936 symbol cp775 unicode
+# cp857
+# 
+# Just add more mappings (and mail them to the tDOM mailing list, please).
+proc tDOM::IANAEncoding2TclEncoding {IANAName} {
+    
+    # First the most widespread encodings with there
+    # preferred MIME name, to speed lookup in this
+    # usual cases. Later the official names and the
+    # aliases.
+    #
+    # For "official names for character sets that may be
+    # used in the Internet" see 
+    # http://www.iana.org/assignments/character-sets
+    # (that's the source for the encoding names below)
+    # 
+    # Matching is case-insensitive
+
+    switch [string tolower $IANAName] {
+        "us-ascii"    {return ascii}
+        "utf-8"       {return utf-8}
+        "utf-16"      {return unicode; # not sure about this}
+        "iso-8859-1"  {return iso8859-1}
+        "iso-8859-2"  {return iso8859-2}
+        "iso-8859-3"  {return iso8859-3}
+        "iso-8859-4"  {return iso8859-4}
+        "iso-8859-5"  {return iso8859-5}
+        "iso-8859-6"  {return iso8859-6}
+        "iso-8859-7"  {return iso8859-7}
+        "iso-8859-8"  {return iso8859-8}
+        "iso-8859-9"  {return iso8859-9}
+        "iso-8859-10" {return iso8859-10}
+        "iso-8859-13" {return iso8859-13}
+        "iso-8859-14" {return iso8859-14}
+        "iso-8859-15" {return iso8859-15}
+        "iso-8859-16" {return iso8859-16}
+        "iso-2022-kr" {return iso2022-kr}
+        "euc-kr"      {return euc-kr}
+        "iso-2022-jp" {return iso2022-jp}
+        "koi8-r"      {return koi8-r}
+        "shift_jis"   {return shiftjis}
+        "euc-jp"      {return euc-jp}
+        "gb2312"      {return gb2312}
+        "big5"        {return big5}
+        "cp866"       {return cp866}
+
+        "windows-1251" -
+        "cp1251"      {return cp1251}
+        
+        "iso_8859-1:1987" -
+        "iso-ir-100" -
+        "iso_8859-1" -
+        "latin1" -
+        "l1" -
+        "ibm819" -
+        "cp819" -
+        "csisolatin1" {return iso8859-1}
+        
+        "iso_8859-2:1987" -
+        "iso-ir-101" -
+        "iso_8859-2" -
+        "iso-8859-2" -
+        "latin2" -
+        "l2" -
+        "csisolatin2" {return iso8859-2}
+
+        "iso_8859-5:1988" -
+        "iso-ir-144" -
+        "iso_8859-5" -
+        "iso-8859-5" -
+        "cyrillic" -
+        "csisolatincyrillic" {return iso8859-5}
+
+        "ms_kanji" -
+        "csshiftjis"  {return shiftjis}
+        
+        "csiso2022kr" {return iso2022-kr}
+
+        "ibm866" -
+        "csibm866"    {return cp866}
+        
+        default {
+            # There are much more encoding names out there
+            # It's only laziness, that let me stop here.
+            error "Unrecognized encoding name $IANAName"
+        }
+    }
+}
+
+#----------------------------------------------------------------------------
+#   IANAEncoding2TclEncoding
+#
+#----------------------------------------------------------------------------
+proc tDOM::xmlOpenFile {filename {encodingString {}}} {
+
+    set fd [open $filename]
+
+    if {$encodingString != {}} {
+        upvar $encodingString encString
+    }
+
+    # The autodetection of the encoding follows
+    # XML Recomendation, Appendix F
+
+    fconfigure $fd -encoding binary
+    binary scan [read $fd 4] "H8" firstBytes
+    
+    # First check for BOM
+    switch [string range $firstBytes 0 3] {
+        "feff" -
+        "fffe" {
+            # feff: UTF-16, big-endian BOM
+            # ffef: UTF-16, little-endian BOM
+            # channel already configured to binary
+            seek $fd 0 start
+            set encString UTF-16
+            return $fd
+        }
+    }
+
+    # If the entity has a XML Declaration, the first four characters are "<?xm".
+    switch $firstBytes {
+        "3c3f786d" {
+            # UTF-8, ISO 646, ASCII, some part of ISO 8859, Shift-JIS,
+            # EUC, or any other 7-bit, 8-bit, or mixed-width encoding which ensures
+            # that the characters of ASCII have their normal positions, width, and
+            # values; the actual encoding declaration must be read to detect which
+            # of these applies, but since all of these encodings use the same bit
+            # patterns for the ASCII characters, the encoding declaration itself may
+            # be read reliably
+
+            # First 300 bytes should be enough for a XML Declaration
+            # This is of course not 100 percent bullet proove.
+            set head [read $fd 296]
+
+            # Try to find the end of the XML Declaration
+            set closeIndex [string first ">" $head]
+            if {$closeIndex == -1} {
+                error "Wired XML data or not XML data at all"
+            }
+
+            seek $fd 0 start
+            set xmlDeclaration [read $fd [expr {$closeIndex + 5}]]
+            # extract the encoding information
+            if {![regexp {encoding=[\x20\x9\xd\xa]*["']([^ ]*)['"]} $head - encStr]} {
+                # Probably something like <?xml version="1.0"?>. 
+                # Without encoding declaration this must be UTF-8
+                set encoding utf-8
+                set encString UTF-8
+            } else {
+                set encoding [IANAEncoding2TclEncoding $encStr]
+                set encString $encStr
+            }
+        }
+        "0000003c" -
+        "0000003c" -
+        "3c000000" -
+        "00003c00" {
+            # UCS-4
+            error "UCS-4 not supported"
+        }
+        "003c003f" -
+        "3c003f00" {
+            # UTF-16, big-endian, no BOM
+            # UTF-16, little-endian, no BOM
+            seek $fd 0 start
+            set encoding binary
+            set encString UTF-16
+        }
+        "4c6fa794" {
+            # EBCDIC in some flavor
+            error "EBCDIC not supported"
+        }
+        default {
+            # UTF-8 without an encoding declaration
+            seek $fd 0 start
+            set encoding utf-8
+            set encString "UTF-8"
+        }
+    }
+    fconfigure $fd -encoding $encoding
+    return $fd
+}
+
+#----------------------------------------------------------------------------
+#   readFile
+#
+#----------------------------------------------------------------------------
+proc tDOM::xmlReadFile {filename {encodingString {}}} {
+
+    if {$encodingString != {}} {
+        upvar $encodingString encString
+    }
+    
+    set fd [xmlOpenFile $filename encString]
+    set data [read $fd [file size $filename]]
+    close $fd 
+    return $data
 }
