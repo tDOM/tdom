@@ -5110,7 +5110,7 @@ int tcldom_CheckDocShared (
     Tcl_MutexUnlock(&tableMutex);
 
     if (found && doc != tabDoc) {
-        domPanic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
+        Tcl_Panic("document mismatch; doc=%p, in table=%p\n", doc, tabDoc);
     }
 
     return found;
