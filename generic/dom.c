@@ -386,7 +386,6 @@ domLookupURI (
     domAttrNode   *NSattr;
     int            found, alreadyHaveDefault;
 
-    /* TODO: rewrite, after change of documentNS from list to arry */
     found = 0;
     alreadyHaveDefault = 0;
     while (node) {
@@ -457,7 +456,7 @@ domNS* domNewNamespace (
     doc->nsptr++;
     if (doc->nsptr > 254) {
         fprintf (stderr, "maximum number of namespaces exceeded!!!\n");
-        return NULL;
+        exit(1);
     }
     if (doc->nsptr >= doc->nslen) {
         doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
@@ -2385,62 +2384,64 @@ domSetDocument (
 )
 {
     domNode *child;
-    domNS   *ns, *orgns = NULL;
-    domDocument *originalDoc;
+    domNS   *ns, *origNS;
+    domDocument *origDoc;
+    domAttrNode *attr;
     TDomThreaded (
         Tcl_HashEntry *h;
         int hnew;
-        domAttrNode *attr;
     )
-
+    
     if (node->nodeType == ELEMENT_NODE) {
-        if (node->namespace) {
-            orgns = node->ownerDocument->namespaces[node->namespace-1];
-        }
-        originalDoc = node->ownerDocument;
+        origDoc = node->ownerDocument;
         node->ownerDocument = doc;
+        for (attr = node->firstAttr; attr != NULL; attr = attr->nextSibling) {
+            if (attr->nodeFlags & IS_NS_NODE) {
+                origNS = origDoc->namespaces[attr->namespace-1];
+                ns = domNewNamespace (doc, origNS->prefix, origNS->uri);
+                attr->namespace = ns->index;
+            } else if (attr->namespace) {
+                ns = domAddNSToNode (node, 
+                                     origDoc->namespaces[attr->namespace-1]);
+                attr->namespace = ns->index;
+            }
+        }
         if (node->namespace) {
-            ns = domLookupPrefix (node, orgns->prefix);
-            if (ns && (strcmp (ns->uri, orgns->uri)==0)) {
-                node->namespace = ns->index;
-            } else {
-                domAddNSToNode (node, orgns);
-            }
+            ns = domAddNSToNode (node, origDoc->namespaces[node->namespace-1]);
+            node->namespace = ns->index;
         } else {
-            ns = domLookupPrefix (node, "");
+            ns = domAddNSToNode (node, NULL);
             if (ns) {
-                if (strcmp(ns->uri, "")!=0) {
-                    ns = domNewNamespace (doc, "", "");
-                }
                 node->namespace = ns->index;
             }
         }
-    }
-
-    DBG( fprintf(stderr, "domSetDocument node%s ", node->nodeName);
-         __dbgAttr(node->firstAttr);
-         fprintf(stderr, "\n");
-    )
-    TDomThreaded (
-        if (originalDoc != doc && node->nodeType == ELEMENT_NODE) {
-            /* Make hash table entries as necessary for tagNames and attrNames. */
-            h = Tcl_CreateHashEntry(&doc->tagNames, node->nodeName, &hnew);
-            node->nodeName = (domString) &(h->key);
-            for (attr = node->firstAttr; attr != NULL; attr = attr->nextSibling) {
-                h = Tcl_CreateHashEntry(&doc->attrNames, attr->nodeName, &hnew);
-                attr->nodeName = (domString) &(h->key);
+        DBG( fprintf(stderr, "domSetDocument node%s ", node->nodeName);
+             __dbgAttr(node->firstAttr);
+             fprintf(stderr, "\n");
+        )
+                
+        TDomThreaded (
+            if (origDoc != doc) {
+                /* Make hash table entries as necessary for tagNames and attrNames. */
+                h = Tcl_CreateHashEntry(&doc->tagNames, node->nodeName, &hnew);
+                node->nodeName = (domString) &(h->key);
+                for (attr = node->firstAttr; attr != NULL; attr = attr->nextSibling) {
+                    h = Tcl_CreateHashEntry(&doc->attrNames, attr->nodeName, &hnew);
+                    attr->nodeName = (domString) &(h->key);
+                }
             }
-        }
-    )
-    if (node->nodeType == ELEMENT_NODE) {
+        )
         child = node->firstChild;
         while (child != NULL) {
             domSetDocument (child, doc);
             child = child->nextSibling;
         }
+    } else {
+        node->ownerDocument = doc;
     }
+
     DBG(
-        fprintf(stderr, "end domSetDocument node%s \n", node->nodeName);
+        fprintf(stderr, "end domSetDocument node %s\n", node->nodeName);
     )
 }
 
@@ -3092,25 +3093,35 @@ domAppendNewElementNode(
 |   domAddNSToNode
 |
 \--------------------------------------------------------------------------*/
-void
+domNS *
 domAddNSToNode (
     domNode *node,
     domNS   *nsToAdd
     )
 {
     domAttrNode   *attr, *lastNSAttr;
-    domNS         *ns;
+    domNS         *ns, noNS;
     Tcl_HashEntry *h;
     int            hnew;
     Tcl_DString    dStr;
 
     DBG(fprintf (stderr, "domAddNSToNode: prefix: %s, uri: %s\n", nsToAdd->prefix, nsToAdd->uri);)
+    if (!nsToAdd) {
+        noNS.uri    = "";
+        noNS.prefix = "";
+        noNS.index  = 0;
+        nsToAdd = &noNS;
+    }
     ns = domLookupPrefix (node, nsToAdd->prefix);
     if (ns) {
         if (strcmp (ns->uri, nsToAdd->uri)==0) {
             /* namespace already in scope, we're done. */
-            return;
+            return ns;
         }
+    } else {
+        /* If the NS to set was no NS and there isn't a default NS
+           we're done */
+        if (nsToAdd->prefix[0] == '\0' && nsToAdd->uri[0] == '\0') return NULL;
     }
     ns = domNewNamespace (node->ownerDocument, nsToAdd->prefix, nsToAdd->uri);
     Tcl_DStringInit (&dStr);
@@ -3150,6 +3161,7 @@ domAddNSToNode (
         node->firstAttr = attr;
     }
     Tcl_DStringFree (&dStr);
+    return ns;
 }
 
 /*---------------------------------------------------------------------------
@@ -3369,8 +3381,25 @@ domCloneNode (
         while (child) {
             newChild = domCloneNode(child, deep);
 
-            /* append new (cloned)child to cloned node, its new parent */
-            domAppendChild (n, newChild);
+            /* append new (cloned)child to cloned node, its new parent.
+               Don't use domAppendChild for this, because that would
+               mess around with the namespaces */
+            if (n->ownerDocument->fragments->nextSibling) {
+                n->ownerDocument->fragments = 
+                    n->ownerDocument->fragments->nextSibling;
+                n->ownerDocument->fragments->previousSibling = NULL;
+                newChild->nextSibling = NULL;
+            } else {
+                n->ownerDocument->fragments = NULL;
+            }
+            if (n->firstChild) {
+                newChild->previousSibling = n->lastChild;
+                n->lastChild->nextSibling = newChild;
+            } else {
+                n->firstChild = newChild;
+            }
+            n->lastChild = newChild;
+            newChild->parentNode = n;
 
             /* clone next child */
             child = child->nextSibling;
