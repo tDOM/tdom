@@ -1,3 +1,32 @@
+2003-01-30  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/dom.c
+        * generic/tcldom.c
+        * generic/xmlsimple.c
+        * tests/xslt.tests: Fixed bug reported by Wilhelm Klink
+          (http://groups.yahoo.com/group/tdom/message/404 see test
+          xslt-4.1). Again a problem (sideeffect) of renumbering
+          node->nodeNumber (which is necessary after modification of
+          the tree for some XPath expr to work). The keys of the
+          entries in the baseURIs hash table of the documents where
+          the nodeNumber of the (subtree root) nodes with new
+          baseURI. Since this nodeNumber isn't necessarily constant
+          over the lifetime of a node (because of the possibility of
+          re-numbering the tree), this could not work anymore. Instead
+          the nodeNumber, we now use the pointer to the node structure
+          as Key for the baseURIs hash table. This pointers stay
+          always constant, even if the nodeNumber changes. Additional
+          code was added to domFreeNode(), to ensure, that an entry in
+          the baseURIs hash table gets freed, if the related node is
+          in deed freed. Removed the yesterday added reseting of the
+          domUniqueNodeNr counter, because it turned out in testing,
+          that there are problems with sorting of resultSets, which
+          includes nodes from different documents (which may happen
+          with some special XSLT constructs (document() calls with a
+          nodeset as argument)). The reseting of the domUniqueNodeNr
+          is still desirable, but it turned out, that it should be
+          carefully considered, when it should be done.
+
 2003-01-29  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
