@@ -1,5 +1,9 @@
 2003-02-09  Rolf Ade  <rolf@pointsman.de>
 
+        Update to expat 1.95.6.    
+
+2003-02-09  Rolf Ade  <rolf@pointsman.de>
+
         Added 'systemId' and 'publicId' methods to the domDoc
         commands. Added flag -doctypeDeclaration to the asXML and
         asHTML methods of the domDoc commands.     
