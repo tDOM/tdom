@@ -70,7 +70,7 @@
 |   Macros
 |
 \---------------------------------------------------------------------------*/
-#define DBG(x)
+#define DBG(x)              
 #define TRACE(x)            DBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)         DBG(fprintf(stderr,(x),(a)))
 #define TRACE2(x,a,b)       DBG(fprintf(stderr,(x),(a),(b)))
@@ -1141,6 +1141,7 @@ static int xsltFormatNumber (
             if (i<79) { prefix[i++] = *p; }
             p++;
         }
+        prefix[i] = '\0';
         while (*p && ((*p==df->zeroDigit) || (*p==df->digit) || (*p==df->groupingSeparator) || (*p==df->decimalSeparator))) p++;
         i = 0;
         while (*p) {
@@ -1600,6 +1601,7 @@ static int xsltXPathFuncs (
     Tcl_HashEntry     * h;
     Tcl_HashTable     * docKeyData;
     xsltSubDoc        * sdoc;
+    domDocument       * ownerDoc;
     Tcl_DString         dStr;
     domNS             * ns;
     xsltDecimalFormat * df;
@@ -1642,8 +1644,13 @@ static int xsltXPathFuncs (
 
         /* find the doc, the context node belongs to */
         sdoc = xs->subDocs;
+        if (ctxNode->nodeType == ATTRIBUTE_NODE) {
+            ownerDoc = ((domAttrNode *)ctxNode)->parentNode->ownerDocument;
+        } else {
+            ownerDoc = ctxNode->ownerDocument;
+        }
         while (sdoc) {
-            if (sdoc->doc == ctxNode->ownerDocument) break;
+            if (sdoc->doc == ownerDoc) break;
             sdoc = sdoc->next;
         }
         DBG(if (!sdoc) fprintf (stderr, "key() function: ctxNode doesn't belong to a doc out of subDocs!!! This could not happen!. ERROR\n");
@@ -1933,8 +1940,8 @@ static int evalXPath (
 
     DBG(fprintf (stderr, "evalXPath evaluating xpath:\n");)
     DBG(printAst(3,t);)
-    rc = xpathEvalSteps( t, context, currentNode, xs->currentXSLTNode, currentPos,
-                         &docOrder, &(xs->cbs), rs, errMsg);
+    rc = xpathEvalSteps( t, context, currentNode, xs->currentXSLTNode,
+                         currentPos, &docOrder, &(xs->cbs), rs, errMsg);
     if (rc != XPATH_OK) {
         xpathRSFree( rs );
     }
@@ -2368,7 +2375,7 @@ static int xsltGetVar (
                 return XPATH_OK;
             }
         }
-        if (frame->stop && frameIndex > 1) frameIndex = 1;
+        if ((frame->stop == 1) && frameIndex > 1) frameIndex = 1;
         frameIndex--;
     }
     
