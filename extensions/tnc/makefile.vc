@@ -65,7 +65,7 @@ NODEBUG = 1
 #
 #-------------------------------------------------------------------------
 
-NAMEPREFIX = tnc
+NAMEPREFIX = libtnc
 STUBPREFIX = $(NAMEPREFIX)stub
 DOTVERSION = 0.2
 VERSION = 02
