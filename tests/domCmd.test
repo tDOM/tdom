@@ -8,6 +8,8 @@
 #    domCmd-3.*:  isName, isNCName, isCharData
 #    domCmd-4.*:  asXML, asHTML
 #    domCmd-5.*:  publicId, systemId
+#    domCmd-6.*:  parse -useForeignDTD
+#    domCmd-7.*:  external entities
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -628,6 +630,92 @@ test domCmd-5.12 {systemId - set to empty string} {
 <root/>}
 
 $doc delete
+
+test domCmd-6.1 {-useForeignDTD 0} {
+    set doc [dom parse -useForeignDTD 0 {<root/>}]
+    $doc delete
+} {}
+
+test domCmd-6.2 {-useForeignDTD 1 with document with internal subset} {
+    set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
+    set ::tDOM::useForeignDTD "data/domCmd1.dtd"
+    set doc [dom parse \
+            -useForeignDTD 1 \
+            -baseurl $baseURI \
+            -externalentitycommand ::tDOM::extRefHandler {
+<!DOCTYPE root [
+    <!ATTLIST root fixed CDATA #FIXED "toThat">
+]>
+<root/>}]
+    set root [$doc documentElement]
+    set result [$root @fixed]
+    $doc delete
+    set result
+} {toThat}
+
+test domCmd-6.3 {-useForeignDTD 1 with document with internal subset} {
+    set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
+    set ::tDOM::useForeignDTD "data/domCmd1.dtd"
+    set doc [dom parse \
+            -useForeignDTD 1 \
+            -baseurl $baseURI \
+            -externalentitycommand ::tDOM::extRefHandler {
+<!DOCTYPE root [
+    <!ATTLIST root fixed2 CDATA #FIXED "toThat">
+]>
+<root/>}]
+    set root [$doc documentElement]
+    set result [$root @fixed]
+    lappend result [$root @fixed2]
+    $doc delete
+    set result
+} {toThis toThat}
+
+test domCmd-6.4 {-useForeignDTD 1 with document without document declaration} {
+    set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
+    set ::tDOM::useForeignDTD "data/domCmd1.dtd"
+    set doc [dom parse \
+            -useForeignDTD 1 \
+            -baseurl $baseURI \
+            -externalentitycommand ::tDOM::extRefHandler <root/>]
+    set root [$doc documentElement]
+    set result [$root @fixed]
+    $doc delete
+    set result
+} {toThis}
+
+test domCmd-6.5 {-useForeignDTD 1 does not overwrite a given external subset} {
+    set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
+    set ::tDOM::useForeignDTD "data/domCmd1.dtd"
+    set doc [dom parse \
+            -useForeignDTD 1 \
+            -baseurl $baseURI \
+            -externalentitycommand ::tDOM::extRefHandler {
+<!DOCTYPE root SYSTEM "data/domCmd2.dtd">
+<root/>}]
+    set root [$doc documentElement]
+    set result [$root @fixed]
+    $doc delete
+    set result
+} {toThat}
+
+test domCmd-6.6 {-useForeignDTD with nonboolean arg} {
+    set result [catch {set doc [dom parse -useForeignDTD foo <root/>]} errMsg]
+    lappend result $errMsg
+} {1 {-useForeignDTD must have a boolean arg}}
+
+test domCmd-7.1 {document with external subset} {
+    set baseURI file://[file join [pwd] [file dir [info script]] domCmd.test]
+    set doc [dom parse \
+            -baseurl $baseURI \
+            -externalentitycommand ::tDOM::extRefHandler {
+<!DOCTYPE root SYSTEM "data/domCmd2.dtd">
+<root/>}]
+    set root [$doc documentElement]
+    set result [$root @fixed]
+    $doc delete
+    set result
+} {toThat}
 
 # cleanup
 ::tcltest::cleanupTests

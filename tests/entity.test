@@ -77,9 +77,58 @@ test entity-2.1 {predefined general entities} {
     set ::result
 } {<>&"'}
 
+# emacs: "
+
+proc extrefhandler-3 {base args} {
+    global extrefhandlerCalled
+
+    set extrefhandlerCalled 1
+
+    return [list string $base ""]
+}
+
+test entity-3.1 {-useForeignDTD} {
+    
+    set ::extrefhandlerCalled 0
+    set parser [expat -useForeignDTD 0 \
+                      -externalentitycommand extrefhandler-3 \
+                      -paramentityparsing notstandalone]
+    $parser parse <root/>
+    $parser free
+    set ::extrefhandlerCalled
+} {0}
+
+test entity-3.2 {-useForeignDTD} {
+    
+    set ::extrefhandlerCalled 0
+    set parser [expat -useForeignDTD 1 \
+                      -externalentitycommand extrefhandler-3 \
+                      -paramentityparsing notstandalone]
+    $parser parse <root/>
+    $parser free
+    set ::extrefhandlerCalled
+} {1}
+
+test entity-3.3 {-useForeignDTD} {
+    
+    set ::extrefhandlerCalled 0
+    set parser [expat -useForeignDTD 1 \
+                      -externalentitycommand extrefhandler-3 \
+                      -paramentityparsing notstandalone]
+    $parser parse {
+<!DOCTYPE root [
+    <!ATTLIST root fixed CDATA #FIXED "toThis">
+]>
+<root/>}
+    $parser free
+    set ::extrefhandlerCalled
+} {1}
+
+
 foreach parser [info commands entity-*] {
     $parser free
 }
+
 
 # cleanup
 ::tcltest::cleanupTests
