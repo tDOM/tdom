@@ -150,33 +150,58 @@ before.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>hasAttributeNS</method> <m>uri</m> <m>attributeName</m></command>
-        <desc>Returns 1 if the object node contains an attribute
-with name <m>attributeName</m> and a namespace URI <m>uri</m>.  Otherwise 0 is
+        <command><method>hasAttributeNS</method> <m>uri</m> <m>localName</m></command>
+
+        <desc>Returns 1 if the object node contains an attribute with the
+local name <m>localName</m> within the namespace <m>uri</m>.  Otherwise 0 is
 returned.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>getAttributeNS</method> <m>uri</m> <m>attributeName</m>
+        <command><method>getAttributeNS</method> <m>uri</m> <m>localName</m>
 <option>defaultValue</option></command>
-        <desc>Returns the value of the attribute
-<m>attributeName</m> having the URI <m>uri</m>. If attribute is not available
-<m>defaultValue</m> is returned.</desc>
+
+        <desc>Returns the value of the attribute with the local name
+<m>localName</m> within the namespace URI <m>uri</m>. If the node dosn't have
+that attribute the <m>defaultValue</m> is returned.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>setAttributeNS</method> <m>uri</m> <m>attributeName</m>
-<m>newValue</m></command>
-        <desc>Sets the value for an attribute <m>attributeName</m>
-with the namespace URI <m>uri</m> to <m>newValue</m>. This will create a new
-attribute, if it wasn't avialble before.
+        <command><method>setAttributeNS</method> <m>uri</m>
+<m>qualifiedName</m> <m>newValue</m></command>
+        <desc><p>Sets the value for an attribute <m>qualifiedName</m> with the
+namespace URI <m>uri</m> to <m>newValue</m>. This will create a new attribute,
+if it wasn't avialble before. If you want to set an attribute within a
+namespace you must specify the attribute name with prefix, even if you want to
+set an already existing attribute to a new value. While searching, if the
+attribute already exists, only the given <m>uri</m> and the localname of the
+<m>qualifiedName</m> is used.</p>
+
+        <example>$node setAttributeNS "http://some.uri.com/wow" prefix:attr1 attrValue</example>
+
+<p>If the uri is the empty string and the attribute name hasn't a prefix, this
+method has the same effect as the method <b>setAttribute</b>.</p>
+
+        <example>$node setAttributeNS "" attri "some Value"</example>
+
+<p>XML namespace nodes are not in any namespace. Set them this way:</p>
+
+        <example>$node setAttributeNS "" xmlns:myprefix "myNamespaceURI"
+$node setAttributeNS "" xmlns "newDefaultNamespace"</example>
+
+<p>If your <m>qualifiedName</m> has the prefix "xml" and you give the empty
+string as <m>uri</m>, the namespace of the attribute defaults to
+"http://www.w3.org/XML/1998/namespace", as the DOM 2 recommendation
+requests. With the exceptions of the special prefixes "xmlns" and "xml" you
+always must provide a non emtpy <m>uri</m>, if your <m>qualifiedName</m> has a
+prefix.</p>
         </desc>
       </commanddef>
 
       <commanddef>
-        <command><method>removeAttributeNS</method> <m>uri</m> <m>attributeName</m></command>
-        <desc>Removes the attribute <m>attributeName</m> having
-the namespace URI <m>uri</m>.</desc>
+        <command><method>removeAttributeNS</method> <m>uri</m> <m>localName</m></command>
+        <desc>Removes the attribute with the local name <m>localName</m> within
+ the namespace <m>uri</m>.</desc>
       </commanddef>
 
       <commanddef>

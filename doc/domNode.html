@@ -1,20 +1,20 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso8859-1"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode4">NAME</a> · <a href="#SECTnode15">SYNOPSIS</a> · <a href="#SECTnode26"> DESCRIPTION </a> · <a href="#SECTnode959">PORTABILITY ISSUES</a> · <a href="#SECTnode965">SEE ALSO</a> · <a href="#SECTnode974">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1879">PORTABILITY ISSUES</a> · <a href="#SECTnode1885">SEE ALSO</a> · <a href="#SECTnode1894">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode4">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode15">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode26"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTnode905"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -159,40 +159,66 @@ before.</dd>
 
       
         <dt>
-<b class="method">hasAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+<b class="method">hasAttributeNS</b> <i class="m">uri</i> <i class="m">localName</i>
 </dt>
-        <dd>Returns 1 if the object node contains an attribute
-with name <i class="m">attributeName</i> and a namespace URI <i class="m">uri</i>.  Otherwise 0 is
+
+        <dd>Returns 1 if the object node contains an attribute with the
+local name <i class="m">localName</i> within the namespace <i class="m">uri</i>.  Otherwise 0 is
 returned.</dd>
       
 
       
         <dt>
-<b class="method">getAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+<b class="method">getAttributeNS</b> <i class="m">uri</i> <i class="m">localName</i>
 <b class="option">defaultValue</b>
 </dt>
-        <dd>Returns the value of the attribute
-<i class="m">attributeName</i> having the URI <i class="m">uri</i>. If attribute is not available
-<i class="m">defaultValue</i> is returned.</dd>
+
+        <dd>Returns the value of the attribute with the local name
+<i class="m">localName</i> within the namespace URI <i class="m">uri</i>. If the node dosn't have
+that attribute the <i class="m">defaultValue</i> is returned.</dd>
       
 
       
         <dt>
-<b class="method">setAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
-<i class="m">newValue</i>
+<b class="method">setAttributeNS</b> <i class="m">uri</i>
+<i class="m">qualifiedName</i> <i class="m">newValue</i>
 </dt>
-        <dd>Sets the value for an attribute <i class="m">attributeName</i>
-with the namespace URI <i class="m">uri</i> to <i class="m">newValue</i>. This will create a new
-attribute, if it wasn't avialble before.
+        <dd>
+<p>Sets the value for an attribute <i class="m">qualifiedName</i> with the
+namespace URI <i class="m">uri</i> to <i class="m">newValue</i>. This will create a new attribute,
+if it wasn't avialble before. If you want to set an attribute within a
+namespace you must specify the attribute name with prefix, even if you want to
+set an already existing attribute to a new value. While searching, if the
+attribute already exists, only the given <i class="m">uri</i> and the localname of the
+<i class="m">qualifiedName</i> is used.</p>
+
+        <pre class="example">$node setAttributeNS &quot;http://some.uri.com/wow&quot; prefix:attr1 attrValue</pre>
+
+<p>If the uri is the empty string and the attribute name hasn't a prefix, this
+method has the same effect as the method <b>setAttribute</b>.</p>
+
+        <pre class="example">$node setAttributeNS &quot;&quot; attri &quot;some Value&quot;</pre>
+
+<p>XML namespace nodes are not in any namespace. Set them this way:</p>
+
+        <pre class="example">$node setAttributeNS &quot;&quot; xmlns:myprefix &quot;myNamespaceURI&quot;
+$node setAttributeNS &quot;&quot; xmlns &quot;newDefaultNamespace&quot;</pre>
+
+<p>If your <i class="m">qualifiedName</i> has the prefix &quot;xml&quot; and you give the empty
+string as <i class="m">uri</i>, the namespace of the attribute defaults to
+&quot;http://www.w3.org/XML/1998/namespace&quot;, as the DOM 2 recommendation
+requests. With the exceptions of the special prefixes &quot;xmlns&quot; and &quot;xml&quot; you
+always must provide a non emtpy <i class="m">uri</i>, if your <i class="m">qualifiedName</i> has a
+prefix.</p>
         </dd>
       
 
       
         <dt>
-<b class="method">removeAttributeNS</b> <i class="m">uri</i> <i class="m">attributeName</i>
+<b class="method">removeAttributeNS</b> <i class="m">uri</i> <i class="m">localName</i>
 </dt>
-        <dd>Removes the attribute <i class="m">attributeName</i> having
-the namespace URI <i class="m">uri</i>.</dd>
+        <dd>Removes the attribute with the local name <i class="m">localName</i> within
+ the namespace <i class="m">uri</i>.</dd>
       
 
       
@@ -463,13 +489,13 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode959">PORTABILITY ISSUES</a></h2>
+  <h2><a name="SECTnode1879">PORTABILITY ISSUES</a></h2>
 
-  <h2><a name="SECTnode965">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode1885">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode974">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode1894">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
