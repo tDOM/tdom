@@ -3562,8 +3562,8 @@ static int xsltNumber (
                 Tcl_DStringAppend (&dStr, "text()", -1);
             } else 
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
+                domProcessingInstructionNode *pi = (domProcessingInstructionNode *)currentNode;
                 Tcl_DStringAppend (&dStr, "processing-instruction('", -1);
-                pi = (domProcessingInstructionNode *)currentNode;
                 Tcl_DStringAppend (&dStr, pi->targetValue, pi->targetLength);
                 Tcl_DStringAppend (&dStr, "')", 2);
             } else {
