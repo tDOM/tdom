@@ -1,5 +1,8 @@
 2003-12-09  Rolf Ade  <rolf@pointsman.de>
 
+        * lib/tdom.tcl: Improved regexp to extract encoding. Corrected
+          typo.        
+    
         * generic/domxslt.c
         * generic/domxpath.c
         * generic/dom.c: Bug fix in namespace handling: copy-of from
