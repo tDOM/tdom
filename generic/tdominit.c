@@ -28,6 +28,10 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2002/06/02 06:36:24  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
+|
 |   Revision 1.4  2002/05/16 13:16:00  rolf
 |   There's something wrong, with the header files (well, at least VC++6.0
 |   thinks so). Seems, it works in this include order.
@@ -79,13 +83,26 @@ extern TdomStubs tdomStubs;
 
 int
 Tdom_Init (interp)
-     Tcl_Interp *interp; /* Interpreter to initialise. */
+     Tcl_Interp *interp; /* Interpreter to initialize. */
 {
+    char *bool = NULL;
 
 #ifdef USE_TCL_STUBS
     Tcl_InitStubs(interp, "8", 0);
 #endif
+
+#ifdef TCL_THREADS
+    bool = Tcl_GetVar2(interp, "::tcl_platform", "threaded", 0);
+    if (bool == NULL || atoi(bool) == 0) { 
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(
+                         "Tcl core wasn't compiled for multithreading.", -1));
+        return TCL_ERROR;
+    }
     domModuleInitialize();
+    tcldom_initialize();
+#else
+    domModuleInitialize();
+#endif /* TCL_THREADS */
 
 #ifndef TDOM_NO_UNKNOWN_CMD
     Tcl_Eval (interp,"rename unknown unknown_tdom");   
@@ -102,10 +119,10 @@ Tdom_Init (interp)
 #endif
     
 #ifdef USE_TCL_STUBS
-    Tcl_PkgProvideEx (interp, "tdom",  STR_TDOM_VERSION(TDOM_VERSION), 
-                    (ClientData) &tdomStubs);
+    Tcl_PkgProvideEx (interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION), 
+                      (ClientData) &tdomStubs);
 #else
-    Tcl_PkgProvide (interp, "tdom",  STR_TDOM_VERSION(TDOM_VERSION));
+    Tcl_PkgProvide (interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION));
 #endif
 
     return TCL_OK;
@@ -118,3 +135,7 @@ Tdom_SafeInit (interp)
     /* nothing special for safe interpreters -> just call Tdom_Init */
     return Tdom_Init (interp);
 }
+
+#ifdef NS_AOLSERVER
+# include "aolserver.cpp"
+#endif

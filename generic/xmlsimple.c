@@ -46,7 +46,7 @@
 |   but WITHOUT ANY WARRANTY; without even the implied warranty of
 |   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 |   Library General Public License for more details.
-|   
+|
 |   You should have received a copy of the GNU Library General Public
 |   License along with this library; if not, write to the
 |   Free Software Foundation, Inc., 59 Temple Place - Suite 330,
@@ -57,7 +57,6 @@
 |     http://www.hwaci.com/drh/
 |
 \---------------------------------------------------------------------------*/
-
 
 
 /*----------------------------------------------------------------------------
@@ -79,7 +78,6 @@
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 
 
-
 /*----------------------------------------------------------------------------
 |   Begin Character Entity Translator
 |
@@ -99,7 +97,7 @@
 
 /*----------------------------------------------------------------------------
 |   Each entity reference is recorded as an instance of the following
-|   tructure
+|   structure
 \---------------------------------------------------------------------------*/
 typedef struct Er Er;
 struct Er {
@@ -113,7 +111,7 @@ struct Er {
 |   The size of the hash table.  For best results this should
 |   be a prime number which is about the same size as the number of
 |   character entity references known to the system.
-| 
+|
 \---------------------------------------------------------------------------*/
 #define ER_HASH_SIZE 7
 
@@ -123,30 +121,31 @@ struct Er {
 |   to be initialized.
 |
 |   Hash table is used read-only, therefore just one copy, protected with
-|   mutex for threading environments.
+|   mutex when used in threading environments. The mutex is used only for
+|   initial setup of the table.
 |
 \---------------------------------------------------------------------------*/
 static int bErNeedsInit = 1;
 TDomThreaded(static Tcl_Mutex initMutex;)
 
+
 /*----------------------------------------------------------------------------
-|   The hash table 
+|   The hash table
 |
 |   If the name of an entity reference hashes to the value H, then
 |   apErHash[H] will point to a linked list of Er structures, one of
 |   which will be the Er structure for that entity reference
-| 
+|
 \---------------------------------------------------------------------------*/
 static Er *apErHash[ER_HASH_SIZE];
 
 
-
 /*----------------------------------------------------------------------------
-|   ErHash  -- 
+|   ErHash  --
 |
-|       Hash an entity reference name.  The value returned is an 
+|       Hash an entity reference name.  The value returned is an
 |       integer between 0 and Er_HASH_SIZE-1, inclusive.
-| 
+|
 \---------------------------------------------------------------------------*/
 static int ErHash(
     const char *zName
@@ -171,7 +170,7 @@ static int ErHash(
 |
 |   Note: For the decoder to work, the name of the entity reference
 |   must not be shorter than the value.
-| 
+|
 \---------------------------------------------------------------------------*/
 static Er er_sequences[] = {
     { "amp",       "&",        0 },
@@ -187,7 +186,7 @@ static Er er_sequences[] = {
 |   ErInit --
 |
 |       Initialize the entity reference hash table
-| 
+|
 \---------------------------------------------------------------------------*/
 static void ErInit (void)
 {
@@ -199,7 +198,7 @@ static void ErInit (void)
         er_sequences[i].pNext = apErHash[h];
         apErHash[h] = &er_sequences[i];
     }
-    
+
 } /* ErInit */
 
 
@@ -215,7 +214,7 @@ static void ErInit (void)
 |
 |          input =    "AT&amp;T &gt MCI"
 |          output =   "AT&T > MCI"
-| 
+|
 \---------------------------------------------------------------------------*/
 static void TranslateEntityRefs (
     char *z,
@@ -228,21 +227,27 @@ static void TranslateEntityRefs (
     char *zVal;  /* The substituted value */
     Er *p;       /* For looping down the entity reference collision chain */
     int value;
-    
+
     from = to = 0;
 
-    TDomThreaded( Tcl_MutexLock(&initMutex); ) 
+    /*---------------------------------------------
+     |   This is done only once per process
+     \--------------------------------------------*/
+
     if (bErNeedsInit) {
-        ErInit();
-        bErNeedsInit = 0;
+        TDomThreaded(Tcl_MutexLock(&initMutex);)
+        if (bErNeedsInit) {
+            ErInit();
+            bErNeedsInit = 0;
+        }
+        TDomThreaded(Tcl_MutexUnlock(&initMutex);)
     }
-    TDomThreaded( Tcl_MutexUnlock(&initMutex); )
-    
+
     while (z[from]) {
         if (z[from]=='&') {
             int i = from+1;
             int c;
-            
+
             if (z[i] == '#') {
                 /*---------------------------------------------
                 |   convert character reference
@@ -254,7 +259,7 @@ static void TranslateEntityRefs (
                         value = value * 16;
                         if ((c>='0') && (c<='9')) {
                             value += c-'0';
-                        } else 
+                        } else
                         if ((c>='A') && (c<='F')) {
                             value += c-'A' + 10;
                         } else
@@ -281,7 +286,7 @@ static void TranslateEntityRefs (
                 }
                 from = i+1;
                 z[to++] = value;
-                
+
             } else {
                 while (z[i] && isalpha(z[i])) {
                    i++;
@@ -290,7 +295,7 @@ static void TranslateEntityRefs (
                 z[i] = 0;
                 h = ErHash(&z[from+1]);
                 p = apErHash[h];
-                while (p && strcmp(p->zName,&z[from+1])!=0 ) { 
+                while (p && strcmp(p->zName,&z[from+1])!=0 ) {
                     p = p->pNext;
                 }
                 z[i] = c;
@@ -317,9 +322,6 @@ static void TranslateEntityRefs (
 \---------------------------------------------------------------------------*/
 
 
-
-
-
 /*----------------------------------------------------------------------------
 |   XML_SimpleParse (non recursive)
 |
@@ -336,7 +338,7 @@ XML_SimpleParse (
     int          ignoreWhiteSpaces,
     char       **errStr
 ) {
-    register int   c;          /* Next character of the input file */    
+    register int   c;          /* Next character of the input file */
     register char *pn;
     register char *x, *start, *piSep;
     int            saved;
@@ -344,17 +346,15 @@ XML_SimpleParse (
     domNode       *node, *toplevel, *rootNode;
     domNode       *parent_node = NULL;
     domTextNode   *tnode;
-    domAttrNode   *attrnode, *lastAttr;    
+    domAttrNode   *attrnode, *lastAttr;
     int            ampersandSeen = 0;
     int            only_whites   = 0;
     int            hnew;
     Tcl_HashEntry *h;
     domProcessingInstructionNode *pinode;
-    GetTDomTSD();
-    
-    
+
     x = &(xml[*pos]);
-    
+
     while ( (c=*x)!=0 ) {
 
         start = x;
@@ -371,7 +371,7 @@ XML_SimpleParse (
                 if ( (c != ' ')  &&
                      (c != '\t') &&
                      (c != '\n') &&
-                     (c != '\r') ) { 
+                     (c != '\r') ) {
                     only_whites = 0;
                 }
                 x++;
@@ -381,37 +381,37 @@ XML_SimpleParse (
                 |   allocate new TEXT node
                  \-------------------------------------------------------*/
                 tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                memset(tnode, 0, sizeof(domTextNode));       
+                memset(tnode, 0, sizeof(domTextNode));
                 tnode->nodeType    = TEXT_NODE;
                 tnode->nodeFlags   = 0;
                 tnode->namespace   = 0;
-                tnode->nodeNumber  = ++TSDPTR(domUniqueNodeNr);
+                tnode->nodeNumber  = NODE_NO(tnode);
                 tnode->valueLength = (x - start);
                 tnode->nodeValue   = (char*)Tcl_Alloc((x - start)+1);
-                memmove(tnode->nodeValue, start, (x - start));    
+                memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
                 if (ampersandSeen) {
                     TranslateEntityRefs(tnode->nodeValue, &(tnode->valueLength) );
                 }
                 tnode->ownerDocument = doc;
-                tnode->parentNode = parent_node;        
+                tnode->parentNode = parent_node;
                 if (parent_node->firstChild)  {
                     parent_node->lastChild->nextSibling = (domNode*)tnode;
                     tnode->previousSibling = parent_node->lastChild;
                     parent_node->lastChild = (domNode*)tnode;
                 } else {
                     parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
-                }   
+                }
             }
-            
+
         } else if (x[1]=='/') {
             /*------------------------------------------------------------
-            |   read and check closing tag 
+            |   read and check closing tag
             \-----------------------------------------------------------*/
             node = parent_node;
             parent_node = node->parentNode;
             pn = (char*)node->nodeName;
-            
+
             x += 2;
             while (*x == *pn) { x++; pn++; }
             if ( *pn || (*x!='>' && !SPACE(*x) ) ) {
@@ -424,19 +424,19 @@ XML_SimpleParse (
                 x++;
             } else {
                 RetError("Missing \">\"",(x - xml)-1);
-            }            
+            }
             if (parent_node == NULL) {
-                /* we return to main node and so finished parsing 
+                /* we return to main node and so finished parsing
                    create the root node now
                  */
-                h = Tcl_CreateHashEntry( &TSDPTR(tagNames), "(rootNode)", &hnew);
+                h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
                 rootNode = (domNode*) domAlloc(sizeof(domNode));
                 memset(rootNode, 0, sizeof(domNode));
                 rootNode->nodeType      = ELEMENT_NODE;
                 rootNode->nodeFlags     = 0;
                 rootNode->namespace     = 0;
                 rootNode->nodeName      = (char *)&(h->key);
-                rootNode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                rootNode->nodeNumber    = NODE_NO(tnode);
                 rootNode->ownerDocument = doc;
                 rootNode->parentNode    = NULL;
 
@@ -453,9 +453,9 @@ XML_SimpleParse (
                 return TCL_OK;
             }
             continue;
-            
-        } else {  
-                
+
+        } else {
+
             x++;
             if (*x=='!') {
                 if (x[1]=='-' && x[2]=='-') {
@@ -463,7 +463,7 @@ XML_SimpleParse (
                     |   read over a comment
                     \-------------------------------------------------------*/
                     x += 3;
-                    while ( (c=*x)!=0 && 
+                    while ( (c=*x)!=0 &&
                             (c!='-' || x[1]!='-' || x[2]!='>')) {
                         x++;
                     }
@@ -472,16 +472,16 @@ XML_SimpleParse (
                         |   allocate new COMMENT node for comments
                         \---------------------------------------------------*/
                         tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                        memset(tnode, 0, sizeof(domTextNode));       
+                        memset(tnode, 0, sizeof(domTextNode));
                         tnode->nodeType      = COMMENT_NODE;
                         tnode->nodeFlags     = 0;
                         tnode->namespace     = 0;
-                        tnode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                        tnode->nodeNumber    = NODE_NO(tnode);
                         tnode->ownerDocument = doc;
-                        tnode->parentNode    = parent_node;        
+                        tnode->parentNode    = parent_node;
                         tnode->valueLength   = x - start - 4;
                         tnode->nodeValue     = (char*)Tcl_Alloc(tnode->valueLength+1);
-                        memmove(tnode->nodeValue, start+4, tnode->valueLength);    
+                        memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
                             if (doc->documentElement) {
@@ -494,7 +494,7 @@ XML_SimpleParse (
                             } else {
                                 doc->documentElement = (domNode*)tnode;
                             }
-                        } else {            
+                        } else {
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
                                 tnode->previousSibling = parent_node->lastChild;
@@ -502,16 +502,16 @@ XML_SimpleParse (
                             } else {
                                 parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
                             }
-                        }   
+                        }
                         x += 3;
                     } else {
                         RetError("Unterminated comment",(start-xml));
                     }
                     continue;
 
-                } else if (x[1]=='D' && x[2]=='O' && 
-                           x[3]=='C' && x[4]=='T' && 
-                           x[5]=='Y' && x[6]=='P' && x[7]=='E' ) {                
+                } else if (x[1]=='D' && x[2]=='O' &&
+                           x[3]=='C' && x[4]=='T' &&
+                           x[5]=='Y' && x[6]=='P' && x[7]=='E' ) {
                     /*--------------------------------------------------------
                     |   read over a DOCTYPE definition
                     \-------------------------------------------------------*/
@@ -521,29 +521,29 @@ XML_SimpleParse (
                         if (*x=='[') {
                             x++;
                             while ((*x!=0) && (*x!=']')) x++;
-                        } else 
-                        if (*x=='>') { 
+                        } else
+                        if (*x=='>') {
                             break;
                         } else {
                             x++;
                         }
-                    } 
+                    }
                     if (*x) {
                         x++;
                     } else {
                         RetError("Unterminated DOCTYPE definition",(start-xml));
                     }
                     continue;
-                    
-                } else if (x[1]=='[' && x[2]=='C' && 
-                           x[3]=='D' && x[4]=='A' && 
-                           x[5]=='T' && x[6]=='A' && x[7]=='[' ) {                 
+
+                } else if (x[1]=='[' && x[2]=='C' &&
+                           x[3]=='D' && x[4]=='A' &&
+                           x[5]=='T' && x[6]=='A' && x[7]=='[' ) {
                     /*--------------------------------------------------------
                     |   read over a <![CDATA[ section
                     \-------------------------------------------------------*/
                     x += 8;
                     start = x;
-                    while ( (*x!=0) && 
+                    while ( (*x!=0) &&
                             ((*x!=']') || (x[1]!=']') || (x[2]!='>'))) {
                         x++;
                     }
@@ -553,16 +553,16 @@ XML_SimpleParse (
                             |   allocate new TEXT node for CDATA section data
                             \---------------------------------------------------*/
                             tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                            memset(tnode, 0, sizeof(domTextNode));       
+                            memset(tnode, 0, sizeof(domTextNode));
                             tnode->nodeType      = TEXT_NODE;
                             tnode->nodeFlags     = 0;
                             tnode->namespace     = 0;
-                            tnode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                            tnode->nodeNumber    = NODE_NO(tnode);
                             tnode->ownerDocument = doc;
-                            tnode->parentNode    = parent_node;        
+                            tnode->parentNode    = parent_node;
                             tnode->valueLength   = (x - start);
                             tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
-                            memmove(tnode->nodeValue, start, (x - start));    
+                            memmove(tnode->nodeValue, start, (x - start));
                             *(tnode->nodeValue + (x - start)) = 0;
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
@@ -570,7 +570,7 @@ XML_SimpleParse (
                                 parent_node->lastChild = (domNode*)tnode;
                             } else {
                                 parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
-                            }   
+                            }
                         }
                         x += 3;
                     } else {
@@ -580,14 +580,14 @@ XML_SimpleParse (
                  } else {
                         RetError("Incorrect <!... tag",(start-xml) );
                  }
-                 
+
             } else if (*x=='?') {
                 /*--------------------------------------------------------
                 |   read over a processing instructions(PI) / XMLDecl
                 \-------------------------------------------------------*/
                 x++;
                 start = x;
-                while ( (c=*x)!=0 && 
+                while ( (c=*x)!=0 &&
                         (c!='?' || x[1]!='>')) {
                     x++;
                 }
@@ -595,41 +595,41 @@ XML_SimpleParse (
                     /*------------------------------------------------------------
                     |   allocate new PI node for processing instruction section
                     \-----------------------------------------------------------*/
-                    pinode = (domProcessingInstructionNode*) 
+                    pinode = (domProcessingInstructionNode*)
                             domAlloc(sizeof(domProcessingInstructionNode));
-                    memset(pinode, 0, sizeof(domProcessingInstructionNode));       
+                    memset(pinode, 0, sizeof(domProcessingInstructionNode));
                     pinode->nodeType      = PROCESSING_INSTRUCTION_NODE;
                     pinode->nodeFlags     = 0;
                     pinode->namespace     = 0;
-                    pinode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                    pinode->nodeNumber    = NODE_NO(pinode);
                     pinode->ownerDocument = doc;
-                    pinode->parentNode    = parent_node;        
-                        
+                    pinode->parentNode    = parent_node;
+
                     /*-------------------------------------------------
                     |   extract PI target
                     \------------------------------------------------*/
                     piSep = start;
-                    while ( (c=*piSep)!=0 && !SPACE(c) && 
+                    while ( (c=*piSep)!=0 && !SPACE(c) &&
                             (c!='?' || piSep[1]!='>')) {
                          piSep++;
                     }
-                    *piSep = '\0'; /* temporarily terminate the string */ 
+                    *piSep = '\0'; /* temporarily terminate the string */
 
                     pinode->targetLength = strlen(start);
                     pinode->targetValue  = (char*)Tcl_Alloc(pinode->targetLength);
-                    memmove(pinode->targetValue, start, pinode->targetLength);  
-                                
-                    *piSep = c;  /* remove temporarily termination */ 
-                        
+                    memmove(pinode->targetValue, start, pinode->targetLength);
+
+                    *piSep = c;  /* remove temporarily termination */
+
                     /*-------------------------------------------------
                     |   extract PI data
                     \------------------------------------------------*/
-                    while (SPACE(*piSep)) { 
+                    while (SPACE(*piSep)) {
                         piSep++;
                     }
                     pinode->dataLength = x - piSep;
                     pinode->dataValue  = (char*)Tcl_Alloc(pinode->dataLength);
-                    memmove(pinode->dataValue, piSep, pinode->dataLength);  
+                    memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
                         if (doc->documentElement) {
@@ -642,7 +642,7 @@ XML_SimpleParse (
                         } else {
                             doc->documentElement = (domNode*)pinode;
                         }
-                    } else {            
+                    } else {
                         if (parent_node->firstChild)  {
                             parent_node->lastChild->nextSibling = (domNode*)pinode;
                             pinode->previousSibling = parent_node->lastChild;
@@ -650,17 +650,16 @@ XML_SimpleParse (
                         } else {
                             parent_node->firstChild = parent_node->lastChild = (domNode*)pinode;
                         }
-                    }   
+                    }
                     x += 2;
                 } else {
                     RetError("Unterminated processing instruction(PI)",(start-xml) );
                 }
                 continue;
             }
-            
 
             /*----------------------------------------------------------------
-            |   new tag/element 
+            |   new tag/element
             |
             \---------------------------------------------------------------*/
             hasContent = 1;
@@ -672,23 +671,22 @@ XML_SimpleParse (
             }
             if ( (x-start)==1) {
                 RetError("Null markup name",(start-xml) );
-            } 
-            *x = '\0'; /* temporarily terminate the string */ 
+            }
+            *x = '\0'; /* temporarily terminate the string */
 
             /*------------------------------------------------------
-            |   create new DOM element node 
+            |   create new DOM element node
             \-----------------------------------------------------*/
-            h = Tcl_CreateHashEntry( &TSDPTR(tagNames), start+1, &hnew);
-            
+            h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), start+1, &hnew);
             node = (domNode*) domAlloc(sizeof(domNode));
             memset(node, 0, sizeof(domNode));
             node->nodeType      = ELEMENT_NODE;
             node->nodeFlags     = 0;
             node->namespace     = 0;
             node->nodeName      = (char *)&(h->key);
-            node->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+            node->nodeNumber    = NODE_NO(node);
             node->ownerDocument = doc;
-            
+
             if (parent_node == NULL) {
                 if (doc->documentElement) {
                     toplevel = doc->documentElement;
@@ -700,7 +698,7 @@ XML_SimpleParse (
                 }
                 doc->documentElement = node;
             } else {
-                node->parentNode = parent_node;        
+                node->parentNode = parent_node;
                 if (parent_node->firstChild)  {
                     parent_node->lastChild->nextSibling = node;
                     node->previousSibling = parent_node->lastChild;
@@ -709,9 +707,9 @@ XML_SimpleParse (
                     parent_node->firstChild = parent_node->lastChild = node;
                 }
             }
-            
-            *x = c;  /* remove temporarily termination */ 
-            
+
+            *x = c;  /* remove temporarily termination */
+
             while (SPACE(*x) ) {
                 x++;
             }
@@ -724,12 +722,12 @@ XML_SimpleParse (
                 int nArgName;
                 char *ArgVal = NULL;
                 int nArgVal = 0;
-                
+
                 while ((c=*x)!=0 && c!='=' && c!='>' && !SPACE(c) ) {
                     x++;
                 }
                 nArgName = x - ArgName;
-                while (SPACE(*x)) { 
+                while (SPACE(*x)) {
                     x++;
                 }
                 if (*x=='=') {
@@ -737,7 +735,7 @@ XML_SimpleParse (
                 }
                 saved = *(ArgName + nArgName);
                 *(ArgName + nArgName) = '\0'; /* terminate arg name */
-                
+
                 while (SPACE(*x)) {
                     x++;
                 }
@@ -758,7 +756,7 @@ XML_SimpleParse (
                     nArgVal = x - ArgVal;
                     if (c==0) {
                         RetError("Unterminated string",(ArgVal - xml - 1) );
-                    } else { 
+                    } else {
                         x++;
                     }
                 } else if (c!=0 && c!='>') {
@@ -778,17 +776,16 @@ XML_SimpleParse (
                 /*--------------------------------------------------
                 |   allocate new attribute node
                 \--------------------------------------------------*/
-                h = Tcl_CreateHashEntry( &TSDPTR(attrNames), ArgName, &hnew);  
-                
+                h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
                 attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
-                memset(attrnode, 0, sizeof(domAttrNode));                       
-                attrnode->parentNode  = node;        
+                memset(attrnode, 0, sizeof(domAttrNode));
+                attrnode->parentNode  = node;
                 attrnode->nodeName    = (char *)&(h->key);
-                attrnode->nodeType    = ATTRIBUTE_NODE;  
-                attrnode->nodeFlags   = 0;                  
+                attrnode->nodeType    = ATTRIBUTE_NODE;
+                attrnode->nodeFlags   = 0;
                 attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
                 attrnode->valueLength = nArgVal;
-                memmove(attrnode->nodeValue, ArgVal, nArgVal);    
+                memmove(attrnode->nodeValue, ArgVal, nArgVal);
                 *(attrnode->nodeValue + nArgVal) = 0;
                 if (ampersandSeen) {
                     TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
@@ -799,7 +796,7 @@ XML_SimpleParse (
                     node->firstAttr = attrnode;
                 }
                 lastAttr = attrnode;
-                
+
                 *(ArgName + nArgName) = saved;
 
                 while (SPACE(*x)) {
@@ -833,7 +830,7 @@ XML_SimpleParse (
 /*----------------------------------------------------------------------------
 |   XML_SimpleParseDocument
 |
-|       Create a document, parses the XML string starting at 'pos' and 
+|       Create a document, parses the XML string starting at 'pos' and
 |       continuing to the first encountered error.
 |
 \---------------------------------------------------------------------------*/
@@ -844,22 +841,12 @@ XML_SimpleParseDocument (
     int    *pos,
     char  **errStr
 ) {
-    domDocument *doc = (domDocument*) Tcl_Alloc(sizeof(domDocument));
-    GetTDomTSD();
-    
-    memset(doc, 0, sizeof(domDocument));  
-    doc->documentNumber   = ++TSDPTR(domUniqueDocNr);
-    doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-      
+    domDocument *doc = domCreateEmptyDoc();
+
     *pos = 0;
     XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, errStr);
-    
-    return doc;    
+
+    return doc;
 
 } /* XML_SimpleParseDocument */
 

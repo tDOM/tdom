@@ -4,7 +4,7 @@
 |
 |
 | !! EXPERIMENTAL / pre alpha !!
-|   A simple (hopefully fast) HTML parser to build up a DOM structure 
+|   A simple (hopefully fast) HTML parser to build up a DOM structure
 |   in memory.
 |   Based on xmlsimple.c.
 | !! EXPERIMENTAL / pre alpha !!
@@ -47,7 +47,7 @@
 |   but WITHOUT ANY WARRANTY; without even the implied warranty of
 |   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 |   Library General Public License for more details.
-|   
+|
 |   You should have received a copy of the GNU Library General Public
 |   License along with this library; if not, write to the
 |   Free Software Foundation, Inc., 59 Temple Place - Suite 330,
@@ -77,7 +77,7 @@
 |   Defines
 |
 \---------------------------------------------------------------------------*/
-#define DBG(x)          
+#define DBG(x)
 #define RetError(m,p)   *errStr = strdup(m); *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 #define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') )
@@ -118,7 +118,7 @@ struct Er {
 |   The size of the hash table.  For best results this should
 |   be a prime number which is about the same size as the number of
 |   character entity references known to the system.
-| 
+|
 \---------------------------------------------------------------------------*/
 #define ER_HASH_SIZE 7
 
@@ -126,30 +126,30 @@ struct Er {
 /*----------------------------------------------------------------------------
 |   The following flag is TRUE if entity reference hash table needs
 |   to be initialized.
-| 
+|
 \---------------------------------------------------------------------------*/
 static int bErNeedsInit = 1;
 TDomThreaded(static Tcl_Mutex initMutex;)
 
 
 /*----------------------------------------------------------------------------
-|   The hash table 
+|   The hash table
 |
 |   If the name of an entity reference hashes to the value H, then
 |   apErHash[H] will point to a linked list of Er structures, one of
 |   which will be the Er structure for that entity reference
-| 
+|
 \---------------------------------------------------------------------------*/
 static Er *apErHash[ER_HASH_SIZE];
 
 
 
 /*----------------------------------------------------------------------------
-|   ErHash  -- 
+|   ErHash  --
 |
-|       Hash an entity reference name.  The value returned is an 
+|       Hash an entity reference name.  The value returned is an
 |       integer between 0 and Er_HASH_SIZE-1, inclusive.
-| 
+|
 \---------------------------------------------------------------------------*/
 static int ErHash(
     const char *zName
@@ -174,7 +174,7 @@ static int ErHash(
 |
 |   Note: For the decoder to work, the name of the entity reference
 |   must not be shorter than the value.
-| 
+|
 \---------------------------------------------------------------------------*/
 static Er er_sequences[] = {
     { "amp",       "&",        0 },
@@ -285,7 +285,7 @@ static Er er_sequences[] = {
 |   ErInit --
 |
 |       Initialize the entity reference hash table
-| 
+|
 \---------------------------------------------------------------------------*/
 static void ErInit (void)
 {
@@ -297,7 +297,7 @@ static void ErInit (void)
         er_sequences[i].pNext = apErHash[h];
         apErHash[h] = &er_sequences[i];
     }
-    
+
 } /* ErInit */
 
 
@@ -313,7 +313,7 @@ static void ErInit (void)
 |
 |          input =    "AT&amp;T &gt MCI"
 |          output =   "AT&T > MCI"
-| 
+|
 \---------------------------------------------------------------------------*/
 static void TranslateEntityRefs (
     char *z,
@@ -326,21 +326,23 @@ static void TranslateEntityRefs (
     char *zVal;  /* The substituted value */
     Er *p;       /* For looping down the entity reference collision chain */
     int value;
-    
+
     from = to = 0;
 
-    TDomThreaded( Tcl_MutexLock(&initMutex); ) 
     if (bErNeedsInit) {
-        ErInit();
-        bErNeedsInit = 0;
+        TDomThreaded(Tcl_MutexLock(&initMutex);)
+        if (bErNeedsInit) {
+            ErInit();
+            bErNeedsInit = 0;
+        }
+        TDomThreaded(Tcl_MutexUnlock(&initMutex);)
     }
-    TDomThreaded( Tcl_MutexUnlock(&initMutex); )
-    
+
     while (z[from]) {
         if (z[from]=='&') {
             int i = from+1;
             int c;
-            
+
             if (z[i] == '#') {
                 /*---------------------------------------------
                 |   convert character reference
@@ -352,7 +354,7 @@ static void TranslateEntityRefs (
                         value = value * 16;
                         if ((c>='0') && (c<='9')) {
                             value += c-'0';
-                        } else 
+                        } else
                         if ((c>='A') && (c<='F')) {
                             value += c-'A' + 10;
                         } else
@@ -379,7 +381,7 @@ static void TranslateEntityRefs (
                 }
                 from = i+1;
                 z[to++] = value;
-                
+
             } else {
                 while (z[i] && isalpha(z[i])) {
                    i++;
@@ -388,7 +390,7 @@ static void TranslateEntityRefs (
                 z[i] = 0;
                 h = ErHash(&z[from+1]);
                 p = apErHash[h];
-                while (p && strcmp(p->zName,&z[from+1])!=0 ) { 
+                while (p && strcmp(p->zName,&z[from+1])!=0 ) {
                     p = p->pNext;
                 }
                 z[i] = c;
@@ -415,9 +417,6 @@ static void TranslateEntityRefs (
 \---------------------------------------------------------------------------*/
 
 
-
-
-
 /*----------------------------------------------------------------------------
 |   HTML_SimpleParse (non recursive)
 |
@@ -434,7 +433,7 @@ HTML_SimpleParse (
     int          ignoreWhiteSpaces,
     char       **errStr
 ) {
-    register int   c;          /* Next character of the input file */    
+    register int   c;          /* Next character of the input file */
     register char *pn, *e;
     register char *x, *start, *piSep;
     int            saved;
@@ -442,23 +441,21 @@ HTML_SimpleParse (
     domNode        *pnode, *saved_node, *toplevel;
     domNode       *node = NULL, *parent_node = NULL;
     domTextNode   *tnode;
-    domAttrNode   *attrnode, *lastAttr;    
+    domAttrNode   *attrnode, *lastAttr;
     int            ampersandSeen = 0;
     int            only_whites   = 0;
     int            hnew, autoclose, ignore;
     char           tmp[250];
-/**    
+/**
  #define LATE_CLOSE_DEEPNESS 100
     char          *lateClose[LATE_CLOSE_DEEPNESS];
     int            topLateClose = 0;
-**/    
+**/
     Tcl_HashEntry *h;
     domProcessingInstructionNode *pinode;
-    GetTDomTSD();
-
 
     x = &(html[*pos]);
-    
+
     while ( (c=*x)!=0 ) {
 
         start = x;
@@ -476,7 +473,7 @@ HTML_SimpleParse (
                 if ( (c != ' ')  &&
                      (c != '\t') &&
                      (c != '\n') &&
-                     (c != '\r') ) { 
+                     (c != '\r') ) {
                     only_whites = 0;
                 }
                 x++;
@@ -486,20 +483,20 @@ HTML_SimpleParse (
                 |   allocate new TEXT node
                 \-------------------------------------------------------*/
                 tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                memset(tnode, 0, sizeof(domTextNode));       
+                memset(tnode, 0, sizeof(domTextNode));
                 tnode->nodeType    = TEXT_NODE;
                 tnode->nodeFlags   = 0;
                 tnode->namespace   = 0;
-                tnode->nodeNumber  = ++TSDPTR(domUniqueNodeNr);
+                tnode->nodeNumber  = NODE_NO(tnode);
                 tnode->valueLength = (x - start);
                 tnode->nodeValue   = (char*)Tcl_Alloc((x - start)+1);
-                memmove(tnode->nodeValue, start, (x - start));    
+                memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
                 if (ampersandSeen) {
                     TranslateEntityRefs(tnode->nodeValue, &(tnode->valueLength) );
                 }
                 tnode->ownerDocument = doc;
-                tnode->parentNode = parent_node;        
+                tnode->parentNode = parent_node;
                 if (parent_node->firstChild)  {
                     parent_node->lastChild->nextSibling = (domNode*)tnode;
                     tnode->previousSibling = parent_node->lastChild;
@@ -507,14 +504,14 @@ HTML_SimpleParse (
                 } else {
                     parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
                 }
-                node = (domNode*)tnode;   
+                node = (domNode*)tnode;
             }
-            
+
         } else if (x[1]=='/') {
             /*------------------------------------------------------------
-            |   read and check closing tag 
+            |   read and check closing tag
             \-----------------------------------------------------------*/
-            x += 2;            
+            x += 2;
             while ((c=*x)!=0 && c!='>' && c!='<' && !SPACE(c) ) {
                 *x = tolower(c);
                 x++;
@@ -524,8 +521,8 @@ HTML_SimpleParse (
             }
             if ( (x-start)==2) {
                 RetError("Null markup name",(start-html) );
-            }                         
-            *x = '\0'; /* temporarily terminate the string */ 
+            }
+            *x = '\0'; /* temporarily terminate the string */
 
             /*----------------------------------------------------------------------
             |   look for a corresponding opening tag the way up the tag hierarchy
@@ -541,21 +538,21 @@ HTML_SimpleParse (
                 DBG(fprintf(stderr,"ignoring closing '%s' \n", start+2);)
 
             } else {
-            
+
                 saved_node = node = parent_node;
                 parent_node = node->parentNode;
-                pn = (char*)node->nodeName;                        
-                    
+                pn = (char*)node->nodeName;
+
                 while (1) {
                     DBG(fprintf(stderr, "comparing '%s' with pn='%s' \n", start+2, pn);)
                     if (strcmp(start+2,pn)!=0) {
-                
+
                         /*----------------------------------------------------------
                         |   check for parent tags which allow closing of sub tags
                         |   which belong to the parent tag
                         \---------------------------------------------------------*/
                         ignore = 0;
-                        if (!strcmp(pn,"table") 
+                        if (!strcmp(pn,"table")
                             && (!strcmp(start+2,"tr") || !strcmp(start+2,"td"))
                         ) {
                             ignore = 1;
@@ -565,7 +562,7 @@ HTML_SimpleParse (
                             parent_node = node->parentNode;
                             break;
                         }
-                    
+
                         /*---------------------------------------------------------------
                         |   check for tags for which end tag can be omitted
                         \--------------------------------------------------------------*/
@@ -577,9 +574,9 @@ HTML_SimpleParse (
                             case 'd': if (!strcmp(pn,"dd") ||
                                           !strcmp(pn,"dt") ||
                                           (!strcmp(start+2,"form") && !strcmp(pn,"div"))
-                                         )                        autoclose = 1; break; 
+                                         )                        autoclose = 1; break;
                             case 'h': if (!strcmp(pn,"head") ||
-                                          !strcmp(pn,"html"))     autoclose = 1; break; 
+                                          !strcmp(pn,"html"))     autoclose = 1; break;
                             case 'f': if (!strcmp(pn,"font")||
                                           !strcmp(pn,"form"))     autoclose = 1; break;
                             case 'i': if (!strcmp(pn,"i"))        autoclose = 1; break;
@@ -594,7 +591,7 @@ HTML_SimpleParse (
                                           !strcmp(pn,"thead") ||
                                           !strcmp(pn,"th")    ||
                                           !strcmp(pn,"tr")    ||
-                                          !strcmp(pn,"tt"))       autoclose = 1; break; 
+                                          !strcmp(pn,"tt"))       autoclose = 1; break;
                             case 'u': if (!strcmp(pn,"ul"))       autoclose = 1; break; /* ext */
                         }
                         /*---------------------------------------------------------------
@@ -613,14 +610,14 @@ HTML_SimpleParse (
                             }
                         }
                         sprintf(tmp, "Unterminated element '%s' (within '%s')", start+2, pn);
-                        *x = c;  /* remove temporarily termination */ 
+                        *x = c;  /* remove temporarily termination */
                         RetError(tmp,(x - html));
                     }
-                    break;                    
+                    break;
                 }
             }
-            *x = c;  /* remove temporarily termination */ 
-            
+            *x = c;  /* remove temporarily termination */
+
             while (SPACE(*x)) {
                 x++;
             }
@@ -628,15 +625,15 @@ HTML_SimpleParse (
                 x++;
             } else {
                 RetError("Missing \">\"",(x - html)-1);
-            }            
+            }
             if (parent_node == NULL) {
                 /* we return to main node and so finished parsing */
                 return TCL_OK;
             }
             continue;
-            
-        } else {  
-                
+
+        } else {
+
             x++;
             if (*x=='!') {
                 if (x[1]=='-' && x[2]=='-') {
@@ -644,7 +641,7 @@ HTML_SimpleParse (
                     |   read over a comment
                     \-------------------------------------------------------*/
                     x += 3;
-                    while ( (c=*x)!=0 && 
+                    while ( (c=*x)!=0 &&
                             (c!='-' || x[1]!='-' || x[2]!='>')) {
                         x++;
                     }
@@ -653,16 +650,16 @@ HTML_SimpleParse (
                         |   allocate new COMMENT node for comments
                         \---------------------------------------------------*/
                         tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                        memset(tnode, 0, sizeof(domTextNode));       
+                        memset(tnode, 0, sizeof(domTextNode));
                         tnode->nodeType      = COMMENT_NODE;
                         tnode->nodeFlags     = 0;
                         tnode->namespace     = 0;
-                        tnode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                        tnode->nodeNumber    = NODE_NO(tnode);
                         tnode->ownerDocument = doc;
-                        tnode->parentNode    = parent_node;        
+                        tnode->parentNode    = parent_node;
                         tnode->valueLength   = x - start - 4;
                         tnode->nodeValue     = (char*)Tcl_Alloc(tnode->valueLength+1);
-                        memmove(tnode->nodeValue, start+4, tnode->valueLength);    
+                        memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
                             if (doc->documentElement) {
@@ -675,7 +672,7 @@ HTML_SimpleParse (
                             } else {
                                 doc->documentElement = (domNode*)tnode;
                             }
-                        } else {            
+                        } else {
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
                                 tnode->previousSibling = parent_node->lastChild;
@@ -683,16 +680,16 @@ HTML_SimpleParse (
                             } else {
                                 parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
                             }
-                        }   
+                        }
                         x += 3;
                     } else {
                         RetError("Unterminated comment",(start-html));
                     }
                     continue;
 
-                } else if (TU(x[1])=='D' && TU(x[2])=='O' && 
-                           TU(x[3])=='C' && TU(x[4])=='T' && 
-                           TU(x[5])=='Y' && TU(x[6])=='P' && TU(x[7])=='E' ) {                
+                } else if (TU(x[1])=='D' && TU(x[2])=='O' &&
+                           TU(x[3])=='C' && TU(x[4])=='T' &&
+                           TU(x[5])=='Y' && TU(x[6])=='P' && TU(x[7])=='E' ) {
                     /*--------------------------------------------------------
                     |   read over a DOCTYPE definition
                     \-------------------------------------------------------*/
@@ -702,29 +699,29 @@ HTML_SimpleParse (
                         if (*x=='[') {
                             x++;
                             while ((*x!=0) && (*x!=']')) x++;
-                        } else 
-                        if (*x=='>') { 
+                        } else
+                        if (*x=='>') {
                             break;
                         } else {
                             x++;
                         }
-                    } 
+                    }
                     if (*x) {
                         x++;
                     } else {
                         RetError("Unterminated DOCTYPE definition",(start-html));
                     }
                     continue;
-                    
-                } else if (x[1]=='[' && x[2]=='C' && 
-                           x[3]=='D' && x[4]=='A' && 
-                           x[5]=='T' && x[6]=='A' && x[7]=='[' ) {                 
+
+                } else if (x[1]=='[' && x[2]=='C' &&
+                           x[3]=='D' && x[4]=='A' &&
+                           x[5]=='T' && x[6]=='A' && x[7]=='[' ) {
                     /*--------------------------------------------------------
                     |   read over a <![CDATA[ section
                     \-------------------------------------------------------*/
                     x += 8;
                     start = x;
-                    while ( (*x!=0) && 
+                    while ( (*x!=0) &&
                             ((*x!=']') || (x[1]!=']') || (x[2]!='>'))) {
                         x++;
                     }
@@ -734,16 +731,16 @@ HTML_SimpleParse (
                             |   allocate new TEXT node for CDATA section data
                             \---------------------------------------------------*/
                             tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                            memset(tnode, 0, sizeof(domTextNode));       
+                            memset(tnode, 0, sizeof(domTextNode));
                             tnode->nodeType      = TEXT_NODE;
                             tnode->nodeFlags     = 0;
                             tnode->namespace     = 0;
-                            tnode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                            tnode->nodeNumber    = NODE_NO(tnode);
                             tnode->ownerDocument = doc;
-                            tnode->parentNode    = parent_node;        
+                            tnode->parentNode    = parent_node;
                             tnode->valueLength   = (x - start);
                             tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
-                            memmove(tnode->nodeValue, start, (x - start));    
+                            memmove(tnode->nodeValue, start, (x - start));
                             *(tnode->nodeValue + (x - start)) = 0;
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
@@ -751,7 +748,7 @@ HTML_SimpleParse (
                                 parent_node->lastChild = (domNode*)tnode;
                             } else {
                                 parent_node->firstChild = parent_node->lastChild = (domNode*)tnode;
-                            }   
+                            }
                         }
                         x += 3;
                     } else {
@@ -761,14 +758,14 @@ HTML_SimpleParse (
                  } else {
                         RetError("Incorrect <!... tag",(start-html) );
                  }
-                 
+
             } else if (*x=='?') {
                 /*--------------------------------------------------------
                 |   read over a processing instructions(PI) / XMLDecl
                 \-------------------------------------------------------*/
                 x++;
                 start = x;
-                while ( (c=*x)!=0 && 
+                while ( (c=*x)!=0 &&
                         (c!='?' || x[1]!='>')) {
                     x++;
                 }
@@ -776,41 +773,41 @@ HTML_SimpleParse (
                     /*------------------------------------------------------------
                     |   allocate new PI node for processing instruction section
                     \-----------------------------------------------------------*/
-                    pinode = (domProcessingInstructionNode*) 
+                    pinode = (domProcessingInstructionNode*)
                             Tcl_Alloc(sizeof(domProcessingInstructionNode));
-                    memset(pinode, 0, sizeof(domProcessingInstructionNode));       
+                    memset(pinode, 0, sizeof(domProcessingInstructionNode));
                     pinode->nodeType      = PROCESSING_INSTRUCTION_NODE;
                     pinode->nodeFlags     = 0;
                     pinode->namespace     = 0;
-                    pinode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                    pinode->nodeNumber    = NODE_NO(pinode);
                     pinode->ownerDocument = doc;
-                    pinode->parentNode    = parent_node;        
-                        
+                    pinode->parentNode    = parent_node;
+
                     /*-------------------------------------------------
                     |   extract PI target
                     \------------------------------------------------*/
                     piSep = start;
-                    while ( (c=*piSep)!=0 && !SPACE(c) && 
+                    while ( (c=*piSep)!=0 && !SPACE(c) &&
                             (c!='?' || piSep[1]!='>')) {
                          piSep++;
                     }
-                    *piSep = '\0'; /* temporarily terminate the string */ 
+                    *piSep = '\0'; /* temporarily terminate the string */
 
                     pinode->targetLength = strlen(start);
                     pinode->targetValue  = (char*)Tcl_Alloc(pinode->targetLength);
-                    memmove(pinode->targetValue, start, pinode->targetLength);  
-                                
-                    *piSep = c;  /* remove temporarily termination */ 
-                        
+                    memmove(pinode->targetValue, start, pinode->targetLength);
+
+                    *piSep = c;  /* remove temporarily termination */
+
                     /*-------------------------------------------------
                     |   extract PI data
                     \------------------------------------------------*/
-                    while (SPACE(*piSep)) { 
+                    while (SPACE(*piSep)) {
                         piSep++;
                     }
                     pinode->dataLength = x - piSep;
                     pinode->dataValue  = (char*)Tcl_Alloc(pinode->dataLength);
-                    memmove(pinode->dataValue, piSep, pinode->dataLength);  
+                    memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
                         if (doc->documentElement) {
@@ -823,7 +820,7 @@ HTML_SimpleParse (
                         } else {
                             doc->documentElement = (domNode*)pinode;
                         }
-                    } else {            
+                    } else {
                         if (parent_node->firstChild)  {
                             parent_node->lastChild->nextSibling = (domNode*)pinode;
                             pinode->previousSibling = parent_node->lastChild;
@@ -831,17 +828,17 @@ HTML_SimpleParse (
                         } else {
                             parent_node->firstChild = parent_node->lastChild = (domNode*)pinode;
                         }
-                    }   
+                    }
                     x += 2;
                 } else {
                     RetError("Unterminated processing instruction(PI)",(start-html) );
                 }
                 continue;
             }
-            
+
 
             /*----------------------------------------------------------------
-            |   new tag/element 
+            |   new tag/element
             |
             \---------------------------------------------------------------*/
             hasContent = 1;
@@ -854,10 +851,10 @@ HTML_SimpleParse (
             }
             if ( (x-start)==1) {
                 RetError("Null markup name",(start-html) );
-            } 
-            *x = '\0'; /* temporarily terminate the string */ 
-            
-            
+            }
+            *x = '\0'; /* temporarily terminate the string */
+
+
             /*-----------------------------------------------------------
             |   check, whether new starting element close an other
             |   currently open one
@@ -867,31 +864,31 @@ HTML_SimpleParse (
             autoclose = 0;
             switch (*e) {
                 case 'a': if(!strcmp(e,"a")&&!strcmp(pn,"a")) autoclose=1;
-                          break;                
+                          break;
                 case 'b': if(!strcmp(e,"b")&&!strcmp(pn,"b")) autoclose=1;
-                          break;                
+                          break;
                 case 'p': if(!strcmp(e,"pre")&&!strcmp(pn,"pre")) autoclose=1;
-                          break;                
+                          break;
             }
             if (autoclose) {
                 node = parent_node;
-                parent_node = node->parentNode;    
+                parent_node = node->parentNode;
             }
-            
+
             /*-----------------------------------------------------------
-            |   create new DOM element node 
+            |   create new DOM element node
             \----------------------------------------------------------*/
-            h = Tcl_CreateHashEntry( &TSDPTR(tagNames), e, &hnew);
-            
+            h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), e, &hnew);
+
             node = (domNode*) domAlloc(sizeof(domNode));
             memset(node, 0, sizeof(domNode));
             node->nodeType      = ELEMENT_NODE;
             node->nodeFlags     = 0;
             node->namespace     = 0;
             node->nodeName      = (char *)&(h->key);
-            node->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+            node->nodeNumber    = NODE_NO(node);
             node->ownerDocument = doc;
-            
+
             if (parent_node == NULL) {
                 if (doc->documentElement) {
                     toplevel = doc->documentElement;
@@ -903,7 +900,7 @@ HTML_SimpleParse (
                 }
                 doc->documentElement = node;
             } else {
-                node->parentNode = parent_node;        
+                node->parentNode = parent_node;
                 if (parent_node->firstChild)  {
                     parent_node->lastChild->nextSibling = node;
                     node->previousSibling = parent_node->lastChild;
@@ -912,9 +909,9 @@ HTML_SimpleParse (
                     parent_node->firstChild = parent_node->lastChild = node;
                 }
             }
-            
-            *x = c;  /* remove temporarily termination */ 
-            
+
+            *x = c;  /* remove temporarily termination */
+
             while (SPACE(*x) ) {
                 x++;
             }
@@ -927,12 +924,12 @@ HTML_SimpleParse (
                 int nArgName;
                 char *ArgVal = NULL;
                 int nArgVal = 0;
-                
+
                 while ((c=*x)!=0 && c!='=' && c!='>' && !SPACE(c) ) {
                     x++;
                 }
                 nArgName = x - ArgName;
-                while (SPACE(*x)) { 
+                while (SPACE(*x)) {
                     x++;
                 }
                 if (*x=='=') {
@@ -940,7 +937,7 @@ HTML_SimpleParse (
                 }
                 saved = *(ArgName + nArgName);
                 *(ArgName + nArgName) = '\0'; /* terminate arg name */
-                
+
                 while (SPACE(*x)) {
                     x++;
                 }
@@ -961,7 +958,7 @@ HTML_SimpleParse (
                     nArgVal = x - ArgVal;
                     if (c==0) {
                         RetError("Unterminated string",(ArgVal - html - 1) );
-                    } else { 
+                    } else {
                         x++;
                     }
                 } else if (c!=0 && c!='>') {
@@ -981,17 +978,16 @@ HTML_SimpleParse (
                 /*--------------------------------------------------
                 |   allocate new attribute node
                 \--------------------------------------------------*/
-                h = Tcl_CreateHashEntry( &TSDPTR(attrNames), ArgName, &hnew);  
-                
+                h = Tcl_CreateHashEntry(&HASHTAB(doc,attrNames), ArgName, &hnew);
                 attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
-                memset(attrnode, 0, sizeof(domAttrNode));                       
-                attrnode->parentNode  = node;        
+                memset(attrnode, 0, sizeof(domAttrNode));
+                attrnode->parentNode  = node;
                 attrnode->nodeName    = (char *)&(h->key);
-                attrnode->nodeType    = ATTRIBUTE_NODE;  
-                attrnode->nodeFlags   = 0;                  
+                attrnode->nodeType    = ATTRIBUTE_NODE;
+                attrnode->nodeFlags   = 0;
                 attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
                 attrnode->valueLength = nArgVal;
-                memmove(attrnode->nodeValue, ArgVal, nArgVal);    
+                memmove(attrnode->nodeValue, ArgVal, nArgVal);
                 *(attrnode->nodeValue + nArgVal) = 0;
                 if (ampersandSeen) {
                     TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
@@ -1002,35 +998,35 @@ HTML_SimpleParse (
                     node->firstAttr = attrnode;
                 }
                 lastAttr = attrnode;
-                
+
                 *(ArgName + nArgName) = saved;
 
                 while (SPACE(*x)) {
                     x++;
                 }
             }
-            
+
             /*-----------------------------------------------------------
-            |   check for empty HTML tags 
+            |   check for empty HTML tags
             \----------------------------------------------------------*/
             switch (node->nodeName[0]) {
                 case 'a':  if (!strcmp(node->nodeName,"area"))     hasContent = 0; break;
-                case 'b':  if (!strcmp(node->nodeName,"br")     || 
-                               !strcmp(node->nodeName,"base")   || 
+                case 'b':  if (!strcmp(node->nodeName,"br")     ||
+                               !strcmp(node->nodeName,"base")   ||
                                !strcmp(node->nodeName,"basefont")) hasContent = 0; break;
                 case 'c':  if (!strcmp(node->nodeName,"col"))      hasContent = 0; break;
                 case 'e':  if (!strcmp(node->nodeName,"embed"))    hasContent = 0; break; /*ext*/
                 case 'f':  if (!strcmp(node->nodeName,"frame"))    hasContent = 0; break;
                 case 'h':  if (!strcmp(node->nodeName,"hr"))       hasContent = 0; break;
-                case 'i':  if (!strcmp(node->nodeName,"img")   || 
-                               !strcmp(node->nodeName,"input") || 
+                case 'i':  if (!strcmp(node->nodeName,"img")   ||
+                               !strcmp(node->nodeName,"input") ||
                                !strcmp(node->nodeName,"isindex"))  hasContent = 0; break;
                 case 'l':  if (!strcmp(node->nodeName,"link"))     hasContent = 0; break;
                 case 'o':  if (!strcmp(node->nodeName,"option"))   hasContent = 0; break;
                 case 'm':  if (!strcmp(node->nodeName,"meta"))     hasContent = 0; break;
                 case 'p':  if (!strcmp(node->nodeName,"param"))    hasContent = 0; break;
                 case 's':  if (!strcmp(node->nodeName,"spacer"))   hasContent = 0; break; /*ext*/
-            }   
+            }
 
             if (*x=='/') {
                 hasContent = 0;
@@ -1043,8 +1039,8 @@ HTML_SimpleParse (
                 x++;
             }
             DBG(fprintf(stderr, "new node '%s' hasContent=%d \n", node->nodeName, hasContent);)
-            
-            if ((strcmp(node->nodeName,"style" )==0) || 
+
+            if ((strcmp(node->nodeName,"style" )==0) ||
                 (strcmp(node->nodeName,"script")==0)
             ) {
                 /*-----------------------------------------------------------
@@ -1060,16 +1056,16 @@ HTML_SimpleParse (
                     |   allocate new TEXT node for style/script data
                     \---------------------------------------------------*/
                     tnode = (domTextNode*) domAlloc(sizeof(domTextNode));
-                    memset(tnode, 0, sizeof(domTextNode));       
+                    memset(tnode, 0, sizeof(domTextNode));
                     tnode->nodeType      = TEXT_NODE;
                     tnode->nodeFlags     = 0;
                     tnode->namespace     = 0;
-                    tnode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+                    tnode->nodeNumber    = NODE_NO(tnode);
                     tnode->ownerDocument = doc;
-                    tnode->parentNode    = node;        
+                    tnode->parentNode    = node;
                     tnode->valueLength   = (x - start);
                     tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
-                    memmove(tnode->nodeValue, start, (x - start));    
+                    memmove(tnode->nodeValue, start, (x - start));
                     *(tnode->nodeValue + (x - start)) = 0;
                     if (node->firstChild)  {
                         node->lastChild->nextSibling = (domNode*)tnode;
@@ -1077,7 +1073,7 @@ HTML_SimpleParse (
                         node->lastChild = (domNode*)tnode;
                     } else {
                         node->firstChild = node->lastChild = (domNode*)tnode;
-                    }   
+                    }
                 }
             }
             if (hasContent) {
@@ -1088,9 +1084,9 @@ HTML_SimpleParse (
             }
         }
     }
-    
+
     while (parent_node != NULL) {
-    
+
         pn = (char*)node->parentNode->nodeName;
         DBG(fprintf(stderr, "final autoclose '%s'? \n", pn);)
         /*---------------------------------------------------------------
@@ -1101,9 +1097,9 @@ HTML_SimpleParse (
             case 'b': if (!strcmp(pn,"body"))     autoclose = 1; break;
             case 'c': if (!strcmp(pn,"colgroup")) autoclose = 1; break;
             case 'd': if (!strcmp(pn,"dd") ||
-                          !strcmp(pn,"dt"))       autoclose = 1; break; 
+                          !strcmp(pn,"dt"))       autoclose = 1; break;
             case 'h': if (!strcmp(pn,"head") ||
-                          !strcmp(pn,"html"))     autoclose = 1; break; 
+                          !strcmp(pn,"html"))     autoclose = 1; break;
             case 'l': if (!strcmp(pn,"li"))       autoclose = 1; break;
             case 'o': if (!strcmp(pn,"option"))   autoclose = 1; break;
             case 'p': if (!strcmp(pn,"p"))        autoclose = 1; break;
@@ -1112,7 +1108,7 @@ HTML_SimpleParse (
                           !strcmp(pn,"tfoot") ||
                           !strcmp(pn,"thead") ||
                           !strcmp(pn,"th")    ||
-                          !strcmp(pn,"tr"))       autoclose = 1; break; 
+                          !strcmp(pn,"tr"))       autoclose = 1; break;
             case 'u': if (!strcmp(pn,"ul"))       autoclose = 1; break; /* ext */
         }
         if (!autoclose) break;
@@ -1129,11 +1125,10 @@ HTML_SimpleParse (
 } /* HTML_SimpleParse */
 
 
-
 /*----------------------------------------------------------------------------
 |   HTML_SimpleParseDocument
 |
-|       Create a document, parses the HTML string starting at 'pos' and 
+|       Create a document, parses the HTML string starting at 'pos' and
 |       continuing to the first encountered error.
 |
 \---------------------------------------------------------------------------*/
@@ -1147,23 +1142,12 @@ HTML_SimpleParseDocument (
     Tcl_HashEntry *h;
     domNode       *rootNode;
     int            hnew;
-    domDocument   *doc = (domDocument*) Tcl_Alloc(sizeof(domDocument));
-    GetTDomTSD();
+    domDocument   *doc = domCreateEmptyDoc();
 
-    
-    memset(doc, 0, sizeof(domDocument));  
-    doc->documentNumber   = ++TSDPTR(domUniqueDocNr);
-    doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-  
     *pos = 0;
     HTML_SimpleParse (html, pos, doc, NULL, ignoreWhiteSpaces, errStr);
-    
-    h = Tcl_CreateHashEntry( &TSDPTR(tagNames), "(rootNode)", &hnew);
+
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
 
     memset(rootNode, 0, sizeof(domNode));
@@ -1171,7 +1155,7 @@ HTML_SimpleParseDocument (
     rootNode->nodeFlags     = 0;
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
     rootNode->firstChild = rootNode->lastChild = doc->documentElement;

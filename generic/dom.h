@@ -29,6 +29,10 @@
 |
 |
 |   $Log$
+|   Revision 1.11  2002/06/02 06:36:23  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
+|
 |   Revision 1.10  2002/05/10 02:30:30  rolf
 |   A few things at one: Made attribute set names namespace aware. If a
 |   literal result node has no namespace, and at the insertion point of
@@ -120,62 +124,40 @@
 
 #include <tcl.h>
 /*#include <xmlparse.h> */
-#include <expat.h> 
+#include <expat.h>
 #include <utf8conv.h>
 
 
+#ifndef TCL_THREADS
 
-/*--------------------------------------------------------------------------
-|   Global DOM node/document object counters and tag/attribute hash tables.
-|
-|   Encapsulated within a structure which, if used in thread environment,
-|   will be stored in thread local storage.
-|
-\-------------------------------------------------------------------------*/
-#ifdef TCL_THREADS
+  extern unsigned int domUniqueNodeNr;
+  extern unsigned int domUniqueDocNr;
+  extern Tcl_HashTable tagNames;
+  extern Tcl_HashTable attrNames;
 
-   typedef struct TDomGlobalThreadSpecificData {
-  
-       unsigned int  domModuleIsInitialized;
-       unsigned int  domUniqueNodeNr;
-       unsigned int  domUniqueDocNr;
-       Tcl_HashTable tagNames;
-       Tcl_HashTable attrNames;
-      
-   } TDomGlobalThreadSpecificData;
-  
-   extern Tcl_ThreadDataKey  domDataKey;
-#  define TSDPTR(x)          tsdPtr->x
-#  define TDomThreaded(x)    x
-#  define GetTDomTSD()       TDomGlobalThreadSpecificData *tsdPtr = \
-                                 (TDomGlobalThreadSpecificData*)    \
-                                 Tcl_GetThreadData( &domDataKey,    \
-                                 sizeof(TdomGlobalThreadSpecificData) )
+# define TDomNotThreaded(x) x
+# define TDomThreaded(x)
+# define HASHTAB(doc,tab)   tab
+# define NODE_NO(node)      ++domUniqueNodeNr
+# define DOC_NO(doc)        ++domUniqueDocNr
+# define NODE_CMD(s,node)   sprintf((s), "domNode%d", (node)->nodeNumber)
+# define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
 
-  
 #else
 
-  extern unsigned int  domUniqueNodeNr;
-  extern unsigned int  domUniqueDocNr;
-  extern Tcl_HashTable tagNames;
-  extern Tcl_HashTable attrNames;     
-  
-#  define TSDPTR(x)          x
-#  define TDomThreaded(x)     
-#  define GetTDomTSD()       
+# define TDomNotThreaded(x)
+# define TDomThreaded(x)    x
+# define HASHTAB(doc,tab)   (doc)->tab
+# define NODE_NO(node)      (unsigned int)(node)
+# define DOC_NO(doc)        (unsigned int)(doc)
+# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (node)->nodeNumber)
+# define DOC_CMD(s,doc)     sprintf((s), "domDoc0x%x", (doc)->documentNumber)
 
-  /*
-  define Tcl_Mutex char
-  define Tcl_MutexLock(a)
-  define Tcl_MutexUnlock(a)
-  define GLOBAL_TSD_KEY(a)  a
-  */
-  
-#endif
+#endif /* TCL_THREADS */
 
-#define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace" 
+#define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
 
-#if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0) || TCL_MAJOR_VERSION < 8 
+#if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0) || TCL_MAJOR_VERSION < 8
 #define TclOnly8Bits 1
 #else
 #define TclOnly8Bits 0
@@ -188,7 +170,7 @@
 
 #if TclOnly8Bits
 #define UTF8_CHAR_LEN(c) 1
-#else 
+#else
 #define UTF8_CHAR_LEN(c) \
   UTF8_1BYTE_CHAR((c)) ? 1 : \
    (UTF8_2BYTE_CHAR((c)) ? 2 : \
@@ -343,14 +325,14 @@ static const unsigned char NCnameStart7Bit[] = {
 #  define isNameChar(x) (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.') || ((*x)==':'))
 #  define isNCNameStart(x) (isalpha(*x) || ((*x)=='_'))
 #  define isNCNameChar(x) (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.'))
-#else 
-static int isNameStart(char *c) 
+#else
+static int isNameStart(char *c)
 {
     int clen;
     clen = UTF8_CHAR_LEN (*c);
     return (UTF8_GET_NAMING_NAME(c, clen));
 }
-static int isNCNameStart(char *c) 
+static int isNCNameStart(char *c)
 {
     int clen;
     clen = UTF8_CHAR_LEN (*c);
@@ -391,13 +373,12 @@ typedef enum {
     ENTITY_NODE                 = 6,
     PROCESSING_INSTRUCTION_NODE = 7,
     COMMENT_NODE                = 8,
-    DOCUMENT_NODE               = 9, 
+    DOCUMENT_NODE               = 9,
     DOCUMENT_TYPE_NODE          = 10,
     DOCUMENT_FRAGMENT_NODE      = 11,
     NOTATION_NODE               = 12,
-    ALL_NODES                   = 100 
+    ALL_NODES                   = 100
 } domNodeType;
-
 
 /*--------------------------------------------------------------------------
 |   flags   -  indicating some internal features about nodes
@@ -405,7 +386,7 @@ typedef enum {
 \-------------------------------------------------------------------------*/
 typedef int domNodeFlags;
 
-#define HAS_LINE_COLUMN           1     
+#define HAS_LINE_COLUMN           1
 #define VISIBLE_IN_TCL            2
 #define HAS_BASEURI               8
 #define DISABLE_OUTPUT_ESCAPING  16
@@ -448,7 +429,7 @@ typedef enum {
     NOT_FOUND_ERR               = 8,
     NOT_SUPPORTED_ERR           = 9,
     INUSE_ATTRIBUTE_ERR         = 10
-    
+
 } domException;
 
 
@@ -462,18 +443,47 @@ typedef struct domDocument {
     domNodeType       nodeType  : 8;
     domDocFlags       nodeFlags : 8;
     domNameSpaceIndex dummy     : 16;
-    unsigned int      documentNumber;        
+    unsigned int      documentNumber;
     struct domNode   *documentElement;
     struct domNode   *fragments;
     struct domNS    **namespaces;
     int               nsptr;
     int               nslen;
     struct domNode   *rootNode;
-    Tcl_HashTable    *ids;
-    Tcl_HashTable    *unparsedEntities;
-    Tcl_HashTable    *baseURIs;
+    Tcl_HashTable     ids;
+    Tcl_HashTable     unparsedEntities;
+    Tcl_HashTable     baseURIs;
     Tcl_Obj          *extResolver;
+    TDomThreaded (
+        Tcl_HashTable tagNames;        /* Names of tags found in doc */
+        Tcl_HashTable attrNames;       /* Names of tag attributes */
+        unsigned int  refCount;        /* # of object commands attached */
+        struct _domlock *lock;          /* Lock for this document */
+    )
 } domDocument;
+
+/*--------------------------------------------------------------------------
+|  domLock
+|
+\-------------------------------------------------------------------------*/
+
+#ifdef TCL_THREADS
+typedef struct _domlock {
+    domDocument* doc;           /* The DOM document to be locked */
+    int numrd;	                /* # of readers waiting for lock */
+    int numwr;                  /* # of writers waiting for lock */
+    int lrcnt;                  /* Lock ref count, > 0: # of shared
+                                 * readers, -1: exclusive writer */
+    Tcl_Mutex mutex;            /* Mutex for serializing access */
+    Tcl_Condition rcond;        /* Condition var for reader locks */
+    Tcl_Condition wcond;        /* Condition var for writer locks */
+    struct _domlock *next;       /* Next doc lock in global list */
+} domlock;
+
+#define LOCK_READ  0
+#define LOCK_WRITE 1
+
+#endif
 
 
 /*--------------------------------------------------------------------------
@@ -503,7 +513,7 @@ typedef struct domLineColumn {
     int   column;
 
 } domLineColumn;
-        
+
 
 /*--------------------------------------------------------------------------
 |   domNode
@@ -515,7 +525,7 @@ typedef struct domNode {
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
     int                 info      : 8;
-    unsigned int        nodeNumber; 
+    unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
@@ -525,7 +535,7 @@ typedef struct domNode {
     struct domNode     *firstChild;
     struct domNode     *lastChild;
     struct domAttrNode *firstAttr;
-    
+
 } domNode;
 
 
@@ -540,12 +550,12 @@ typedef struct domTextNode {
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
     int                 info      : 8;
-    unsigned int        nodeNumber; 
+    unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
     struct domNode     *nextSibling;
-    
+
     domString           nodeValue;   /* now the text node specific fields */
     int                 valueLength;
 
@@ -562,12 +572,12 @@ typedef struct domProcessingInstructionNode {
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
     int                 info      : 8;
-    unsigned int        nodeNumber; 
+    unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
     struct domNode     *nextSibling;
-    
+
     domString           targetValue;   /* now the pi specific fields */
     int                 targetLength;
     domString           dataValue;
@@ -581,7 +591,7 @@ typedef struct domProcessingInstructionNode {
 |
 \-------------------------------------------------------------------------*/
 typedef struct domAttrNode {
- 
+
     domNodeType         nodeType  : 8;
     domAttrFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
@@ -600,8 +610,6 @@ typedef struct domAttrNode {
 \-------------------------------------------------------------------------*/
 typedef int  (*domAddCallback)  (domNode * node, void * clientData);
 typedef void (*domFreeCallback) (domNode * node, void * clientData);
-                                                                                            
-
 
 /*--------------------------------------------------------------------------
 |   Function prototypes
@@ -614,10 +622,10 @@ domDocument *  domCreateDoc ();
 domDocument *  domCreateDocument (Tcl_Interp *interp,
                                   char *documentElementTagName,
                                   char *uri);
-   
-domDocument *  domReadDocument (XML_Parser parser, 
-                                char *xml, 
-                                int   length, 
+
+domDocument *  domReadDocument (XML_Parser parser,
+                                char *xml,
+                                int   length,
                                 int   ignoreWhiteSpaces,
                                 TEncoding *encoding_8bit,
                                 int   storeLineColumn,
@@ -626,10 +634,10 @@ domDocument *  domReadDocument (XML_Parser parser,
                                 char *baseurl,
                                 Tcl_Obj *extResolver,
                                 Tcl_Interp *interp);
-                                
+
 void           domFreeDocument (domDocument *doc, domFreeCallback freeCB, void * clientData);
 void           domFreeNode (domNode *node, domFreeCallback freeCB, void *clientData);
-            
+
 domTextNode *  domNewTextNode (domDocument *doc,
                                char        *value,
                                int          length,
@@ -637,12 +645,12 @@ domTextNode *  domNewTextNode (domDocument *doc,
 
 domNode *      domNewElementNode (domDocument *doc,
                                   char        *tagName,
-				  domNodeType nodeType);
-				  
+				                  domNodeType nodeType);
+				
 domNode *      domNewElementNodeNS (domDocument *doc,
                                     char        *tagName,
                                     char        *uri,
-				    domNodeType nodeType);
+				                    domNodeType nodeType);
 
 domProcessingInstructionNode * domNewProcessingInstructionNode (
                                   domDocument *doc,
@@ -687,21 +695,21 @@ int            domGetLineColumn (domNode *node, int *line, int *column);
 
 int            domXPointerChild (domNode * node, int all, int instance, domNodeType type,
                                  char *element, char *attrName, char *attrValue,
-                                 int attrLen, domAddCallback addCallback, 
+                                 int attrLen, domAddCallback addCallback,
                                  void * clientData);
 
-int            domXPointerDescendant (domNode * node, int all, int instance, 
-                                      int * i, domNodeType type, char *element, 
+int            domXPointerDescendant (domNode * node, int all, int instance,
+                                      int * i, domNodeType type, char *element,
                                       char *attrName, char *attrValue, int attrLen,
                                       domAddCallback addCallback, void * clientData);
 
-int            domXPointerAncestor (domNode * node, int all, int instance, 
-                                    int * i, domNodeType type, char *element, 
+int            domXPointerAncestor (domNode * node, int all, int instance,
+                                    int * i, domNodeType type, char *element,
                                     char *attrName, char *attrValue, int attrLen,
                                     domAddCallback addCallback, void * clientData);
 
-int            domXPointerXSibling (domNode * node, int forward_mode, int all, int instance, 
-                                    domNodeType type, char *element, char *attrName, 
+int            domXPointerXSibling (domNode * node, int forward_mode, int all, int instance,
+                                    domNodeType type, char *element, char *attrName,
                                     char *attrValue, int attrLen,
                                     domAddCallback addCallback, void * clientData);
 
@@ -712,10 +720,20 @@ int            domIsNAME (char *name);
 int            domIsNCNAME (char *name);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 
+#ifdef TCL_THREADS
+void           domLocksLock(domlock *dl, int how);
+void           domLocksUnlock(domlock *dl);
+void           domLocksAttach(domDocument *doc);
+void           domLocksDetach(domDocument *doc);
+void           domLocksFinalize(ClientData dummy);
+#endif
+
+domDocument *  domCreateEmptyDoc(void);
+
 /*---------------------------------------------------------------------------
 |   coercion routines for calling from C++
 |
-\--------------------------------------------------------------------------*/ 
+\--------------------------------------------------------------------------*/
 domAttrNode                  * coerceToAttrNode( domNode *n );
 domTextNode                  * coerceToTextNode( domNode *n );
 domProcessingInstructionNode * coerceToProcessingInstructionNode( domNode *n );

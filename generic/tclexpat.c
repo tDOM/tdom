@@ -104,6 +104,7 @@ typedef enum {
 
 static int uniqueCounter = 0;  /* Counter to generate unique command names
                                 */
+TDomThreaded(static Tcl_Mutex counterMutex;) /* Protect the counter (zv) */
 
 /*----------------------------------------------------------------------------
 |   Prototypes for procedures defined later in this file:
@@ -440,8 +441,11 @@ FindUniqueCmdName(interp)
   Tcl_IncrRefCount(name);
 
   do {
+    TDomThreaded(Tcl_MutexLock(&counterMutex);)
     sprintf(s, "xmlparser%d", uniqueCounter++);
+    TDomThreaded(Tcl_MutexUnlock(&counterMutex);)
     Tcl_SetStringObj(name, s, -1);
+
   } while (Tcl_GetCommandInfo(interp, Tcl_GetStringFromObj(name, NULL), &info));
 
   return name;
@@ -720,7 +724,7 @@ TclExpatParse (interp, expat, data, len, type)
   XML_Parser *parser;
   Tcl_Channel channel = NULL;
   CHandlerSet *activeCHandlerSet;
-#if !TclOnly8Bits    
+#if !TclOnly8Bits
   Tcl_Obj       *bufObj;
   Tcl_DString    dStr;
   int            useBinary;
@@ -801,7 +805,7 @@ TclExpatParse (interp, expat, data, len, type)
           result = 1;
           Tcl_DecrRefCount (bufObj);
       }
-#else             
+#else
       do {
           bytesread = Tcl_Read (channel, buf, sizeof (buf));
           done = bytesread < sizeof (buf);
@@ -814,9 +818,9 @@ TclExpatParse (interp, expat, data, len, type)
               }
           }
       } while (!done);
-#endif      
+#endif
       break;
-      
+
   case EXPAT_INPUT_FILENAME:
       fd = open(data, O_BINARY|O_RDONLY);
       if (fd < 0) {
@@ -2768,7 +2772,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
       oldparser = expat->parser;
       expat->parser = extparser;
       XML_SetBase (extparser, extbase);
-      
+
       result = Tcl_ListObjIndex (expat->interp, resultObj, 2, &dataObj);
       if (result != TCL_OK) {
           goto wrongScriptResult;
@@ -3800,6 +3804,12 @@ TclExpatDeleteCmd(clientData)
       }
       if (activeTclHandlerSet->picommand) {
           Tcl_DecrRefCount(activeTclHandlerSet->picommand);
+      }
+      if (activeTclHandlerSet->defaultcommand) {
+          Tcl_DecrRefCount(activeTclHandlerSet->defaultcommand);
+      }
+      if (activeTclHandlerSet->notationcommand) {
+          Tcl_DecrRefCount(activeTclHandlerSet->notationcommand);
       }
       if (activeTclHandlerSet->externalentitycommand) {
           Tcl_DecrRefCount(activeTclHandlerSet->externalentitycommand);

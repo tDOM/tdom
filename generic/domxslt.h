@@ -4,9 +4,9 @@
 |
 |   $Header$
 |
-| 
-|   A (partial) XSLT implementation for tDOM, according to the W3C 
-|   recommendation (16 Nov 1999, 
+|
+|   A (partial) XSLT implementation for tDOM, according to the W3C
+|   recommendation (16 Nov 1999,
 |   http://www.w3.org/TR/1999/REC-xslt-19991116).
 |
 |
@@ -30,6 +30,10 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/06/02 06:36:24  zoran
+|   Added thread safety with capability of sharing DOM trees between
+|   threads and ability to read/write-lock DOM documents
+|
 |   Revision 1.2  2002/04/08 02:11:12  rolf
 |   Added -parameters option to domNode xslt method, to enable setting of
 |   top level parameters from tcl level.
@@ -63,7 +67,7 @@ int xsltProcess (domDocument       * xsltDoc,
                  xpathFuncCallback   funcCB,
                  void              * clientData,
                  char             ** errMsg,
-                 domDocument      ** resultDoc   
+                 domDocument      ** resultDoc
                 );
 
 void sortByDocOrder (xpathResultSet *rs);
