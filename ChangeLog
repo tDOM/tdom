@@ -1,3 +1,7 @@
+2002-11-14  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/tcldom.c: fixed UMR report from Purify
+
 2002-11-12  Rolf Ade  <rolf@pointsman.de>
 
         * win/makefile.vc
