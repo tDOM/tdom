@@ -3486,6 +3486,7 @@ static int xsltNumber (
     Tcl_HashEntry    *h;
     xsltNumberFormat *f;
     Tcl_DString       dStr;
+    domProcessingInstructionNode *pi;
 
     v = vs;
     value = getAttr(actionNode, "value",  a_value);
@@ -3563,7 +3564,10 @@ static int xsltNumber (
                 Tcl_DStringAppend (&dStr, "text()", -1);
             } else 
             if (currentNode->nodeType == PROCESSING_INSTRUCTION_NODE) {
-                Tcl_DStringAppend (&dStr, "processing-instruction()", -1);
+                Tcl_DStringAppend (&dStr, "processing-instruction('", -1);
+                pi = (domProcessingInstructionNode *)currentNode;
+                Tcl_DStringAppend (&dStr, pi->targetValue, pi->targetLength);
+                Tcl_DStringAppend (&dStr, "')", 2);
             } else {
                 reportError (actionNode, "unknown node type!!!", errMsg);
                 return -1;
