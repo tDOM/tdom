@@ -579,7 +579,6 @@ void tcldom_createNodeObj (
     char       * objCmdName
 )
 {
-    Tcl_CmdInfo     cmdInfo;
     GetTcldomTSD()
 
     NODE_CMD(objCmdName, node);
@@ -4125,7 +4124,7 @@ int tcldom_DocObjCmd (
     domDeleteInfo       * dinfo;
     domDocument         * doc;
     char                * method, *tag, *data, *target, *uri, tmp[100];
-    char                  objCmdName[40], *str, *docName, *errMsg;
+    char                * str, *docName, *errMsg;
     int                   methodIndex, result, data_length, target_length, i;
     int                   nsIndex, forXPath, bool, setDocumentElement = 0;
     int                   restoreDomCreateCmdMode = 0;
@@ -5126,7 +5125,7 @@ int tcldom_DomObjCmd (
 {
     GetTcldomTSD()
 
-    char        * method, tmp[300], *mode;
+    char        * method, tmp[300];
     int           methodIndex, result, i, bool;
     Tcl_CmdInfo   cmdInfo;
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
