@@ -2933,7 +2933,7 @@ xpathEvalFunction (
            replaceStr = xpathFuncString( &replaceResult );
 
 
-#if TcOnly8Bits
+#if TclOnly8Bits
            len = strlen(replaceStr);
            pfrom = pto = leftStr;
            while (*pfrom) {
