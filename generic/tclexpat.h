@@ -124,9 +124,12 @@ typedef struct TclGenExpatInfo {
     Tcl_Obj *result;		/* application return result */
     const char *context;        /* reference to the context pointer */  
     Tcl_Obj *cdata;             /* Accumulates character data */ 
-    ExpatElemContent *eContents;/* As linked list, the reported XML_Content's*/
+    ExpatElemContent *eContents;/* The reported XML_Content's as linked list */
     int      ns_mode;           /* namespace mode */
-    XML_Char nsSeparator;
+    XML_Char nsSeparator;       
+    int paramentityparsing;     
+    int noexpand;
+    int useForeignDTD;
 
     TclHandlerSet *firstTclHandlerSet;
     CHandlerSet *firstCHandlerSet;
