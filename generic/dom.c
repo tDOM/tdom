@@ -355,7 +355,7 @@ domIsNamespaceInScope (
     int          NSstackPos,
     char        *prefix,
     char        *namespaceURI
-    )
+)
 {
     int    i;
 
