@@ -1,3 +1,8 @@
+2003-03-19  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* Makefile.in: installs the tdomConfig.sh into the
+	  $(libdir) whatever that points to.
+
 2003-03-08  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* expt/internal.h: disabled FASTCALL & friends
