@@ -1,7 +1,11 @@
 2004-05-08  Rolf Ade  <rolf@pointsman.de>
 
         * generic/xmlsimple.c: Removed superfluous arg baseURI from
-          XML_SimpleParse(). 
+          XML_SimpleParse().
+
+        * generic/domhtml.c
+        * tests/htmlreader.test: Fixed html-2.1 and html-2.2. (This
+          html reader ist crusty stuff...)
 
 2004-03-26  Rolf Ade  <rolf@pointsman.de>
 
