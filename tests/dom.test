@@ -200,8 +200,36 @@ test dom-5.1 {insert FQ Element} {
 </root>
 }
 
+test dom-6.1 {appendChild} {
+    set doc [dom createDocument XMI]
+    set root [$doc documentElement]
+    set A1tag [$doc createElement "A1"]
+    set A2subtag [$doc createElement "A2sub"]
+    set A2tag [$doc createElement "A2"]
+    $A2tag appendChild $A2subtag
+
+    set Atag [$doc createElement "A"]
+    $Atag appendChild $A1tag
+    $Atag appendChild $A2tag
+
+    set Btag [$doc createElement "B"]
+    $Btag appendChild $Atag
+
+    set Ctag [$doc createElement "C"]
+    set result 0
+    if {$root == "[$doc documentElement]"} {set result 1}
+    $doc delete
+    set result
+} {1}
+
 # cleanup
 ::tcltest::cleanupTests
 return
+
+
+
+
+
+
 
 
