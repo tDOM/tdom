@@ -1,3 +1,8 @@
+2003-09-17  Rolf Ade  <rolf@pointsman.de>
+
+        Added the up to now missing implementation of expatObj method
+        cget. Thanks goes to Harry Moreau for his contribution.
+
 2003-04-09  Rolf Ade  <rolf@pointsman.de>
 
         Added domDoc method toXSLTcmd, which converts the domDoc to an
