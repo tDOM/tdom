@@ -1707,7 +1707,7 @@ static int buildKeyInfoForDoc (
                         FREE(useValue);
                     }
                 }
-                else {
+                else if (rs.type != EmptyResult) {
                     useValue = xpathFuncString (&rs);
                     TRACE1("use value = '%s'\n", useValue);
                     keyValue = (xsltKeyValue *)MALLOC(sizeof(xsltKeyValue));
@@ -2025,15 +2025,19 @@ static int xsltXPathFuncs (
         }
         Tcl_DStringAppend (&dStr, localName, -1);
         FREE(keyId);
-        keyId = tdomstrdup (Tcl_DStringValue (&dStr));
-        Tcl_DStringFree (&dStr);
-        h = Tcl_FindHashEntry (&xs->keyInfos, keyId);
+        h = Tcl_FindHashEntry (&xs->keyInfos, Tcl_DStringValue (&dStr));
         if (!h) {
             *errMsg = tdomstrdup("Unkown key in key() function call!");
-            FREE(keyId);
+            Tcl_DStringFree (&dStr);
             return 1;
         }
 
+        /* Short cut for empty result sets. */
+        if (argv[1]->type == EmptyResult) {
+            Tcl_DStringFree (&dStr);
+            return 0;
+        }
+            
         /* find the doc, the context node belongs to */
         sdoc = xs->subDocs;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
@@ -2048,15 +2052,16 @@ static int xsltXPathFuncs (
         DBG(if (!sdoc) fprintf (stderr, "key() function: ctxNode doesn't belong to a doc out of subDocs!!! This could not happen!. ERROR\n");
             else (fprintf (stderr, "key() function: ctxNode belongs to doc %s\n", sdoc->baseURI));)
 
-        h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
+        h = Tcl_FindHashEntry (&(sdoc->keyData), Tcl_DStringValue (&dStr));
         if (!h) {
-            if (buildKeyInfoForDoc(sdoc,keyId,&(xs->keyInfos),xs,errMsg)<0) {
-                FREE(keyId);
+            if (buildKeyInfoForDoc(sdoc, Tcl_DStringValue (&dStr),
+                                   &(xs->keyInfos),xs,errMsg)<0) {
+                Tcl_DStringFree (&dStr);
                 return 1;
             }
-            h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
+            h = Tcl_FindHashEntry (&(sdoc->keyData), Tcl_DStringValue (&dStr));
         }
-        FREE(keyId);
+        Tcl_DStringFree (&dStr);
 
         docKeyData = (Tcl_HashTable *) Tcl_GetHashValue (h);
 
@@ -2075,8 +2080,6 @@ static int xsltXPathFuncs (
                 }
                 FREE(filterValue);
             }
-            sortByDocOrder (result);
-            return 0;
         } else {
            filterValue = xpathFuncString(argv[1]);
            TRACE1("filterValue='%s' \n", filterValue);
@@ -2090,8 +2093,8 @@ static int xsltXPathFuncs (
                }
            }
            FREE(filterValue);
-           return 0;
         }
+        return 0;
     } else
     if (strcmp(funcName, "current")==0) {
         /*--------------------------------------------------------------------
@@ -2623,7 +2626,7 @@ static int xsltSetVar (
             xsltPopVarFrame (xs);
             CHECK_RC;
             xpathRSInit(&rs);
-            rsAddNode(&rs, fragmentNode);
+            rsAddNodeFast(&rs, fragmentNode);
             xs->lastNode = savedLastNode;
         }
     }
@@ -3556,13 +3559,13 @@ static int xsltNumber (
             }
             vVals = rs.nr_nodes;
             v[0] = 0;
-            for (i = rs.nr_nodes - 1; i >= 0; i--) {
+            for (i = 0;  i < rs.nr_nodes; i++) {
                 node = rs.nodes[i]->previousSibling;
-                v[rs.nr_nodes-1-i] = 1;
+                v[i] = 1;
                 while (node) {
                     rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
                     CHECK_RC;
-                    if (rc) v[rs.nr_nodes-1-i]++;
+                    if (rc) v[i]++;
                     node = node->previousSibling;
                 }
             }
@@ -3891,7 +3894,7 @@ static int ExecAction (
                 }
             } else {
                 xpathRSInit( &nodeList );
-                rsAddNode( &nodeList, currentNode );
+                rsAddNodeFast( &nodeList, currentNode );
                 DBG(rsPrint( &nodeList ));
                 TRACE2("applyTemplates: select = '%s' mode='%s'\n", select, mode);
                 xs->current = currentNode;
@@ -4392,7 +4395,7 @@ static int ExecAction (
               }
             )
             xpathRSInit( &nodeList );
-            rsAddNode( &nodeList, currentNode );
+            rsAddNodeFast( &nodeList, currentNode );
             DBG(rsPrint( &nodeList ));
             xs->current = currentNode;
             rc = evalXPath(xs, &nodeList, currentNode, 1, select, &rs, errMsg);
@@ -5421,7 +5424,7 @@ static int processTopLevelVars (
     Tcl_DString        dStr;
 
     xpathRSInit (&nodeList);
-    rsAddNode (&nodeList, xmlNode);
+    rsAddNodeFast (&nodeList, xmlNode);
 
     if (parameters) {
         i = 0;
@@ -5552,7 +5555,7 @@ static int processTopLevel (
     Tcl_DString        dStr;
 
     xpathRSInit( &nodeList );
-    rsAddNode( &nodeList, xmlNode);
+    rsAddNodeFast( &nodeList, xmlNode);
 
     DBG(fprintf (stderr, "start processTopLevel. precedence: %f precedenceLowBound %f\n", precedence, *precedenceLowBound););
     node = xsltDocumentElement->firstChild;
@@ -6438,7 +6441,7 @@ int xsltProcess (
 
     xsltPushVarFrame(&xs);
     xpathRSInit( &nodeList );
-    rsAddNode( &nodeList, xmlNode);
+    rsAddNodeFast( &nodeList, xmlNode);
 
     node = xsltDoc->documentElement;
 
