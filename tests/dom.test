@@ -12,6 +12,7 @@
 #    dom-11.*: disableOutputEscaping 
 #    dom-12.*: cloneNode
 #    dom-13.*: appendFromScript
+#    dom-14.*: appendFromList  
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
@@ -862,6 +863,58 @@ test dom-13.8 {appendFromScript - textnode with -disableOutputEscaping} {
     $doc delete
     set result
 } {<root><p>Some <b>important</b> stuff</p></root>}
+
+
+test dom-14.1 {appendFromList} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    set errMsg ""
+    set result [catch {$root appendFromList {a b}} errMsg] 
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {invalid element node list format!}} 
+
+test dom-14.2 {appendFromList} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    set errMsg ""
+    set result [catch {$root appendFromList {a b c}} errMsg] 
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {invalid attributes list format!}} 
+
+test dom-14.3 {appendFromList} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    $root appendFromList {a {} {}}
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><a/></root>} 
+
+test dom-14.4 {appendFromList} {
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    $root appendFromList {#text "foo bar"}
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root>foo bar</root>} 
+
+test dom-14.5 {appendFromList} {
+    set doc [dom parse {<elm><foobar/>text<barfoo/><foobaz><a/>text<b/><a/><c/></foobaz></elm>}]
+    set elm [$doc documentElement]
+    set elmList [$elm asList]
+    $doc delete
+    set doc [dom createDocument root]
+    set root [$doc documentElement]
+    $root appendFromList $elmList
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<root><elm><foobar/>text<barfoo/><foobaz><a/>text<b/><a/><c/></foobaz></elm></root>} 
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
