@@ -1,3 +1,12 @@
+2002-12-20  Zoran Vasiljevic  (zoran@archiware.com)
+
+	* generic/tcldom.c
+	* generic/dom.c
+	* generic/domxpath.c
+	* generic/domalloc.c
+	* generic/domhtml.c
+	* generic/docxpath.c: added DBG macro arround some fprintf's
+
 2002-11-28  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Reuse already parsed trees only if it is
