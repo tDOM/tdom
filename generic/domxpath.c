@@ -203,7 +203,8 @@ typedef enum {
     f_generateId, f_id, f_lang, f_last, f_localName, f_name, f_namespaceUri,
     f_normalizeSpace, f_not, f_number, f_position, f_round, f_startsWith,
     f_string, f_stringLength, f_substring, f_substringAfter,
-    f_substringBefore, f_sum, f_translate, f_true, f_unparsedEntityUri
+    f_substringBefore, f_sum, f_translate, f_true, f_unparsedEntityUri,
+    f_fqfunction
 
 } functionTag;
 
@@ -1195,10 +1196,18 @@ Production(FilterExpr)
         Consume(REALNUMBER);
         a = NewReal( REALVAL );
 
-    } else if (LA==FUNCTION) {
-        Consume(FUNCTION);
-        a = NewStr( ExecFunction, STRVAL);
-        a->intvalue = getFunctionTag (STRVAL);
+    } else if (LA==FUNCTION || LA==NSPREFIX) {
+        if (LA==FUNCTION) {
+            Consume(FUNCTION);
+            a = NewStr( ExecFunction, STRVAL);
+            a->intvalue = getFunctionTag (STRVAL);
+        } else {
+            Consume(NSPREFIX);
+            a = NewStr( ExecFunction, STRVAL);
+            a->intvalue = f_fqfunction;
+            Consume(FUNCTION);
+            AddChild (a, NewStr( ExecFunction, STRVAL));
+        }
         Consume(LPAR);
         if (LA!=RPAR) {
             AddChildWithEvalSteps (a, Recurse(OrExpr));
@@ -1233,6 +1242,7 @@ Production(PathExpr)
        ||(LA==INTNUMBER)
        ||(LA==REALNUMBER)
        ||(LA==FUNCTION)
+       ||(LA==NSPREFIX && LA2==FUNCTION)  
     ) {
         a = Recurse(FilterExpr);
         if (LA==SLASH) {
@@ -2592,6 +2602,8 @@ xpathEvalFunction (
     int              left = 0, useFastAdd;
     double           dRight = 0.0;
     char            *leftStr = NULL, *rightStr = NULL;
+    domNS           *ns;
+    Tcl_DString      dStr;
 #if TclOnly8Bits
     char            *fStr;
 #else
@@ -3405,47 +3417,86 @@ xpathEvalFunction (
            xpathRSFree( &leftResult );
            break;
 
+    case f_fqfunction: 
+           ns = domLookupPrefix (exprContext, step->strvalue);
+           if (!ns) {
+               *errMsg = tdomstrdup ("There isn't a namespace bound to the prefix.");
+               return XPATH_EVAL_ERR;
+           }
+           Tcl_DStringInit (&dStr);
+           if (cbs->funcCB == NULL) {
+               Tcl_DStringAppend (&dStr, "Unknown function ", -1);
+           }
+           Tcl_DStringAppend (&dStr, ns->uri, -1);
+           Tcl_DStringAppend (&dStr, "::", 2);
+           nextStep = step->child;
+           Tcl_DStringAppend (&dStr, nextStep->strvalue, -1);
+           if (cbs->funcCB == NULL) {
+               *errMsg = (char*)tdomstrdup (Tcl_DStringValue (&dStr));
+               Tcl_DStringFree (&dStr);
+               return XPATH_EVAL_ERR;
+           }
+           /* fall throu */
+           
     default:
-           if (cbs->funcCB != NULL) {
-               /* count number of arguments (to be able to allocate later) */
-               argc = 0;
-               nextStep = step->child;
-               while (nextStep) {
-                   argc++;
-                   nextStep = nextStep->next;
-               }
-               args = (xpathResultSets*)MALLOC((argc+1) * sizeof(xpathResultSets));
-               args[0] = NULL;
-               argc = 0;
-               nextStep = step->child;
-               savedDocOrder = *docOrder;
-               while (nextStep) {
-                   arg = (xpathResultSet*)MALLOC(sizeof(xpathResultSet));
-                   args[argc++] = arg;
-                   args[argc]   = NULL;
-                   xpathRSInit (arg);
-                   rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
-                                       nodeList, cbs, arg, docOrder, errMsg);
-                   CHECK_RC;
-                   *docOrder = savedDocOrder;
-                   nextStep = nextStep->next;
-               }
-               rc = (cbs->funcCB) (cbs->funcClientData, step->strvalue,
-                                   ctxNode, position, nodeList, exprContext,
-                                   argc, args, result, errMsg);
-               argc = 0;
-               while ( args[argc] != NULL) {
-                   xpathRSFree( args[argc] );
-                   FREE((char*)args[argc++]);
-               }
-               FREE((char*)args);
-               return rc;
-           } else {
+           if (cbs->funcCB == NULL) {
                if (strlen(step->strvalue)>50) *(step->strvalue + 50) = '\0';
                sprintf(tmp, "Unknown function '%s'!", step->strvalue);
                *errMsg = (char*)tdomstrdup(tmp);
+               return XPATH_EVAL_ERR;
            }
-           return XPATH_EVAL_ERR;
+           
+           /* count number of arguments (to be able to allocate later) */
+           argc = 0;
+           if (step->intvalue == f_fqfunction) {
+               nextStep = step->child->next;
+           } else {
+               nextStep = step->child;
+           }
+           while (nextStep) {
+               argc++;
+               nextStep = nextStep->next;
+           }
+           args = (xpathResultSets*)MALLOC((argc+1) * sizeof(xpathResultSets));
+           args[0] = NULL;
+           argc = 0;
+           if (step->intvalue == f_fqfunction) {
+               nextStep = step->child->next;
+           } else {
+               nextStep = step->child;
+           }
+           savedDocOrder = *docOrder;
+           while (nextStep) {
+               arg = (xpathResultSet*)MALLOC(sizeof(xpathResultSet));
+               args[argc++] = arg;
+               args[argc]   = NULL;
+               xpathRSInit (arg);
+               rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
+                                   nodeList, cbs, arg, docOrder, errMsg);
+               if (rc) goto unknownfunccleanup;
+               *docOrder = savedDocOrder;
+               nextStep = nextStep->next;
+           }
+           if (step->intvalue == f_fqfunction) {
+               rc = (cbs->funcCB) (cbs->funcClientData, Tcl_DStringValue (&dStr),
+                                   ctxNode, position, nodeList, exprContext,
+                                   argc, args, result, errMsg);
+           } else {
+               rc = (cbs->funcCB) (cbs->funcClientData, step->strvalue,
+                                   ctxNode, position, nodeList, exprContext,
+                                   argc, args, result, errMsg);
+           }
+    unknownfunccleanup:
+           argc = 0;
+           while ( args[argc] != NULL) {
+               xpathRSFree( args[argc] );
+               FREE((char*)args[argc++]);
+           }
+           FREE((char*)args);
+           if (step->intvalue == f_fqfunction) {
+               Tcl_DStringFree (&dStr);
+           }
+           return rc;
     }
     return XPATH_OK;
 }
