@@ -89,6 +89,8 @@
 # define Tcl_Panic panic
 #endif
 
+#define domPanic(msg) Tcl_Panic((msg));
+
 /*
  * If compiled against threaded Tcl core, we must take
  * some extra care about process-wide globals and the
@@ -666,6 +668,7 @@ domDocument *  domReadDocument (XML_Parser parser,
                                 Tcl_Channel channel,
                                 char *baseurl,
                                 Tcl_Obj *extResolver,
+                                int   useForeignDTD,
                                 Tcl_Interp *interp);
 
 void           domFreeDocument (domDocument *doc, domFreeCallback freeCB, void * clientData);
