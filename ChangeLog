@@ -1,3 +1,19 @@
+2005-03-26  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/xslt.test    
+        * generic/dom.c: Fix in domAppendNewElementNode(),
+          domAppendLiteralNode() and domAppendNewTextNode(): if the
+          created node is a child of doc->root, set the parentNode
+          according.
+
+        * generic/domxslt.c: Removed (anyway not correctly working)
+          work-around to set parent of the childs of doc->root
+          (problem now correctly fixed by changes in dom.c).
+
+        * tests/domNode.test
+        * generic/nodecmd.c: Changes, to prepare adding of node
+          creating cmds, which creates namespace aware nodes.  
+
 2005-03-21  Rolf Ade  <rolf@pointsman.de>
 
         * tests/domDoc.test: Fixed flawed test, which slipped through,
