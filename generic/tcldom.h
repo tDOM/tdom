@@ -28,8 +28,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:34  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -51,24 +54,15 @@ Tcl_ObjCmdProc TclExpatObjCmd;
 Tcl_ObjCmdProc tcldom_unknownCmd;
 Tcl_ObjCmdProc TclTdomObjCmd;
 
-#define STR_TDOM_VERSION(v) ("0.7")
-#ifndef DLLEXPORT
-#define DLL_BUILD
-#  undef TCL_STORAGE_CLASS
-#  define TCL_STORAGE_CLASS
-#   define DLLEXPORT __declspec(dllexport)
-#ifndef STATIC_BUILD
 #if defined(_MSC_VER)
-#   define EXPORT(a,b) __declspec(dllexport) a b
-#   define DllEntryPoint DllMain
-#else
-#   if defined(__BORLANDC__)
-#       define EXPORT(a,b) a _export b
-#   else
-#       define EXPORT(a,b) a b
-#   endif
+#  undef TCL_STORAGE_CLASS
+#  define TCL_STORAGE_CLASS DLLEXPORT
 #endif
+
+#define STR_TDOM_VERSION(v) ("0.7")
+
+EXTERN int Tdom_Init     _ANSI_ARGS_((Tcl_Interp *interp));
+
 #endif
-#endif
-#endif
+
 

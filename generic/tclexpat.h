@@ -129,6 +129,10 @@ typedef struct TclGenExpatInfo {
 |
 \-------------------------------------------------------------------------*/
 
+#if defined(_MSC_VER)
+#  undef TCL_STORAGE_CLASS
+#  define TCL_STORAGE_CLASS DLLEXPORT
+#endif
 
 EXTERN int TclExpatObjCmd _ANSI_ARGS_((ClientData dummy,
                                        Tcl_Interp *interp, 

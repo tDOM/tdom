@@ -36,8 +36,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:34  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -1056,17 +1059,17 @@ processingInstructionHandler(
 |  
 \--------------------------------------------------------------------------*/
 static void
-entityDeclHandler (userData, entityName, is_parameter_entity, value,
-                       value_length, base, systemId, publicId, notationName)
-    void *userData;
-    const char *entityName;
-    int is_parameter_entity;
-    const char *value;
-    int value_length;
-    const char *base;
-    const char *systemId;
-    const char *publicId;
-    const char *notationName;
+entityDeclHandler (
+    void       *userData, 
+    const char *entityName,
+    int         is_parameter_entity,
+    const char *value,
+    int         value_length,
+    const char *base,
+    const char *systemId,
+    const char *publicId,
+    const char *notationName
+)
 {
     domReadInfo                  *info = (domReadInfo *) userData;
     Tcl_HashEntry                *entryPtr;
@@ -1086,12 +1089,13 @@ entityDeclHandler (userData, entityName, is_parameter_entity, value,
 |  
 \--------------------------------------------------------------------------*/
 static int
-externalEntityRefHandler (parser, openEntityNames, base, systemId, publicId)
-     XML_Parser parser;
-     CONST char *openEntityNames;
-     CONST char *base;
-     CONST char *systemId;
-     CONST char *publicId;
+externalEntityRefHandler (
+    XML_Parser  parser,
+    CONST char *openEntityNames,
+    CONST char *base,
+    CONST char *systemId,
+    CONST char *publicId
+)
 {
     domReadInfo   *info = (domReadInfo *) XML_GetUserData (parser);
 
@@ -1236,12 +1240,13 @@ externalEntityRefHandler (parser, openEntityNames, base, systemId, publicId)
 |
 \--------------------------------------------------------------------------*/
 void 
-startDoctypeDeclHandler (userData, doctypeName, sysid, pubid, has_internal_subset)
-    void       *userData;
-    const char *doctypeName;
-    const char *sysid;
-    const char *pubid;
-    int         has_internal_subset;
+startDoctypeDeclHandler (
+    void       *userData,
+    const char *doctypeName,
+    const char *sysid,
+    const char *pubid,
+    int         has_internal_subset
+)
 {
     domReadInfo                  *info = (domReadInfo *) userData;
     
@@ -1253,8 +1258,9 @@ startDoctypeDeclHandler (userData, doctypeName, sysid, pubid, has_internal_subse
 |
 \--------------------------------------------------------------------------*/
 void
-endDoctypeDeclHandler (userData)
-    void *userData;
+endDoctypeDeclHandler (
+    void *userData
+)
 {
     domReadInfo                  *info = (domReadInfo *) userData;
 
@@ -1800,7 +1806,7 @@ domSetAttribute (
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
             h = Tcl_FindHashEntry (node->ownerDocument->ids, attr->nodeValue);
             if (h) {
-                tmp = Tcl_GetHashValue (h);
+                tmp = (domNode *)Tcl_GetHashValue (h);
                 Tcl_DeleteHashEntry (h);
                 h = Tcl_CreateHashEntry (node->ownerDocument->ids, 
                                          attributeValue, &hnew);
@@ -3220,9 +3226,10 @@ EXTERN int tcldom_returnDocumentObj (Tcl_Interp *interp, domDocument *document,
                                  int setVariable, Tcl_Obj *var_name);
 
 void
-tdom_freeProc (interp, userData)
-    Tcl_Interp *interp;
-    void *userData;
+tdom_freeProc (
+    Tcl_Interp *interp,
+    void       *userData
+)
 {
     char         objCmdName[40];
     Tcl_CmdInfo  cmd_info;
@@ -3239,9 +3246,10 @@ tdom_freeProc (interp, userData)
 }
 
 void
-tdom_resetProc (interp, userData)
-    Tcl_Interp *interp;
-    void *userData;
+tdom_resetProc (
+    Tcl_Interp *interp,
+    void       *userData
+)
 {
     char         objCmdName[40];
     Tcl_CmdInfo  cmd_info;
@@ -3279,9 +3287,10 @@ tdom_resetProc (interp, userData)
 }
 
 void
-tdom_parserResetProc (parser, userData)
-    XML_Parser parser;
-    void *userData;
+tdom_parserResetProc (
+    XML_Parser parser,
+    void      *userData
+)
 {
     domReadInfo *info = (domReadInfo *) userData;
 
@@ -3306,8 +3315,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     TclGenExpatInfo *expat;
     Tcl_Obj         *newObjName = NULL;
     TEncoding       *encoding;
-    GetTDomTSD();
-
 
     static char *tdomMethods[] = {
         "enable", "getdoc",
@@ -3322,6 +3329,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         m_setExternalEntityResolver, m_keepEmpties,
         m_remove,
     };
+    GetTDomTSD();
     
     if (objc < 3 || objc > 4) {
         Tcl_WrongNumArgs (interp, 1, objv, tdom_usage);

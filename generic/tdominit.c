@@ -28,8 +28,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -47,12 +50,6 @@
 #include <tcl.h>
 #include <dom.h>
 #include <tcldom.h>
-
-
-/*JCL #define STR_TDOM_VERSION(v) (#v)
-
-EXTERN EXPORT(int,Tdom_Init)     _ANSI_ARGS_((Tcl_Interp *interp));
-*/
 
 
 /*
@@ -99,12 +96,6 @@ Tdom_Init (interp)
     Tcl_PkgProvide (interp, "stackedtdom", "0.1");    
     Tcl_PkgProvide (interp, "tdom",  STR_TDOM_VERSION(TDOM_VERSION));
 
-    /*
-    fprintf(stderr, "sizeof(domNode)     = %d \n", sizeof(domNode) );
-    fprintf(stderr, "sizeof(domTextNode) = %d \n", sizeof(domTextNode) );
-    fprintf(stderr, "sizeof(domAttrNode) = %d \n", sizeof(domAttrNode) );
-    */ 
-    
     return TCL_OK;
 }
 

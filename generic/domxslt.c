@@ -36,8 +36,11 @@
 |                               over the place.
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |   Revision 1.5  2002/02/04 22:10:59  jolo
 |   rolf 04022002
@@ -1358,7 +1361,7 @@ void StripXMLSpace (
             h = Tcl_FindHashEntry (&(xs->stripInfo.NSWildcards), nsname);
             if (h) {
                 strip = 1;
-                f = Tcl_GetHashValue (h);
+                f = (double *)Tcl_GetHashValue (h);
                 if (*f >= stripPrecedence) {
                     stripPrecedence = *f;
                     stripPrio = -0.25;
@@ -1372,7 +1375,7 @@ void StripXMLSpace (
                                    Tcl_DStringValue (&dStr));
             if (h) {
                 strip = 1;
-                f = Tcl_GetHashValue (h);
+                f = (double *)Tcl_GetHashValue (h);
                 if (*f >= stripPrecedence) {
                     stripPrecedence = *f;
                     stripPrio = 0.0;
@@ -1382,7 +1385,7 @@ void StripXMLSpace (
             h = Tcl_FindHashEntry (&(xs->stripInfo.NCNames), node->nodeName);
             if (h) {
                 strip = 1;
-                f = Tcl_GetHashValue (h);
+                f = (double *)Tcl_GetHashValue (h);
                 if (*f >= stripPrecedence) {
                     stripPrecedence = *f;
                     stripPrio = 0.0;
@@ -1397,7 +1400,7 @@ void StripXMLSpace (
                     h = Tcl_FindHashEntry (&(xs->preserveInfo.FQNames),
                                            Tcl_DStringValue (&dStr));
                     if (h) {
-                        f = Tcl_GetHashValue (h);
+                        f = (double *)Tcl_GetHashValue (h);
                         if (*f > stripPrecedence) {
                             strip = 0;
                         } else
@@ -1409,7 +1412,7 @@ void StripXMLSpace (
                         h = Tcl_FindHashEntry (&(xs->preserveInfo.NSWildcards),
                                                nsname);
                         if (h) {
-                            f = Tcl_GetHashValue (h);
+                            f = (double *)Tcl_GetHashValue (h);
                             if (*f > stripPrecedence) {
                                 strip = 0;
                             } else 
@@ -1422,7 +1425,7 @@ void StripXMLSpace (
                     h = Tcl_FindHashEntry (&(xs->preserveInfo.NCNames),
                                            node->nodeName);
                     if (h) {
-                        f = Tcl_GetHashValue (h);
+                        f = (double *)Tcl_GetHashValue (h);
                         if (*f > stripPrecedence) {
                             strip = 0;
                         } else 
@@ -3853,7 +3856,7 @@ void fillElementList (
                         h = Tcl_CreateHashEntry (&(wsinfo->NSWildcards), ns->uri,
                                                  &hnew);
                         if (!hnew) {
-                            f = Tcl_GetHashValue (h);
+                            f = (double *)Tcl_GetHashValue (h);
                             if (*f < precedence) { *f = precedence; }
                         } else {
                             f = (double *) Tcl_Alloc (sizeof (double));
@@ -3867,7 +3870,7 @@ void fillElementList (
                         h = Tcl_CreateHashEntry (&(wsinfo->FQNames), 
                                                  Tcl_DStringValue (&dStr), &hnew);
                         if (!hnew) {
-                            f = Tcl_GetHashValue (h);
+                            f = (double *)Tcl_GetHashValue (h);
                             if (*f < precedence) { *f = precedence; }
                         } else {
                             f = (double *) Tcl_Alloc (sizeof (double));
@@ -3882,7 +3885,7 @@ void fillElementList (
             } else {
                 h = Tcl_CreateHashEntry (&(wsinfo->NCNames), start, &hnew);
                 if (!hnew) {
-                    f = Tcl_GetHashValue (h);
+                    f = (double *)Tcl_GetHashValue (h);
                     if (*f < precedence) { *f = precedence; }
                 } else {
                     f = (double *) Tcl_Alloc (sizeof (double));
@@ -4178,7 +4181,7 @@ static int processTopLevel (
                 }
                 h = Tcl_CreateHashEntry (&(xs->topLevelVars), str, &hnew);
                 if (!hnew) {
-                    topLevelVar = Tcl_GetHashValue (h);
+                    topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (h);
                     /* Since imported stylesheets are processed at the
                        point at which they encounters the definitions are
                        already in increasing order of import precedence.
@@ -4326,7 +4329,7 @@ static int processTopLevel (
                 if (hnew) {
                     keyInfo->next  = NULL;
                 } else {
-                    keyInfo->next  = Tcl_GetHashValue (h);
+                    keyInfo->next  = (xsltKeyInfo *)Tcl_GetHashValue (h);
                 }
                 Tcl_SetHashValue (h, keyInfo);
                 break;
@@ -4373,7 +4376,7 @@ static int processTopLevel (
                 }
                 h = Tcl_CreateHashEntry (&(xs->topLevelVars), str, &hnew);
                 if (!hnew) {
-                    topLevelVar = Tcl_GetHashValue (h);
+                    topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (h);
                     /* Since imported stylesheets are processed at the
                        point at which they encounters the definitions are
                        already in increasing order of import precedence.

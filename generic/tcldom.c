@@ -32,8 +32,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/02/23 01:13:33  rolf
+|   Some code tweaking for a mostly warning free MS build
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -1859,7 +1862,7 @@ char *findBaseURI (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry (node->ownerDocument->baseURIs,
                                           (char*)node->nodeNumber);
-            baseURI = Tcl_GetHashValue (entryPtr);
+            baseURI = (char *)Tcl_GetHashValue (entryPtr);
             break;
         }
         if (node->previousSibling) {
