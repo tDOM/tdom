@@ -72,7 +72,7 @@ AC_SUBST(MAJOR_VERSION)
 MINOR_VERSION=7
 AC_SUBST(MINOR_VERSION)
 
-PATCHLEVEL=6
+PATCHLEVEL=7
 AC_SUBST(PATCHLEVEL)
 
 # This package name must be replaced statically for AC_SUBST to work
