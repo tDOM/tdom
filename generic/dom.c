@@ -36,6 +36,10 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/03/01 01:18:22  rolf
+|   Changed parsing. [dom parse ..] now uses Tcl_GetStringFromObj(),
+|   dom parse -channel now respects the encoding of the channel.
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -302,6 +306,34 @@ domLookupPrefix (
     return NULL;
 }
 
+/*---------------------------------------------------------------------------
+|   domIsNamespaceInScope
+|
+\--------------------------------------------------------------------------*/
+int 
+domIsNamespaceInScope (
+    domActiveNS *NSstack,
+    int          NSstackPos,
+    char        *prefix,
+    char        *namespaceURI
+    )
+{
+    int    i;
+    
+    for (i = NSstackPos; i >= 0; i--) {
+        if (strcmp(NSstack[i].namespace->prefix, prefix)==0) {
+            if (strcmp(NSstack[i].namespace->uri, namespaceURI)==0) {
+                /* OK, exactly the same namespace declaration is in scope */
+                return 1;
+            } else {
+                /* This prefix is currently assigned to another uri,
+                   we need a new NS declaration, to override this one */
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
 
 /*---------------------------------------------------------------------------
 |   domLookupURI
@@ -623,6 +655,9 @@ startElement(
         if (strncmp((char *)atPtr[0], "xmlns", 5) == 0) {
             xmlns = (char *)atPtr[0];
             if (xmlns[5] == ':') {
+                if (domIsNamespaceInScope (info->activeNS, info->activeNSpos,
+                                           &(xmlns[6]), (char *)atPtr[1])) 
+                    continue;
                 ns = domNewNamespace(info->document, &(xmlns[6]), (char *)atPtr[1]);
             } else {
                 ns = domNewNamespace(info->document, "", (char *)atPtr[1]);
@@ -637,12 +672,9 @@ startElement(
             }
             info->activeNS[info->activeNSpos].depth     = info->depth;
             info->activeNS[info->activeNSpos].namespace = ns;
-            continue;
         } 
     }
-#endif        
 
-#ifdef TDOM_NS    
     /*----------------------------------------------------------
     |   look for namespace of element
     \---------------------------------------------------------*/
@@ -1292,6 +1324,12 @@ domReadDocument (
     int            hnew, done, len;
     domReadInfo    info;
     char           buf[1024];
+#if !TclOnly8Bits    
+    Tcl_Obj       *bufObj;
+    Tcl_DString    dStr;
+    int            useBinary;
+    char          *str;
+#endif
     domDocument   *doc  = (domDocument*) Tcl_Alloc(sizeof(domDocument));
     GetTDomTSD();
 
@@ -1384,6 +1422,40 @@ domReadDocument (
             return NULL;
         }
     } else {
+#if !TclOnly8Bits
+        Tcl_DStringInit (&dStr);
+        if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
+            Tcl_Free ( (char*) info.activeNS );
+            return NULL;
+        }
+        if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
+        else useBinary = 0;
+        Tcl_DStringFree (&dStr);
+        if (useBinary) {
+            do {
+                len = Tcl_Read (channel, buf, sizeof(buf));
+                done = len < sizeof(buf);
+                if (!XML_Parse (parser, buf, len, done)) {
+                    Tcl_Free ( (char*) info.activeNS );
+                    return NULL;
+                }
+            } while (!done);
+        } else {
+            bufObj = Tcl_NewObj();
+            Tcl_SetObjLength (bufObj, 6144);
+            do {
+                len = Tcl_ReadChars (channel, bufObj, 1024, 0);
+                done = (len < 1024);
+                str = Tcl_GetStringFromObj (bufObj, &len);
+                if (!XML_Parse (parser, str, len, done)) {
+                    Tcl_Free ( (char*) info.activeNS );
+                    Tcl_DecrRefCount (bufObj);
+                    return NULL;
+                }
+            } while (!done);
+            Tcl_DecrRefCount (bufObj);
+        }
+#else             
         do {
             len = Tcl_Read (channel, buf, sizeof(buf));
             done = len < sizeof(buf);
@@ -1392,6 +1464,7 @@ domReadDocument (
                 return NULL;
             }
         } while (!done);
+#endif        
     }
     Tcl_Free ( (char*) info.activeNS );
 
