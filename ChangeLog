@@ -5,6 +5,9 @@
         * extensions/tnc/Makefile.in: Fixed pkgIndex.tcl problem, if
           the path to the packages contains a space.
 
+        * doc/domDoc.*
+        * doc/domNode.*
+        * CHANGES  
         * generic/dom.h
         * generic/dom.c
         * generic/tcldom.c
