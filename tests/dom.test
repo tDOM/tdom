@@ -251,6 +251,36 @@ test dom-4.12 {setAttributeNS - special prefix "xml"} {
     set result
 } {{attr1 xml http://www.w3.org/XML/1998/namespace}}
 
+test dom-4.13 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS uri p:attr1 attrValue
+    $root setAttributeNS uri o:attr1 newValue
+    set result [$root attributes *]
+    $doc delete
+    set result
+} {{attr1 p uri}}
+
+test dom-4.14 {setAttributeNS} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS uri p:attr1 attrValue
+    $root setAttributeNS uri o:attr1 newValue
+    set result [$root getAttributeNS uri attr1]
+    $doc delete
+    set result
+} {newValue}
+
+test dom-4.15 {setAttributeNS - use as setAttribute} {
+    dom createDocument "root" doc
+    set root [$doc documentElement]
+    $root setAttributeNS "" attr1 attrValue
+    set result [$root attributes *]
+    $doc delete
+    set result
+} {attr1}
+
+
 test dom-5.1 {insert FQ Element} {
     set doc [dom parse {<root xmlns:p="uri1"/>}]
     set root [$doc documentElement]
