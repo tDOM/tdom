@@ -1112,7 +1112,7 @@ test dom-9.2 {setObjectCommands} {
 test dom-9.3 {setObjectCommands} {
     set result [catch {dom setObjectCommands foobar} errMsg]
     lappend result $errMsg
-} {1 {bad node mode value "foobar": must be automatic, command, or token}}
+} {1 {bad mode value "foobar": must be automatic, command, or token}}
 
 test dom-9.4 {setObjectCommands} {
     set nrOfCmds [llength [info commands]]
