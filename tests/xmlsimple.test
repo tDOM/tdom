@@ -1,0 +1,73 @@
+# Features covered: simple parser
+#
+# This file contains a collection of tests for the simple parser.
+# Tested functionalities:
+#    simple-1.*: Basic function, parsing
+#    simple-2.*: Character encoding
+#
+# Copyright (c) 2002 Rolf Ade.
+
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest
+    namespace import -force ::tcltest::*
+}
+
+if {[catch {package require tdom 0.7}]} {
+   puts stderr "Cannot load tDOM 0.7 package"
+   return
+}
+
+test simple-1.1 {document as only root node} {
+    set doc [dom parse -simple {<doc/>}]
+    set root [$doc documentElement]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<doc/>}
+
+test simple-1.2 {parsing} {
+    set doc [dom parse -simple {<doc><e/><e/><e/></doc>}]
+    set root [$doc documentElement]
+    set result [llength [$root childNodes]]
+    $doc delete
+    set result
+} {3}
+
+test simple-1.3 {simple parser - parsing} {knownBug} {
+    set doc [dom parse -simple {<doc/> }]
+    set root [$doc documentElement]
+    set result [$root asXML -indent none]
+    $doc delete
+    set result
+} {<doc/>}
+
+test simple-2.1 {XML build in entities} {
+    set doc [dom parse -simple {<doc>&lt;&gt;&amp;&apos;&quot;</doc>}]
+    set root [$doc documentElement]
+    set result [$root text]
+    $doc delete
+    set result
+} {<>&'"}
+
+# emacs: "
+
+test simple-2.2 {character entities} {
+    set doc [dom parse -simple {<doc>&#65;&#x42;</doc>}]
+    set root [$doc documentElement]
+    set result [$root text]
+    $doc delete
+    set result
+} {AB}
+
+test simple-2.3 {character entities} {
+    set doc [dom parse -simple {<doc>&#214;&#xC4;&#xc4;</doc>}]
+    set root [$doc documentElement]
+    set result [$root text]
+    $doc delete
+    set result
+} "\u00d6\u00c4\u00c4"
+
+    
+# cleanup
+::tcltest::cleanupTests
+return
