@@ -1,3 +1,16 @@
+2003-01-29  Rolf Ade  <rolf@pointsman.de>
+
+        Changed the escaping while serializing XML data: in the past
+        """ and "'" was escaped, now it isn't anymore. There isn't a
+        clear rule (to the best of my knowledge) in any of the related
+        specs about this, but now we do things almost along the lines,
+        as saxon (which I regard as the currently most 'rule-setting'
+        xslt processor) does it. In theory (from an XML viewpoint)
+        this should not make a difference, but if somebody postprocess
+        some tDOM output with other toots, there is a small risk, that
+        things (slightly) breaks, therefor:
+        *** POTENTIAL INCOMPATIBILITY ***
+
 2002-12-28  Rolf Ade  <rolf@pointsman.de>
 
         The xslt method now understands also the options
