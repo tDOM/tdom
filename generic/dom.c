@@ -4789,7 +4789,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         m_enable, m_getdoc,
         m_setResultEncoding, m_setStoreLineColumn,
         m_setExternalEntityResolver, m_keepEmpties,
-        m_remove,
+        m_remove
     };
 
     if (objc < 3 || objc > 4) {
