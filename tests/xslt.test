@@ -1,3 +1,12 @@
+# Features covered: XSLT transformation
+#
+# This file contains a collection of tests for the XSLT engine of
+# tDOM.
+# Tested commands and object commands:
+#    xslt-1.*: xpath Lexer/parser tests
+#    xslt-2.*: xslt method command variants, -parameters option
+#
+# Copyright (c) 2002 Rolf Ade.
 
 
 test xslt-1.1 {unicode chars outside of US-ASCII in var name} {
@@ -33,26 +42,248 @@ test xslt-1.2 {xpath parse real number} {
      set result
 } {0.12345}
 
-test xslt-1.2 {xpath parse real number} {
-     set xml [dom parse {<root/>}]
-     set xslt [dom parse {<xsl:stylesheet 
+test xslt-1.3 {xpath parse real number} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0">
   <xsl:template match="/">
       <xsl:value-of select="-.12345"/>
   </xsl:template>
 </xsl:stylesheet>}]
-     set xmlroot [$xml documentElement]
-     $xmlroot xslt $xslt resultDoc
-     set resultroot [$resultDoc documentElement]
-     set result [$resultroot asXML]
-     $xml delete
-     $xslt delete
-     $resultDoc delete
-     set result
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
 } {-0.12345}
      
+test xslt-2.1 {xslt top level parameter: use default value} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {parameter1Value}
 
+test xslt-2.2 {xslt top level parameter: overwrite default value with -parameters} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {parameter1 startValue} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {startValue}
+
+
+test xslt-2.3 {xslt top level parameter: overwrite default value with -parameters} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {parameter1 startValue} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {startValue parameter2Value}
+
+test xslt-2.4 {xslt top level parameter: overwrite default value with -parameters} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {parameter1 startValue1 parameter2 startValue2} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {startValue1 startValue2}
+
+test xslt-2.5 {xslt top level parameter: try to set nonexisted param} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt -parameters {nonExistend foo} $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {There isn't a parameter named "nonExistend" defined at top level in the stylesheet.}
+
+test xslt-2.6 {xslt top level parameter: try to set variable} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:variable name="variable1" select="'variable1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$variable1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt -parameters {variable1 foo} $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {"variable1" is defined as variable, not as parameter.}
+
+test xslt-2.7 {xslt top level parameter} {
+    set xml [dom parse -keepEmpties {<root/>}]
+    set xslt [dom parse -keepEmpties {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:variable name="variable1" select="'variable1Value'"/>
+  <xsl:param name="parameter2" select="'parameter2Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$variable1"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="$parameter2"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt -parameters {parameter2 foo} $xslt resultDoc} errMsg
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {variable1Value foo}
+
+test xslt-2.8 {xslt top level parameter: wrong usage of -parameters option} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt -parameters $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs}
+
+test xslt-2.9 {xslt top level parameter: wrong usage of -parameters option} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt -parameters {foo bar baz} $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs}
+
+test xslt-2.10 {no resultDoc variable name} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    set resultDoc [$xmlroot xslt $xslt]
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {parameter1Value}
+
+test xslt-2.11 {xslt top level parameter: set with 'strange' value} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:param name="parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {parameter1 foo\"'<>bar} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {foo&quot;'&lt;&gt;bar}
 
 # cleanup
 ::tcltest::cleanupTests
