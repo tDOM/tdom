@@ -746,6 +746,11 @@ static int xsltAddExternalDocument (
     domDocument * extDocument;
     int           found;
 
+    DBG(
+        fprintf (stderr, "xsltAddExternalDocument: baseURI '%s'\n", baseURI);
+        fprintf (stderr, "xsltAddExternalDocument: systemID '%s'\n", str);
+    )
+
     found = 0;
     sdoc = xs->subDocs;
     while (sdoc) {
@@ -2317,15 +2322,20 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
+                if (*str == '\0') {
+                    FREE(str);
+                    freeStr = 0;
+                    str = baseURI;
+                }
                 if (xsltAddExternalDocument(xs, baseURI, str, 0,
                                             result, errMsg) < 0) {
-                    FREE(str);
+                    if (freeStr) FREE(str);
                     return -1;
                 }
                 if (xs->wsInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
-                FREE(str);
+                if (freeStr) FREE(str);
             }
         } else {
             reportError (exprContext, "wrong # of args in document() call!",
@@ -4848,9 +4858,12 @@ static int ExecAction (
             str = getAttr(actionNode, "name", a_name);
             if (str) {
                 if (xsltVarExists (xs, str, actionNode)) {
-                    reportError (actionNode,
-                                 "Variable is already declared in this template",
-                                 errMsg);
+                    Tcl_DStringInit (&dStr);
+                    Tcl_DStringAppend (&dStr, "Variable '", -1);
+                    Tcl_DStringAppend (&dStr, str, -1);
+                    Tcl_DStringAppend (
+                        &dStr, "' is already declared in this template", -1);
+                    reportError (actionNode, Tcl_DStringValue (&dStr), errMsg);
                     return -1;
                 }
                 select = getAttr(actionNode, "select", a_select);
