@@ -669,6 +669,7 @@ domDocument *  domReadDocument (XML_Parser parser,
                                 char *baseurl,
                                 Tcl_Obj *extResolver,
                                 int   useForeignDTD,
+                                int   paramEntityParsing,
                                 Tcl_Interp *interp);
 
 void           domFreeDocument (domDocument *doc, domFreeCallback freeCB, void * clientData);
