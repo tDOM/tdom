@@ -157,6 +157,7 @@ typedef struct xsltTemplate {
 typedef struct xsltAttrSet {
 
     char    * name;
+    char    * uri;
     domNode * content;
         
     struct xsltAttrSet *next;
@@ -2319,7 +2320,6 @@ static int xsltAddTemplate (
     
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        
         rc = xpathParse(tpl->match, errMsg, &(tpl->ast), 1); 
         CHECK_RC;
         if (!prioStr) {
@@ -2354,13 +2354,15 @@ int ExecUseAttributeSets (
     xpathResultSet    * context,
     domNode           * currentNode,
     int                 currentPos,
+    domNode           * actionNode,
     char              * styles,
     char             ** errMsg
 )
 {
     xsltAttrSet *attrSet;
-    char        *pc, *aSet, save, *str;
+    char        *pc, *aSet, save, *str, prefix[80], *localName;
     int          rc;
+    domNS       *ns;
         
     pc = styles;
     while (*pc == ' ') pc++;
@@ -2374,12 +2376,28 @@ int ExecUseAttributeSets (
         attrSet = xs->attrSets;
         while (attrSet) {
             TRACE2("use-Attr: '%s' == '%s' ? \n", attrSet->name, aSet);
-            if (strcmp(attrSet->name, aSet)==0) {
+            rc = 0;
+            if (!attrSet->uri) { 
+                if (strcmp(attrSet->name, aSet)==0) rc = 1;
+            }
+            else {
+                domSplitQName (aSet, prefix, &localName);
+                if (prefix[0] != '\0') {
+                    ns = domLookupPrefix (actionNode, prefix);
+                    if (ns) {
+                        if (strcmp (ns->uri, attrSet->uri)==0) {
+                            if (strcmp (attrSet->name, localName)==0) rc = 1;
+                        }
+                    }
+                }
+            }
+            if (rc) {
                 str = getAttr (attrSet->content, "use-attribute-sets",
                                a_useAttributeSets);
                 if (str) {
                     rc = ExecUseAttributeSets (xs, context, currentNode,
-                                               currentPos, str, errMsg);
+                                               currentPos, attrSet->content, 
+                                               str, errMsg);
                     CHECK_RC;
                 }
                 rc = ExecActions(xs, context, currentNode, currentPos, 
@@ -2723,6 +2741,7 @@ static int xsltNumber (
         CHECK_RC;
         vVals = 1;
         v[0] = xpathRound(xpathFuncNumber( &rs, &NaN ));
+        if (NaN) v[0] = 0;
         xpathRSFree( &rs );     
     } else {
         level = getAttr(actionNode, "level",  a_level); 
@@ -3401,7 +3420,8 @@ static int ExecAction (
                     copyNS (currentNode, xs->lastNode);
                     if (str) {
                         rc = ExecUseAttributeSets (xs, context, currentNode,
-                                                   currentPos, str, errMsg);
+                                                   currentPos, actionNode, 
+                                                   str, errMsg);
                         CHECK_RC;
                     }
                 }
@@ -3545,7 +3565,8 @@ static int ExecAction (
             str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
             if (str) {
                 TRACE1("use-attribute-sets = '%s' \n", str);
-                rc = ExecUseAttributeSets (xs, context, currentNode, currentPos,
+                rc = ExecUseAttributeSets (xs, context, currentNode,
+                                           currentPos, actionNode,
                                            str, errMsg);
                 CHECK_RC;
             }
@@ -3917,7 +3938,14 @@ static int ExecAction (
                 domAddNSToNode (xs->lastNode, ns);
                 ns->uri = uri;
             }
-
+            else {
+                ns = domLookupPrefix (xs->lastNode, "");
+                if (ns && (strcmp (ns->uri, "")!=0)) {
+                    ns =  domNewNamespace (xs->lastNode->ownerDocument, "", "");
+                    domAddNSToNode (xs->lastNode, ns);
+                }
+            }
+            
             n = xs->lastNode;
             /* process the attributes */
             attr = actionNode->firstAttr;
@@ -3934,7 +3962,8 @@ static int ExecAction (
                     if (strcmp(localName,"use-attribute-sets")==0) {
                         str = attr->nodeValue;
                         rc = ExecUseAttributeSets (xs, context, currentNode,
-                                                   currentPos, str, errMsg);
+                                                   currentPos, actionNode,
+                                                   str, errMsg);
                         CHECK_RC;
                     }
                 } else {
@@ -4667,6 +4696,7 @@ static int processTopLevel (
     int                rc, hnew;
     double             childPrecedence, childLowBound;
     char              *str, *name, *match, *use, *baseURI, *href;
+    char              *localName, prefix[MAX_PREFIX_LEN];
     xsltAttrSet       *attrSet;
     xsltKeyInfo       *keyInfo;
     xpathResultSet     nodeList;
@@ -4687,6 +4717,11 @@ static int processTopLevel (
             case attributeSet:
                 str = getAttr(node, "name", a_name);
                 if (str) {
+                    domSplitQName (str, prefix, &localName);
+                    ns = NULL;
+                    if (prefix[0] != '\0') {
+                        ns = domLookupPrefix (node, prefix);
+                    }
                     if (xs->attrSets) {
                         attrSet = xs->attrSets;
                         while (attrSet->next) attrSet = attrSet->next;
@@ -4698,7 +4733,12 @@ static int processTopLevel (
                     }
                     attrSet->next    = NULL;
                     attrSet->content = node;
-                    attrSet->name    = str;
+                    attrSet->name    = localName;
+                    if (ns) {
+                        attrSet->uri = ns->uri;
+                    } else {
+                        attrSet->uri = NULL;
+                    }
                 } else {
                     reportError (node, "xsl:attribute-set: missing mandatory attribute \"name\".", errMsg);
                     return -1;
