@@ -1,3 +1,11 @@
+2003-11-02  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/xpath.test: Added a few tests related to declarations
+          to chapter 4.2 and 4.4 in the errata to the XPath rec.
+
+        * generic/domxpath.h: Fixed memory leak, if floor or ceiling
+          are called with non-numbers.
+
 2003-11-01  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Minor bug fix: Special handling is
