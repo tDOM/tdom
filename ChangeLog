@@ -1,3 +1,45 @@
+2004-05-26  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/dom.*
+        * tests/dom.test
+        * tests/domNode.test
+        * tests/tdomcmd.test
+        * generic/tcldom.c
+        * generic/dom.c
+        * generic/dom.h
+        * generic/nodecmd.h
+        * generic/nodecmd.c: Added isPIName, isComment, isCDATA and
+          isPIValue method to the dom command. Created new global
+          (thread wide) flags for name and value checks (Names and FQ
+          Names (element, attribute and processing instruction names),
+          text nodes, comments, CDATA sections and processing
+          instruction values). New methods setNameCheck and
+          setTextCheck to control this flags. 
+
+        * generic/nodecmd.c: Bug fix in case of 
+          appendFromScript script.
+
+        * generic/domxslt.c: Uses the new domIsComment, domIsPINAME
+          and domIsPIValue API functions of dom.c. Improved
+          xsl:processing-instruction processing (now instantiating the
+          content).
+
+        * generic/domxpath.c: Minor editorial changes.
+
+        * tests/domCmd.test: Deleted this file, moved the tests to
+          the new dom.test or domDoc.test.
+
+        * tests/dom.test: Moved the tests from this file to the new
+          domNode.test and collected dom command tests here.
+
+        * tests/domDoc.test
+        * tests/domNode.test: Created this files, tests from dom.test
+          and domCmd.test.  
+
+        * doc/expat,*  
+        * tests/xpath.test
+        * tests/xslt.test: Minor changes.
+  
 2004-05-11  Rolf Ade  <rolf@pointsman.de>
 
         * apps/xslt.tcl: Fixed the test for running in a source tree
