@@ -652,7 +652,7 @@ subset.  It is called with no additional arguments.
 .PP
 "never" disables expansion of parameter entities,
 "always" expands always and "notstandalone" only, if the
-document isn't "standalone='no'".
+document isn't "standalone='no'". The default ist "never"
 .RE
 .IP "\fB -entitydeclcommand  \fIscript\fP\fR"
 .RS
@@ -712,6 +712,17 @@ enddoctypedeclcommand scripts, if set, are not called.
 .PP
 Sets configuration options for the parser. Every command
 option, except \fI-namespace\fR can be set or modified with this method.
+.RE
+.TP
+\&\fB\fBparser\fP \fBcget \fI?-handlerset name? option\fB\fP
+\&\fR
+.RS
+.PP
+Return the current configuration value option for the
+parser.
+.PP
+If the -handlerset option is used, the configuration for the
+named handler set is returned.
 .RE
 .TP
 \&\fB\fBparser\fP \fBfree\fP
