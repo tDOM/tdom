@@ -1,3 +1,15 @@
+2003-10-07  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/nodecmd.c
+        * generic/nodecmd.h
+        * generic/tcldom.c
+        * tests/dom.tests
+        * doc/domNode.*
+        * CHANGES: Added new method insertBeforeFromScript to
+          domNodes. Bug fixes for appendFromScript: In case of error
+          in the script, the tree will not be altered. The
+          appendFromScript may only be used for ELEMENT_NODEs.
+
 2003-10-04  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.h: Removed prototypes of functions, which
