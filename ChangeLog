@@ -1,5 +1,8 @@
 2002-11-01  Rolf Ade  <rolf@pointsman.de>
 
+        * Makefile.in: Fixed 'missing separator' problem (using tab
+          instead of white space).
+
         * lib/tdom.tcl: Updated function-available, corrected
           ridiculous typo by my (element-avaliable ->
           element-available). Somewhat fixed and updated
