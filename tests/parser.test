@@ -99,6 +99,14 @@ test parser-1.4 {parser creation, named with options} {
     ::xml::parser parser-1.4 -elementstartcommand Start
 } parser-1.4
 
+test parser-1.5 {parser freeing, wrong nr of args} {
+    set p [expat]
+    if {[set result [catch {$p free wrongarg}]]} {
+        $p free
+    }
+    set result
+} 1
+
 # Test break return code from callback
 
 test parser-2.1 {break in callback} {
@@ -209,6 +217,59 @@ test parser-3.3 {continue in callback} {
 }
     set ::started(Element)
 } 5
+
+proc esh-3.4 {name attList} {
+    incr ::eshcounter
+    return -code continue
+}
+
+proc eeh-3.4 {name} {
+    incr ::eehcounter
+}
+
+proc cdh-3.4 {data} {
+    incr ::cdhcounter
+}
+
+test parser-3.4 {continue} {
+    set ::eshcounter 0
+    set ::eehcounter 0
+    set ::cdhcounter 0
+    set p [expat -elementstartcommand esh-3.4 -elementendcommand eeh-3.4 \
+              -characterdatacommand chd-3.4]
+    $p parse {<root><a/>foo<a>foo<b><c/>foo</b></a></root>}
+    $p free
+    list $::eshcounter $::eehcounter $::cdhcounter
+} {1 1 0}
+
+proc esh-3.5 {name attList} {
+    incr ::eshcounter2
+}
+
+proc eeh-3.5 {name} {
+    incr ::eehcounter2
+}
+
+proc cdh-3.5 {data} {
+    incr ::cdhcounter2
+}
+
+test parser-3.5 {continue with more than one handlerset} {
+    set ::eshcounter 0
+    set ::eehcounter 0
+    set ::cdhcounter 0
+    set ::eshcounter2 0
+    set ::eehcounter2 0
+    set ::cdhcounter2 0
+    set p [expat -elementstartcommand esh-3.4 -elementendcommand eeh-3.4 \
+              -characterdatacommand chd-3.4 -handlerset second \
+              -elementstartcommand esh-3.5 -elementendcommand eeh-3.5 \
+              -characterdatacommand cdh-3.5]
+    $p parse {<root><a/>foo<a>foo<b><c/>foo</b></a></root>}
+    $p free
+    list $::eshcounter $::eehcounter $::cdhcounter \
+        $::eshcounter2 $::eehcounter2 $::cdhcounter2
+} {1 1 0 5 5 3}
 
 test parser-4.1 {error in callback} {
     catch {unset ::started}

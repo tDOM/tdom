@@ -301,6 +301,34 @@ test cdata-5.2 {CDATA section whiteCDATAs} {
     list $::result
 } {{ foo }}    
 
+proc cdh-6.1 {suppliedData data} {
+    if {$suppliedData == "first arg"} {
+        set ::result 1
+    } else {
+        set ::result 0
+    }
+}
+
+test cdata-6.1 {CDATA script} {
+    set ::result 0
+    set p [xml::parser -characterdatacommand [list cdh-6.1 "first arg"]]
+    $p parse {<root>pcdata</root>}
+    $p free
+    set ::result
+} {1}
+
+test cdata-6.2 {declare handler proc later} {
+    catch {rename cdh-6.2 {}}
+    catch {unset ::cdata}
+    set p [xml::parser -characterdatacommand cdh-6.2]
+    proc cdh-6.2 {data} {
+        append ::cdata $data
+    }
+    $p parse {<root>foo<a/>data<b>more data</b></root>}
+    $p free
+    set ::cdata
+} {foodatamore data}
+
 foreach parser [info commands cdata-*] {
     $parser free
 }
