@@ -1,3 +1,10 @@
+2003-10-22  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * tests/xpath.test: Bug fix in the xpath lexer: In a union
+          expr, a NCName test with a name equal to an operator was
+          wrongly interpreted as operator.
+    
 2003-10-21  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Fixed bug with current(), if it is used
