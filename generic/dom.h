@@ -63,7 +63,7 @@
 # define domFree            FREE
 # if defined(TCL_MEM_DEBUG) || defined(NS_AOLSERVER) 
 #  define MALLOC            Tcl_Alloc
-#  define FREE              Tcl_Free
+#  define FREE(a)           Tcl_Free((char*)(a))
 #  define REALLOC           Tcl_Realloc
 #  define tdomstrdup(s)     (char*)strcpy(MALLOC(strlen((s))+1),(char*)s)
 # else    
