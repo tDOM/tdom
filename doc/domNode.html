@@ -1,26 +1,26 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode905"> DESCRIPTION </a> · <a href="#SECTnode1961">SEE ALSO</a> · <a href="#SECTnode1970">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1983">SEE ALSO</a> · <a href="#SECTid1992">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode905"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTid905"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
-should closely conform to the W3C recommendation &quot;Document Object Model
-(Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
-as well to parts of the W3C draft &quot;XML Pointer Language (XPointer)&quot;
-(<a href="http://www.w3.org/TR/1998/WD-xptr-19980303">http://www.w3.org/TR/1998/WD-xptr-19980303</a>).</p><p>The selectNodes method implements the &quot;XML Path
-Language (XPath) Version 1.0&quot; W3C recommendation 16 November 1999 (<a href="http://www.w3.org/TR/1999/REC-xpath-19991116">http://www.w3.org/TR/1999/REC-xpath-19991116</a>). Look
+should closely conform to the W3C recommendation "Document Object Model
+(Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
+as well to parts of the W3C draft "XML Pointer Language (XPointer)"
+(<a href="http://www.w3.org/TR/1998/WD-xptr-19980303">http://www.w3.org/TR/1998/WD-xptr-19980303</a>).</p><p>The selectNodes method implements the "XML Path
+Language (XPath) Version 1.0" W3C recommendation 16 November 1999 (<a href="http://www.w3.org/TR/1999/REC-xpath-19991116">http://www.w3.org/TR/1999/REC-xpath-19991116</a>). Look
 at these documents for a deeper understanding of the functionality.</p><p>The valid methods are:</p><dl class="commandlist">
       
         <dt><b class="method">nodeType</b></dt>
@@ -32,8 +32,8 @@ PROCESSING_INSTRUCTION_NODE.</dd>
       
         <dt><b class="method">nodeName</b></dt>
         <dd>Returns the node name of that node object. This is the element
-(tag) name for element nodes (type ELEMENT_NODE), &quot;#text&quot; for text
-node or &quot;#cdata&quot; for cdata section nodes.</dd>
+(tag) name for element nodes (type ELEMENT_NODE), "#text" for text
+node or "#cdata" for cdata section nodes.</dd>
       
 
       
@@ -68,14 +68,14 @@ value.</dd>
 
       
         <dt><b class="method">childNodesLive</b></dt>
-        <dd>Returns a &quot;live&quot; nodeList object of the child nodes of
+        <dd>Returns a "live" nodeList object of the child nodes of
 the node in the sense of the DOM recommendation. This nodeList object is
-&quot;live&quot; in the sense that, for instance, changes to the children of
+"live" in the sense that, for instance, changes to the children of
 the node object that it was created from are immediately reflected in the nodes
 returned by the NodeList accessors; it is not a static snapshot of the content
-of the node. The both accessors know by the nodeList object are &quot;item
-&lt;index&gt;&quot;, which returns the indexth item in the collection, and
-&quot;length&quot;, which returns the number of nodes in the list.</dd>
+of the node. The both accessors know by the nodeList object are "item
+&lt;index&gt;", which returns the indexth item in the collection, and
+"length", which returns the number of nodes in the list.</dd>
       
 
       
@@ -201,22 +201,22 @@ already existing attribute to a new value. While searching, if the attribute
 already exists, only the given <i class="m">uri</i> and the localname of the
 <i class="m">qualifiedName</i> is used.</p>
 
-        <pre class="example">$node setAttributeNS &quot;http://some.uri.com/wow&quot; prefix:attr1 attrValue</pre>
+        <pre class="example">$node setAttributeNS "http://some.uri.com/wow" prefix:attr1 attrValue</pre>
 
 <p>If the uri is the empty string and the attribute name hasn't a prefix, this
 method has the same effect as the method <b>setAttribute</b>.</p>
 
-        <pre class="example">$node setAttributeNS &quot;&quot; attri &quot;some Value&quot;</pre>
+        <pre class="example">$node setAttributeNS "" attri "some Value"</pre>
 
 <p>XML namespace nodes are not in any namespace. Set them this way:</p>
 
-        <pre class="example">$node setAttributeNS &quot;&quot; xmlns:myprefix &quot;myNamespaceURI&quot;
-$node setAttributeNS &quot;&quot; xmlns &quot;newDefaultNamespace&quot;</pre>
+        <pre class="example">$node setAttributeNS "" xmlns:myprefix "myNamespaceURI"
+$node setAttributeNS "" xmlns "newDefaultNamespace"</pre>
 
-<p>If your <i class="m">qualifiedName</i> has the prefix &quot;xml&quot; and you give the empty
+<p>If your <i class="m">qualifiedName</i> has the prefix "xml" and you give the empty
 string as <i class="m">uri</i>, the namespace of the attribute defaults to
-&quot;http://www.w3.org/XML/1998/namespace&quot;, as the DOM 2 recommendation
-requests. With the exceptions of the special prefixes &quot;xmlns&quot; and &quot;xml&quot; you
+"http://www.w3.org/XML/1998/namespace", as the DOM 2 recommendation
+requests. With the exceptions of the special prefixes "xmlns" and "xml" you
 always must provide a non emtpy <i class="m">uri</i>, if your <i class="m">qualifiedName</i> has a
 prefix.</p>
         </dd>
@@ -525,6 +525,17 @@ really know, what you do.</dd>
 
       
         <dt>
+<b class="method">startBefore</b> <i class="m">refnode</i>
+</dt>
+        <dd>Compares the relative order of node and <i class="m">refnode</i>. Both
+nodes must be part of the same documents and not out of the fragment list of
+the document. Returns 1, if node is in document order before (or, in case of
+nested element nodes, start before) <i class="m">refnode</i>, 0 if node and
+<i class="m">refnode</i> are the same node and -1 otherwise.</dd>
+      
+
+      
+        <dt>
 <b class="method">xslt</b> <b class="option">?-parameters
 parameterList?</b> <b class="option">?-ignoreUndeclaredParameters?</b>
 <b class="option">?-xsltmessagecmd script?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
@@ -549,7 +560,7 @@ in the stylesheet. The actual command consists of the script, given as argument
 to the option, appended with the XML Fragment from instantiating the
 xsl:message element content as string (as if the XPath string() function would
 have been applied to the XML Fragment) and a flag, which indicates, if the
-xsl:message has an attribute &quot;terminate&quot; with the value &quot;yes&quot;.</p>
+xsl:message has an attribute "terminate" with the value "yes".</p>
 </dd>
       
 
@@ -563,11 +574,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode1961">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTid1983">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode1970">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid1992">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
