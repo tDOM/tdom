@@ -1032,7 +1032,7 @@ int tcldom_appendXML (
     xml_string = Tcl_GetStringFromObj( obj, &xml_string_len);
 
 #ifdef TDOM_NO_EXPAT
-    Tcl_AppendResult(interp, "tDOM was compiled without Expat!", NULL);
+    SetResult ("tDOM was compiled without Expat!");
     return TCL_ERROR;
 #else
     parser = XML_ParserCreate(NULL);
@@ -1048,6 +1048,7 @@ int tcldom_appendXML (
                            NULL,
                            node->ownerDocument->extResolver,
                            0,
+                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS,
                            interp);
     if (doc == NULL) {
         char s[50];
@@ -1055,8 +1056,9 @@ int tcldom_appendXML (
 
         Tcl_ResetResult(interp);
         sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
-        Tcl_AppendResult(interp, "error \"", XML_ErrorString(XML_GetErrorCode(parser)),
-                                 "\" at line ", s, " character ", NULL);
+        Tcl_AppendResult(interp, "error \"",
+                         XML_ErrorString(XML_GetErrorCode(parser)),
+                         "\" at line ", s, " character ", NULL);
         sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
         Tcl_AppendResult(interp, s, NULL);
         byteIndex = XML_GetCurrentByteIndex(parser);
@@ -2706,7 +2708,7 @@ static int applyXSLT (
     Tcl_Obj     *CONST objv[]
     )
 {
-    char          *usage, **parameters = NULL, *errMsg;
+    char          *usage, **parameters = NULL, *errMsg, *option;
     Tcl_Obj       *objPtr, *localListPtr = (Tcl_Obj *)NULL;
     int            i, result, length, optionIndex;
     int            ignoreUndeclaredParameters = 0;
@@ -2729,9 +2731,13 @@ static int applyXSLT (
     else       usage = cmd_usage;
     
     while (objc > 1) {
+        option = Tcl_GetStringFromObj (objv[0], NULL);
+        if (option[0] != '-') {
+            break;
+        }
         if (Tcl_GetIndexFromObj (interp, objv[0], xsltOptions, "option", 0,
                                  &optionIndex) != TCL_OK) {
-            break;
+            goto applyXSLTCleanUP;
         }
     
         switch ((enum xsltOption) optionIndex) {
@@ -2740,11 +2746,15 @@ static int applyXSLT (
             if (objc < 3) {SetResult (usage); goto applyXSLTCleanUP;}
             if (Tcl_ListObjLength (interp, objv[1], &length) != TCL_OK) {
                 SetResult ("ill-formed parameters list: the -parameters option needs a list of parameter name and parameter value pairs");
-                return TCL_ERROR;
+                goto applyXSLTCleanUP;
             }
             if (length % 2) {
                 SetResult ("parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs");
-                return TCL_ERROR;
+                goto applyXSLTCleanUP;
+            }
+            if (parameters) {
+                SetResult ("only one -parameters option allowed");
+                goto applyXSLTCleanUP;
             }
             localListPtr = Tcl_DuplicateObj (objv[1]);
             Tcl_IncrRefCount (localListPtr);
@@ -3051,8 +3061,9 @@ int tcldom_NodeObjCmd (
             if (objc == 3) {
                 SetResult ( Tcl_GetStringFromObj (objv[2], NULL) );
             } else {
-                sprintf (tmp, "attribute %80.80s not found!", &(method[1]) );
-                SetResult ( tmp);
+                Tcl_ResetResult (interp);
+                Tcl_AppendResult (interp, "Attribute \"", &(method[1]),
+                                  "\" not found!", NULL);
                 return TCL_ERROR;
             }
         }
@@ -4273,46 +4284,89 @@ int tcldom_parse (
     GetTcldomTSD()
     char        *xml_string, *option, *errStr, *channelId, *baseURI = NULL;
     CONST84 char *interpResult;
-    int          xml_string_len, mode;
+    int          optionIndex, value, xml_string_len, mode;
     int          ignoreWhiteSpaces   = 1;
     int          takeSimpleParser    = 0;
     int          takeHTMLParser      = 0;
     int          setVariable         = 0;
     int          feedbackAfter       = 0;
     int          useForeignDTD       = 0;
+    int          paramEntityParsing  = (int)XML_PARAM_ENTITY_PARSING_ALWAYS;
     domDocument *doc;
     Tcl_Obj     *newObjName = NULL, *extResolver = NULL;
     XML_Parser   parser;
     Tcl_Channel  chan = (Tcl_Channel) NULL;
 
+    static CONST84 char *parseOptions[] = {
+        "-keepEmpties",           "-simple",        "-html",
+        "-feedbackAfter",         "-channel",       "-baseurl",
+        "-externalentitycommand", "-useForeignDTD", "-paramentityparsing",
+        NULL
+    };
+    enum parseOption {
+        o_keepEmpties,            o_simple,         o_html,
+        o_feedbackAfter,          o_channel,        o_baseurl,
+        o_externalentitycommand,  o_useForeignDTD,  o_paramentityparsing
+    };
 
+    static CONST84 char *paramEntityParsingValues[] = {
+        "always",
+        "never",
+        "notstandalone",
+        (char *) NULL
+    };
+    enum paramEntityParsingValue {
+        EXPAT_PARAMENTITYPARSINGALWAYS,
+        EXPAT_PARAMENTITYPARSINGNEVER,
+        EXPAT_PARAMENTITYPARSINGNOTSTANDALONE
+    };
+    
     while (objc > 1) {
         option = Tcl_GetStringFromObj( objv[1], NULL);
-        if (strcmp(option,"-keepEmpties")==0) {
+        if (option[0] != '-') {
+            break;
+        }
+        if (Tcl_GetIndexFromObj (interp, objv[1], parseOptions, "option", 0,
+                                 &optionIndex) != TCL_OK) {
+            return TCL_ERROR;
+        }
+
+        switch ((enum parseOption) optionIndex) {
+
+        case o_keepEmpties:
             ignoreWhiteSpaces = 0;
             objv++;  objc--; continue;
-        }
-        if (strcmp(option,"-simple")==0) {
+
+        case o_simple:
             takeSimpleParser = 1;
             objv++;  objc--; continue;
-        }
-        if (strcmp(option,"-html")==0) {
+
+        case o_html:
             takeSimpleParser = 1;
             takeHTMLParser = 1;
             objv++;  objc--; continue;
-        }
-        if (strcmp(option,"-feedbackAfter")==0) {
+            
+        case o_feedbackAfter:
             objv++; objc--;
-            Tcl_GetIntFromObj (interp, objv[1], &feedbackAfter);
+            if (objc > 1) {
+                if (Tcl_GetIntFromObj (interp, objv[1], &feedbackAfter)
+                    != TCL_OK) {
+                    SetResult ("-feedbackAfter must have an integer argument");
+                    return TCL_ERROR;
+                }
+            } else {
+                SetResult ("The \"dom parse\" option \"-feedbackAfter\" requires an integer as argument.");
+                return TCL_ERROR;
+            }
             objv++; objc--;
             continue;
-        }
-        if (strcmp(option, "-channel")==0) {
+
+        case o_channel:
             objv++; objc--;
             if (objc > 1) {
                 channelId = Tcl_GetStringFromObj (objv[1], NULL);
             } else {
-                SetResult (dom_usage);
+                SetResult ("The \"dom parse\" option \"-channel\" requires a tcl channel as argument.");
                 return TCL_ERROR;
             }
             chan = Tcl_GetChannel (interp, channelId, &mode);
@@ -4326,31 +4380,31 @@ int tcldom_parse (
             }
             objv++; objc--;
             continue;
-        }
-        if (strcmp(option, "-baseurl")==0) {
+
+        case o_baseurl:
             objv++; objc--;
             if (objc > 1) {
                 baseURI = Tcl_GetStringFromObj (objv[1], NULL);
             } else {
-                SetResult (dom_usage);
+                SetResult ("The \"dom parse\" option \"-baseurl\" requires the base URL of the document to parse as argument.");
                 return TCL_ERROR;
             }
             objv++; objc--;
             continue;
-        }
-        if (strcmp(option, "-externalentitycommand")==0) {
+
+        case o_externalentitycommand:
             objv++; objc--;
             if (objc > 1) {
                 extResolver = objv[1];
                 Tcl_IncrRefCount (objv[1]);
             } else {
-                SetResult (dom_usage);
+                SetResult ("The \"dom parse\" option \"-externalentitycommand\" requires a script as argument.");
                 return TCL_ERROR;
             }
             objv++; objc--;
             continue;
-        }
-        if (strcmp(option, "-useForeignDTD")==0) {
+
+        case o_useForeignDTD:
             objv++; objc--;
             if (objc > 1) {
                 if (Tcl_GetBooleanFromObj (interp, objv[1], &useForeignDTD)
@@ -4364,14 +4418,36 @@ int tcldom_parse (
             }
             objv++; objc--;
             continue;
-        }
-        if (objc == 2 || objc == 3) {
-            break;
-        }
-        SetResult (dom_usage);
-        return TCL_ERROR;
-    }
 
+        case o_paramentityparsing:
+            if (objc > 2) {
+                if (Tcl_GetIndexFromObj(interp, objv[2], 
+                                        paramEntityParsingValues, "value", 0, 
+                                        &value) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+                switch ((enum paramEntityParsingValue) value) {
+                case EXPAT_PARAMENTITYPARSINGALWAYS:
+                    paramEntityParsing = (int) XML_PARAM_ENTITY_PARSING_ALWAYS;
+                    break;
+                case EXPAT_PARAMENTITYPARSINGNEVER:
+                    paramEntityParsing = (int) XML_PARAM_ENTITY_PARSING_NEVER;
+                    break;
+                case EXPAT_PARAMENTITYPARSINGNOTSTANDALONE:
+                    paramEntityParsing = 
+                        (int) XML_PARAM_ENTITY_PARSING_UNLESS_STANDALONE;
+                    break;
+                }
+            } else {
+                SetResult ("-paramEntityParsing requires 'always', 'never' or 'notstandalone' as argument");
+                return TCL_ERROR;
+            }
+            objv++; objc--;
+            objv++; objc--;
+            continue;
+        }
+    }
+    
     if (chan == NULL) {
         if (objc < 2) {
             SetResult (dom_usage);
@@ -4383,11 +4459,16 @@ int tcldom_parse (
             setVariable = 1;
         }
     } else {
+        if (objc > 2) {
+            SetResult (dom_usage);
+            return TCL_ERROR;
+        }
         xml_string = NULL;
         xml_string_len = 0;
         if (takeSimpleParser || takeHTMLParser) {
             Tcl_AppendResult(interp,
-                "simple and/or HTML parser(s) don't support channel reading", NULL);
+                "simple and/or HTML parser(s) don't support channel reading",
+                             NULL);
             return TCL_ERROR;
         }
         if (objc == 2) {
@@ -4396,9 +4477,7 @@ int tcldom_parse (
         }
     }
 
-
     if (takeSimpleParser) {
-
         char s[50];
         int  byteIndex, i;
 
@@ -4462,6 +4541,7 @@ int tcldom_parse (
                                    baseURI,
                                    extResolver,
                                    useForeignDTD,
+                                   paramEntityParsing,
                                    interp);
     if (doc == NULL) {
         char s[50];
@@ -4522,7 +4602,6 @@ int tcldom_domCmd (
 {
     GetTcldomTSD()
     char        * method, tmp[300];
-    char        *localName, prefix[MAX_PREFIX_LEN];
     int           methodIndex, result, i, bool;
     Tcl_CmdInfo   cmdInfo;
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
@@ -4643,18 +4722,7 @@ int tcldom_domCmd (
             
         case m_isQName:
             CheckArgs(3,3,2,"string");
-            if ((Tcl_GetStringFromObj(objv[2], NULL))[0] == ':') {
-                SetBooleanResult (0);
-            } else {
-                domSplitQName (Tcl_GetStringFromObj(objv[2],NULL), prefix,
-                               &localName);
-                if (prefix[0]) {
-                    SetBooleanResult ((domIsNCNAME(prefix) 
-                                       && domIsNCNAME(localName)));
-                } else {
-                    SetBooleanResult (domIsNCNAME (localName));
-                }
-            }
+            SetBooleanResult (domIsQNAME (Tcl_GetStringFromObj(objv[2],NULL)));
             return TCL_OK;
 
         case m_isNCName:
