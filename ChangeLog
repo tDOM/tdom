@@ -1,3 +1,27 @@
+2003-09-22  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/dom.test
+          doc/domNode.*
+          generic/tcldom.c
+          generic/dom.c: Reworked insertBefore: Bug fix: If the
+          refNode was invalid, the involved documents got mangled. Bug
+          fix: Dead loop, if the node to insert was the node
+          itself. Bug fix: the rootNode of node's document could be
+          used as node to insert. Bug fix: It was not possible, to
+          insert a node before refNode, which was already a children
+          of node. Bug fix: It was not possible, to insert a sibling
+          of node. Feature enhancement: If the refnode is the empty
+          string, the newNode is inserted at the end of the children
+          list of node. Optimization: Average speed was O(n/2) (n:
+          number of childs of node) in case the node to insert was out
+          of the tree, and 0((n+m)/1) (m: number of nodes in the
+          fragments list) in case the node to insert was out of the
+          fragments list. Now its O(1). 
+
+        * tests/dom.test: Removed 'knownBug' constraint from two
+          tests, which documented known bugs, that are fixed in the
+          meantime.
+
 2003-09-17  Rolf Ade  <rolf@pointsman.de>
 
         * tests/cdata,test
