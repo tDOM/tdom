@@ -2631,7 +2631,7 @@ static int evalAttrTemplates (
                 rc = evalXPath (xs, context, currentNode, currentPos,
                                 tplStart, &rs, errMsg);
                 *str = '}';
-                CHECK_RC1(out);
+                CHECK_RC1(*out);
                 tplResult = xpathFuncString( &rs );
                 DBG(fprintf(stderr, "attrTpl tplResult='%s' \n", tplResult);)
                 xpathRSFree( &rs );
