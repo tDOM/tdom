@@ -1,3 +1,27 @@
+2003-02-26  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Removed unused variables.
+
+        * lib/tdom.tcl
+          generic/dom.c: Improved ::tDOM::xml(Read|Open)File. Now
+          handles also utf-16 files with BOM right.
+
+        * generic/domxslt.c: Made some functions static. Removed a
+          TODO note, which already was done. Improved some error msgs
+          (now with line/column info, if avaliable). Bug fix:
+          xsltXPathFuncs must return -1 to signal error, because if
+          the source of the function call was inside of domxslt.c the
+          result code (rc) check rule is rc < 0. Fixed text in a
+          xsl:attribute error msg. Fixed memory leak in error case in
+          ExecAction, case forEach. Added a missing result code check
+          in ExecAction, case procinstr. Bug fix: Even literal result
+          element subtrees are relevant for xslt variable scope
+          (default case of ExecAction). Bug fix: the expression
+          context of the match expr of a xsl:template is the
+          xsl:template node. Now the xslt white space stripping is
+          done before the top level processing (was done after
+          toplevel processing).
+    
 2003-02-25  Rolf Ade  <rolf@pointsman.de>
 
         * expat/VERSION    
