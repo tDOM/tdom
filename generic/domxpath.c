@@ -3923,7 +3923,12 @@ static int xpathEvalStep (
                     } 
                 } else 
                 if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                    rsSetString (result, domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName));
+                    leftStr = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
+                    if (leftStr[0] == 'x' && strcmp(leftStr, "xmlns")==0) {
+                        rsSetString (result, "");
+                    } else {
+                        rsSetString (result, leftStr);
+                    }
                 } else 
                 if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
                     if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
