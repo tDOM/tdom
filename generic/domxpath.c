@@ -679,7 +679,7 @@ static XPathTokens xpathLexer (
 
     tokens = (XPathTokens)MALLOC(INITIAL_SIZE * sizeof(XPathToken));
     if (tokens == NULL) {
-        *errMsg = (char*)tdomstrdup("Unable to alloc initial memory!");
+        *errMsg = tdomstrdup("Unable to alloc initial memory!");
         return NULL;
     }
     allocated = INITIAL_SIZE;
@@ -711,7 +711,7 @@ static XPathTokens xpathLexer (
                                i += UTF8_CHAR_LEN (xpath[i]);
                            save = xpath[i];
                            xpath[i] = '\0';
-                           tokens[l].strvalue = (char*)tdomstrdup(ps);
+                           tokens[l].strvalue = tdomstrdup(ps);
                            xpath[i] = save;
                            if (save == ':' && xpath[i+1] != ':') {
                                token = ATTRIBUTEPREFIX;
@@ -732,7 +732,7 @@ static XPathTokens xpathLexer (
                                    save = xpath[i];
                                    xpath[i] = '\0';
                                    token = ATTRIBUTE;
-                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
+                                   tokens[l].strvalue = tdomstrdup(ps);
                                    xpath[i--] = save;
                                }
                            } else {
@@ -740,10 +740,10 @@ static XPathTokens xpathLexer (
                                i--;
                            }
                        } else if (xpath[i]=='*') {
-                           tokens[l].strvalue = (char*)tdomstrdup("*");
+                           tokens[l].strvalue = tdomstrdup("*");
                            token = ATTRIBUTE;
                        } else {
-                           *errMsg = (char*)tdomstrdup("Expected attribute name");
+                           *errMsg = tdomstrdup("Expected attribute name");
                            return tokens;
                        }; break;
 
@@ -753,7 +753,7 @@ static XPathTokens xpathLexer (
                            token = COLONCOLON;
                            i++;
                        } else {
-                           *errMsg = (char*)tdomstrdup("Unexpected token ':'");
+                           *errMsg = tdomstrdup("Unexpected token ':'");
                            return tokens;
                        }; break;
 
@@ -761,11 +761,11 @@ static XPathTokens xpathLexer (
             case '\'': delim = xpath[i]; start = ++i;
                        while (xpath[i] && (xpath[i] != delim)) i++;
                        if (!xpath[i]) {
-                           *errMsg = (char*)tdomstrdup("Undetermined string");
+                           *errMsg = tdomstrdup("Undetermined string");
                            return tokens;
                        }
                        xpath[i] = '\0'; /* terminate string */
-                       tokens[l].strvalue = (char*)tdomstrdup(&xpath[start]);
+                       tokens[l].strvalue = tdomstrdup(&xpath[start]);
                        token = LITERAL;
                        xpath[i] = delim;
                        break;
@@ -786,7 +786,7 @@ static XPathTokens xpathLexer (
                            token = NOTEQ;
                            i++;
                        } else {
-                           *errMsg = (char*)tdomstrdup("Unexpected token '!'");
+                           *errMsg = tdomstrdup("Unexpected token '!'");
                            return tokens;
                        }; break;
 
@@ -816,7 +816,7 @@ static XPathTokens xpathLexer (
                            token = MULTIPLY;
                        } else {
                            token = WCARDNAME;
-                           tokens[l].strvalue = (char*)tdomstrdup("*");
+                           tokens[l].strvalue = tdomstrdup("*");
                        }; break;
 
             case '$':  i++;
@@ -839,10 +839,10 @@ static XPathTokens xpathLexer (
                            }
                            save = xpath[i];
                            xpath[i] = '\0';
-                           tokens[l].strvalue = (char*)tdomstrdup(ps);
+                           tokens[l].strvalue = tdomstrdup(ps);
                            xpath[i--] = save;
                        } else {
-                           *errMsg = (char*)tdomstrdup("Expected variable name");
+                           *errMsg = tdomstrdup("Expected variable name");
                            return tokens;
                        }; break;
 
@@ -904,7 +904,7 @@ static XPathTokens xpathLexer (
                                else               token = FUNCTION;
                                save = xpath[i];
                                xpath[i] = '\0';
-                               tokens[l].strvalue = (char*)tdomstrdup(ps);
+                               tokens[l].strvalue = tdomstrdup(ps);
                                xpath[i--] = save;
                                break;
                            }
@@ -930,7 +930,7 @@ static XPathTokens xpathLexer (
                                    if ((save!='(') && (strcmp(ps,"div")==0)) token = DIV;
                                    else {
                                        token = FUNCTION;
-                                       tokens[l].strvalue = (char*)tdomstrdup(ps);
+                                       tokens[l].strvalue = tdomstrdup(ps);
                                    }
                                }
                                xpath[i] = save;
@@ -938,7 +938,7 @@ static XPathTokens xpathLexer (
                                token = AXISNAME;
                                save = xpath[i];
                                xpath[i] = '\0'; /* terminate */
-                               tokens[l].strvalue = (char*)tdomstrdup(ps);
+                               tokens[l].strvalue = tdomstrdup(ps);
                                xpath[i] = save;
                            } else {
                                save = xpath[i];
@@ -975,11 +975,11 @@ static XPathTokens xpathLexer (
                                        token = DIV;
                                    } else {
                                        token = WCARDNAME;
-                                       tokens[l].strvalue = (char*)tdomstrdup(ps);
+                                       tokens[l].strvalue = tdomstrdup(ps);
                                    }
                                } else {
                                    token = WCARDNAME;
-                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
+                                   tokens[l].strvalue = tdomstrdup(ps);
                                }
                                xpath[i] = save;
                            }
@@ -2003,17 +2003,75 @@ int xpathFreeTokens (
     return 0;
 }
 
-
+/*----------------------------------------------------------------------------
+|   checkPatternConstraints
+|
+\---------------------------------------------------------------------------*/
+int checkPatternConstraints (
+    ast           t,
+    xpathExprType type,
+    char        **errMsg
+    )
+{
+    while (t) {
+        if (type != XPATH_KEY_USE_EXPR) {
+            /* 12.4: "It is an error to use the current function in a pattern." */
+            if (t->type == ExecFunction 
+                && t->intvalue == f_unknown
+                && (strcmp (t->strvalue, "current")==0)) {
+                *errMsg = tdomstrdup(
+                    "The 'current' function is not allowed in Pattern."
+                    );
+                return 0;
+            }
+        }
+        if (type == XPATH_KEY_MATCH_PATTERN || type == XPATH_KEY_USE_EXPR) {
+            /* 12.2: "It is an error for the value of either the use
+               attribute or the match attribute to contain a
+               VariableReference, or a call to the key function." */
+            if (t->type == ExecFunction 
+                && t->intvalue == f_unknown
+                && (strcmp (t->strvalue, "key")==0)) {
+                *errMsg = tdomstrdup(
+                    "The 'key' function is not allowed in the use and match attribute pattern of xsl:key."
+                    );
+                return 0;
+            }
+            if (t->type == GetVar || t->type == GetFQVar) {
+                return 0;
+                *errMsg = tdomstrdup(
+                    "Variable references are not allowed in the use and match attribute of xsl:key."
+                    );
+                return 0;
+            }
+        }
+        if (type == XPATH_TEMPMATCH_PATTERN) {
+            /* 5.3: "It is an error for the value of the match
+               attribute to contain a VariableReference." */
+            if (t->type == GetVar || t->type == GetFQVar) {
+                *errMsg = tdomstrdup(
+                    "Variable references are not allowed in the match attribute of xsl:template."
+                    );
+                return 0;
+            }
+        }
+        if (t->child) {
+            if (!checkPatternConstraints (t->child, type, errMsg)) return 0;
+        }
+        t = t->next;
+    }
+    return 1;
+}
 
 /*----------------------------------------------------------------------------
 |   xpathParse
 |
 \---------------------------------------------------------------------------*/
 int xpathParse (
-    char  *xpath,
-    char **errMsg,
-    ast   *t,
-    int    parsePattern
+    char         *xpath,
+    char        **errMsg,
+    ast          *t,
+    xpathExprType type
 )
 {
     XPathTokens tokens;
@@ -2042,13 +2100,16 @@ int xpathParse (
     l = 0;
 
     *t = NULL;
-    if (parsePattern) {
-        *t = Pattern (&l, tokens, errMsg);
-    } else {
+    if (type == XPATH_EXPR || type == XPATH_KEY_USE_EXPR) {
         *t = OrExpr (&l, tokens, errMsg);
+    } else {
+        *t = Pattern (&l, tokens, errMsg);
+    }
+    if (*errMsg == NULL && type != XPATH_EXPR) {
+        checkPatternConstraints (*t, type, errMsg);
     }
     if ((*errMsg == NULL) && (tokens[l].token != EOS)) {
-        *errMsg = (char*)tdomstrdup("Unexpected tokens (beyond end)!");
+        *errMsg = tdomstrdup("Unexpected tokens (beyond end)!");
     }
     if (*errMsg) {
         len    = strlen(*errMsg);
@@ -2082,7 +2143,7 @@ int xpathParse (
         }
     }
     DBG(
-        if (parsePattern) {
+        if (type) {
             fprintf(stderr, "\nPattern AST for '%s': \n", xpath);
             printAst (0, *t);
         } else {
@@ -2597,7 +2658,7 @@ static int xpathArityCheck (
         step = step->next;
     }
     if (arity!=parms) {
-        *errMsg = (char*)tdomstrdup("wrong number of parameters!");
+        *errMsg = tdomstrdup("wrong number of parameters!");
         return 1;
     }
     return 0;
@@ -2846,7 +2907,7 @@ xpathEvalFunction (
             rsPrint(&leftResult);
             )
         if (leftResult.type == EmptyResult) {
-            *errMsg = (char*)tdomstrdup ("id() requires an argument!");
+            *errMsg = tdomstrdup ("id() requires an argument!");
             return XPATH_EVAL_ERR;
         }
         if (leftResult.type == xNodeSetResult) {
@@ -2932,7 +2993,7 @@ xpathEvalFunction (
                 return XPATH_OK;
             } else {
                 xpathRSFree( &leftResult );
-                *errMsg = (char*)tdomstrdup("sum() requires a node set!");
+                *errMsg = tdomstrdup("sum() requires a node set!");
                 xpathRSFree( &leftResult );
                 return XPATH_EVAL_ERR;
             }
@@ -3086,7 +3147,7 @@ xpathEvalFunction (
 
     case f_concat:
         if (xpathArity(step) < 2) {
-            *errMsg = (char*)tdomstrdup("wrong number of parameters!");
+            *errMsg = tdomstrdup("wrong number of parameters!");
             return XPATH_EVAL_ERR;
         }
         nextStep = step->child;
@@ -3117,7 +3178,7 @@ xpathEvalFunction (
     case f_substring:
         i = xpathArity(step);
         if (i != 2 && i != 3) {
-            *errMsg = (char*)tdomstrdup("wrong number of parameters!");
+            *errMsg = tdomstrdup("wrong number of parameters!");
             return XPATH_EVAL_ERR;
         }
         xpathRSInit (&leftResult);
@@ -3302,7 +3363,7 @@ xpathEvalFunction (
             return XPATH_OK;
         }
         if (leftResult.type != xNodeSetResult) {
-            *errMsg = (char*)tdomstrdup("count() requires a node set!");
+            *errMsg = tdomstrdup("count() requires a node set!");
             xpathRSFree( &leftResult );
             return XPATH_EVAL_ERR;
         }
@@ -3358,7 +3419,7 @@ xpathEvalFunction (
 
         if (step->intvalue == f_generateId) {
             if (leftResult.type != xNodeSetResult) {
-                *errMsg = (char*)tdomstrdup("generate-id() requires a nodeset or no argument!");
+                *errMsg = tdomstrdup("generate-id() requires a nodeset or no argument!");
                 xpathRSFree (&leftResult);
                 return XPATH_EVAL_ERR;
             }
@@ -3380,7 +3441,7 @@ xpathEvalFunction (
 
         if (step->intvalue == f_namespaceUri) {
             if (leftResult.type != xNodeSetResult) {
-                *errMsg = (char*)tdomstrdup("namespace-uri() requires a node set!");
+                *errMsg = tdomstrdup("namespace-uri() requires a node set!");
                 xpathRSFree( &leftResult );
                 return XPATH_EVAL_ERR;
             }
@@ -3397,7 +3458,7 @@ xpathEvalFunction (
 
         if (step->intvalue == f_localName) {
             if (leftResult.type != xNodeSetResult) {
-                *errMsg = (char*)tdomstrdup("local-name() requires a node set!");
+                *errMsg = tdomstrdup("local-name() requires a node set!");
                 xpathRSFree( &leftResult );
                 return XPATH_EVAL_ERR;
             }
@@ -3434,7 +3495,7 @@ xpathEvalFunction (
 
         if (step->intvalue == f_name) {
             if (   leftResult.type != xNodeSetResult ) {
-                *errMsg = (char*)tdomstrdup("name() requires a node set!");
+                *errMsg = tdomstrdup("name() requires a node set!");
                 xpathRSFree( &leftResult );
                 return XPATH_EVAL_ERR;
             }
@@ -3489,7 +3550,7 @@ xpathEvalFunction (
         nextStep = step->child;
         Tcl_DStringAppend (&dStr, nextStep->strvalue, -1);
         if (cbs->funcCB == NULL) {
-            *errMsg = (char*)tdomstrdup (Tcl_DStringValue (&dStr));
+            *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
             Tcl_DStringFree (&dStr);
             return XPATH_EVAL_ERR;
         }
@@ -3499,7 +3560,7 @@ xpathEvalFunction (
         if (cbs->funcCB == NULL) {
             if (strlen(step->strvalue)>50) *(step->strvalue + 50) = '\0';
             sprintf(tmp, "Unknown function '%s'!", step->strvalue);
-            *errMsg = (char*)tdomstrdup(tmp);
+            *errMsg = tdomstrdup(tmp);
             return XPATH_EVAL_ERR;
         }
            
@@ -4303,7 +4364,7 @@ static int xpathEvalStep (
             ((rightResult.type != xNodeSetResult)
              && (rightResult.type != EmptyResult)))
         {
-            *errMsg = (char*)tdomstrdup("| requires node sets!");
+            *errMsg = tdomstrdup("| requires node sets!");
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_EVAL_ERR;
@@ -4720,7 +4781,7 @@ static int xpathEvalStep (
             rsPrint (result);
             fprintf (stderr, "leftResult:\n");
             rsPrint (&leftResult); )
-            *errMsg = (char*)tdomstrdup("can not merge different result types!");
+            *errMsg = tdomstrdup("can not merge different result types!");
             return XPATH_EVAL_ERR;
         }
         switch (leftResult.type) {
