@@ -1244,9 +1244,9 @@ externalEntityRefHandler (
 
     Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj *channelIdObj;
-    int result, len, mode, done;
+    int result, len, mode, done, byteIndex, i;
     XML_Parser extparser, oldparser = NULL;
-    char buf[4096], *resultType, *extbase, *xmlstring, *channelId;
+    char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
 
 
@@ -1348,6 +1348,36 @@ externalEntityRefHandler (
 
     if (chan == NULL) {
         if (!XML_Parse(extparser, xmlstring, strlen (xmlstring), 1)) {
+            Tcl_ResetResult (info->interp);
+            sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
+            Tcl_AppendResult(info->interp, "error \"",
+                             XML_ErrorString(XML_GetErrorCode(parser)),
+                             "\" in entity \"", systemId,
+                             "\" at line ", s, " character ", NULL);
+            sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
+            Tcl_AppendResult(info->interp, s, NULL);
+            byteIndex = XML_GetCurrentByteIndex(parser);
+            if (byteIndex != -1) {
+                Tcl_AppendResult(info->interp, "\n\"", NULL);
+                s[1] = '\0';
+                for (i=-20; i < 40; i++) {
+                    if ((byteIndex+i)>=0) {
+                        if (xmlstring[byteIndex+i]) {
+                            s[0] = xmlstring[byteIndex+i];
+                            Tcl_AppendResult(info->interp, s, NULL);
+                            if (i==0) {
+                                Tcl_AppendResult(info->interp,
+                                                 " <--Error-- ", NULL);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                Tcl_AppendResult(info->interp, "\"",NULL);
+            }
+            XML_ParserFree (extparser);
+            info->parser = oldparser;
             return 0;
         }
     } else {
@@ -1355,6 +1385,8 @@ externalEntityRefHandler (
             len = Tcl_Read (chan, buf, sizeof(buf));
             done = len < sizeof(buf);
             if (!XML_Parse (extparser, buf, len, done)) {
+                XML_ParserFree (extparser);
+                info->parser = oldparser;
                 return 0;
             }
         } while (!done);
