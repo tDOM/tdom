@@ -204,6 +204,9 @@ if test "${exec_prefix}" = "NONE" ; then
 fi
 eval libdir="$libdir"
 
+tdom_SRC_DIR=`cd ${srcdir}; pwd`
+AC_SUBST(tdom_SRC_DIR)
+
 stublib="-ltdomstub${VERSION}${TCL_DBGX}"
 
 if test "${TEA_PLATFORM}" = "windows" ; then
@@ -217,9 +220,6 @@ AC_SUBST(tdomstub_BUILD_SPEC)
 
 tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${stublib}"
 AC_SUBST(tdomstub_FILE_SPEC)
-
-tdom_SRC_DIR=`cd ${srcdir}; pwd`
-AC_SUBST(tdom_SRC_DIR)
 
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you

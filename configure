@@ -5963,6 +5963,8 @@ if test "${exec_prefix}" = "NONE" ; then
 fi
 eval libdir="$libdir"
 
+tdom_SRC_DIR=`cd ${srcdir}; pwd`
+
 stublib="-ltdomstub${VERSION}${TCL_DBGX}"
 
 if test "${TEA_PLATFORM}" = "windows" ; then
@@ -5974,8 +5976,6 @@ else
 fi
 
 tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${stublib}"
-
-tdom_SRC_DIR=`cd ${srcdir}; pwd`
 
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you
@@ -7537,9 +7537,9 @@ s,@TDOM_LD_SEARCH_FLAGS@,$TDOM_LD_SEARCH_FLAGS,;t t
 s,@TCL_DBGX@,$TCL_DBGX,;t t
 s,@CFLAGS_DEFAULT@,$CFLAGS_DEFAULT,;t t
 s,@LDFLAGS_DEFAULT@,$LDFLAGS_DEFAULT,;t t
+s,@tdom_SRC_DIR@,$tdom_SRC_DIR,;t t
 s,@tdomstub_BUILD_SPEC@,$tdomstub_BUILD_SPEC,;t t
 s,@tdomstub_FILE_SPEC@,$tdomstub_FILE_SPEC,;t t
-s,@tdom_SRC_DIR@,$tdom_SRC_DIR,;t t
 s,@MAKE_LIB@,$MAKE_LIB,;t t
 s,@MAKE_SHARED_LIB@,$MAKE_SHARED_LIB,;t t
 s,@MAKE_STATIC_LIB@,$MAKE_STATIC_LIB,;t t
