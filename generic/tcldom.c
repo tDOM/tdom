@@ -909,7 +909,7 @@ int tcldom_xpointerSearch (
 |   tcldom_getNodeFromName
 |
 \---------------------------------------------------------------------------*/
-static domNode * tcldom_getNodeFromName (
+domNode * tcldom_getNodeFromName (
     Tcl_Interp  *interp,
     char        *nodeName,
     char       **errMsg
@@ -949,7 +949,7 @@ static domNode * tcldom_getNodeFromName (
 |   tcldom_getDocumentFromName
 |
 \---------------------------------------------------------------------------*/
-static domDocument * tcldom_getDocumentFromName (
+domDocument * tcldom_getDocumentFromName (
     Tcl_Interp  *interp,
     char        *docName,
     char       **errMsg

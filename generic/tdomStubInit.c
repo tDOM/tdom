@@ -27,6 +27,8 @@ TdomStubs tdomStubs = {
     XML_GetBase, /* 13 */
     XML_GetSpecifiedAttributeCount, /* 14 */
     XML_GetIdAttributeIndex, /* 15 */
+    tcldom_getNodeFromName, /* 16 */
+    tcldom_getDocumentFromName, /* 17 */
 };
 
 /* !END!: Do not edit above this line. */

@@ -64,3 +64,12 @@ declare 14 generic {
 declare 15 generic {
      int XML_GetIdAttributeIndex(XML_Parser parser)
 }
+declare 16 generic {
+     domNode * tcldom_getNodeFromName(Tcl_Interp *interp, char *nodeName, 
+                                      char **errMsg)
+}
+declare 17 generic {
+     domDocument * tcldom_getDocumentFromName (Tcl_Interp  *interp, 
+                                               char *docName, char **errMsg)
+}
+

@@ -60,6 +60,14 @@ EXTERN int		XML_GetSpecifiedAttributeCount _ANSI_ARGS_((
 /* 15 */
 EXTERN int		XML_GetIdAttributeIndex _ANSI_ARGS_((
 				XML_Parser parser));
+/* 16 */
+EXTERN domNode *	tcldom_getNodeFromName _ANSI_ARGS_((
+				Tcl_Interp * interp, char * nodeName, 
+				char ** errMsg));
+/* 17 */
+EXTERN domDocument *	tcldom_getDocumentFromName _ANSI_ARGS_((
+				Tcl_Interp * interp, char * docName, 
+				char ** errMsg));
 
 typedef struct TdomStubs {
     int magic;
@@ -81,6 +89,8 @@ typedef struct TdomStubs {
     const XML_Char * (*xML_GetBase) _ANSI_ARGS_((XML_Parser parser)); /* 13 */
     int (*xML_GetSpecifiedAttributeCount) _ANSI_ARGS_((XML_Parser parser)); /* 14 */
     int (*xML_GetIdAttributeIndex) _ANSI_ARGS_((XML_Parser parser)); /* 15 */
+    domNode * (*tcldom_getNodeFromName) _ANSI_ARGS_((Tcl_Interp * interp, char * nodeName, char ** errMsg)); /* 16 */
+    domDocument * (*tcldom_getDocumentFromName) _ANSI_ARGS_((Tcl_Interp * interp, char * docName, char ** errMsg)); /* 17 */
 } TdomStubs;
 
 #ifdef __cplusplus
@@ -160,6 +170,14 @@ extern TdomStubs *tdomStubsPtr;
 #ifndef XML_GetIdAttributeIndex
 #define XML_GetIdAttributeIndex \
 	(tdomStubsPtr->xML_GetIdAttributeIndex) /* 15 */
+#endif
+#ifndef tcldom_getNodeFromName
+#define tcldom_getNodeFromName \
+	(tdomStubsPtr->tcldom_getNodeFromName) /* 16 */
+#endif
+#ifndef tcldom_getDocumentFromName
+#define tcldom_getDocumentFromName \
+	(tdomStubsPtr->tcldom_getDocumentFromName) /* 17 */
 #endif
 
 #endif /* defined(USE_TDOM_STUBS) && !defined(USE_TDOM_STUB_PROCS) */
