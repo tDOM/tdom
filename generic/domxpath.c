@@ -570,6 +570,7 @@ void printAst (int depth, ast t)
             case Int :        fprintf(stderr, "%d", t->intvalue);   break;
             case Real:        fprintf(stderr, "%f", t->realvalue);  break;
             case IsElement:
+            case IsFQElement:    
             case IsNSAttr:
             case IsAttr:
             case ExecFunction:
@@ -2279,11 +2280,11 @@ static int xpathEvalStep (
     domNS           *ns;
     double           leftReal;
     ast              nextStep;
-    int              argc, savedDocOrder;
+    int              argc, savedDocOrder, from;
     xpathResultSets *args;
     xpathResultSet  *arg;
     Tcl_HashEntry   *entryPtr;
-    unsigned int     from, leftNodeNr, rightNodeNr;
+    unsigned int     leftNodeNr, rightNodeNr;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;
@@ -3788,96 +3789,91 @@ static int xpathEvalStep (
             return XPATH_OK;
         } else
 
+        if (IS_FUNC('c',"count")) {
+            XPATH_ARITYCHECK(step,1,errMsg);
+            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
+                                 position, docOrder, cbs, &leftResult, errMsg);
+            if (rc) {
+                xpathRSFree( &leftResult );
+                return rc;
+            }
+            if (leftResult.type == EmptyResult) {
+                rsSetInt (result, 0);
+            } 
+            if (leftResult.type != xNodeSetResult) {
+                *errMsg = (char*)strdup("count() requires a node set!");
+                xpathRSFree( &leftResult );
+                return XPATH_EVAL_ERR;
+            }
+            rsSetInt (result, leftResult.nr_nodes);
+            return XPATH_OK;
+        } else 
+
+        if (IS_FUNC('u',"unparsed-entry-uri")) {
+            XPATH_ARITYCHECK(step,1,errMsg);
+            rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
+                                 position, docOrder, cbs, &leftResult, errMsg);
+            if (rc) {
+                xpathRSFree( &leftResult );
+                return rc;
+            }
+            leftStr = xpathFuncString (&leftResult);
+            entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->unparsedEntities, 
+                                          leftStr);
+            if (entryPtr) {
+                rsSetString (result, (char *)Tcl_GetHashValue (entryPtr));
+            } else {
+                rsSetString (result, "");
+            }
+            free (leftStr);
+        } else
+                
         if (IS_FUNC('l',"local-name")   ||
             IS_FUNC('n',"name")         ||
             IS_FUNC('n',"namespace-uri")||
-            IS_FUNC('g',"generate-id")  ||
-            IS_FUNC('c',"count")        ||
-            IS_FUNC('u',"unparsed-entity-uri")
+            IS_FUNC('g',"generate-id")
         ) {
             xpathRSInit (&leftResult);
-            if ((step->child == NULL) && (!IS_FUNC('c',"count"))) {
+            if (step->child == NULL) {
                 /*  no parameter, the context node is the nodeset to
                  *  operate with
                  */
                 rsAddNode( &leftResult, ctxNode);
             } else {
                 XPATH_ARITYCHECK(step,1,errMsg);
-                rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, 
-                                     position, docOrder, cbs, &leftResult, errMsg);
+                rc = xpathEvalSteps (step->child, nodeList, ctxNode,
+                                     exprContext, position, docOrder, cbs,
+                                     &leftResult, errMsg);
                 if (rc) {
                     xpathRSFree( &leftResult );
                     return rc;
                 }
             }
-            
-            if (IS_FUNC('c',"count")) {
-                if (leftResult.type != xNodeSetResult) {
-                    if ((leftResult.type == EmptyResult)) {
-                        rsSetInt (result, 0);
-                        xpathRSFree( &leftResult );
-                        return XPATH_OK;
-                    } else {
-                        *errMsg = (char*)strdup("count() requires a node set!");
-                        xpathRSFree( &leftResult );
-                        return XPATH_EVAL_ERR;
-                    }
-                }
-                rsSetInt (result, leftResult.nr_nodes);
-            } else
+            if (leftResult.type == EmptyResult) {
+                rsSetString (result, "");
+                return XPATH_OK;
+            }
             
             if (IS_FUNC('g',"generate-id")) {
-                if (leftResult.type == EmptyResult) {
-                    rsSetString (result, "");
-                    return XPATH_OK;
-                } else 
-                if (leftResult.type == xNodeSetResult) {
-                    if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                        node = ((domAttrNode*)leftResult.nodes[0])->parentNode;
-                        i = 0;
-                        attr = node->firstAttr;
-                        while (attr) {
-                            if ((domNode*)attr == leftResult.nodes[0]) break;
-                            attr = attr->nextSibling;
-                            i++;
-                        }
-                        sprintf(tmp,"node%d-%d", node->nodeNumber, i);
-                    } else {
-                        sprintf(tmp,"node%d", leftResult.nodes[0]->nodeNumber);
-                    }
-                } else
-                if (xpathArity(step) == 0) {
-                    if (ctxNode->nodeType == ATTRIBUTE_NODE) {
-                        node = ((domAttrNode*)ctxNode)->parentNode;
-                        i = 0;
-                        attr = node->firstAttr;
-                        while (attr) {
-                            if ((domNode*)attr == leftResult.nodes[0]) break;
-                            attr = attr->nextSibling;
-                            i++;
-                        }
-                        sprintf(tmp,"node%d-%d", node->nodeNumber, i);
-                    } else {
-                        sprintf(tmp, "node%d", ctxNode->nodeNumber);
-                    }
-                } else {
+                if (leftResult.type != xNodeSetResult) {
                     *errMsg = (char*)strdup("generate-id() requires a nodeset or no argument!");
                     xpathRSFree (&leftResult);
                     return XPATH_EVAL_ERR;
                 }
-                rsSetString (result, tmp);
-            } else
-            
-            if (IS_FUNC('u',"unparsed-entity-uri")) {
-                leftStr = xpathFuncString (&leftResult);
-                entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->unparsedEntities, 
-                                              leftStr);
-                if (entryPtr) {
-                    rsSetString (result, (char *)Tcl_GetHashValue (entryPtr));
+                if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
+                    node = ((domAttrNode*)leftResult.nodes[0])->parentNode;
+                    i = 0;
+                    attr = node->firstAttr;
+                    while (attr) {
+                        if ((domNode*)attr == leftResult.nodes[0]) break;
+                        attr = attr->nextSibling;
+                        i++;
+                    }
+                    sprintf(tmp,"node%d-%d", node->nodeNumber, i);
                 } else {
-                    rsSetString (result, "");
+                    sprintf(tmp,"node%d", leftResult.nodes[0]->nodeNumber);
                 }
-                free (leftStr);
+                rsSetString (result, tmp);
             } else
             
             if (IS_FUNC('n',"namespace-uri")) {
@@ -3930,15 +3926,11 @@ static int xpathEvalStep (
             } else
             
             if (IS_FUNC('n',"name")) {
-                if (   leftResult.type != xNodeSetResult
-                    && leftResult.type != EmptyResult) {
+                if (   leftResult.type != xNodeSetResult ) {
                     *errMsg = (char*)strdup("name() requires a node set!");
                     xpathRSFree( &leftResult );
                     return XPATH_EVAL_ERR;
                 }
-                if (leftResult.type == EmptyResult) {
-                    rsSetString (result, "");
-                } else 
                 if (leftResult.nodes[0]->nodeType == ELEMENT_NODE) {
                     if (leftResult.nodes[0] == 
                         leftResult.nodes[0]->ownerDocument->rootNode) {
@@ -3965,7 +3957,7 @@ static int xpathEvalStep (
                     } else {
                         memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue,
                                 ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength);
-                        tmp[        ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
+                        tmp[((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
                     }
                     rsSetString (result, tmp);
                 } else {
