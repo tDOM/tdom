@@ -1,3 +1,14 @@
+2005-03-18  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domDoc.*
+        * doc/domNode.*
+        * CHANGES
+        * tests/domDoc.test
+        * generic/tcldom.c
+        * generic/dom.h
+        * generic/dom.c: Added document method selectNodesNamespaces,
+          to provide a document global XPath prefix/namespace mapping.
+
 2005-03-12  Rolf Ade  <rolf@pointsman.de>
 
         * tests/xslt.test: Added two tests about two subtleties of
