@@ -48,7 +48,6 @@
 #----------------------------------------------------------------------------
 
 package require tdom
-package provide tdomhtml
 
 namespace eval ::dom::domHTML {
     
@@ -57,7 +56,7 @@ namespace eval ::dom::domHTML {
     # set taken from http://www.w3.org/TR/html4/index/elements.html
     #
     
-    foreach name {
+    variable elementNodeCmd {
         a
         abbr
         acronym
@@ -149,8 +148,10 @@ namespace eval ::dom::domHTML {
         u
         ul
         var
-    } {
-        dom createNodeCmd elementNode $name
+    }
+
+    foreach nodecmd $elementNodeCmd {
+        dom createNodeCmd elementNode $nodecmd
     }
 
     #
@@ -158,8 +159,11 @@ namespace eval ::dom::domHTML {
     # for generation of special DOM nodes.
     #
 
-    dom createNodeCmd textNode    t; # Emits a text node
-    dom createNodeCmd commentNode c; # Emits a comment node
+    variable textNodeCmd t
+    dom createNodeCmd textNode $textNodeCmd
+
+    variable commentNodeCmd c
+    dom createNodeCmd commentNode $commentNodeCmd
 }
 
 #-----------------------------------------------------------------------------
@@ -170,6 +174,7 @@ namespace eval ::dom::domHTML {
 #-----------------------------------------------------------------------------
 
 proc ::dom::domHTML::newdoc {script} {
+
     set doc [dom createDocument html]
     [$doc documentElement] appendFromScript $script
 
@@ -183,6 +188,7 @@ proc ::dom::domHTML::newdoc {script} {
 #-----------------------------------------------------------------------------
 
 proc ::dom::domHTML::putdoc {doc chan} {
+
     [$doc documentElement] asHTML -channel $chan
 }
 
@@ -193,6 +199,7 @@ proc ::dom::domHTML::putdoc {doc chan} {
 #-----------------------------------------------------------------------------
 
 proc ::dom::domHTML::deldoc {doc} {
+
     $doc delete
 }
 
@@ -205,12 +212,6 @@ proc ::dom::domHTML::deldoc {doc} {
 
 proc ::dom::domHTML::html2tcl {htmlfile {outfile ""}} {
 
-    variable doc
-
-    if {$outfile == ""} {
-        set outfile [file root $htmlfile].tcl
-    }
-    
     #
     # Slurp-in the entire html file
     #
@@ -225,32 +226,34 @@ proc ::dom::domHTML::html2tcl {htmlfile {outfile ""}} {
     # tdom html parser.
     #
 
-    if {[catch {dom parse -html $html} doc]} {
-        return -1
-    }
+    dom parse -html $html doc
 
     #
     # Open output file and recursively
     # format all elements found there.
     #
 
-    set ochan [open $outfile w]
-    _astcl [$doc documentElement] $ochan
-    close $ochan
-    $doc delete
+    if {$outfile == ""} {
+        set outfile [file root $htmlfile].tcl
+    }
 
-    return 0
+    set ochan [open $outfile w]
+    _2tcl [$doc documentElement] $ochan
+    close $ochan
 }
 
 #-----------------------------------------------------------------------------
-# ::dom::domHTML::_astcl --  
+# ::dom::domHTML::_2tcl --  
 #
 # Helper procedure for recursively parsing the html tag
 #-----------------------------------------------------------------------------
 
-proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
+proc ::dom::domHTML::_2tcl {top ochan {indent 2} {offset 0}} {
 
-    variable doc
+    variable commentNodeCmd
+    variable textNodeCmd
+    variable elementNodeCmd
+
     set space [string repeat " " $offset]
 
     foreach child [$top childNodes] {
@@ -258,7 +261,11 @@ proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
             ELEMENT_NODE {    
           
                 # Emit the nodename as html command
+                # and create node command if missing
                 set nodecmd [string tolower [$child nodeName]]
+                if {[lsearch $elementNodeCmd $name] == -1} {
+                    dom createNodeCmd elementNode $nodecmd
+                }
                 puts -nonewline $ochan $space
                 puts -nonewline $ochan $nodecmd
 
@@ -267,7 +274,7 @@ proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
                     puts -nonewline $ochan " "
                     puts -nonewline $ochan [string tolower $att]
                     puts -nonewline $ochan " "
-                    set val [_entesc [$child getAttribute $att]]
+                    set val [_entityesc [$child getAttribute $att]]
                     if {[regexp { } $val]} {
                         puts -nonewline $ochan \"$val\"
                     } else {
@@ -278,7 +285,7 @@ proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
                 # Recurse to child nodes
                 if {[llength [$child childNodes]]} {
                     puts $ochan " {"
-                    _astcl $child $ochan $indent [expr {$offset+$indent}]
+                    _2tcl $child $ochan $indent [expr {$offset+$indent}]
                     puts -nonewline $ochan $space
                     puts $ochan "}"
                 } else {
@@ -289,15 +296,15 @@ proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
 
                 # Escape contents of text nodes
                 puts -nonewline $ochan $space
-                puts -nonewline $ochan "t {"
-                puts -nonewline $ochan [_entesc [$child nodeValue]]
+                puts -nonewline $ochan "$textNodeCmd {"
+                puts -nonewline $ochan [_entityesc [$child nodeValue]]
                 puts $ochan "}"
             }
             COMMENT_NODE {
 
-                # Pass commaent nodes as-is
+                # Pass contents of comment nodes as-is
                 puts -nonewline $ochan $space
-                puts -nonewline $ochan "c {"
+                puts -nonewline $ochan "$commentNodeCmd {"
                 puts -nonewline $ochan [$child nodeValue]
                 puts $ochan "}"
             }
@@ -306,12 +313,12 @@ proc ::dom::domHTML::_astcl {top ochan {indent 2} {offset 0}} {
 }
 
 #-----------------------------------------------------------------------------
-# ::dom::domHTML::_entesc --  
+# ::dom::domHTML::_entityesc --  
 #
 # Helper procedure for entity escaping
 #-----------------------------------------------------------------------------
 
-proc ::dom::domHTML::_entesc {string} {
+proc ::dom::domHTML::_entityesc {string} {
 
     regsub -all {(&[^;]+;)}  $string {\\\1} string
     regsub -all {([\#\[\]])} $string {\\\1} string
@@ -326,9 +333,9 @@ proc ::dom::domHTML::_entesc {string} {
 
 if {0} {
     set doc [dom::domHTML::newdoc {
-        title {t "Test document generated with tDOM0.7"}
+        title {t "Test document generated with tDOM"}
         body {
-            table -border 1 -width 100 {
+            table border 1 width 100 {
                 for {set i 0} {$i < 5} {incr i} {
                     tr {
                         td {
