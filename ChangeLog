@@ -1,3 +1,8 @@
+2003-10-23  Rolf Ade  <rolf@pointsman.de>
+
+        * expat/*
+        * CHANGES: Update to expat 1.95.7.
+    
 2003-10-22  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
