@@ -3252,6 +3252,11 @@ static int ExecAction (
             CHECK_RC;
             nsStr = NULL;
             domSplitQName (str2, prefix, &localName);
+            if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
+                 || !domIsNCNAME (localName)) {
+                reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                return -1;
+            }
             if (prefix[0] != '\0') {
                 if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
             } else {
@@ -3624,9 +3629,8 @@ static int ExecAction (
                 CHECK_RC;
             } else {
                 domSplitQName (str2, prefix, &localName);
-                if ((prefix[0] == '\0' && !domIsNCNAME (str2))
-                    || ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
-                        || !domIsNCNAME (localName))) {
+                if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
+                    || !domIsNCNAME (localName)) {
                     reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
                     return -1;
                 }
@@ -4289,11 +4293,12 @@ int ApplyTemplates (
 |   fillElementList
 |
 \---------------------------------------------------------------------------*/
-void fillElementList (
+int fillElementList (
     xsltWSInfo   * wsinfo,
     double         precedence,
     domNode      * node,
-    char         * str
+    char         * str,
+    char        ** errMsg
 )
 {
     char *pc, *start, save;
@@ -4360,7 +4365,9 @@ void fillElementList (
                         Tcl_DStringFree (&dStr);
                     }
                 } else {
-                    /* ??? error? */
+                    reportError (node, "prefix isn't bound to a namespace",
+                                 errMsg);
+                    return -1;
                 }
             } else {
                 h = Tcl_CreateHashEntry (&(wsinfo->NCNames), start, &hnew);
@@ -4376,6 +4383,7 @@ void fillElementList (
         }
         *pc = save;                   
     }
+    return 0;
 }    
 
 
@@ -5071,7 +5079,9 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
-                    fillElementList(&(xs->preserveInfo), precedence, node, str);
+                    rc = fillElementList(&(xs->preserveInfo), precedence, 
+                                         node, str, errMsg);
+                    CHECK_RC;
                 } else {
                     reportError (node, "xsl:preserve-space: missing required attribute \"elements\".", errMsg);
                     return -1;
@@ -5085,7 +5095,9 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "elements", a_elements);
                 if (str) {
-                    fillElementList(&(xs->stripInfo), precedence, node, str);
+                    rc = fillElementList(&(xs->stripInfo), precedence, node,
+                                         str, errMsg);
+                    CHECK_RC;
                 } else {
                     reportError (node, "xsl:strip-space: missing required attribute \"elements\".", errMsg);
                     return -1;
