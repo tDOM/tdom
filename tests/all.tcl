@@ -7,52 +7,50 @@
 # Copyright (c) 1998-1999 by Scriptics Corporation.
 # All rights reserved.
 # 
-# RCS: @(#) $Id$
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    source [file join [pwd] [file dirname [info script]] defs.tcl]
-}
+source [file join [file dir [info script]] loadtdom.tcl]
+
+#  if {[lsearch [namespace children] ::tcltest] == -1} {
+#      package require tcltest
+#      namespace import ::tcltest::*
+#  }
+
 set ::tcltest::testSingleFile false
+set ::tcltest::testsDirectory [file dir [info script]]
+
+#  set tdomVersion 0.7.5 
+#  set tdombin "libtdom[set tdomVersion][info sharedlibextension]"
+
+#  source [file join [file dir [info script]] ../lib tdom.tcl]
+#  if {[catch [load [file join [file dir [info script]] ../unix $tdombin]]]} {
+#      if {[catch [load [file join [file dir [info script]] ../win $tdombin]]]} {
+#          # Just propagate the error, therefor no catch
+#          package require tdom $tdomVersion
+#      }
+#  }
 
 puts stdout "Tcl $tcl_patchLevel tests running in interp:  [info nameofexecutable]"
-puts stdout "Tests running in working dir:  $::tcltest::workingDir"
+puts stdout "Tests running in working dir:  $::tcltest::testsDirectory"
 if {[llength $::tcltest::skip] > 0} {
     puts stdout "Skipping tests that match:  $::tcltest::skip"
 }
 if {[llength $::tcltest::match] > 0} {
     puts stdout "Only running tests that match:  $::tcltest::match"
 }
-source ../lib/tdom.tcl
-# Use command line specified glob pattern (specified by -file or -f)
-# if one exists.  Otherwise use *.test.  If given, the file pattern
-# should be specified relative to the dir containing this file.  If no
-# files are found to match the pattern, print an error message and exit.
-set fileIndex [expr {[lsearch $argv "-file"] + 1}]
-set fIndex [expr {[lsearch $argv "-f"] + 1}]
-if {($fileIndex < 1) || ($fIndex > $fileIndex)} {
-    set fileIndex $fIndex
+
+if {[llength $::tcltest::skipFiles] > 0} {
+    puts stdout "Skipping test files that match:  $::tcltest::skipFiles"
 }
-if {$fileIndex > 0} {
-    set globPattern [file join $::tcltest::testsDir [lindex $argv $fileIndex]]
-    puts stdout "Sourcing files that match:  $globPattern"
-} else {
-    set globPattern [file join $::tcltest::testsDir *.test]
+if {[llength $::tcltest::matchFiles] > 0} {
+    puts stdout "Only sourcing test files that match:  $::tcltest::matchFiles"
 }
-set fileList [glob -nocomplain $globPattern]
-if {[llength $fileList] < 1} {
-    puts "Error: no files found matching $globPattern"
-    exit
-}
+
 set timeCmd {clock format [clock seconds]}
 puts stdout "Tests began at [eval $timeCmd]"
 
 # source each of the specified tests
-foreach file [lsort $fileList] {
+foreach file [lsort [::tcltest::getMatchingFiles]] {
     set tail [file tail $file]
-    if {[string match l.*.test $tail]} {
-	# This is an SCCS lockfile; ignore it
-	continue
-    }
     puts stdout $tail
     if {[catch {source $file} msg]} {
 	puts stdout $msg
@@ -62,15 +60,6 @@ foreach file [lsort $fileList] {
 # cleanup
 puts stdout "\nTests ended at [eval $timeCmd]"
 ::tcltest::cleanupTests 1
-return
-
-
-
-
-
-
-
-
-
-
+exit
+#return
 
