@@ -1,10 +1,15 @@
 # Features covered:  Entities
 #
-# This file tests the parser's performance on entities.
-# Sourcing this file into Tcl runs the tests and generates output
-# for errors.  No output means no errors were found.
+# This file contains a collection of tests for the different kinds of 
+# entities.
+#
+#    entity-1.*:  parameter entities, character entities
+#    entity-2.*:  predefined entities
+#    entity-3.*:  -useForeignDTD
+#    entity-4.*:  external parsed entites
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
+# Copyright (c) 2000-2004 Rolf Ade
 #
 # $Id$
 
@@ -124,11 +129,33 @@ test entity-3.3 {-useForeignDTD} {
     set ::extrefhandlerCalled
 } {1}
 
+proc extrefhandler-4 {args} {
+    global notexistendpath
+    # Search for a not existing file path
+    set base /ae124
+    set filename 0
+    set path [file join $base $filename]
+    while {[file exists $path]} {
+        incr filename
+        set path [file join $base $filename]
+    }
+    set notexistendpath $path
+    return [list filename $path $path]
+}
+
+test entity-4.1 {external entity: returned filename dose not exist} -body {
+    set parser [expat -useForeignDTD 1 \
+                      -externalentitycommand extrefhandler-4 \
+                      -paramentityparsing always]
+    set result [catch {$parser parse <root/>} errMsg]
+    append result " $errMsg"
+    $parser free
+    set result
+} -match glob -result {1 error opening file "/ae124/*"}
 
 foreach parser [info commands entity-*] {
     $parser free
 }
-
 
 # cleanup
 ::tcltest::cleanupTests
