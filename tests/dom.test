@@ -308,7 +308,7 @@ test dom-6.1 {appendChild} {
     set result
 } {1}
 
-set doc [dom parse {<root><a/><b/><a/><c/></root>}]
+set doc [dom parse {<root><foobar/><barfoo/><foobaz/><a/><b/><a/><c/></root>}]
 set root [$doc documentElement]
 
 test dom-7.1 {getElementsByTagName - doc method} {
@@ -335,7 +335,89 @@ test dom-7.6 {getElementsByTagName - node method} {
     llength [$root getElementsByTagName foo]
 } {0}
 
+test dom-7.7 {getElementsByTagName - node method '*' wildcard} {
+    llength [$root getElementsByTagName *]
+} {7}
+
+test dom-7.8 {getElementsByTagName - doc method '*' wildcard} {
+    llength [$doc getElementsByTagName *]
+} {8}
+
+test dom-7.9 {getElementsByTagName - node method tcl glob style} {
+    llength [$root getElementsByTagName foo*]
+} {2}
+
+test dom-7.9 {getElementsByTagName - node method tcl glob style} {
+    llength [$root getElementsByTagName *oo*]
+} {3}
+
+test dom-7.10 {getElementsByTagName - doc method tcl glob style} {
+    llength [$doc getElementsByTagName foo*]
+} {2}
+
+test dom-7.11 {getElementsByTagName - doc method tcl glob style} {
+    llength [$doc getElementsByTagName *oo*]
+} {4}
+
+test dom-7.12 {getElementsByTagName - doc method empty result} {
+    $doc getElementsByTagName noSuchANodeName
+} {}
+
+test dom-7.13 {getElementsByTagName - node method empty result} {
+    $root getElementsByTagName noSuchANodeName
+} {}
+
+test dom-7.14 {getElementsByTagName - doc method: doc order of result} {
+    set nodes [$doc getElementsByTagName *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {root foobar barfoo foobaz a b a c }
+
+test dom-7.15 {getElementsByTagName - node method: doc order of result} {
+    set nodes [$root getElementsByTagName *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {foobar barfoo foobaz a b a c }
+
 $doc delete
+
+set doc [dom parse {
+<root>mixed content 
+   <elem><b>important</b> more content <b>again important</b></elem>
+   <!-- a comment --> 
+   <elem xmlns="defaultNS"><b/></elem>
+</root>}]
+set root [$doc documentElement]
+
+test dom-7.15 {getElementsByTagName - node method mixed content} {
+    llength [$doc getElementsByTagName elem]
+} {1}
+
+test dom-7.16 {getElementsByTagName - node method mixed content} {
+    llength [$root getElementsByTagName elem]
+} {1}
+
+test dom-7.17 {getElementsByTagName - doc method mixed content} {
+    llength [$doc getElementsByTagName b]
+} {2}
+
+test dom-7.18 {getElementsByTagName - node method mixed content} {
+    llength [$root getElementsByTagName b]
+} {2}
+
+test dom-7.19 {getElementsByTagName - not a element node} {
+    set textnode [$root selectNodes {descendant::text()[1]}]
+    catch {$textnode getElementsByTagName b} errMsg
+    set errMsg
+} {Node must be an element node.}
+
+$doc delete 
 
 set doc [dom parse {<?xml version="1.0"?>
 <soap:Envelope
@@ -349,27 +431,123 @@ soap:encodingStyle="http://www.w3.org/2001/12/soap-encoding">
 </soap:Envelope>}]
 set root [$doc documentElement]
 
-test dom-7.8 {getElementsByTagNameNS -} {
+test dom-8.1 {getElementsByTagNameNS - root method} {
     [$root getElementsByTagNameNS "http://www.stock.org/stock" GetStockPrice] nodeName
 } {m:GetStockPrice}
 
-test dom-7.9 {getElementsByTagNameNS} {
+test dom-8.2 {getElementsByTagNameNS - root method} {
     [$root getElementsByTagNameNS "*" GetStockPrice] nodeName
 } {m:GetStockPrice}
 
-test dom-7.10 {getElementsByTagNameNS} {
+test dom-8.3 {getElementsByTagNameNS - root method} {
     llength [$root getElementsByTagNameNS "http://www.stock.org/stock" *]
+} {2}
+
+test dom-8.4 {getElementsByTagNameNS - doc method} {
+    [$doc getElementsByTagNameNS "http://www.stock.org/stock" GetStockPrice] nodeName
+} {m:GetStockPrice}
+
+test dom-8.5 {getElementsByTagNameNS - doc method} {
+    [$doc getElementsByTagNameNS "*" GetStockPrice] nodeName
+} {m:GetStockPrice}
+
+test dom-8.6 {getElementsByTagNameNS - doc method} {
+    llength [$doc getElementsByTagNameNS "http://www.stock.org/stock" *]
 } {2}
 
 $doc delete 
 
+set doc [dom parse {
+<root>mixed content 
+   <elem><b>important</b> more content <b>again important</b></elem>
+   <!-- a comment --> 
+   <elem xmlns="NS1"><b/></elem>
+   <elem xmlns="NS2"/>
+   <p:pathologic xmlns:p="firstp">
+     <p:pathologic xmlns:p="secondp">
+       <p:pathologic xmlns:p="firstp"/>
+     </p:pathologic>
+   </p:pathologic>
+</root>}]
+set root [$doc documentElement]
+
+test dom-8.7 {getElementsByTagNameNS - doc method pathologic XML} {
+    llength [$doc getElementsByTagNameNS "firstp" pathologic]
+} {2}
+
+test dom-8.8 {getElementsByTagNameNS - doc method pathologic XML} {
+    llength [$doc getElementsByTagNameNS "secondp" pathologic]
+} {1}
+
+test dom-8.9 {getElementsByTagNameNS - doc method pathologic XML} {
+    llength [$doc getElementsByTagNameNS "*" pathologic]
+} {3}
+
+test dom-8.10 {getElementsByTagNameNS - node method pathologic XML} {
+    llength [$root getElementsByTagNameNS "firstp" pathologic]
+} {2}
+
+test dom-8.11 {getElementsByTagNameNS - node method pathologic XML} {
+    llength [$root getElementsByTagNameNS "secondp" pathologic]
+} {1}
+
+test dom-8.12 {getElementsByTagNameNS - node method pathologic XML} {
+    llength [$root getElementsByTagNameNS "*" pathologic]
+} {3}
+
+test dom-8.13 {getElementsByTagNameNS - doc method} {
+    llength [$doc getElementsByTagNameNS "NS1" elem]
+} {1}
+
+test dom-8.14 {getElementsByTagNameNS - doc method} {
+    llength [$doc getElementsByTagNameNS "NS2" elem]
+} {1}
+
+test dom-8.15 {getElementsByTagNameNS - doc method} {
+    llength [$doc getElementsByTagNameNS "*" elem]
+} {3}
+
+test dom-8.16 {getElementsByTagNameNS - node method} {
+    llength [$root getElementsByTagNameNS "NS1" elem]
+} {1}
+
+test dom-8.17 {getElementsByTagNameNS - node method} {
+    llength [$root getElementsByTagNameNS "NS2" elem]
+} {1}
+
+test dom-8.18 {getElementsByTagNameNS - node method} {
+    llength [$root getElementsByTagNameNS "*" elem]
+} {3}
+
+test dom-8.19 {getElementsByTagNameNS - doc method empty namespace} {
+    set nodes [$doc getElementsByTagNameNS "" *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {root elem b b }
+
+test dom-8.19 {getElementsByTagNameNS - node method empty namespace} {
+    set nodes [$root getElementsByTagNameNS "" *]
+    set result ""
+    foreach node $nodes {
+        append result "[$node nodeName] "
+    }
+    set result
+} {elem b b }
+
+test dom-8.20 {getElementsByTagNameNS - not a element node} {
+    set textnode [$root selectNodes {descendant::text()[1]}]
+    catch {$textnode getElementsByTagName b} errMsg
+    set errMsg
+} {Node must be an element node.}
+
+$doc delete
+
 # cleanup
 ::tcltest::cleanupTests
 return
-
-
-
-
 
 
 
