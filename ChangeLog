@@ -1,3 +1,8 @@
+2003-04-16  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Optimization: Improved caching of
+          external documents.
+
 2003-04-12  Rolf Ade  <rolf@pointsman.de>
 
         * README
