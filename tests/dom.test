@@ -1,11 +1,102 @@
+# Features covered: DOM functions
+#
+# This file contains a collection of tests for the DOM methods of
+# tDOM.
+# Tested commands and object commands:
+# dom:
+#    dom-1.*: createDocument, createDocumentNS
+#    dom-2.*: parse
+#
+# Copyright (c) 2002 Rolf Ade.
 
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest
+    namespace import -force ::tcltest::*
+}
 
-test dom-1.1 {knownBug} {Don't create Document with root node name not a NCNAME} {
-    catch {dom createDocument "root node"}
-} {1}
+if {[catch {package require tdom 0.7}]} {
+   puts stderr "Cannot load tDOM 0.7 package"
+   return
+}
 
-test dom-1.1 {knownBug} {Don't quash white space at start or end of non white space content} {
-    set doc [dom parse -keepEmpties {<root>
+test dom-1.1 {createDocument with root node name not a XML Name} {
+    list [catch {dom createDocument "root node"} msg] $msg
+} "1 {invalid root element name}"
+
+test dom-1.2 {createDocument with root node name not a XML Name} {
+    list [catch {dom createDocument "1root"} msg] $msg
+} "1 {invalid root element name}"
+
+test dom-1.3 {createDocument - root name us-ascii} {
+    dom createDocument "root" doc 
+    set root [$doc documentElement]
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "root"
+
+test dom-1.4 {createDocument - root name with UTF-8 chars} {
+    dom createDocument "\u00c4\u00d4\u00dc" doc 
+    set root [$doc documentElement]
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "\u00c4\u00d4\u00dc"
+    
+test dom-1.5 {createDocument with FQ root name} {
+    dom createDocument "foo:bar" doc
+    set root [$doc documentElement]
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "foo:bar"
+
+test dom-1.6 {createDocument with wrong # of args} {
+    list [catch {dom createDocument "root" "http:/foo:bar" doc} msg] $msg
+} "1 {wrong \# args: should be \"createDocument docElemName ?newObjVar?\"}"
+
+test dom-1.7 {createDocumentNS - check root name} {
+    set doc [dom createDocumentNS root "http://foo.bar"]
+    set root [$doc documentElement]
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "root"
+
+test dom-1.8 {createDocumentNS - check the NS of the created root} {
+    dom createDocumentNS root "http://foo.bar" doc
+    set root [$doc documentElement]
+    set result [$root namespaceURI]
+    $doc delete
+    set result
+} "http://foo.bar"    
+
+test dom-1.9 {createDocumentNS with root name not a NCName} {
+    list [catch {dom createDocumentNS "foo bar" "http://foo.bar" doc} msg] $msg
+} "1 {invalid local name}"
+
+test dom-1.10 {createDocumentNS with root name not a NCName} {
+    list [catch {dom createDocumentNS "a:b:c" "http://foo.bar" doc} msg] $msg
+} "1 {invalid local name}"
+
+test dom-1.11 {createDocumentNS with root name not a NCName} {
+    list [catch {dom createDocumentNS "a b:b" "http://foo.bar" doc} msg] $msg
+} "1 {invalid prefix name}"
+
+test dom-1.12 {createDocumentNS with root name not a NCName} {
+    list [catch {dom createDocumentNS "a:a b" "http://foo.bar" doc} msg] $msg
+} "1 {invalid local name}"
+
+test dom-1.13 {createDocumentNS - check root name} {
+    set doc [dom createDocumentNS foo:root "http://foo.bar"]
+    set root [$doc documentElement]
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "foo:root"
+
+test dom-2.1 {knownBug} {Don't quash white space at start or end of non white space content} {
+    set doc [dom parse {<root>
     some content
     </root>}]
     set root [$doc documentElement]
@@ -13,6 +104,18 @@ test dom-1.1 {knownBug} {Don't quash white space at start or end of non white sp
 } {
     some content
     }
+
+test dom-3.1 {knownBug} {repetitived createDocument with objVar, then delete} {
+    dom createDocument "root" doc 
+    $doc documentElement root
+    $doc delete
+    
+    dom createDocument "\u00c4\u00d4\u00dc" doc 
+    $doc documentElement root
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "\u00c4\u00d4\u00dc"
 
 
 # cleanup
