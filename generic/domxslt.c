@@ -85,6 +85,7 @@
 #define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}       
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
 #define SETSCOPESTART       xs->varFramesStack[xs->varFramesStackPtr].stop=1
+#define SETPARAMDEF         xs->varFramesStack[xs->varFramesStackPtr].stop=2
 
 #if defined(_MSC_VER)
 # define STRCASECMP(a,b)  stricmp (a,b)
@@ -357,7 +358,6 @@ typedef struct {
     domNode           * xmlRootNode;
     domDocument       * resultDoc;
     domNode           * lastNode;
-    xsltVarFrame      * varFrames;
     xsltVarFrame      * varFramesStack;
     int                 varFramesStackPtr;
     int                 varFramesStackLen;
@@ -518,7 +518,7 @@ static void printXML (domNode *node, int level, int maxlevel) {
         if (n>8) { fprintf(stderr, "...\n"); return; }
     }
 }
-
+        
 /*----------------------------------------------------------------------------
 |   reportError
 |
@@ -672,18 +672,20 @@ static void xsltPopVarFrame (
 )
 {
     int             i;
+    xsltVarFrame   *frame;
 
-    if (xs->varFrames) {    
-        if (xs->varFrames->nrOfVars) {
-            for (i = xs->varFrames->varStartIndex;
-                 i < xs->varFrames->varStartIndex + xs->varFrames->nrOfVars;
+
+    if (xs->varFramesStackPtr >= 0) {    
+        frame = &xs->varFramesStack[xs->varFramesStackPtr];
+        if (frame->nrOfVars) {
+            for (i = frame->varStartIndex;
+                 i < frame->varStartIndex + frame->nrOfVars;
                  i++) {
                 xpathRSFree (&(&xs->varStack[i])->rs);
             }
         }
-        xs->varStackPtr -= xs->varFrames->nrOfVars;
+        xs->varStackPtr -= frame->nrOfVars;
         xs->varFramesStackPtr--;
-        xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr]);
     }
 }
 
@@ -696,7 +698,7 @@ static void xsltPushVarFrame (
     xsltState  * xs
 )
 {
-    xsltVarFrame  * currentFrame;
+    xsltVarFrame  * frame;
     
     xs->varFramesStackPtr++;
     if (xs->varFramesStackPtr >= xs->varFramesStackLen) {
@@ -705,14 +707,12 @@ static void xsltPushVarFrame (
                                                   * 2 * xs->varFramesStackLen);
         xs->varFramesStackLen *= 2;
     }
-    currentFrame = &(xs->varFramesStack[xs->varFramesStackPtr]);
-    currentFrame->polluted = 0;
-    currentFrame->nrOfVars = 0;
-    currentFrame->varStartIndex = -1;
-    currentFrame->stop = 0;
+    frame = &(xs->varFramesStack[xs->varFramesStackPtr]);
+    frame->polluted = 0;
+    frame->nrOfVars = 0;
+    frame->varStartIndex = -1;
+    frame->stop = 0;
 
-    xs->varFrames = currentFrame;
-    
 }
 
 
@@ -2133,11 +2133,7 @@ static int xsltSetVar (
             xs->lastNode = savedLastNode;
         }
     }
-    if (forTopLevel) {
-        tmpFrame = xs->varFramesStack;
-    } else {
-        tmpFrame = xs->varFrames;
-    }
+    tmpFrame = &xs->varFramesStack[xs->varFramesStackPtr];
     
     xs->varStackPtr++;
     if (xs->varStackPtr >= xs->varStackLen) {
@@ -2152,7 +2148,7 @@ static int xsltSetVar (
     }
     tmpFrame->nrOfVars++;
     domSplitQName (variableName, prefix, &localName);
-    if (prefix[0]) {
+    if (prefix[0] != '\0') {
         ns = domLookupPrefix (actionNode, prefix);
         if (!ns) {
             reportError (actionNode,
@@ -2184,12 +2180,11 @@ static int xsltVarExists (
     domNode    * exprContext
 )
 {
-    int      i, found = 0;
-    char     prefix[MAX_PREFIX_LEN], *localName, *uri, *varName;
-    domNS   *ns;
+    int           i, frameIndex, found = 0;
+    char          prefix[MAX_PREFIX_LEN], *localName, *uri, *varName;
+    domNS        *ns;
+    xsltVarFrame *frame;
 
-
-    if (!xs->varFrames || !xs->varFrames->nrOfVars) return 0;
     
     domSplitQName (variableName, prefix, &localName);
     if (prefix[0]) {
@@ -2205,19 +2200,26 @@ static int xsltVarExists (
         varName = variableName;
     }
         
-    for (i = xs->varFrames->varStartIndex;
-         i < xs->varFrames->varStartIndex + xs->varFrames->nrOfVars;
-         i++) {
-        if ( (uri && !((&xs->varStack[i])->uri))
-            || (!uri && (&xs->varStack[i])->uri)
-            || (uri && (&xs->varStack[i])->uri && (strcmp (uri, (&xs->varStack[i])->uri)!=0))
-            ) continue;
-        if (strcmp((&xs->varStack[i])->name, varName)==0) {
-            found = 1;
-            break; /* found the variable */
+    frameIndex = xs->varFramesStackPtr;
+    while (frameIndex >= 0) {
+        frame = &xs->varFramesStack[frameIndex];
+        for (i = frame->varStartIndex;
+             i < frame->varStartIndex + frame->nrOfVars;
+             i++) {
+            if ( (uri && !((&xs->varStack[i])->uri))
+                 || (!uri && (&xs->varStack[i])->uri)
+                 || (uri && (&xs->varStack[i])->uri && (strcmp (uri, (&xs->varStack[i])->uri)!=0))
+                ) continue;
+            if (strcmp((&xs->varStack[i])->name, varName)==0) {
+                found = 1;
+                break; /* found the variable */
+            }
         }
+        if (found) return 1;
+        if (frame->stop) break;
+        frameIndex--;
     }
-    if (found) return 1;
+    
     return 0;
 }
 
@@ -2237,7 +2239,7 @@ static int xsltGetVar (
     xsltState        *xs = clientData;
     xsltVarFrame     *frame;
     xsltVariable     *var;
-    int               rc, d, i, j; 
+    int               rc, i, frameIndex, parFrameSkiped = 0; 
     char             *select;
     Tcl_HashEntry    *h;
     xsltTopLevelVar  *topLevelVar;
@@ -2247,18 +2249,22 @@ static int xsltGetVar (
     Tcl_DString       dErrMsg;
     
     TRACE1("xsltGetVar variableName='%s' \n", variableName);
-    
-    d = 0;
-    if ((xs->varFramesStackPtr > -1) && (&(xs->varFramesStack[xs->varFramesStackPtr]) != xs->varFrames)) {
-        d = 1;
-    }
-    for (i = xs->varFramesStackPtr - d; i >= 0; i--) {
-        frame = &(xs->varFramesStack[i]);
-        for (j = frame->varStartIndex;
-             j < frame->varStartIndex + frame->nrOfVars;
-             j++) {
-            var = &xs->varStack[j];
-            /*TRACE2("is it var %d:'%s' ? \n", d, var->name);*/
+    frameIndex = xs->varFramesStackPtr;
+    while (frameIndex >= 0) {
+        frame = &xs->varFramesStack[frameIndex];
+        if (frame->stop == 2 && !parFrameSkiped) {
+            parFrameSkiped = 1;
+            frameIndex--;
+            continue;
+        }
+        for (i = frame->varStartIndex;
+             i < frame->varStartIndex + frame->nrOfVars;
+             i++) {
+            var = &xs->varStack[i];
+            if ( (varURI && !var->uri)
+                 || (!varURI && var->uri)
+                 || (varURI && var->uri && (strcmp (varURI, var->uri)!=0))
+                ) continue;
             if (strcmp(var->name, variableName)==0) {
                 TRACE1("xsltGetVar '%s':\n", variableName);
                 DBG(rsPrint(&(var->rs)));
@@ -2266,7 +2272,8 @@ static int xsltGetVar (
                 return XPATH_OK;
             }
         }
-        if (frame->stop && (i > 1)) i = 1;
+        if (frame->stop && frameIndex > 1) frameIndex = 1;
+        frameIndex--;
     }
     
     if (xs->varsInProcess) {
@@ -3358,6 +3365,7 @@ static int ExecAction (
             }
             if (tplChoosen) {
                 xsltPushVarFrame (xs);
+                SETPARAMDEF;
                 TRACE3("call template %s match='%s' name='%s' \n", str, tplChoosen->match, tplChoosen->name);
                 DBG(printXML(xs->lastNode, 0, 2);)
                 rc = setParamVars (xs, context, currentNode, currentPos,
@@ -3717,7 +3725,7 @@ static int ExecAction (
                         xsltPopVarFrame (xs);
                         return rc;
                     }
-                    if (xs->varFrames->polluted) {
+                    if ((&xs->varFramesStack[xs->varFramesStackPtr])->polluted) {
                         xsltPopVarFrame (xs);
                         xsltPushVarFrame (xs);
                     }
@@ -3772,7 +3780,7 @@ static int ExecAction (
             xsltPushVarFrame (xs);
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
-            xsltPushVarFrame (xs);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             
             str2 = xpathGetTextValue(fragmentNode, &len);
@@ -4269,6 +4277,7 @@ int ApplyTemplates (
         for (i=0; i < nodeList->nr_nodes; i++) {
             if (needNewVarFrame) {
                 xsltPushVarFrame (xs);
+                SETPARAMDEF;
                 rc = setParamVars (xs, context, currentNode, currentPos,
                                    actionNode, errMsg);
                 if (rc < 0) {
@@ -4276,7 +4285,7 @@ int ApplyTemplates (
                     return rc;
                 }
                 SETSCOPESTART;
-                xs->varFrames->polluted = 0;
+                (&xs->varFramesStack[xs->varFramesStackPtr])->polluted = 0;
             }
             rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode,
                                 i, mode, modeURI, errMsg);
@@ -4284,7 +4293,7 @@ int ApplyTemplates (
                 xsltPopVarFrame (xs);
                 return rc;
             }
-            if (xs->varFrames->polluted) {
+            if ((&xs->varFramesStack[xs->varFramesStackPtr])->polluted) {
                 xsltPopVarFrame (xs);
                 needNewVarFrame = 1;
             } else needNewVarFrame = 0;
@@ -4730,6 +4739,7 @@ static int processTopLevelVars (
             }
             xs->varFramesStack->nrOfVars++;
             var->name   = parameters[i];
+            var->uri    = NULL;
             var->node   = topLevelVar->node;
             var->rs     = rs;
 
@@ -5251,7 +5261,6 @@ xsltFreeState (
     while (sd)  {
         sdsave = sd;
         sd = sd->next;
-        if (sdsave->baseURI) free(sdsave->baseURI);
         for (entryPtr = Tcl_FirstHashEntry (&sdsave->keyData, &search);
              entryPtr != (Tcl_HashEntry*) NULL;
              entryPtr = Tcl_NextHashEntry (&search)) {
@@ -5281,10 +5290,11 @@ xsltFreeState (
         }
         if (sdsave->next && sdsave->next->next) {
             domFreeDocument (sdsave->doc, NULL, NULL);
+            if (sdsave->baseURI) free(sdsave->baseURI);
         }
         Tcl_Free((char*)sdsave);
     }
-    
+
     nsAlias = xs->nsAliases;
     while (nsAlias) {
         nsAliasSave = nsAlias;
@@ -5410,7 +5420,6 @@ int xsltProcess (
     xs.cbs.funcClientData  = &xs;
     xs.orig_funcCB         = funcCB;
     xs.orig_funcClientData = clientData;
-    xs.varFrames           = NULL;
     xs.varFramesStack      = (xsltVarFrame *) malloc (sizeof (xsltVarFrame) * 4);
     xs.varFramesStackPtr   = -1;
     xs.varFramesStackLen   = 4;
