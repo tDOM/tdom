@@ -34,6 +34,7 @@
 #----------------------------------------------------------------------------
 
 package require tdom 0.7.5
+
 if {[lsearch [namespace children] ::tdom] == -1} {
     # tcldomsh without the script library. Source the lib.
     source [file join [file dir [info script]] ../lib tdom.tcl]
@@ -60,10 +61,7 @@ set xsltdoc [dom parse -baseurl [tDOM::baseURL $xsltFile] \
                        [tDOM::xmlReadFile $xsltFile] ]
 dom setStoreLineColumn 0
 
-set xmlroot [$xmldoc documentElement]
-
-$xmlroot xslt $xsltdoc resultDoc
-
+$xmldoc xslt $xsltdoc resultDoc
 
 if {$outputOpt == ""} {
     set outputOpt [$resultDoc getDefaultOutputMethod]
@@ -72,16 +70,16 @@ if {$outputOpt == ""} {
 switch $outputOpt {
     asXML -
     xml  {
-        puts [$resultDoc asXML]
+        puts [$resultDoc asXML -indent no -escapeNonASCII]
     }
     asHTML -
     html {
-        puts [$resultDoc asHTML]
+        puts [$resultDoc asHTML -escapeNonASCII -htmlEntities]
     }
     asText -
     text {
         set resultRoot [$resultDoc documentElement]
-        puts [$node nodeValue]
+        puts [$resultRoot nodeValue]
     }
     default {
         puts stderr "Unknown output method '$outputOpt'!"
