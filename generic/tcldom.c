@@ -355,19 +355,24 @@ void tcldom_docCmdDeleteProc  (
     }
 
     TDomThreaded(
+    {
+        Tcl_HashEntry *entryPtr;
+        char objCmdName[40];
+
         Tcl_MutexLock(&tableMutex);
-        if(--dinfo->document->refCount <= 0) {
-            Tcl_HashEntry *entryPtr;
-            char objCmdName[40];
-            DOC_CMD(objCmdName, dinfo->document);
-            entryPtr = Tcl_FindHashEntry(&sharedDocs, objCmdName);
-            if (entryPtr) {
-                Tcl_DeleteHashEntry(entryPtr);
-                DBG(fprintf(stderr, "--> document %s deleted from the shared table\n",
-                            objCmdName);)
-            }
+        if(--dinfo->document->refCount > 0) {
+            Tcl_MutexUnlock(&tableMutex);
+            return; /* While doc has still users attached */
+        }
+        DOC_CMD(objCmdName, dinfo->document);
+        entryPtr = Tcl_FindHashEntry(&sharedDocs, objCmdName);
+        if (entryPtr) {
+            Tcl_DeleteHashEntry(entryPtr);
+            DBG(fprintf(stderr, "--> document %s deleted from the shared table\n",
+                        objCmdName);)
         }
         Tcl_MutexUnlock(&tableMutex);
+    }
     )
 
     /* delete DOM tree */
