@@ -1964,7 +1964,7 @@ domDeleteNode (
     domDocument *doc;
 
     if (node->nodeType == ATTRIBUTE_NODE) {
-        panic("domDeleteNode on ATTRIBUTE_NODE not supported!");
+        Tcl_Panic("domDeleteNode on ATTRIBUTE_NODE not supported!");
     }
     TDomThreaded (
         shared = node->ownerDocument->refCount > 1;
