@@ -1,3 +1,13 @@
+2003-14-11  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/attribute.text: Made test results independent from the
+          (undefined) order of [array get].
+
+        * tests/dom.test: Build expected result of some tests with
+          [list], instead of providing a string rep. This hides the
+          changes in list string rep by TIP 148, so that the tests
+          work both with pre- and post TIP 148 tcl.
+
 2003-12-11  Rolf Ade  <rolf@pointsman.de>
 
         * tests/xslt.test
