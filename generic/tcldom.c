@@ -2046,7 +2046,7 @@ int tcldom_NodeObjCmd (
     Tcl_Channel  chan = (Tcl_Channel) NULL;
     Tcl_HashEntry *entryPtr;
 
-    static char *nodeMethods[] = {
+    static CONST84 char *nodeMethods[] = {
         "firstChild",      "nextSibling",    "getAttribute",    "nodeName",
         "nodeValue",       "nodeType",       "attributes",      "asList",
         "find",            "setAttribute",   "removeAttribute", "parentNode",
@@ -3009,7 +3009,7 @@ int tcldom_DocObjCmd (
     Tcl_Obj             * mobjv[MAX_REWRITE_ARGS];
 
 
-    static char *docMethods[] = {
+    static CONST84 char *docMethods[] = {
         "documentElement", "getElementsByTagName",       "delete",
         "createElement",   "createCDATASection",         "createTextNode",
         "createComment",   "createProcessingInstruction",
@@ -3522,7 +3522,7 @@ int tcldom_domCmd (
     Tcl_CmdInfo   cmdInfo;
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
 
-    static char *domMethods[] = {
+    static CONST84 char *domMethods[] = {
         "createDocument",  "createDocumentNS",  "createNodeCmd",
         "parse",           "setResultEncoding", "setStoreLineColumn",
 #ifdef TCL_THREADS

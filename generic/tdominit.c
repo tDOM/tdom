@@ -28,6 +28,11 @@
 |
 |
 |   $Log$
+|   Revision 1.7  2002/07/02 19:25:08  zoran
+|   Fixed references to CONS'ified Tcl API (8.4 and later)
+|   Also, fixed (disappeared) NODE_NO references which broke the
+|   threaded build (mainly in the dom.c)
+|
 |   Revision 1.6  2002/06/20 13:14:01  loewerj
 |   fixed compile warnings
 |
@@ -97,7 +102,7 @@ Tdom_Init (interp)
 #endif
 
 #ifdef TCL_THREADS
-    bool = Tcl_GetVar2(interp, "::tcl_platform", "threaded", 0);
+    bool = (char*)Tcl_GetVar2(interp, "::tcl_platform", "threaded", 0);
     if (bool == NULL || atoi(bool) == 0) { 
         Tcl_SetObjResult(interp, Tcl_NewStringObj(
                          "Tcl core wasn't compiled for multithreading.", -1));

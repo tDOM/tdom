@@ -643,7 +643,7 @@ startElement(
     node->nodeFlags     = 0;
     node->namespace     = 0;
     node->nodeName      = (char *)&(h->key);
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(info->document);
     node->ownerDocument = info->document;
 
     if (info->baseURI != XML_GetBase (info->parser)) {
@@ -956,7 +956,7 @@ characterDataHandler (
         node->nodeType    = TEXT_NODE;
         node->nodeFlags   = 0;
         node->namespace   = 0;
-        node->nodeNumber  = NODE_NO(node);
+        node->nodeNumber  = NODE_NO(info->document);
         if (info->baseURI != XML_GetBase (info->parser)) {
             info->baseURI  = XML_GetBase (info->parser);
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1028,7 +1028,7 @@ commentHandler (
     node->nodeType    = COMMENT_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->nodeNumber  = NODE_NO(node);
+    node->nodeNumber  = NODE_NO(info->document);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1105,7 +1105,7 @@ processingInstructionHandler(
     node->nodeType    = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->nodeNumber  = NODE_NO(node);
+    node->nodeNumber  = NODE_NO(info->document);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1464,7 +1464,7 @@ domReadDocument (
     }
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(rootNode);
+    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
@@ -1684,7 +1684,7 @@ domCreateDoc ( )
     rootNode->nodeFlags     = 0;
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(rootNode);
+    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
     rootNode->firstChild    = rootNode->lastChild = NULL;
@@ -1750,7 +1750,7 @@ domCreateDocument (
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
     node->nodeFlags       = 0;
-    node->nodeNumber      = NODE_NO(node);
+    node->nodeNumber      = NODE_NO(doc);
     node->ownerDocument   = doc;
     node->nodeName        = (char *)&(h->key);
     doc->documentElement  = node;
@@ -2786,7 +2786,7 @@ domNewTextNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
@@ -2941,7 +2941,7 @@ domAppendNewTextNode(
         node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
     }
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
@@ -2989,7 +2989,7 @@ domAppendNewElementNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = parent->namespace;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->nodeName      = (char *)&(h->key);
 
@@ -3123,7 +3123,7 @@ domAppendLiteralNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->nodeName      = (char *)&(h->key);
 
@@ -3163,7 +3163,7 @@ domNewProcessingInstructionNode(
     node->nodeType      = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->targetLength  = targetLength;
     node->targetValue   = (char*)Tcl_Alloc(targetLength);
@@ -3207,7 +3207,7 @@ domNewElementNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->nodeName      = (char *)&(h->key);
 
@@ -3247,7 +3247,7 @@ domNewElementNodeNS (
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
+    node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->nodeName      = (char *)&(h->key);
 
@@ -3858,7 +3858,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     Tcl_Obj         *newObjName = NULL;
     TEncoding       *encoding;
 
-    static char *tdomMethods[] = {
+    static CONST84 char *tdomMethods[] = {
         "enable", "getdoc",
         "setResultEncoding", "setStoreLineColumn",
         "setExternalEntityResolver", "keepEmpties",
@@ -3950,7 +3950,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         rootNode->nodeFlags     = 0;
         rootNode->namespace     = 0;
         rootNode->nodeName      = (char *)&(h->key);
-        rootNode->nodeNumber    = NODE_NO(rootNode);
+        rootNode->nodeNumber    = NODE_NO(info->document);
         rootNode->ownerDocument = info->document;
         rootNode->parentNode    = NULL;
         if (info->storeLineColumn) {

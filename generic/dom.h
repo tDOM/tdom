@@ -29,6 +29,11 @@
 |
 |
 |   $Log$
+|   Revision 1.13  2002/07/02 19:25:07  zoran
+|   Fixed references to CONS'ified Tcl API (8.4 and later)
+|   Also, fixed (disappeared) NODE_NO references which broke the
+|   threaded build (mainly in the dom.c)
+|
 |   Revision 1.12  2002/06/21 10:38:24  zoran
 |   Fixed node numbering to use document-private node-counter when compiled
 |   with -DTCL_THREADS. Node Tcl-command names are still defined in the
@@ -133,6 +138,12 @@
 #include <expat.h>
 #include <utf8conv.h>
 
+/*
+ * Beginning with 8.4 tcl API is CONST'ified
+ */
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
+# define CONST84
+#endif
 
 #ifndef TCL_THREADS
 

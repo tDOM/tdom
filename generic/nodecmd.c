@@ -25,6 +25,11 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
+|   Revision 1.5  2002/07/02 19:25:07  zoran
+|   Fixed references to CONS'ified Tcl API (8.4 and later)
+|   Also, fixed (disappeared) NODE_NO references which broke the
+|   threaded build (mainly in the dom.c)
+|
 |   Revision 1.4  2002/06/21 10:38:24  zoran
 |   Fixed node numbering to use document-private node-counter when compiled
 |   with -DTCL_THREADS. Node Tcl-command names are still defined in the
@@ -380,7 +385,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
         ELM_NODE, TXT_NODE, CDS_NODE, CMT_NODE, PIC_NODE, PRS_NODE
     };
 
-    char *subcmd[] = {
+    static CONST84 char *subcmd[] = {
         "elementNode", "textNode", "cdataNode", "commentNode", "piNode",
         "parserNode", NULL
     };
@@ -403,7 +408,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     if (ret != TCL_OK) {
         return ret;
     }
-    nsName = Tcl_GetStringResult(interp);
+    nsName = (char *)Tcl_GetStringResult(interp);
     Tcl_DStringAppend(&cmdName, nsName, -1);
     if (strcmp(nsName, "::")) {
         Tcl_DStringAppend(&cmdName, "::", 2);
