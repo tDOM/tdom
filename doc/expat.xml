@@ -14,16 +14,11 @@
 -->
 
     <synopsis>
-      <syntax><cmd>package require expat</cmd>
+      <syntax><cmd>package require tdom</cmd>
 
 <cmd>expat</cmd> ?<m>parsername</m>? ?<m>-namespace</m>? ?<m>arg arg ..</m>
 
-<cmd>xml:parser</cmd> ?<m>parsername</m>? ?<m>-namespace</m>? ?<m>arg arg ..</m></syntax>
-
-<!--      <syntax><cmd>package require expat</cmd></syntax>
-      <syntax><cmd>expat</cmd> ?<m>parsername</m>? ?<m>-namespace</m>? ?<m>arg arg ..</m></syntax>
-      <syntax><cmd>xml:parser</cmd> ?<m>parsername</m>? ?<m>-namespace</m>? ?<m>arg arg ..</m></syntax>
--->
+<cmd>xml::parser</cmd> ?<m>parsername</m>? ?<m>-namespace</m>? ?<m>arg arg ..</m></syntax>
     </synopsis>
     <section>
       <title>DESCRIPTION</title>

@@ -163,11 +163,11 @@ Database Class:	\\fB\\$3\\fR
 expat \- Creates an instance of an expat parser object
 .SH SYNOPSIS
 .nf
-\&\fBpackage require expat\fP
+\&\fBpackage require tdom\fP
 
 \&\fBexpat\fP ?\fIparsername\fR? ?\fI-namespace\fR? ?\fIarg arg ..\fR
 
-\&\fBxml:parser\fP ?\fIparsername\fR? ?\fI-namespace\fR? ?\fIarg arg ..\fR
+\&\fBxml::parser\fP ?\fIparsername\fR? ?\fI-namespace\fR? ?\fIarg arg ..\fR
 .fi
 .BE
 .SH DESCRIPTION
