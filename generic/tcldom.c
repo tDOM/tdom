@@ -245,7 +245,7 @@ static char node_usage[] =
                 "    selectNodes xpathQuery ?typeVar? \n"
                 "    toXPath                     \n"
                 "    disableOutputEscaping ?boolean? \n"
-                "    startBefore node            \n"
+                "    precedes node               \n"
                 "    xslt ?-parameters parameterList? <xsltDocNode>\n"
                 TDomThreaded(
                 "    readlock                    \n"
@@ -2932,7 +2932,7 @@ int tcldom_NodeObjCmd (
         "asHTML",          "prefix",         "getBaseURI",      "appendFromScript",
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
-        "disableOutputEscaping",             "startBefore",
+        "disableOutputEscaping",             "precedes",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -2953,7 +2953,7 @@ int tcldom_NodeObjCmd (
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
-        m_disableOutputEscaping,             m_startBefore,
+        m_disableOutputEscaping,             m_precedes,
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3793,7 +3793,7 @@ int tcldom_NodeObjCmd (
             }
             break;
 
-        case m_startBefore:
+        case m_precedes:
             CheckArgs (3,3,2, "node");
             nodeName = Tcl_GetStringFromObj (objv[2], NULL);
             refNode = tcldom_getNodeFromName (interp, nodeName, &errMsg);
@@ -3820,11 +3820,9 @@ int tcldom_NodeObjCmd (
                 node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
             }
             if (node->nodeNumber < refNode->nodeNumber) {
-                SetIntResult (1);
-            } else if (node->nodeNumber > refNode->nodeNumber) {
-                SetIntResult (-1);
+                SetBooleanResult (1);
             } else {
-                SetIntResult (0);
+                SetBooleanResult (0);
             }
             break;
             
