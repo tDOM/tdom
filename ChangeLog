@@ -7,6 +7,10 @@
 
         * generic/tcldom.h: Removed hard coded version number, uses
           now VERSION define.
+          
+        * win/makefile.vc
+        * win/makefile805.vc
+        * win/pkgIndex.tcl: Updated to new version 0.7.6.
 
         * extensions/tnc/tnc.c
         * extensions/tnc/tests/tnc.c: Added code needed to handle
