@@ -241,6 +241,7 @@ static char node_usage[] =
     "    prefix                       \n"
     "    namespaceURI                 \n"
     "    getBaseURI                   \n"
+    "    baseURI ?URI?                \n"
     "    localName                    \n"
     "    delete                       \n"
     "    getLine                      \n"
@@ -2926,11 +2927,11 @@ int tcldom_NodeObjCmd (
                 *method, *nodeName, *str, *localName,
                 *attr_name, *attr_val, *filter, *errMsg, *uri;
     int          result, length, methodIndex, i, line, column;
-    int          nsIndex, bool;
+    int          nsIndex, bool, hnew;
     Tcl_Obj     *namePtr, *resultPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
-    Tcl_HashEntry *entryPtr;
+    Tcl_HashEntry *h;
 
     static CONST84 char *nodeMethods[] = {
         "firstChild",      "nextSibling",    "getAttribute",    "nodeName",
@@ -2948,7 +2949,7 @@ int tcldom_NodeObjCmd (
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
         "disableOutputEscaping",             "precedes",         "asText",
-        "insertBeforeFromScript",            "normalize",
+        "insertBeforeFromScript",            "normalize",        "baseURI",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -2970,7 +2971,7 @@ int tcldom_NodeObjCmd (
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
         m_disableOutputEscaping,             m_precedes,        m_asText,
-        m_insertBeforeFromScript,            m_normalize
+        m_insertBeforeFromScript,            m_normalize,       m_baseURI
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3621,9 +3622,9 @@ int tcldom_NodeObjCmd (
         case m_getElementById:
             CheckArgs(3,3,2,"id");
             str = Tcl_GetString(objv[2]);
-            entryPtr = Tcl_FindHashEntry(&node->ownerDocument->ids, str);
-            if (entryPtr) {
-                domNode *node = Tcl_GetHashValue(entryPtr);
+            h = Tcl_FindHashEntry(&node->ownerDocument->ids, str);
+            if (h) {
+                domNode *node = Tcl_GetHashValue(h);
                 return tcldom_returnNodeObj(interp, node, 0, NULL);
             }
             SetResult("id not found");
@@ -3798,12 +3799,25 @@ int tcldom_NodeObjCmd (
 
         case m_getBaseURI:
             CheckArgs(2,2,2,"");
+            /* fall thru */
+
+        case m_baseURI:    
+            CheckArgs(2,3,2,"?URI?");
             str = findBaseURI(node);
             if (!str) {
                 SetResult("no base URI information available!");
                 return TCL_ERROR;
             } else {
                 SetResult(str);
+            }
+            if (objc == 3) {
+                h = Tcl_CreateHashEntry (&node->ownerDocument->baseURIs, 
+                                         (char *) node, &hnew);
+                if (!hnew) {
+                    FREE (Tcl_GetHashValue (h));
+                }
+                Tcl_SetHashValue (h, tdomstrdup (str));
+                node->nodeFlags |= HAS_BASEURI;
             }
             break;
 
