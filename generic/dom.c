@@ -1440,7 +1440,11 @@ domReadDocument (
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-    doc->extResolver      = extResolver;
+    if (extResolver) {
+        doc->extResolver  = Tcl_DuplicateObj (extResolver);
+    } else {
+        doc->extResolver  =  NULL;
+    }
     doc->nsptr            = -1;
     doc->nslen            =  4;
     doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
