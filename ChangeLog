@@ -1,3 +1,13 @@
+2003-10-17  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c: Fixed dom parse -channel option, which got
+          accidentally broken, due to the lately switch from
+          Tcl_GetStringFromObj() to Tcl_GetString().
+
+        * generic/tcldom.c: Added again some recently implemented methods to
+          domObj_usage and node_usage, which got accidentally removed
+          by the lately editorial changes.
+
 2003-10-16  Zoran Vasiljevic  <zv@archiware.com>
 
 	* generic/tcldom.c: added "dom detachDocument" command
