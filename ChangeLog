@@ -1,8 +1,11 @@
 2003-09-14  Rolf Ade  <rolf@pointsman.de>
 
+        * lib/tdom.tcl: Fixed scripting bugs in
+          ::dom::domDoc::importNode and ::dom::domNode::length    
+
         * Makefile.in: dist target: Don't include CVS dirs and hidden
           files into the distribution file.
-
+          
 2003-09-14  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* Makefile.in
