@@ -36,6 +36,10 @@
 |
 |
 |   $Log$
+|   Revision 1.6  2002/03/10 01:16:12  rolf
+|   Added support for [dom createDocumentNS]. Added tests for correctness
+|   of document Element tag name.
+|
 |   Revision 1.5  2002/03/07 22:11:32  rolf
 |   Freeze of actual state, befor feeding stuff to Jochen.
 |
@@ -263,7 +267,30 @@ domProcessingInstructionNode * coerceToProcessingInstructionNode( domNode *n ) {
 }
 
 /*---------------------------------------------------------------------------
-|   domLookupNamespace
+|   domIsNAME
+|
+\--------------------------------------------------------------------------*/
+static int
+domIsNAME (
+    char *name
+    )
+{
+    char *p;
+    
+    p = name;
+    if (!isNameStart(p)) return 0;
+    p += UTF8_CHAR_LEN(*p);
+    while (*p) {
+        if (isNameChar(p)) 
+            p += UTF8_CHAR_LEN(*p);
+        else return 0;
+    }
+    return 1;
+}
+
+
+/*---------------------------------------------------------------------------
+|   domIsNCNAME
 |
 \--------------------------------------------------------------------------*/
 static int
@@ -272,13 +299,12 @@ domIsNCNAME (
     )
 {
     char *p;
-    int   i;
     
     p = name;
-    if (!isNameStart(p)) return 0;
+    if (!isNCNameStart(p)) return 0;
     p += UTF8_CHAR_LEN(*p);
     while (*p) {
-        if (isNameChar(p)) 
+        if (isNCNameChar(p)) 
             p += UTF8_CHAR_LEN(*p);
         else return 0;
     }
@@ -1630,28 +1656,52 @@ domCreateDoc ( )
 domDocument *
 domCreateDocument (
     Tcl_Interp *interp,
-    char       *documentElementTagName
+    char       *documentElementTagName,
+    char       *uri
 )
 {
     Tcl_HashEntry *h;
     int            hnew;
     domNode       *node; 
     domDocument   *doc;
+    char           prefix[MAX_PREFIX_LEN], *localName;
+    domNS         *ns = NULL;
     GetTDomTSD();
 
-    /* what about full qualified names? */
-/*      if (!domIsNCNAME (documentElementTagName)) { */
-/*          Tcl_SetObjResult (interp, Tcl_NewStringObj ("invalid root element name", -1)); */
-/*          return NULL; */
-/*      } */
+    if (uri) {
+        domSplitQName (documentElementTagName, prefix, &localName);
+        DBG(fprintf (stderr, "rootName: -->%s<--, prefix: -->%s<--, localName: -->%s<--\n", documentElementTagName, prefix, localName);)
+        if (prefix[0] != '\0') {
+            if (!domIsNCNAME (prefix)) {
+                Tcl_SetObjResult (interp, Tcl_NewStringObj("invalid prefix name", -1));
+                return NULL;
+            }
+        }
+        if (!domIsNCNAME (localName)) {
+            Tcl_SetObjResult (interp, Tcl_NewStringObj ("invalid local name", -1));
+            return NULL;
+        }
+    } else {
+        if (!domIsNAME (documentElementTagName)) {
+            Tcl_SetObjResult (interp, Tcl_NewStringObj ("invalid root element name", -1));
+            return NULL;
+        }
+    }
     doc = domCreateDoc ();
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), documentElementTagName, &hnew); 
+    if (uri) {
+        ns = domNewNamespace (doc, prefix, uri);
+    }
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
     node->nodeFlags       = 0;
-    node->namespace       = 0;
+    if (uri) {
+        node->namespace   = ns->index;
+    } else {
+        node->namespace   = 0;
+    }
     node->nodeNumber      = ++TSDPTR(domUniqueNodeNr);
     node->ownerDocument   = doc;
     node->nodeName        = (char *)&(h->key);
