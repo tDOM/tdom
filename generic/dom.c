@@ -626,6 +626,65 @@ domGetLocalName (
     return localName;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * domGetAttributeNodeNS --
+ *
+ *      Search a given node for an attribute with namespace "uri" and
+ *      localname "localname".
+ *
+ * Results:
+ *      Returns a pointer to the attribute, if there is one with the
+ *      given namespace and localname. Otherwise returns NULL.
+ *
+ * Side effects:
+ *      None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+domAttrNode *
+domGetAttributeNodeNS (
+    domNode *node,         /* The attributes of this node are searched for a
+                              matching attribute; the node must exist */
+    char    *uri,          /* The namespace of the demanded attribute */
+    char    *localname     /* The localname of the demanded attribute */
+    )
+{
+    domAttrNode *attr;
+    domNS       *ns;
+    int          noNS;
+    char         prefix[MAX_PREFIX_LEN], *attrLocalName;
+
+    if (uri[0] == '\0') noNS = 1;
+    else                noNS = 0;
+
+    attr = node->firstAttr;
+    while (attr) {
+        if (noNS) {
+            if (!attr->namespace 
+                && strcmp (attr->nodeName, localname) == 0) {
+                return attr;
+                
+            }
+        } else {
+            if (attr->namespace) {
+                domSplitQName (attr->nodeName, prefix, &attrLocalName);
+                if (strcmp (localname, attrLocalName) == 0) {
+                    ns = domGetNamespaceByIndex (node->ownerDocument,
+                                                 attr->namespace);
+                    if (strcmp (ns->uri, uri) == 0) {
+                        return attr;
+                    }
+                }
+            }
+        }
+        attr = attr->nextSibling;
+    }
+    return NULL;
+}
+
 
 #ifndef  TDOM_NO_EXPAT
 
@@ -2043,10 +2102,14 @@ domFreeDocument (
 {
     domNode      *node, *next;
     domNS        *ns;
-    int           i;
+    int           i, dontfree = 0;
     Tcl_HashEntry *entryPtr;
     Tcl_HashSearch search;
 
+    if (doc->nodeFlags & DONT_FREE) {
+        doc->nodeFlags &= ~DONT_FREE;
+        dontfree = 1;
+    }
     /*-----------------------------------------------------------
     |   delete main trees, including top level PIs, etc.
     \-----------------------------------------------------------*/
@@ -2063,7 +2126,7 @@ domFreeDocument (
         if (freeCB) {
             freeCB(node, clientData);
         }
-        domFreeNode (node, freeCB, clientData, 0);
+        domFreeNode (node, freeCB, clientData, dontfree);
         node = next;
     }
 
@@ -2076,10 +2139,12 @@ domFreeDocument (
         if (freeCB) {
             freeCB(node, clientData);
         }
-        domFreeNode (node, freeCB, clientData, 0);
+        domFreeNode (node, freeCB, clientData, dontfree);
         node = next;
     }
 
+    if (dontfree) return;
+    
     /*-----------------------------------------------------------
     | delete namespaces
     \-----------------------------------------------------------*/
@@ -4059,7 +4124,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     int              methodIndex, result, bool, hnew;
     domDocument     *doc;
     domNode         *rootNode;
-    domReadInfo        *info;
+    domReadInfo     *info;
     domLineColumn   *lc;
     Tcl_HashEntry   *h;
     TclGenExpatInfo *expat;

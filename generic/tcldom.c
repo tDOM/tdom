@@ -175,6 +175,7 @@ static char domObj_usage[] =
                 "          getDefaultOutputMethod                  \n"
                 "          delete                                  \n"
                 "          xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
+                "          toXSLTcmd                               \n"
                 TDomThreaded(
                 "          readlock                                \n"
                 "          writelock                               \n"
@@ -245,8 +246,6 @@ static char node_usage[] =
                 "    writelock                   \n"
                 )
                 ;
-
-
 
 /*----------------------------------------------------------------------------
 |   Types
@@ -2508,18 +2507,20 @@ static int serializeAsHTML (
 static int applyXSLT (
     domNode     *node,
     Tcl_Interp  *interp,
+    void        *clientData,
     int          objc,
     Tcl_Obj     *CONST objv[]
     )
 {
-    char          *str, **parameters = NULL, *errMsg;
+    char          *str, *usage, **parameters = NULL, *errMsg;
     Tcl_Obj       *objPtr, *localListPtr = (Tcl_Obj *)NULL;
     int            i, result, length, optionIndex;
     int            ignoreUndeclaredParameters = 0;
-    domDocument   *xsltDoc, *resultDoc;
+    domDocument   *xsltDoc, *xmlDoc, *resultDoc;
     XsltMsgCBInfo  xsltMsgInfo;
 
-    static CONST84 char *usage = "wrong # args: should be \"nodeObj xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? xsltDocNode ?varname?\"";
+    static char *method_usage = "wrong # args: should be \"nodeObj xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? xsltDocNode ?varname?\"";
+    static char *cmd_usage = "wrong # args: should be \"?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?\"";
     static CONST84 char *xsltOptions[] = {
         "-parameters", "-ignoreUndeclaredParameters", "-xsltmessagecmd", NULL
     };
@@ -2530,6 +2531,9 @@ static int applyXSLT (
     xsltMsgInfo.interp = interp;
     xsltMsgInfo.msgcmd = NULL;
 
+    if (node)  usage = method_usage;
+    else       usage = cmd_usage;
+    
     while (objc > 1) {
         if (Tcl_GetIndexFromObj (interp, objv[0], xsltOptions, "option", 0,
                                  &optionIndex) != TCL_OK) {
@@ -2583,14 +2587,24 @@ static int applyXSLT (
         }
     }
     if (objc > 2 || objc < 1) {SetResult (usage); goto applyXSLTCleanUP;}
-    xsltDoc = tcldom_getDocumentFromName (interp, 
-                                          Tcl_GetStringFromObj(objv[0], NULL),
-                                          &errMsg);
-    if (xsltDoc == NULL) {
-        SetResult ( errMsg );
-        goto applyXSLTCleanUP;
+    if (node) {
+        xsltDoc = tcldom_getDocumentFromName (interp, 
+                                              Tcl_GetStringFromObj(objv[0],
+                                                                   NULL),
+                                              &errMsg);
+        if (xsltDoc == NULL) {
+            SetResult ( errMsg );
+            goto applyXSLTCleanUP;
+        }
+    } else {
+        xmlDoc = tcldom_getDocumentFromName (interp, 
+                                              Tcl_GetStringFromObj(objv[0],
+                                                                   NULL),
+                                             &errMsg);
+        node = (domNode *) xmlDoc;
+        xsltDoc = NULL;
     }
-    result = xsltProcess (xsltDoc, node, parameters, 
+    result = xsltProcess (xsltDoc, node, clientData, parameters, 
                           ignoreUndeclaredParameters,
                           tcldom_xpathFuncCallBack,  interp,
                           tcldom_xsltMsgCB, &xsltMsgInfo,
@@ -2620,6 +2634,67 @@ static int applyXSLT (
         Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
     }
     return TCL_ERROR;
+}
+
+/*----------------------------------------------------------------------------
+|   tcldom_XSLTObjCmd
+|
+\---------------------------------------------------------------------------*/
+int tcldom_XSLTObjCmd (
+    ClientData  clientData,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    *CONST objv[]
+)
+{
+    GetTcldomTSD()
+    
+    CheckArgs(2,8,1, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> ?objVar?");
+    objv++;
+    objc--;
+    return applyXSLT (NULL, interp, (void *) clientData, objc, objv);
+}
+
+/*----------------------------------------------------------------------------
+|   convertToXSLTCmd
+|
+\---------------------------------------------------------------------------*/
+static int convertToXSLTCmd (
+    domDocument *doc,
+    Tcl_Interp  *interp,
+    int          setVariable,
+    Tcl_Obj     *var_name
+    )
+{
+    char *errMsg, *objVar, objCmdName[40];
+    ClientData *clientData;
+
+    doc->nodeFlags |= DONT_FREE;
+    clientData = (ClientData *) xsltCompileStylesheet(doc,
+                                                      tcldom_xpathFuncCallBack,
+                                                      interp, 0, &errMsg);
+    if (!clientData) {
+        SetResult (errMsg);
+        if (setVariable) {
+            objVar = Tcl_GetStringFromObj (var_name, NULL);
+            Tcl_UnsetVar (interp, objVar, 0);
+            Tcl_SetVar   (interp, objVar, "", 0);
+        }
+        FREE (errMsg);
+        return TCL_ERROR;
+    }
+    DOC_CMD(objCmdName, doc);
+    Tcl_DeleteCommand ( interp, objCmdName );
+    XSLT_CMD(objCmdName, doc);
+    Tcl_CreateObjCommand (interp, objCmdName, tcldom_XSLTObjCmd, clientData,
+                          xsltFreeStateWrapper);
+    if (setVariable) {
+        objVar = Tcl_GetStringFromObj (var_name, NULL);
+        Tcl_UnsetVar (interp, objVar, 0);
+        Tcl_SetVar   (interp, objVar, objCmdName, 0);
+    }
+    SetResult (objCmdName);
+    return TCL_OK;
 }
 
 /*----------------------------------------------------------------------------
@@ -2811,7 +2886,7 @@ int tcldom_NodeObjCmd (
         case m_xslt:
             CheckArgs(3,9,2, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?");
             objv += 2; objc -= 2;
-            return applyXSLT (node, interp, objc, objv);
+            return applyXSLT (node, interp, NULL, objc, objv);
 
         case m_selectNodes:
             CheckArgs(3,4,2,"xpathQuery");
@@ -2967,52 +3042,14 @@ int tcldom_NodeObjCmd (
             }
             uri = Tcl_GetStringFromObj (objv[2], NULL);
             localName = Tcl_GetStringFromObj (objv[3], NULL);
-            attrs = node->firstAttr;
-            while (attrs) {
-                domSplitQName (attrs->nodeName, prefix, &str);
-                if (strcmp(localName,str)==0) {
-                    ns = domGetNamespaceByIndex(node->ownerDocument, attrs->namespace);
-                    if (strcmp(ns->uri, uri)==0) {
-                        SetResult ( attrs->nodeValue );
-                        return TCL_OK;
-                    }
-                }
-                attrs = attrs->nextSibling;
-            }
+            attrs = domGetAttributeNodeNS (node, uri, localName);
+            if (attrs) {
+                SetResult (attrs->nodeValue);
+                return TCL_OK;
+            } 
             sprintf (tmp, "attribute with localName %80.80s not found!",localName);
             SetResult (tmp);
             return TCL_ERROR;
-
-#if 0
-            uri = Tcl_GetStringFromObj (objv[2], NULL);
-            attr_name = Tcl_GetStringFromObj (objv[3], NULL);
-            domSplitQName ((char*)attr_name, prefix, &localName);
-            ns = domLookupNamespace (node->ownerDocument, prefix, uri);
-            if (ns == NULL) {
-                SetResult ("namespace not found!");
-                return TCL_ERROR;
-            }
-            attrs = node->firstAttr;
-            while (attrs &&
-                   strcmp(attrs->nodeName, attr_name) &&
-                   (attrs->namespace != ns->index)
-            ) {
-                attrs = attrs->nextSibling;
-            }
-            if (attrs) {
-                SetResult ( attrs->nodeValue );
-                return TCL_OK;
-            }
-            if (objc == 5) {
-                SetResult ( Tcl_GetStringFromObj (objv[4], NULL) );
-                return TCL_OK;
-            } else {
-                sprintf (tmp, "attribute %80.80s not found!", attr_name);
-                SetResult ( tmp);
-                return TCL_ERROR;
-            }
-            break;
-#endif
 
         case m_setAttribute:
             if (node->nodeType != ELEMENT_NODE) {
@@ -3602,6 +3639,7 @@ int tcldom_DocObjCmd (
         "createComment",   "createProcessingInstruction",
         "createElementNS", "getDefaultOutputMethod",     "asXML",
         "asHTML",          "getElementsByTagNameNS",     "xslt", 
+        "toXSLTcmd",
 #ifdef TCL_THREADS
         "readlock", "writelock",
 #endif
@@ -3612,7 +3650,8 @@ int tcldom_DocObjCmd (
         m_createElement,    m_createCDATASection,         m_createTextNode,
         m_createComment,    m_createProcessingInstruction,
         m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
-        m_asHTML,           m_getElementsByTagNameNS,     m_xslt
+        m_asHTML,           m_getElementsByTagNameNS,     m_xslt,
+        m_toXSLTcmd
 #ifdef TCL_THREADS
         ,m_readlock, m_writelock
 #endif
@@ -3805,8 +3844,14 @@ int tcldom_DocObjCmd (
         case m_xslt:
             CheckArgs(3,9,2, "?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?");
             objv += 2; objc -= 2;
-            return applyXSLT ((domNode *) doc, interp, objc, objv);
+            return applyXSLT ((domNode *) doc, interp, NULL, objc, objv);
 
+
+        case m_toXSLTcmd:
+            CheckArgs(2,3,2, "?objVar?");
+            return convertToXSLTCmd (doc, interp, (objc == 3),
+                                     (objc == 3) ? objv[2] : NULL);
+            
         TDomThreaded(
         case m_writelock:
             CheckArgs(3,3,2,"script");

@@ -30,6 +30,11 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2003/01/11 00:19:02  rolf
+|   Added conversion of XSLT stylesheet DOM trees to 'cached' xslt cmds
+|   (new domDoc method toXSLTcmd). Works for non threaded tcl; needs
+|   additional work for multi-threaded tcl and documentation.
+|
 |   Revision 1.4  2002/12/27 23:40:10  rolf
 |   The xslt method now understands also the options
 |   -ignoreUndeclaredParameters and -xsltmessagecmd.
@@ -71,6 +76,7 @@ typedef void (*xsltMsgCB) (void *clientData, char *str,
 \---------------------------------------------------------------------------*/
 int xsltProcess (domDocument       * xsltDoc,
                  domNode           * xmlNode,
+                 void              * xsltCmdData,
                  char             ** parameters,
                  int                 ignoreUndeclaredParameters,
                  xpathFuncCallback   funcCB,
@@ -80,6 +86,16 @@ int xsltProcess (domDocument       * xsltDoc,
                  char             ** errMsg,
                  domDocument      ** resultDoc
                 );
+
+void * xsltCompileStylesheet (
+    domDocument       * xsltDoc,
+    xpathFuncCallback   funcCB,
+    void              * xpathFuncClientData,
+    int                 guardXSLTTree,
+    char             ** errMsg
+    );
+
+void xsltFreeStateWrapper (void *clientData);
 
 void sortByDocOrder (xpathResultSet *rs);
 
