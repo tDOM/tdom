@@ -113,8 +113,8 @@
 #ifndef TCL_THREADS
   extern unsigned int domUniqueNodeNr;
   extern unsigned int domUniqueDocNr;
-  extern Tcl_HashTable tagNames;
-  extern Tcl_HashTable attrNames;
+  extern Tcl_HashTable tdom_tagNames;
+  extern Tcl_HashTable tdom_attrNames;
 # define TDomNotThreaded(x) x
 # define TDomThreaded(x)
 # define HASHTAB(doc,tab)   tab
@@ -526,8 +526,8 @@ typedef struct domDocument {
     char             *extResolver;
     domDocInfo       *doctype;
     TDomThreaded (
-        Tcl_HashTable tagNames;        /* Names of tags found in doc */
-        Tcl_HashTable attrNames;       /* Names of tag attributes */
+        Tcl_HashTable tdom_tagNames;   /* Names of tags found in doc */
+        Tcl_HashTable tdom_attrNames;  /* Names of tag attributes */
         unsigned int  refCount;        /* # of object commands attached */
         struct _domlock *lock;          /* Lock for this document */
     )
