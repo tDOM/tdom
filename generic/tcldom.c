@@ -78,18 +78,21 @@
 
 #define MAX_REWRITE_ARGS 50
 
-#define GetObjResult(in) Tcl_IsShared(Tcl_GetObjResult(in)) ? \
-                     Tcl_DuplicateObj(Tcl_GetObjResult(in)) : \
-                     Tcl_GetObjResult(in)
+#define SetResult(str) Tcl_ResetResult(interp); \
+                     Tcl_SetStringObj(Tcl_GetObjResult(interp), (str), -1)
 
-#define SetResult(str) \
-                     (Tcl_SetStringObj (GetObjResult(interp), (str), -1))
+#define SetIntResult(i) Tcl_ResetResult(interp); \
+                     Tcl_SetIntObj(Tcl_GetObjResult(interp), (i))
+                     
+#define SetDoubleResult(d) Tcl_ResetResult(interp); \
+                     Tcl_SetDoubleObj(Tcl_GetObjResult(interp), (d))
+
 #define AppendResult(str) \
-                     (Tcl_AppendToObj (GetObjResult(interp), (str), -1))
-#define SetIntResult(i) \
-                     (Tcl_SetIntObj (GetObjResult(interp), (i) ))
-#define SetDoubleResult(d) \
-                     (Tcl_SetDoubleObj (GetObjResult(interp), (d) ))
+                     if (!Tcl_IsShared(Tcl_GetObjResult(interp))) \
+                         Tcl_AppendToObj(Tcl_GetObjResult(interp),(str),-1); \
+                     else \
+                         Tcl_SetObjResult(interp, Tcl_NewStringObj((str),-1));
+
 #define CheckArgs(min,max,n,msg) \
                      if ((objc < min) || (objc >max)) { \
                          Tcl_WrongNumArgs(interp, n, objv, msg); \
