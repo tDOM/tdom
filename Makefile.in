@@ -168,10 +168,14 @@ TCL_SRC_DIR	= @TCL_SRC_DIR@
 
 #========================================================================
 # This is needed so we can link the custom shell
+# For runtime linker, you can extend/modify the LIB_RUNTIME_DIR to point
+# to a comma-separated list of directories for looking-up shared libs.
 #========================================================================
 
 TCL_LIBS	= @TCL_LIBS@
 TCL_LIB_SPEC	= @TCL_LIB_SPEC@
+LIB_RUNTIME_DIR	= $(libdir)
+TDOM_LD_SEARCH_FLAGS = @TDOM_LD_SEARCH_FLAGS@
 
 #========================================================================
 # TCLLIBPATH seeds the auto_path in Tcl's init.tcl so we can test our
@@ -225,10 +229,11 @@ all: binaries libraries doc
 #========================================================================
 
 $(TDOMSHELL): $(tdomsh_OBJECTS) $(tdom_OBJECTS)
-	if test "x$(AOL_DIR)" = "x"; then \
-	    $(COMPILE) -c `@CYGPATH@ tclAppInit.c`; \
-	      $(CC) @LDFLAGS@ tclAppInit.$(OBJEXT) $(tdom_OBJECTS) \
-	          $(TCL_LIBS) $(TCL_LIB_SPEC) $(LIBS) -o $@; \
+	if test "x$(AOL_DIR)" = "x"; then\
+	    $(COMPILE) -c `@CYGPATH@ tclAppInit.c`;\
+	      $(CC) @LDFLAGS@ tclAppInit.$(OBJEXT) $(tdom_OBJECTS)\
+	        $(TCL_LIBS) $(TCL_LIB_SPEC) $(LIBS)\
+	          $(TDOM_LD_SEARCH_FLAGS) -o $@;\
 	fi
 
 #========================================================================
