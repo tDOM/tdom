@@ -2386,11 +2386,18 @@ domSetDocument (
 {
     domNode *child;
     domNS   *ns, *orgns = NULL;
+    domDocument *originalDoc;
+    TDomThreaded (
+        Tcl_HashEntry *h;
+        int hnew;
+        domAttrNode *attr;
+    )
 
     if (node->nodeType == ELEMENT_NODE) {
         if (node->namespace) {
             orgns = node->ownerDocument->namespaces[node->namespace-1];
         }
+        originalDoc = node->ownerDocument;
         node->ownerDocument = doc;
         if (node->namespace) {
             ns = domLookupPrefix (node, orgns->prefix);
@@ -2413,6 +2420,17 @@ domSetDocument (
     DBG( fprintf(stderr, "domSetDocument node%s ", node->nodeName);
          __dbgAttr(node->firstAttr);
          fprintf(stderr, "\n");
+    )
+    TDomThreaded (
+        if (originalDoc != doc && node->nodeType == ELEMENT_NODE) {
+            /* Make hash table entries as necessary for tagNames and attrNames. */
+            h = Tcl_CreateHashEntry(&doc->tagNames, node->nodeName, &hnew);
+            node->nodeName = (domString) &(h->key);
+            for (attr = node->firstAttr; attr != NULL; attr = attr->nextSibling) {
+                h = Tcl_CreateHashEntry(&doc->attrNames, attr->nodeName, &hnew);
+                attr->nodeName = (domString) &(h->key);
+            }
+        }
     )
     if (node->nodeType == ELEMENT_NODE) {
         child = node->firstChild;
