@@ -1,3 +1,18 @@
+2004-09-21  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domDoc.*: Add documentation for 'selectNodes' method.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxpath.c
+        * generic/domxpath.h
+        * generic/domxslt.c
+
+        * generic/tcldom.c: Added the '-namespaces' option to the
+          selectNdoes method. Not resolved namespace prefixes within
+          the xpath expression now raises an error.
+          *** POTENTIAL INCOMPATIBILITY *** 
+
 2004-09-13  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Corrected a typo in an error msg.

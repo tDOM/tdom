@@ -1,6 +1,19 @@
+2004-09-21  Rolf Ade  <rolf@pointsman.de>
+
+        Added the '-namespaces' option to the selectNdoes
+        method. Not resolved namespace prefixes within the xpath
+        expression now raises an error.
+        *** POTENTIAL INCOMPATIBILITY ***
+
 2004-08-20  Rolf Ade  <rolf@pointsman.pointsman.de>
 
         Update to expat 1.95.8.        
+
+2004-08-19  Rolf Ade  <rolf@pointsman.de>
+
+        Made tDOM work out of the box on 64-bit systems like Itanium 2
+        (again) (though --disable-tdomalloc configure option at build
+        time is still needed).
 
 --- Release 0.8.0, 11. Aug. 2004 --- See ChangeLog for details ---
 
