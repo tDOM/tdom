@@ -1,5 +1,9 @@
 2003-02-21  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/domxslt.c: Bug fixes: Return after detecting the
+          error (xsltPathFuncs), ensure that savedLastNode is always
+          set right (ExecAction, case copy). Editorial changes.
+
         * configure.in
         * Makefile.in
         * configure
