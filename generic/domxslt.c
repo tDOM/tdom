@@ -5833,6 +5833,7 @@ static int processTopLevelVars (
             else    var->uri = NULL;
             var->node   = topLevelVar->node;
             var->rs     = rs;
+            var->active = 1;
 
             i += 2;
         }
