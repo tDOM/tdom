@@ -297,27 +297,27 @@ cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
 iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.
 .TP
 \&\fB\fBdom\fP \fBcreateNodeCmd\fP \fI(element|comment|text|cdata|pi)Node\fB \fIcommandName\fB
-\&\fRThis method creates Tcl commands, which creates tDOM nodes, if
-invoked. However this commands are only avaliable inside a script given to the
-domNode method \fIappendFromScript\fR. If a command, created with
-\&\fIcreateNodeCmd\fR is invoked in any other context, it returns error.  The
-created command \fIcommandName\fR replaces any existend command or procedure
-there may have been by that name. If the \fIcommandName\fR includes any
-namespace qualifiers, the command is created in the specified namespace.
+\&\fRThis method creates Tcl commands, which in turn create tDOM nodes.
+Tcl commands created by this command are only avaliable inside a script given to the
+domNode method \fIappendFromScript\fR. If a command created with
+\&\fIcreateNodeCmd\fR is invoked in any other context, it will return error. The
+created command \fIcommandName\fR replaces any existing command or procedure
+with that name. If the \fIcommandName\fR includes any namespace qualifiers,
+it is created in the specified namespace.
 .RS
 .PP
-If such a command is invoked inside a script, which was given as argument to
-the domNode method \fIappendFromScript\fR, the command creates a new node and
-appends this node at the end of the childlist of the invoking element
-node. Each command creates always the same type of node. Which type of node is
-created by the command is determined by the the first argument to the
-\&\fIcreateNodeCmd\fR. The synax of the created command depends on type of node,
-that it creates.
+If such command is invoked inside a script given as argument to
+the domNode method \fIappendFromScript\fR, it creates a new node and
+appends this node at the end of the child list of the invoking element
+node. Each command creates always the same type of node. Which type of
+node is created by the command is determined by the first argument to the
+\&\fIcreateNodeCmd\fR. The syntax of the created command depends on the
+type of the node it creates.
 .PP
 If the first argument of the method is \fIelementNode\fR, the created
-command will create an element node, if invoked. The tag name of the created
-node is \fIcommandName\fR without namespace qualifiers, if there any. The
-syntax of the created command is:
+command will create an element node. The tag name of the created
+node is \fIcommandName\fR without namespace qualifiers. The syntax of the
+created command is:
 
 
 
@@ -329,23 +329,22 @@ syntax of the created command is:
 
 .CE
 .PP
-The command syntax allows three different ways, to specify the attributes of
-the resulting element. They could be specified with \fIattributeName
-attributeValue\fR argument pairs, or in an "option style" way with
+The command syntax allows three different ways to specify the attributes of
+the resulting element. These could be specified with \fIattributeName
+attributeValue\fR argument pairs, in an "option style" way with
 \&\fI-attriubteName attributeValue\fR argument pairs (the '-' character is only
-syntactical sugar and will be stripped) or with a tcl list, which elements are
-interpreted successive as attribute name and the according attribute value. The
-attribute name elements in the list may have a leading '-' character, which
-will be stripped.
+syntactical sugar and will be stripped off) or as a Tcl list with elements
+interpreted as attribute name and the corresponding attribute value.
+The attribute name elements in the list may have a leading '-' character, which
+will be stripped off.
 .PP
-Every \fIelementNodeCmd\fR accepts an optional tcl script as last
-argument. This script is evaluated as recursive \fIappendFromScript\fR script,
-with the node, created by the \fIelementNodeCmd\fR as parent of the nodes,
-created with the script. This allows, to create an element node and its content
-at once.
+Every \fIelementNodeCmd\fR accepts an optional Tcl script as last
+argument. This script is evaluated as recursive \fIappendFromScript\fR script
+with the node created by the \fIelementNodeCmd\fR as parent of all nodes
+created by the script.
 .PP
-If the first argument of the method is \fItextNode\fR, the command will create a text node, if invoked. The syntax of the created command
-is
+If the first argument of the method is \fItextNode\fR, the command will create
+a text node. The syntax of the created command is:
 
 
 
@@ -355,14 +354,13 @@ is
 
 .CE
 .PP
-If the optional flag \fI-disableOutputEscaping\fR is given then the
+If the optional flag \fI-disableOutputEscaping\fR is given, the
 escaping of the ampersand character (&) and the left angle bracket (<)
-inside the data is disabled, if the text node is serialized. You should not use
-this flag until you really know, what you do.
+inside the data is disabled. You should use this flag carefully.
 .PP
 If the first argument of the method is \fItextNode\fR, or \fIcdataNode\fR,
-the command will create accordingly a comment node or CDATA section node, if
-invoked. The syntax of the created command is
+the command will create an comment node or CDATA section node. The syntax of
+the created command is:
 
 
 
@@ -373,8 +371,8 @@ invoked. The syntax of the created command is
 .CE
 .PP
 If the first argument of the method is \fIpiNode\fR, the command will
-create a processing instruction node, if invoked. The syntax of the created
-command is
+create a processing instruction node. The syntax of the created
+command is:
 
 
 
