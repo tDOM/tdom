@@ -665,7 +665,7 @@ static XPathTokens xpathLexer (
                                        return NULL;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
-                                   while (xpath[i] && isNCNameChar)
+                                   while (xpath[i] && isNCNameChar (&xpath[i]))
                                        i += UTF8_CHAR_LEN (xpath[i]);
                                    save = xpath[i];
                                    xpath[i] = '\0';
@@ -3150,8 +3150,8 @@ static int xpathEvalStep (
 
     case UnaryMinus:
         xpathRSInit (&leftResult);
-        rc = xpathEvalStep (step->child, ctxNode, exprContext, position,
-                            nodeList, cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext,
+                             position, docOrder,cbs, &leftResult, errMsg);
         CHECK_RC;
         rsSetReal (result , -1 * xpathFuncNumber (&leftResult, &NaN));
         xpathRSFree (&leftResult);
