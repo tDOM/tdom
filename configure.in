@@ -137,11 +137,11 @@ TEA_PUBLIC_TCL_HEADERS
 
 if test "${TEA_PLATFORM}" = "windows" ; then
     AC_DEFINE(BUILD_tdom)
-    CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
+    CLEANFILES="pkgIndex.tcl tdomConfig.sh *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
     EXTRA_SOURCES='$(WIN_SOURCES)'
     VERSION=${MAJOR_VERSION}${MINOR_VERSION}${PATCHLEVEL}
 else
-    CLEANFILES="pkgIndex.tcl"
+    CLEANFILES="pkgIndex.tcl tdomConfig.sh"
     EXTRA_SOURCES='$(UNIX_SOURCES)'
     VERSION=${MAJOR_VERSION}.${MINOR_VERSION}.${PATCHLEVEL}
 fi
