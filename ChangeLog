@@ -1,4 +1,7 @@
 2002-11-27  Rolf Ade  <rolf@pointsman.de>
+         
+        * win/makefile805.vc: Added this file. VC++ 6.0 makefile to
+          compile against tcl8.0.5, contributed by Sumit Pokhariyal.
 
         * generic/domxpath.c: FQ names with a localname equal to a
           XPath 'keyword' (for example ns1:div) are now recognized as
