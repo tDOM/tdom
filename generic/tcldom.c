@@ -249,6 +249,7 @@ static char doc_usage[] =
     "    delete                                  \n"
     "    xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
     "    toXSLTcmd                               \n"
+    "    cdataSectionElements (?URI:?localname|*) ?boolean?\n"
     "    normalize ?-forXPath?                   \n"
     "    nodeType                                \n"
     "    hasChildNodes                           \n"
@@ -2566,13 +2567,17 @@ void tcldom_treeAsXML (
     int         doIndent,
     Tcl_Channel chan,
     int         escapeNonASCII,
-    int         doctypeDeclaration
+    int         doctypeDeclaration,
+    int         cdataChild
 )
 {
-    domAttrNode *attrs;
-    domNode     *child;
-    domDocument *doc;
-    int          first, hasElements, i;
+    domAttrNode   *attrs;
+    domNode       *child;
+    domDocument   *doc;
+    int            first, hasElements, i;
+    char           prefix[MAX_PREFIX_LEN], *localName, *start, *p;
+    Tcl_HashEntry *h;
+    Tcl_DString    dStr;
 
     if (node->nodeType == DOCUMENT_NODE) {
         doc = (domDocument*) node;
@@ -2606,21 +2611,45 @@ void tcldom_treeAsXML (
         child = doc->rootNode->firstChild;
         while (child) {
             tcldom_treeAsXML(xmlString, child, indent, level, doIndent, chan,
-                             escapeNonASCII, doctypeDeclaration);
+                             escapeNonASCII, doctypeDeclaration, 0);
             child = child->nextSibling;
         }
         return;
     }
 
     if (node->nodeType == TEXT_NODE) {
-        if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
-            writeChars(xmlString, chan, ((domTextNode*)node)->nodeValue,
-                       ((domTextNode*)node)->valueLength);
+        if (cdataChild) {
+            writeChars(xmlString, chan, "<![CDATA[", 9);
+            i = 0;
+            start = p = ((domTextNode*)node)->nodeValue;
+            while (i < ((domTextNode*)node)->valueLength) {
+                if (*p == ']') {
+                    p++; i++;;
+                    if (i >= ((domTextNode*)node)->valueLength) break;
+                    if (*p == ']') {
+                        p++; i++;;
+                        if (i >= ((domTextNode*)node)->valueLength) break;
+                        if (*p == '>') {
+                            writeChars(xmlString, chan, start, p-start);
+                            writeChars(xmlString, chan, "]]><![CDATA[>", 13);
+                            start = p+1;
+                        }
+                    }
+                }
+                p++; i++;;
+            }
+            writeChars(xmlString, chan, start, p-start);
+            writeChars(xmlString, chan, "]]>", 3);
         } else {
-            tcldom_AppendEscaped(xmlString, chan,
-                                 ((domTextNode*)node)->nodeValue,
-                                 ((domTextNode*)node)->valueLength, 0,
-                                 escapeNonASCII, 0);
+            if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
+                writeChars(xmlString, chan, ((domTextNode*)node)->nodeValue,
+                           ((domTextNode*)node)->valueLength);
+            } else {
+                tcldom_AppendEscaped(xmlString, chan,
+                                     ((domTextNode*)node)->nodeValue,
+                                     ((domTextNode*)node)->valueLength, 0,
+                                     escapeNonASCII, 0);
+            }
         }
         return;
     }
@@ -2681,6 +2710,28 @@ void tcldom_treeAsXML (
     doIndent    = 1;
 
     if (node->nodeType == ELEMENT_NODE) {
+        cdataChild = 0;
+        if (node->ownerDocument->doctype
+            && node->ownerDocument->doctype->cdataSectionElements) {
+            if (node->namespace) {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, domNamespaceURI(node), -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+                domSplitQName (node->nodeName, prefix, &localName);
+                Tcl_DStringAppend (&dStr, localName, -1);
+                h = Tcl_FindHashEntry (
+                    node->ownerDocument->doctype->cdataSectionElements,
+                    Tcl_DStringValue (&dStr));
+                Tcl_DStringFree (&dStr);
+            } else {
+                h = Tcl_FindHashEntry (
+                    node->ownerDocument->doctype->cdataSectionElements,
+                    node->nodeName);
+            }
+            if (h) {
+                cdataChild = 1;
+            }
+        }
         child = node->firstChild;
         while (child != NULL) {
 
@@ -2697,7 +2748,8 @@ void tcldom_treeAsXML (
             }
             first = 0;
             tcldom_treeAsXML(xmlString, child, indent, level+1, doIndent,
-                              chan, escapeNonASCII, doctypeDeclaration);
+                             chan, escapeNonASCII, doctypeDeclaration,
+                             cdataChild);
             doIndent = 0;
             if (  (child->nodeType == ELEMENT_NODE)
                 ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )
@@ -2775,11 +2827,13 @@ static int serializeAsXML (
     Tcl_Obj    *CONST objv[]
 )
 {
-    char       *channelId;
-    int         indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
-    int         optionIndex;
-    Tcl_Obj    *resultPtr;
-    Tcl_Channel chan = (Tcl_Channel) NULL;
+    char          *channelId, prefix[MAX_PREFIX_LEN], *localName;
+    int            indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
+    int            optionIndex, cdataChild;
+    Tcl_Obj       *resultPtr;
+    Tcl_Channel    chan = (Tcl_Channel) NULL;
+    Tcl_HashEntry *h;
+    Tcl_DString    dStr;
 
     static CONST84 char *asXMLOptions[] = {
         "-indent", "-channel", "-escapeNonASCII", "-doctypeDeclaration",
@@ -2873,8 +2927,31 @@ static int serializeAsXML (
     if (indent < -1) indent = -1;
 
     resultPtr = Tcl_NewStringObj("", 0);
+    cdataChild = 0;
+    if (node->nodeType == ELEMENT_NODE
+        && node->ownerDocument->doctype 
+        && node->ownerDocument->doctype->cdataSectionElements) {
+        if (node->namespace) {
+            Tcl_DStringInit (&dStr);
+            Tcl_DStringAppend (&dStr, domNamespaceURI(node), -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+            domSplitQName (node->nodeName, prefix, &localName);
+            Tcl_DStringAppend (&dStr, localName, -1);
+            h = Tcl_FindHashEntry (
+                node->ownerDocument->doctype->cdataSectionElements,
+                Tcl_DStringValue (&dStr));
+            Tcl_DStringFree (&dStr);
+        } else {
+            h = Tcl_FindHashEntry (
+                node->ownerDocument->doctype->cdataSectionElements,
+                node->nodeName);
+        }
+        if (h) {
+            cdataChild = 1;
+        }
+    }
     tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan, escapeNonASCII,
-                     doctypeDeclaration);
+                     doctypeDeclaration, cdataChild);
     Tcl_SetObjResult(interp, resultPtr);
     return TCL_OK;
 }
@@ -2976,6 +3053,97 @@ static int serializeAsHTML (
     Tcl_DecrRefCount(resultPtr);
     return TCL_OK;
 }
+
+/*----------------------------------------------------------------------------
+|   cdataSectionElements
+|
+\---------------------------------------------------------------------------*/
+static int cdataSectionElements (
+    domDocument *doc,
+    Tcl_Interp  *interp,
+    int          objc,
+    Tcl_Obj     *CONST objv[] 
+    )
+{
+    int result, hnew;
+    Tcl_Obj *resultPtr,*namePtr;
+    Tcl_HashEntry *h;
+    Tcl_HashSearch search;
+    
+    CheckArgs (3,4,0, "<domDoc> cdataSectionElements ?URI:?localname "
+               "?boolean?");
+    if (objc == 3) {
+        if (Tcl_GetString(objv[2])[0] == '*' 
+            && Tcl_GetString(objv[2])[1] == '\0') {
+            Tcl_ResetResult (interp);
+            if (doc->doctype && doc->doctype->cdataSectionElements) {
+                resultPtr = Tcl_GetObjResult (interp);
+                for (h = Tcl_FirstHashEntry (
+                         doc->doctype->cdataSectionElements, &search);
+                     h != NULL;
+                     h = Tcl_NextHashEntry(&search)) {
+                    namePtr = Tcl_NewStringObj (
+                        Tcl_GetHashKey (doc->doctype->cdataSectionElements,
+                                        h), -1);
+                    result = Tcl_ListObjAppendElement (interp, resultPtr, 
+                                                       namePtr);
+                    if (result != TCL_OK) {
+                        Tcl_DecrRefCount(namePtr);
+                        return result;
+                    }
+                }
+            }
+            return TCL_OK;
+        }
+        if (!doc->doctype || !doc->doctype->cdataSectionElements) {
+            SetBooleanResult (0);
+        } else {
+            if (Tcl_FindHashEntry (doc->doctype->cdataSectionElements,
+                                   Tcl_GetString (objv[2]))) {
+                SetBooleanResult (1);
+            } else {
+                SetBooleanResult (0);
+            }
+        }
+    } else {
+        if (Tcl_GetBooleanFromObj (interp, objv[3], &result) 
+            != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (result) {
+            if (!doc->doctype) {
+                doc->doctype = (domDocInfo *)MALLOC(sizeof(domDocInfo));
+                memset(doc->doctype, 0,(sizeof(domDocInfo)));
+            }
+            if (!doc->doctype->cdataSectionElements) {
+                doc->doctype->cdataSectionElements =
+                    (Tcl_HashTable *)MALLOC(sizeof(Tcl_HashTable));
+                Tcl_InitHashTable (doc->doctype->cdataSectionElements,
+                                   TCL_STRING_KEYS);
+            }
+            Tcl_CreateHashEntry (doc->doctype->cdataSectionElements,
+                                 Tcl_GetString (objv[2]), &hnew);
+        } else {
+            if (doc->doctype && doc->doctype->cdataSectionElements) {
+                h = Tcl_FindHashEntry (doc->doctype->cdataSectionElements,
+                                       Tcl_GetString (objv[2]));
+                if (h) {
+                    Tcl_DeleteHashEntry (h);
+                    if (!doc->doctype->cdataSectionElements->numEntries) {
+                        Tcl_DeleteHashTable (
+                            doc->doctype->cdataSectionElements
+                            );
+                        FREE (doc->doctype->cdataSectionElements);
+                        doc->doctype->cdataSectionElements = NULL;
+                    }
+                }
+            }
+        }
+        SetBooleanResult(result);
+    }
+    return TCL_OK;
+}
+
 
 /*----------------------------------------------------------------------------
 |   applyXSLT
@@ -4279,6 +4447,7 @@ int tcldom_DocObjCmd (
         "toXSLTcmd",       "asText",                     "normalize",
         "indent",          "omit-xml-declaration",       "encoding",
         "standalone",      "mediaType",                  "nodeType",
+        "cdataSectionElements",
         "getElementById",  "firstChild",                 "lastChild",
         "appendChild",     "removeChild",                "hasChildNodes",
         "childNodes",      "ownerDocument",              "insertBefore",
@@ -4300,6 +4469,7 @@ int tcldom_DocObjCmd (
         m_toXSLTcmd,        m_asText,                     m_normalize,
         m_indent,           m_omitXMLDeclaration,         m_encoding,
         m_standalone,       m_mediaType,                  m_nodeType,
+        m_cdataSectionElements,
         /* The following methods will be dispatched to tcldom_NodeObjCmd */
         m_getElementById,   m_firstChild,                 m_lastChild,
         m_appendChild,      m_removeChild,                m_hasChildNodes,
@@ -4697,6 +4867,9 @@ int tcldom_DocObjCmd (
             CheckArgs (2,2,2, "");
             SetResult("DOCUMENT_NODE");
             return TCL_OK;
+
+        case m_cdataSectionElements:
+            return cdataSectionElements (doc, interp, objc, objv);
 
         case m_appendChild:
         case m_removeChild:
