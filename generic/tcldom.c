@@ -1309,7 +1309,7 @@ int tcldom_xpathFuncCallBack (
             } else {
                 *errMsg = (char*)MALLOC (80 + strlen (typeStr)
                                          + strlen (functionName));
-                strcpy (*errMsg, "Unkown type of return value \"");
+                strcpy (*errMsg, "Unknown type of return value \"");
                 strcat (*errMsg, typeStr);
                 strcat (*errMsg, "\" from tcl coded XPath function \"");
                 strcat (*errMsg, functionName);
@@ -1372,8 +1372,11 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
+    if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
+        domRenumberTree (node->ownerDocument->rootNode);
+        node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+    }
     rc = xpathEval (node, node, xpathQuery, &cbs, &errMsg, &rs);
-    /*rc = xpathEval (node, xpathQuery, &cbs, &errMsg, &rs);*/
 
     if (rc != XPATH_OK) {
         xpathRSFree( &rs );
@@ -2443,7 +2446,7 @@ static int applyXSLT (
     )
 {
     char        *str, **parameters, *errMsg;
-    Tcl_Obj     *objPtr, *localListPtr;
+    Tcl_Obj     *objPtr, *localListPtr = (Tcl_Obj *)NULL;
     int          i, result, length;
     domDocument *xsltDoc, *resultDoc;
 
@@ -2512,17 +2515,15 @@ int tcldom_NodeObjCmd (
 {
     GetTcldomTSD()
     domNode     *node, *child, *refChild, *oldChild;
-    domDocument *xsltDoc, *resultDoc;
     domNS       *ns;
     domAttrNode *attrs;
     domException exception;
     char         tmp[200], objCmdName[40], prefix[MAX_PREFIX_LEN],
                 *method, *nodeName, *str, *localName,
-                *attr_name, *attr_val, *filter, *errMsg, *uri,
-               **parameters;
+                *attr_name, *attr_val, *filter, *errMsg, *uri;
     int          result, length, methodIndex, i, line, column;
     int          nsIndex, bool;
-    Tcl_Obj     *namePtr, *resultPtr, *objPtr, *localListPtr;
+    Tcl_Obj     *namePtr, *resultPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
     Tcl_HashEntry *entryPtr;
@@ -3655,7 +3656,7 @@ int tcldom_DocObjCmd (
             if (doc->nodeFlags & OUTPUT_DEFAULT_TEXT) {
                 SetResult ("text");
             } else
-            if (doc->nodeFlags & OUTPUT_DEFAULT_UNKOWN) {
+            if (doc->nodeFlags & OUTPUT_DEFAULT_UNKNOWN) {
                 SetResult ("unknown");
             } else {
                 SetResult ("none");

@@ -393,8 +393,9 @@ typedef int domDocFlags;
 #define OUTPUT_DEFAULT_XML        1
 #define OUTPUT_DEFAULT_HTML       2
 #define OUTPUT_DEFAULT_TEXT       4
-#define OUTPUT_DEFAULT_UNKOWN     8
+#define OUTPUT_DEFAULT_UNKNOWN    8
 #define USE_8_BIT_ENCODING       16
+#define NEEDS_RENUMBERING        32
 
 /*--------------------------------------------------------------------------
 |   a index to the namespace records
@@ -716,6 +717,7 @@ int            domIsNCNAME (char *name);
 int            domIsChar (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
+void           domRenumberTree (domNode *node);
 
 #ifdef TCL_THREADS
 void           domLocksLock(domlock *dl, int how);
