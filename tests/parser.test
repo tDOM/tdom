@@ -251,6 +251,11 @@ test parser-5.1 {parse channel input} {
     list $::count
 } {42}
 
+test parser-6.1 {parser create syntax check} {
+    set result [catch {set parser [expat -paramentityparsing wrong]} errMsg]
+    lappend result $errMsg
+} {1 {bad value "wrong": must be always, never, or notstandalone}}
+
 
 foreach parser [info commands xmlparser*] {
     $parser free
