@@ -28,6 +28,10 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/05/16 13:16:00  rolf
+|   There's something wrong, with the header files (well, at least VC++6.0
+|   thinks so). Seems, it works in this include order.
+|
 |   Revision 1.3  2002/05/16 12:03:30  rolf
 |   Corrected tdom stubs table export.
 |
@@ -50,10 +54,10 @@
 |   Includes
 |
 \---------------------------------------------------------------------------*/
+#include <tdom.h>
 #include <tcl.h>
 #include <dom.h>
 #include <tcldom.h>
-#include <tdom.h>
 
 extern TdomStubs tdomStubs;
 
