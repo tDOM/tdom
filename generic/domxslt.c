@@ -3339,6 +3339,7 @@ static int ExecAction (
                     n = domAppendNewElementNode(xs->lastNode, 
                                                 currentNode->nodeName,
                                                 domNamespaceURI(currentNode) );
+                    savedLastNode = xs->lastNode;
                     xs->lastNode = n;
                     str = getAttr(actionNode, "use-attribute-sets",
                               a_useAttributeSets);
@@ -3390,6 +3391,7 @@ static int ExecAction (
                                  actionNode->firstChild, errMsg);
                 xsltPopVarFrame (xs);
                 CHECK_RC;
+                xs->lastNode = savedLastNode;
             }
             break;
             
@@ -3456,7 +3458,10 @@ static int ExecAction (
             rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                     str, &str2, errMsg);
             CHECK_RC;
-                
+            if (!domIsNAME (str2)) {
+                reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                return -1;
+            }
             nsStr = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
@@ -3465,6 +3470,10 @@ static int ExecAction (
             } else {
                 domSplitQName (str2, prefix, &localName);
                 if (prefix[0] != '\0') {
+                    if (!domIsNCNAME (localName)) {
+                        reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                        return -1;
+                    }
                     ns = domLookupPrefix (actionNode, prefix);
                     if (ns) nsStr = ns->uri;
                     else {
@@ -4280,7 +4289,6 @@ parseList (
             excludeNS->next = docData->excludeNS;
             docData->excludeNS = excludeNS;
             if (strcmp (start, "#default")==0) {
-                fprintf (stderr, "exclude default namespace\n");
                 ns = domLookupPrefix (xsltRoot, "");
                 if (!ns) {
                     *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
@@ -4290,7 +4298,6 @@ parseList (
             } else {
                 ns = domLookupPrefix (xsltRoot, start);
                 if (!ns) {
-                    fprintf (stderr, "not defined prefix %s\n", start);
                     *errMsg = strdup ("All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.");
                     return -1;
                 }

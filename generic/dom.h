@@ -29,6 +29,12 @@
 |
 |
 |   $Log$
+|   Revision 1.9  2002/04/28 22:27:11  rolf
+|   Improved xsl:elements: non QNAME name as element name is detected
+|   now. Bug Fix in domSetAttributeNS(). Small improvement of domCopyTo():
+|   don't copy namespace attribute if it isn't necessary. Bug fix for
+|   xsl:copy.
+|
 |   Revision 1.8  2002/04/26 01:14:44  rolf
 |   Improved namespace support. New domCopyTo() for XSLT. Little
 |   improvement of xpathGetPrio().
@@ -159,7 +165,7 @@
   
 #endif
 
-#define XML_NAMESPACE (const char*) "http://www.w3.org/XML/1998/namespace" 
+#define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace" 
 
 #if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0) || TCL_MAJOR_VERSION < 8 
 #define TclOnly8Bits 1
@@ -693,7 +699,9 @@ int            domXPointerXSibling (domNode * node, int forward_mode, int all, i
 char *         findBaseURI (domNode *node);
 
 void           tcldom_tolower (char *str, char *str_out, int  len);
-
+int            domIsNAME (char *name);
+int            domIsNCNAME (char *name);
+void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 
 /*---------------------------------------------------------------------------
 |   coercion routines for calling from C++
