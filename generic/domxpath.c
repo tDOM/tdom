@@ -3518,7 +3518,6 @@ static int xpathEvalStep (
     domAttrNode     *attr;
     domNS           *ns;
     int              savedDocOrder, predLimit;
-    unsigned int     leftNodeNr, rightNodeNr;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;

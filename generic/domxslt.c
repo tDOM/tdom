@@ -1807,8 +1807,8 @@ static void sortNodeSetByNodeNumber(
     int      n
 )
 {
-    domNode *tmp, *nrnodea, *nrnodeb;
     int i, j, ln, rn;
+    domNode *tmp;
 
     while (n > 1) {
         tmp = nodes[0]; nodes[0] = nodes[n/2]; nodes[n/2] = tmp;
@@ -4755,7 +4755,8 @@ static int ExecAction (
             return 0;
 
         case text:
-            str = getAttr(actionNode, "disable-output-escaping", a_disableOutputEscaping);
+            str = getAttr(actionNode, "disable-output-escaping",
+                          a_disableOutputEscaping);
             if (str) {
                 if (strcmp (str, "yes")==0) disableEsc = 1;
             }
@@ -4769,10 +4770,12 @@ static int ExecAction (
 
         case valueOf:
             if (actionNode->firstChild) {
-                reportError (actionNode, "xsl:value-of has to be empty.", errMsg);
+                reportError (actionNode, "xsl:value-of has to be empty.",
+                             errMsg);
                 return -1;
             }
-            str = getAttr(actionNode, "disable-output-escaping", a_disableOutputEscaping);
+            str = getAttr(actionNode, "disable-output-escaping",
+                          a_disableOutputEscaping);
             if (str) {
                 if (strcmp (str, "yes")==0) disableEsc = 1;
             }
@@ -7041,7 +7044,7 @@ int xsltProcess (
         xmlNode->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
     }
 
-    xs->resultDoc           = domCreateDoc();
+    xs->resultDoc           = domCreateDoc(NULL, 0);
     if (xs->doctype.systemId) {
         xs->resultDoc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
         memset (xs->resultDoc->doctype, 0, (sizeof (domDoctype)));
