@@ -35,6 +35,7 @@
 #    dom-32.*: asText
 #    dom-33.*: insertBeforeFromScript
 #    dom-34.*: getBaseURI
+#    dom-35.*: objCmd traces
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003 Rolf Ade.
@@ -1658,7 +1659,9 @@ test dom-23.7 {replaceChild} {
 test dom-24.1 {getLine} {
     set doc [dom parse <root/>]
     set root [$doc documentElement]
-    catch {$root getLine}
+    set result [catch {$root getLine}]
+    $doc delete
+    set result
 } {1}
 
 dom setStoreLineColumn 1
@@ -2210,7 +2213,8 @@ test dom-32.2 {asText} {
 } {pcdata foo bar grill}
 
 test dom-32.3 {asText} {
-    dom parse {<root>pcdata <![CDATA[<greeting>Hello, world!</greeting>]]>
+    dom parse -keepEmpties \
+        {<root>pcdata <![CDATA[<greeting>Hello, world!</greeting>]]>
         more pcdata</root>} doc
     $doc documentElement root
     set result [$root asText]
@@ -2366,7 +2370,7 @@ test dom-33.6 {insertBefore- insert more then one node} {
     set result
 } {grill bar e1 e2 e1 foo }
 
-test dom-34.1 {getBaseURI} {
+test dom-34.1 {getBaseURI} {need_uri} {
     makeFile <y/> dom-34.1-e1.xml [file join [file dir [info script]] data]
     makeFile <y/> dom-34.1-e2.xml [file join [file dir [info script]] data]
 
@@ -2397,6 +2401,101 @@ test dom-34.1 {getBaseURI} {
     $doc delete
     set result
 } {1}
+
+test dom-34.2 {getBaseURI} {need_uri} {
+    makeFile <y/> dom-34.1-e1.xml [file join [file dir [info script]] data]
+    makeFile <y/> dom-34.1-e2.xml [file join [file dir [info script]] data]
+
+    set baseURI file://[file join [pwd] [file dir [info script]] dom.test]
+    set doc [dom parse \
+                 -baseurl $baseURI \
+                 -externalentitycommand ::tDOM::extRefHandler {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "data/dom-34.1-e1.xml">
+                                  <!ENTITY b SYSTEM "data/dom-34.1-e2.xml">
+                                 ]>
+                     <x>
+                     &a;
+                     &b;
+                     <y/>
+                     </x>}]
+    $doc delete
+    set doc [dom parse \
+                 -baseurl $baseURI \
+                 -externalentitycommand ::tDOM::extRefHandler {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "data/dom-34.1-e1.xml">
+                                  <!ENTITY b SYSTEM "data/dom-34.1-e2.xml">
+                                 ]>
+                     <x>
+                     &a;
+                     &b;
+                     <y/>
+                     </x>}]
+
+    $doc documentElement root
+    set result 1
+    foreach child [$root childNodes] {
+        lappend baseURIs [$child getBaseURI]
+    }
+    if {([lindex $baseURIs 0] == [lindex $baseURIs 1])
+        || ([lindex $baseURIs 0] == [lindex $baseURIs 2])
+        || ([lindex $baseURIs 1] == [lindex $baseURIs 2])
+        || ([lindex $baseURIs 2] != [$root getBaseURI])} {
+        set result 0
+    }
+    $doc delete
+    set result
+} {1}
+
+proc 35.1 {doc} {
+    $doc documentElement root
+}
+
+test dom-35.1 {objCmd traces} {
+    for {set x 0} {$x < 1} {incr x} {
+        set doc [dom parse {<root/>}]
+        $doc documentElement root
+        35.1 $doc
+        $doc delete
+    }
+} {}
+
+proc 35.2.2 {doc} {
+    $doc documentElement root
+}
+
+proc 35.2.1 {doc} {
+    $doc documentElement root
+    35.2.2 $doc
+    return $root
+}
+    
+# test dom-35.2 {objCmd traces} {
+#     set doc [dom parse {<root><child/></root>}]
+#     set rootCmdName [35.2.1 $doc]
+#     set result [info commands $rootCmdName]
+#     $doc delete
+#     set result
+# } {}
+
+proc 35.3.2 {doc} {
+    $doc documentElement root
+    $doc delete
+}
+
+proc 35.3.1 {doc} {
+    $doc documentElement root
+    35.3.2 $doc
+    return $root
+}
+    
+test dom-35.3 {objCmd traces} {
+    set doc [dom parse {<root><child/></root>}]
+    set rootCmdName [35.3.1 $doc]
+    set result [info commands $rootCmdName]
+    set result
+} {}
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
