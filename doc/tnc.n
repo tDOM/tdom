@@ -161,7 +161,7 @@ Database Class:	\\fB\\$3\\fR
 .BS
 .SH NAME
 tnc \- tnc is an expat parser object extension, that validates the XML
-stream according the document DTD while parsing.
+stream against the document DTD while parsing.
 .SH SYNOPSIS
 .nf
 package require tdom
@@ -175,8 +175,8 @@ tnc $parser enable
 .SH DESCRIPTION
 .PP
 \&\fItnc\fR adds the C handler set "tnc" to an tcl expat parser
-obj. This handler set is a simple DTD validator. If the validator detects the
-first validation error, it sets the interp result, signals error and stops
+obj. This handler set is a simple DTD validator. If the validator detects a
+validation error, it sets the interp result, signals error and stops
 parsing. There isn't any validation error recovering. As a consequence, only
 valid documents are completely parsed.
 .PP

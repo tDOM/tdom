@@ -9,7 +9,7 @@
 </div><div class="body">
   <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
 <b class="names">tnc - </b><br>tnc is an expat parser object extension, that validates the XML
-stream according the document DTD while parsing.</p>
+stream against the document DTD while parsing.</p>
   
   <h2><a name="SECTnode892">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 package require tnc
@@ -20,8 +20,8 @@ tnc $parser enable</pre>
 
   <h2><a name="SECTnode898">DESCRIPTION</a></h2><p>
 <i class="m">tnc</i> adds the C handler set &quot;tnc&quot; to an tcl expat parser
-obj. This handler set is a simple DTD validator. If the validator detects the
-first validation error, it sets the interp result, signals error and stops
+obj. This handler set is a simple DTD validator. If the validator detects a
+validation error, it sets the interp result, signals error and stops
 parsing. There isn't any validation error recovering. As a consequence, only
 valid documents are completely parsed.</p><p>This handler set has only two methods:</p><dl class="commandlist">
       
