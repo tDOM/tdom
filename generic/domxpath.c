@@ -4551,7 +4551,7 @@ static int xpathEvalStepAndPredicates (
 {
     xpathResultSet  stepResult, tmpResult;
     int             rc, i, j;
-    int            *done;
+    char           *done;
     domNode        *parent;
 
     if (steps->next && steps->next->type == Pred) {
@@ -4564,7 +4564,7 @@ static int xpathEvalStepAndPredicates (
            "The Predicate filters the node-set with respect to the
            child axis" */
         if (steps->type == AxisDescendantOrSelf || steps->type == AxisDescendant) {
-            done = calloc (sizeof (int) * stepResult.nr_nodes, sizeof (int));
+            done = calloc (stepResult.nr_nodes, sizeof (char));
             for (i = 0; i < stepResult.nr_nodes; i++) {
                 if (done[i]) continue;
                 xpathRSInit (&tmpResult);
