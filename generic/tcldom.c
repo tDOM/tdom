@@ -53,7 +53,7 @@
 #include <nodecmd.h>
 #include <tcldom.h>
 
-//#define DEBUG
+/* #define DEBUG */
 /*----------------------------------------------------------------------------
 |   Debug Macros
 |
