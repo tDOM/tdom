@@ -354,6 +354,7 @@ typedef struct {
 
     xsltTemplate      * templates;
     xsltTemplate      * lastTemplate;
+    Tcl_HashTable       templateNames;
     xsltWSInfo          stripInfo;
     xsltWSInfo          preserveInfo;
     domNode           * xmlRootNode;
@@ -2456,10 +2457,12 @@ static int xsltAddTemplate (
     char     **errMsg
 )
 {
-    xsltTemplate *tpl;
+    xsltTemplate *tpl, *t;
     char         *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
-    int           rc;
+    int           rc, hnew;
     domNS        *ns;
+    Tcl_HashEntry *h;
+    Tcl_DString  dStr;
 
     tpl = (xsltTemplate *)MALLOC(sizeof(xsltTemplate));
 
@@ -2476,8 +2479,25 @@ static int xsltAddTemplate (
                 return -1;
             }
             tpl->nameURI = ns->uri;
+            Tcl_DStringInit (&dStr);
+            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+            Tcl_DStringAppend (&dStr, localName, -1);
+            h = Tcl_CreateHashEntry (&(xs->templateNames), 
+                                     Tcl_DStringValue (&dStr), &hnew);
+            Tcl_DStringFree (&dStr);
+        } else {
+            h = Tcl_CreateHashEntry (&(xs->templateNames), localName, &hnew);
         }
         tpl->name   = localName;
+        if (!hnew) {
+            t = (xsltTemplate *) Tcl_GetHashValue (h);
+            if (t->precedence == precedence) {
+                reportError (node, "There is already a template with the same name and precedence.", errMsg);
+                return -1;
+            }
+        }
+        Tcl_SetHashValue (h, tpl);
     }
     tpl->ast        = NULL;
     tpl->mode       = NULL;
@@ -3186,6 +3206,7 @@ static int ExecAction (
     char           *uri, *localName, prefix[MAX_PREFIX_LEN];
     int             rc, b, i, len, disableEsc = 0;
     double          currentPrio, currentPrec;
+    Tcl_HashEntry  *h;
 
     if (actionNode->nodeType == TEXT_NODE) {
         domAppendNewTextNode(xs->lastNode,
@@ -3464,47 +3485,44 @@ static int ExecAction (
                     return -1;
                 }
                 uri = ns->uri;
+
                 str = localName;
             }
-            for( tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
-                if (tpl->name && (strcmp(tpl->name,str)==0)) {
-                    if (uri) {
-                        if (tpl->nameURI) {
-                            if (strcmp(tpl->nameURI, uri)!=0) continue;
-                        } else continue;
-                    } else {
-                        if (tpl->nameURI) continue;
-                    }
-                    if (tpl->precedence > currentPrec) {
-                        tplChoosen = tpl;
-                        currentPrec = tpl->precedence;
-                    }
-                }
-            }
-            if (tplChoosen) {
-                xsltPushVarFrame (xs);
-                SETPARAMDEF;
-                TRACE3("call template %s match='%s' name='%s' \n", str, tplChoosen->match, tplChoosen->name);
-                DBG(printXML(xs->lastNode, 0, 2);)
-                rc = setParamVars (xs, context, currentNode, currentPos,
-                                   actionNode, errMsg);
-                if (rc < 0) {
-                    xsltPopVarFrame (xs);
-                    return rc;
-                }
-                SETSCOPESTART;
-                rc = ExecActions(xs, context, currentNode, currentPos, 
-                                 tplChoosen->content->firstChild, errMsg);
-                TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
-                xsltPopVarFrame (xs);
-                CHECK_RC;    
-                DBG(printXML(xs->lastNode, 0, 2);)
+            if (uri) {
+                Tcl_DStringInit (&dStr);
+                Tcl_DStringAppend (&dStr, uri, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+                Tcl_DStringAppend (&dStr, localName, -1);
+                h = Tcl_FindHashEntry (&(xs->templateNames),
+                                       Tcl_DStringValue (&dStr));
+                Tcl_DStringFree (&dStr);
             } else {
+                h = Tcl_FindHashEntry (&(xs->templateNames), localName);
+            }
+            if (!h) {
                 reportError (actionNode,
-                             "xsl:call-template has called a non existend template!",
+                             "xsl:call-template calls a non existend template!",
                              errMsg);
                 return -1;
+            } 
+            tplChoosen = (xsltTemplate *) Tcl_GetHashValue (h);
+            xsltPushVarFrame (xs);
+            SETPARAMDEF;
+            TRACE3("call template %s match='%s' name='%s' \n", str, tplChoosen->match, tplChoosen->name);
+            DBG(printXML(xs->lastNode, 0, 2);)
+                rc = setParamVars (xs, context, currentNode, currentPos,
+                                   actionNode, errMsg);
+            if (rc < 0) {
+                xsltPopVarFrame (xs);
+                return rc;
             }
+            SETSCOPESTART;
+            rc = ExecActions(xs, context, currentNode, currentPos, 
+                             tplChoosen->content->firstChild, errMsg);
+            TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
+            xsltPopVarFrame (xs);
+            CHECK_RC;    
+            DBG(printXML(xs->lastNode, 0, 2);)
             break;
 
        case choose:
@@ -4150,8 +4168,7 @@ static int ExecAction (
             else {
                 ns = domLookupPrefix (xs->lastNode, "");
                 if (ns && (strcmp (ns->uri, "")!=0)) {
-                    ns =  domNewNamespace (xs->lastNode->ownerDocument, "", "");
-                    domAddNSToNode (xs->lastNode, ns);
+                    domSetAttributeNS (xs->lastNode, "xmlns", "", NULL, 0);
                 }
             }
 
@@ -5458,6 +5475,8 @@ xsltFreeState (
     Tcl_HashTable     *htable;
     double            *f;
 
+    Tcl_DeleteHashTable (&xs->templateNames);
+
     for (entryPtr = Tcl_FirstHashEntry(&xs->xpaths, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
@@ -5665,6 +5684,7 @@ int xsltProcess (
     xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
     DBG(printXML(xmlNode, 0, 1);)
 
+    Tcl_InitHashTable ( &(xs.templateNames), TCL_STRING_KEYS);
     xs.cbs.varCB           = xsltGetVar;
     xs.cbs.varClientData   = (void*)&xs;
     xs.cbs.funcCB          = xsltXPathFuncs;
