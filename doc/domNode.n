@@ -188,8 +188,10 @@ PROCESSING_INSTRUCTION_NODE.
 .TP
 \&\fB\fBnodeName\fP
 \&\fRReturns the node name of that node object. This is the element
-(tag) name for element nodes (type ELEMENT_NODE), "#text" for text
-node or "#cdata" for cdata section nodes.
+(tag) name for element nodes (type ELEMENT_NODE), the processing-instruction
+target for processing-instructions, "#text" for text node,
+"#comment" for comment nodes or "#cdata" for cdata section
+nodes.
 .TP
 \&\fB\fBnodeValue\fP \fI?newValue?\fB
 \&\fRReturns the value of that node object. This is the the text or
@@ -243,7 +245,7 @@ matching (glob style) \fIlocalname\fR and having the given namespace
 .TP
 \&\fB\fBgetElementById\fP \fIid\fB
 \&\fRReturns the node having a id attribute with value
-\&\fIid\fR.
+\&\fIid\fR or the emtpy string, if no node has an id attribute with that value.
 .TP
 \&\fB\fBhasAttribute\fP \fIattributeName\fB
 \&\fRReturns 1 if the object node contains an attribute with name
@@ -328,7 +330,7 @@ list.
 .TP
 \&\fB\fBappendChild\fP \fInewChild\fB
 \&\fRAppend \fInewChild\fR to the end of the child list of the
-node. \fInewChild\fR must be in the document fragment list.
+node.
 .TP
 \&\fB\fBinsertBefore\fP \fInewChild\fB  \fIrefChild\fB
 \&\fRInsert \fInewChild\fR before the \fIrefChild\fR into the list of
@@ -337,8 +339,7 @@ children of node. If \fIrefChild\fR is the empty string, insert
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
 \&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of children
-of that node.  \fInewChild\fR must be in the document fragment list.
-\&\fIoldChild\fR will be part of the document fragment list after this
+of that node. \fIoldChild\fR will be part of the document fragment list after this
 operation.
 .TP
 \&\fB\fBremoveChild\fP \fIchild\fB
