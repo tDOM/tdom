@@ -84,6 +84,11 @@ test element-1.2 {distinct elements} {
     list [parray ::started] [parray ::ended]
 } {{Child1 1 Child2 1 Test 1} {Child1 1 Child2 1 Test 1}}
 
+
+foreach parser [info commands element-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return

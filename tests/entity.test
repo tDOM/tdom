@@ -88,6 +88,10 @@ test entity-2.1 {predefined general entities} {
     set ::result
 } {<>&"'}
 
+foreach parser [info commands entity-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return
