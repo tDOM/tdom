@@ -28,6 +28,9 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/08/06 02:22:27  rolf
+|   Changed the version number to 0.7.5
+|
 |   Revision 1.3  2002/06/02 06:36:24  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -64,7 +67,7 @@ Tcl_ObjCmdProc TclTdomObjCmd;
 #  define TCL_STORAGE_CLASS DLLEXPORT
 #endif
 
-#define STR_TDOM_VERSION(v) ("0.7")
+#define STR_TDOM_VERSION(v) ("0.7.5")
 
 EXTERN int Tdom_Init     _ANSI_ARGS_((Tcl_Interp *interp));
 EXTERN int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
