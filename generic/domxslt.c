@@ -2012,18 +2012,18 @@ DBG(   fprintf(stderr, "nodeGreater %d <-- strA='%s' strB='%s'\n", rc, strA, str
 
     } else {
 DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
-        if (isnan (realA) || isnan (realB)) {
+        if (IS_NAN (realA) || IS_NAN (realB)) {
             if (asc) {
-                if (isnan (realA) && !isnan (realB)) {
+                if (IS_NAN (realA) && !IS_NAN (realB)) {
                     *greater = 0;
                 } else {
-                    if (isnan (realB) && !isnan (realA)) *greater = 1;
+                    if (IS_NAN (realB) && !IS_NAN (realA)) *greater = 1;
                 }
             } else {
-                if (isnan (realA) && !isnan(realB)) {
+                if (IS_NAN (realA) && !IS_NAN(realB)) {
                     *greater = 1;
                 } else {
-                    if (isnan (realB) && !isnan(realA)) *greater = 0;
+                    if (IS_NAN (realB) && !IS_NAN(realA)) *greater = 0;
                 }
             }
         } else {
