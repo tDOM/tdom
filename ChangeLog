@@ -1,3 +1,8 @@
+2003-03-08  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* expt/internal.h: disabled FASTCALL & friends
+	  since those do not work anywhere, as of my knowledge.
+
 2003-03-06  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* generic/domalloc.c: removed include malloc.h since 
