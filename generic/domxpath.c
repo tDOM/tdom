@@ -5563,29 +5563,20 @@ double xpathGetPrio (
                 return 0.0;
             }
         } else
-        if ( (steps->type == IsNode)
-           ||(steps->type == IsText)
-           ||(steps->type == IsPI)
-           ||(steps->type == IsComment)
-           ||(steps->type == IsSpecificPI)
-        ) {
+        if ( steps->type == IsNode
+             || steps->type == IsText
+             || steps->type == IsPI
+             || steps->type == IsComment
+             || steps->type == IsSpecificPI
+            ) {
             return -0.5;
+        } else 
+        if ( steps->type == AxisChild
+             || steps->type == AxisAttribute
+             || steps->type == EvalSteps
+            ) {
+            return (xpathGetPrio (steps->child));
         }
-    }
-    if (steps->type == AxisChild
-        || steps->type == AxisAttribute
-        || steps->type == EvalSteps) {
-        return (xpathGetPrio (steps->child));
-    }
-    if (steps->type == CombinePath) {
-        max = -0.5;
-        steps = steps->child;
-        while (steps) {
-            prio = xpathGetPrio(steps->child);
-            if (prio > max) max = prio;
-            steps = steps->next;
-        }
-        return max;
     }
     return 0.5;
 
