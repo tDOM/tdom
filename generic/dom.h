@@ -773,6 +773,7 @@ int            domIsChar (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 void           domRenumberTree (domNode *node);
+int            domPrecedes (domNode *node, domNode *other);
 
 #ifdef TCL_THREADS
 void           domLocksLock(domlock *dl, int how);

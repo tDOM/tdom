@@ -1785,6 +1785,21 @@ test dom-30.10 {precedes} {
 
 $doc delete
 
+dom parse {<root><e><ee><eee/></ee></e></root>} doc
+$doc documentElement root
+set e [$root selectNodes //e]
+set eee [$root selectNodes //eee]
+
+test dom-30.11 {precedes} {
+    $e precedes $eee
+} {1}
+
+test dom-30.12 {precedes} {
+    $eee precedes $e
+} {0}
+
+$doc delete
+
 test dom-31.1 {insertBefore - syntax check} {
     set doc [dom parse <root/>]
     set root [$doc documentElement]

@@ -493,16 +493,19 @@ static void printXML (domNode *node, int level, int maxlevel) {
                 if (l > 30) l = 30;
                 memmove(tmp, tnode->nodeValue, l);
                 tmp[l] = '\0';
-                fprintf(stderr, "<%s/%d> '%s'\n", node->nodeName, node->nodeNumber, tmp);
+                fprintf(stderr, "<%s/domNode0x%x> '%s'\n", node->nodeName, 
+                        node, tmp);
             } else {
                 tmp[0] = '\0';
                 if ((level>=maxlevel) && (node->firstChild)) {
                     strcpy( tmp, "...");
                 }
-                fprintf(stderr, "<%s/%d> %s\n", node->nodeName, node->nodeNumber, tmp);
+                fprintf(stderr, "<%s/domNode0x%x> %s\n", node->nodeName,
+                        node, tmp);
             }
             if (level<maxlevel) {
-                if (node->firstChild) printXML(node->firstChild, level+1, maxlevel);
+                if (node->firstChild) printXML(node->firstChild, level+1,
+                                               maxlevel);
             }
         }
         if (node->nodeType == TEXT_NODE) {
@@ -1812,22 +1815,10 @@ static void sortNodeSetByNodeNumber(
         for (i = 0, j = n; ; ) {
             do {
                 --j;
-                nrnodea = (nodes[j]->nodeType == ATTRIBUTE_NODE ? 
-                           ((domAttrNode *) nodes[j])->parentNode :
-                           nodes[j]);
-                nrnodeb = (nodes[0]->nodeType == ATTRIBUTE_NODE ? 
-                           ((domAttrNode *) nodes[0])->parentNode :
-                           nodes[0]);
-            } while (nrnodea->nodeNumber > nrnodeb->nodeNumber);
+            } while (domPrecedes (nodes[0], nodes[j]));
             do {
                 ++i;
-                nrnodea = (nodes[0]->nodeType == ATTRIBUTE_NODE ?
-                           ((domAttrNode *) nodes[0])->parentNode :
-                           nodes[0]);
-                nrnodeb = (nodes[i]->nodeType == ATTRIBUTE_NODE ?
-                           ((domAttrNode *) nodes[i])->parentNode :
-                           nodes[i]);
-            } while (i < j && nrnodea->nodeNumber > nrnodeb->nodeNumber);
+            } while (i < j && domPrecedes (nodes[i], nodes[0]));
             if (i >= j)  break;
             tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp;
         }
@@ -1896,7 +1887,8 @@ static void StripXMLSpace (
                 }
                 parent = parent->parentNode;
             }
-            DBG(fprintf(stderr, "removing %d(len %d) under '%s' \n", node->nodeNumber, len, node->parentNode->nodeName);)
+            DBG(fprintf(stderr, "removing domNode0x%x(len %d) under '%s' \n", 
+                        node, len, node->parentNode->nodeName);)
                 domDeleteNode (node, NULL, NULL);
         }
     } else
@@ -2107,7 +2099,8 @@ static int xsltXPathFuncs (
         /*--------------------------------------------------------------------
         |   'current' function
         \-------------------------------------------------------------------*/
-        DBG(fprintf(stderr, "xsltXPathFuncs 'current' = '%d' \n", xs->current->nodeNumber);)
+        DBG(fprintf(stderr, "xsltXPathFuncs 'current' = 'domNode0x%x' \n",
+                    xs->current);)
         if (argc != 0) {
             reportError (exprContext, "current() must not have any arguments",
                          errMsg);
@@ -2798,7 +2791,7 @@ static int xsltGetVar (
             xs->varsInProcess = &thisVarInProcess;
 
             xpathRSInit( &nodeList );
-            rsAddNode( &nodeList, xs->xmlRootNode);
+            rsAddNodeFast( &nodeList, xs->xmlRootNode);
             savedCurrentXSLTNode = xs->currentXSLTNode;
             xs->currentXSLTNode = topLevelVar->node;
             select = getAttr (topLevelVar->node, "select", a_select);
@@ -3602,7 +3595,8 @@ static int xsltNumber (
             start = NULL;
             if (from) {
                 while (node) {
-                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
+                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs),
+                                       errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                     if (node->nodeType == ATTRIBUTE_NODE) 
@@ -3612,7 +3606,8 @@ static int xsltNumber (
             }
             node = currentNode;
             while (node != start) {
-                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
+                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
+                                   errMsg);
                 if (rc < 0) goto xsltNumberError;
                 if (rc) break;
                 if (node->nodeType == ATTRIBUTE_NODE) 
@@ -3628,7 +3623,8 @@ static int xsltNumber (
                 v[0] = 1;
                 node = node->previousSibling;
                 while (node) {
-                    rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
+                    rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
+                                       errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) v[0]++;
                     node = node->previousSibling;
@@ -3640,14 +3636,16 @@ static int xsltNumber (
             node = currentNode;
             while (node) {
                 if (from) {
-                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
+                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs),
+                                       errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                 }
-                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
+                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), 
+                                   errMsg);
                 if (rc < 0) goto xsltNumberError;
                 if (rc) rsAddNode (&rs, node);
-                if (node->nodeType == ATTRIBUTE_NODE) 
+                if (node->nodeType == ATTRIBUTE_NODE)
                     node = ((domAttrNode *)node)->parentNode;
                 else node = node->parentNode;
             }
@@ -3661,7 +3659,8 @@ static int xsltNumber (
                 node = rs.nodes[i]->previousSibling;
                 v[i] = 1;
                 while (node) {
-                    rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
+                    rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
+                                       errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) v[i]++;
                     node = node->previousSibling;
@@ -3675,11 +3674,13 @@ static int xsltNumber (
             node = currentNode;
             while (node) {
                 if (from) {
-                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs), errMsg);
+                    rc = xpathMatches (t_from, actionNode, node, &(xs->cbs),
+                                       errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) break;
                 }
-                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs), errMsg);
+                rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
+                                   errMsg);
                 if (rc < 0) goto xsltNumberError;
                 if (rc) v[0]++;
 
@@ -3694,7 +3695,8 @@ static int xsltNumber (
                 node = node->parentNode;
             }
         } else {
-            reportError (actionNode, "xsl:number: Wrong \"level\" attribute value!",
+            reportError (actionNode, 
+                         "xsl:number: Wrong \"level\" attribute value!",
                          errMsg);
             return -1;
         }
@@ -4542,9 +4544,14 @@ static int ExecAction (
             }
             DBG (
               if (currentNode->nodeType == ELEMENT_NODE) {
-                  fprintf (stderr, "forEach select from Element Node '%s' %d:\n", currentNode->nodeName, currentNode->nodeNumber);
+                  fprintf (stderr, 
+                        "forEach select from Element Node '%s' domNode0x%x:\n",
+                           currentNode->nodeName, currentNode);
                   if (currentNode->firstChild) {
-                      fprintf(stderr, "forEach select from child '%s' %d:\n", currentNode->firstChild->nodeName, currentNode->firstChild->nodeNumber);
+                      fprintf(stderr, 
+                              "forEach select from child '%s' domNode0x%x:\n",
+                              currentNode->firstChild->nodeName, 
+                              currentNode->firstChild);
                   }
               } else if (currentNode->nodeType == ATTRIBUTE_NODE) {
                   fprintf (stderr, "forEach select from Attribute Node '%s' Value '%s'\n", ((domAttrNode *)currentNode)->nodeName, ((domAttrNode *)currentNode)->nodeValue);
@@ -5159,7 +5166,7 @@ static int ApplyTemplate (
         if (tpl->precedence == currentPrec) {
             if (tpl->prio < currentPrio) break;
             if (tpl->prio == currentPrio
-                && tpl->content->nodeNumber <= tplChoosen->content->nodeNumber)
+                && domPrecedes (tpl->content, tplChoosen->content))
                 break;
         }
         rc = xpathMatches ( tpl->ast, tpl->content, currentNode, &(xs->cbs),
@@ -5427,7 +5434,8 @@ static void StripXSLTSpace (
                 }
                 parent = parent->parentNode;
             }
-            DBG(fprintf(stderr, "removing %d(len %d) under '%s' \n", node->nodeNumber, len, node->parentNode->nodeName);)
+            DBG(fprintf(stderr, "removing domNode0x%x(len %d) under '%s' \n",
+                        node, len, node->parentNode->nodeName);)
             domDeleteNode (node, NULL, NULL);
         }
     } else

@@ -185,6 +185,7 @@ static char domObj_usage[] =
                 TDomThreaded(
                 "          readlock                                \n"
                 "          writelock                               \n"
+                "          renumber                                \n"
                 )
                 ;
 
@@ -1477,10 +1478,6 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
-    if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
-        domRenumberTree (node->ownerDocument->rootNode);
-        node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
-    }
     rc = xpathEval (node, node, xpathQuery, &cbs, &errMsg, &rs);
 
     if (rc != XPATH_OK) {
@@ -3867,15 +3864,7 @@ int tcldom_NodeObjCmd (
                 SetResult ("Cannot compare the relative order of a node with a node out of the fragment list.");
                 return TCL_ERROR;
             }
-            if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
-                domRenumberTree (node->ownerDocument->rootNode);
-                node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
-            }
-            if (node->nodeNumber < refNode->nodeNumber) {
-                SetBooleanResult (1);
-            } else {
-                SetBooleanResult (0);
-            }
+            SetBooleanResult (domPrecedes (node, refNode));
             break;
             
         TDomThreaded(
@@ -3925,7 +3914,7 @@ int tcldom_DocObjCmd (
         "publicId",        "systemId",                   "internalSubset",
         "toXSLTcmd",
 #ifdef TCL_THREADS
-        "readlock", "writelock",
+        "readlock",        "writelock",                  "renumber",
 #endif
         NULL
     };
@@ -3938,7 +3927,7 @@ int tcldom_DocObjCmd (
         m_publicId,         m_systemId,                   m_internalSubset,
         m_toXSLTcmd
 #ifdef TCL_THREADS
-        ,m_readlock, m_writelock
+        ,m_readlock,        m_writelock,                  m_renumber
 #endif
     };
 
@@ -4200,6 +4189,14 @@ int tcldom_DocObjCmd (
         case m_readlock:
             CheckArgs(3,3,2,"script");
             return tcldom_EvalLocked(interp, (Tcl_Obj**)objv, doc, LOCK_READ);
+
+        case m_renumber:
+            CheckArgs(2,2,2,"");
+            if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
+                domRenumberTree (node->ownerDocument->rootNode);
+                node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+            }
+            return TCL_OK;
         )
     }
     SetResult ( domObj_usage);
