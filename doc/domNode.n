@@ -102,24 +102,63 @@ before.
 \&\fB\fBremoveAttribute\fP \fIattributeName\fB
 \&\fR Removes the attribute \fIattributeName\fR.
 .TP
-\&\fB\fBhasAttributeNS\fP \fIuri\fB \fIattributeName\fB
-\&\fRReturns 1 if the object node contains an attribute
-with name \fIattributeName\fR and a namespace URI \fIuri\fR.  Otherwise 0 is
+\&\fB\fBhasAttributeNS\fP \fIuri\fB \fIlocalName\fB
+\&\fRReturns 1 if the object node contains an attribute with the
+local name \fIlocalName\fR within the namespace \fIuri\fR.  Otherwise 0 is
 returned.
 .TP
-\&\fB\fBgetAttributeNS\fP \fIuri\fB \fIattributeName\fB \fBdefaultValue\fP
-\&\fRReturns the value of the attribute
-\&\fIattributeName\fR having the URI \fIuri\fR. If attribute is not available
-\&\fIdefaultValue\fR is returned.
+\&\fB\fBgetAttributeNS\fP \fIuri\fB \fIlocalName\fB \fBdefaultValue\fP
+\&\fRReturns the value of the attribute with the local name
+\&\fIlocalName\fR within the namespace URI \fIuri\fR. If the node dosn't have
+that attribute the \fIdefaultValue\fR is returned.
 .TP
-\&\fB\fBsetAttributeNS\fP \fIuri\fB \fIattributeName\fB \fInewValue\fB
-\&\fRSets the value for an attribute \fIattributeName\fR
-with the namespace URI \fIuri\fR to \fInewValue\fR. This will create a new
-attribute, if it wasn't avialble before.
+\&\fB\fBsetAttributeNS\fP \fIuri\fB \fIqualifiedName\fB \fInewValue\fB
+\&\fR
+.RS
+.PP
+Sets the value for an attribute \fIqualifiedName\fR with the
+namespace URI \fIuri\fR to \fInewValue\fR. This will create a new attribute,
+if it wasn't avialble before. If you want to set an attribute within a
+namespace you must specify the attribute name with prefix, even if you want to
+set an already existing attribute to a new value. While searching, if the
+attribute already exists, only the given \fIuri\fR and the localname of the
+\&\fIqualifiedName\fR is used.
+
+
+        
+.CS
+$node setAttributeNS "http://some.uri.com/wow" prefix:attr1 attrValue
+.CE
+.PP
+If the uri is the empty string and the attribute name hasn't a prefix, this
+method has the same effect as the method \fBsetAttribute\fR.
+
+
+        
+.CS
+$node setAttributeNS "" attri "some Value"
+.CE
+.PP
+XML namespace nodes are not in any namespace. Set them this way:
+
+
+        
+.CS
+$node setAttributeNS "" xmlns:myprefix "myNamespaceURI"
+$node setAttributeNS "" xmlns "newDefaultNamespace"
+.CE
+.PP
+If your \fIqualifiedName\fR has the prefix "xml" and you give the empty
+string as \fIuri\fR, the namespace of the attribute defaults to
+"http://www.w3.org/XML/1998/namespace", as the DOM 2 recommendation
+requests. With the exceptions of the special prefixes "xmlns" and "xml" you
+always must provide a non emtpy \fIuri\fR, if your \fIqualifiedName\fR has a
+prefix.
+.RE
 .TP
-\&\fB\fBremoveAttributeNS\fP \fIuri\fB \fIattributeName\fB
-\&\fRRemoves the attribute \fIattributeName\fR having
-the namespace URI \fIuri\fR.
+\&\fB\fBremoveAttributeNS\fP \fIuri\fB \fIlocalName\fB
+\&\fRRemoves the attribute with the local name \fIlocalName\fR within
+the namespace \fIuri\fR.
 .TP
 \&\fB\fBattributes\fP \fBattributeNamePattern\fP
 \&\fR Returns all attributes matching the \fIattributeNamePattern\fR.
