@@ -1,30 +1,30 @@
 2005-01-11  Rolf Ade  <rolf@pointsman.de>
 
-       * lib/tdom.tcl: Scripted xpath function element-available:
-         moved xsl:output to the avaliable elements, since it's in
-         fact avaliable in the meantime (with exception of the
-         'version' and 'cdata-section-elements' attributes) - the
-         output options can be queried from the result doc, but it's
-         the responsibility of the application, to serialize the tree
-         according to that settings.
+        * lib/tdom.tcl: Scripted xpath function element-available:
+          moved xsl:output to the avaliable elements, since it's in
+          fact avaliable in the meantime (with exception of the
+          'version' and 'cdata-section-elements' attributes) - the
+          output options can be queried from the result doc, but it's
+          the responsibility of the application, to serialize the tree
+          according to that settings.
 
 2005-01-10  Rolf Ade  <rolf@pointsman.de>
 
-       * doc/dom.*: Corrected typo.     
+        * doc/dom.*: Corrected typo.     
 
-       * generic/dom.c: Fixed a leftover reference to embedded hash
-         table in domDocument struct.
+        * generic/dom.c: Fixed a leftover reference to embedded hash
+          table in domDocument struct.
 
 2005-01-10  Rolf Ade  <rolf@pointsman.de>
 
-       * generic/dom.c
-       * generic/dom.h
-       * generic/domxpath.c
-       * generic/domxpath.h
-       * generic/tcldom.c
-       * tests/domNode.test: Don't embed Tcl_HashTables into dom Docs,
-         use pointers to the hash table. Added -cache option to the
-         selectNodes method.
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxpath.c
+        * generic/domxpath.h
+        * generic/tcldom.c
+        * tests/domNode.test: Don't embed Tcl_HashTables into dom Docs,
+          use pointers to the hash table. Added -cache option to the
+          selectNodes method.
 
 2005-01-07  Rolf Ade  <rolf@pointsman.de>
 
