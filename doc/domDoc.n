@@ -275,11 +275,11 @@ document, if there is one, otherwise the empty string. If there is a value
 given to the method, the system identifier of the document is set to this
 value.
 .TP
-\&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fIstylesheet\fB \fI?outputVar?\fB
+\&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the whole document of the node
 object using the XSLT \fIstylesheet\fR (given as domDoc). Returns a document
-object containing the result document of that transformation and stores it in
-optional \fIoutputVar\fR.
+object containing the result document of the transformation and stores that
+document object in the optional \fIoutputVar\fR, if that was given.
 .RS
 .PP
 The optional \fI-parameters\fR option sets top level
@@ -298,6 +298,31 @@ to the option, appended with the XML Fragment from instantiating the
 xsl:message element content as string (as if the XPath string() function would
 have been applied to the XML Fragment) and a flag, which indicates, if the
 xsl:message has an attribute "terminate" with the value "yes".
+.RE
+.TP
+\&\fB\fBtoXSLTcmd\fP ?\fIobjVar\fB?
+\&\fRIf the DOM tree represents a valid XSLT stylesheet, this method
+transforms the DOM tree into a xslt command, otherwise it returns error. The
+created xsltCmd is returnd and stored in the \fIobjVar\fR, if a var name was
+given. A successful transformation of the DOM tree to a xsltCmd removes the
+domDoc cmd and all nodeCmds of the document.
+.RS
+.PP
+The syntax of the created xsltCmd is:
+
+ 
+
+.CS
+
+\&\fBxsltCmd\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIdocNode\fR \fI?outputVar?\fR
+
+.CE
+.PP
+The options are the same as for the domDoc \fIxslt\fR method; see there for
+a description. The \fIdocNode\fR argument is the XML document to transform
+(given as domDoc). The command returns a document object containing the result
+document of the transformation and stores it in the optional \fIoutputVar\fR,
+if that was given.
 .RE
 .PP
 Otherwise, if an unknown method name is given, the command with the
