@@ -1928,7 +1928,7 @@ int tcldom_NodeObjCmd (
                 *attr_name, *attr_val, *filter, *option, *errMsg, *uri,
                **parameters;
     int          result, length, methodIndex, i, line, column, indent, mode;
-    Tcl_Obj     *namePtr, *resultPtr, *objPtr;
+    Tcl_Obj     *namePtr, *resultPtr, *objPtr, *localListPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
     Tcl_Channel  chan = (Tcl_Channel) NULL;
@@ -2087,13 +2087,12 @@ int tcldom_NodeObjCmd (
                     SetResult ("parameter value missing: the -parameters option needs a list of parameter name and parameter value pairs");
                     return TCL_ERROR;
                 }
-                
+                localListPtr = Tcl_DuplicateObj (objv[3]);
+                Tcl_IncrRefCount (localListPtr);
                 parameters =  (char **)Tcl_Alloc(sizeof (char **)*(length+1));
-                for (i = 0; i < length; i += 2) {
-                    Tcl_ListObjIndex (interp, objv[3], i, &objPtr);
+                for (i = 0; i < length; i ++) {
+                    Tcl_ListObjIndex (interp, localListPtr, i, &objPtr);
                     parameters[i] = Tcl_GetString (objPtr);
-                    Tcl_ListObjIndex (interp, objv[3], i+1, &objPtr);
-                    parameters[i+1] = Tcl_GetString (objPtr);
                 }
                 parameters[length] = NULL;
                 objc -= 2;
@@ -2112,7 +2111,10 @@ int tcldom_NodeObjCmd (
             result = xsltProcess (xsltDoc, node, parameters,
                                  tcldom_xpathFuncCallBack,  interp,
                                  &errMsg, &resultDoc);
-            if (parameters) Tcl_Free ((char *) parameters);
+            if (parameters) {
+                Tcl_DecrRefCount (localListPtr);
+                Tcl_Free ((char *) parameters);
+            }
             if (result < 0) {
                 SetResult ( errMsg );
                 free (errMsg);
