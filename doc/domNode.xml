@@ -112,9 +112,9 @@ style) <m>name</m>.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>getElementsByTagNameNS</method> <m>uri</m> <m>name</m></command>
+        <command><method>getElementsByTagNameNS</method> <m>uri</m> <m>localname</m></command>
         <desc> Returns a list of all elements in the subtree
-matching (glob style) <m>name</m> and having the given namespace
+matching (glob style) <m>localname</m> and having the given namespace
 <m>uri</m>.</desc>
       </commanddef>
 

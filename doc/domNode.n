@@ -232,9 +232,9 @@ object.
 \&\fR Returns a list of all elements in the subtree matching (glob
 style) \fIname\fR.
 .TP
-\&\fB\fBgetElementsByTagNameNS\fP \fIuri\fB \fIname\fB
+\&\fB\fBgetElementsByTagNameNS\fP \fIuri\fB \fIlocalname\fB
 \&\fR Returns a list of all elements in the subtree
-matching (glob style) \fIname\fR and having the given namespace
+matching (glob style) \fIlocalname\fR and having the given namespace
 \&\fIuri\fR.
 .TP
 \&\fB\fBgetElementById\fP \fIid\fB
