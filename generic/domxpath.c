@@ -107,12 +107,13 @@
 /* #define Recurse(p)        rc=p(l,tokens,errMsg);if(rc==NULL)return rc;*/
 #define Recurse(p)        p(l,tokens,errMsg)
 
-#define Consume(tk)        if (tokens[*l].token == tk) {      \
+#define Consume(tk)       if (tokens[*l].token == tk) {      \
                               TRACE2("Production %s:   %s consumed\n", \
                                  __func, token2str[tokens[*l].token]); \
                               (*l)++;                         \
                           } else {                            \
-                              ErrExpected(#tk);               \
+                              if (*errMsg==NULL) {ErrExpected(#tk);} \
+                              else return a; \
                           }
 #define STRVAL            tokens[(*l)-1].strvalue
 #define INTVAL            tokens[(*l)-1].intvalue
@@ -127,7 +128,7 @@
                           **errMsg = '\0';                     \
                           strcpy(*errMsg, __func);             \
                           strcat(*errMsg, ": Expected " #msg); \
-                          return NULL;
+                          return a;
 
 #define CHECK_RC          if (rc) return rc
 #define checkRsAddNode(rs,node)    if (useFastAdd) rsAddNodeFast( rs,node); \
@@ -715,7 +716,7 @@ static XPathTokens xpathLexer (
                                    ps = &(xpath[++i]);
                                    if (!(isNCNameStart (&xpath[i]))) {
                                        *errMsg = tdomstrdup ("Illegal attribute name");
-                                       return NULL;
+                                       return tokens;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
                                    while (xpath[i] && isNCNameChar (&xpath[i]))
@@ -735,7 +736,7 @@ static XPathTokens xpathLexer (
                            token = ATTRIBUTE;
                        } else {
                            *errMsg = (char*)tdomstrdup("Expected attribute name");
-                           return NULL;
+                           return tokens;
                        }; break;
 
             case ',':  token = COMMA; break;
@@ -753,7 +754,7 @@ static XPathTokens xpathLexer (
                        while (xpath[i] && (xpath[i] != delim)) i++;
                        if (!xpath[i]) {
                            *errMsg = (char*)tdomstrdup("Undetermined string");
-                           return NULL;
+                           return tokens;
                        }
                        xpath[i] = '\0'; /* terminate string */
                        tokens[l].strvalue = (char*)tdomstrdup(&xpath[start]);
@@ -820,7 +821,7 @@ static XPathTokens xpathLexer (
                                token = FQVARIABLE;
                                if (!isNCNameStart (&xpath[++i])) {
                                    *errMsg = tdomstrdup ("Illegal variable name");
-                                   return NULL;
+                                   return tokens;
                                }
                                i += UTF8_CHAR_LEN (xpath[i]);
                                while (xpath[i] && isNCNameChar (&xpath[i]))
@@ -834,7 +835,7 @@ static XPathTokens xpathLexer (
                            xpath[i--] = save;
                        } else {
                            *errMsg = (char*)tdomstrdup("Expected variable name");
-                           return NULL;
+                           return tokens;
                        }; break;
 
             case '.':  if (xpath[i+1] == '.') {
@@ -873,7 +874,7 @@ static XPathTokens xpathLexer (
                                        (xpath[k] == '\r') ||
                                        (xpath[k] == '\t')) {
                                        *errMsg = tdomstrdup("whitespace after namespace prefix");
-                                       return NULL;
+                                       return tokens;
                                    }
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
@@ -1932,9 +1933,10 @@ int xpathParse (
     char tmp[200];
 
     DDBG(fprintf(stderr, "\nLex output following tokens for '%s':\n", xpath);)
+    *errMsg = NULL;
     tokens = xpathLexer(xpath, errMsg);
-    if (tokens == NULL) {
-        xpathFreeTokens (tokens);
+    if (*errMsg != NULL) {
+        if (tokens != NULL) xpathFreeTokens (tokens);
         return XPATH_LEX_ERR;
     }
     DDBG(
@@ -1951,6 +1953,7 @@ int xpathParse (
     )
     l = 0;
 
+    *t = NULL;
     if (parsePattern) {
         *t = Pattern (&l, tokens, errMsg);
     } else {
@@ -2000,7 +2003,10 @@ int xpathParse (
         }
     )
     xpathFreeTokens (tokens);
-    if (*errMsg!=NULL) return XPATH_SYNTAX_ERR ;
+    if (*errMsg!=NULL) {
+        if (*t) freeAst (*t);
+        return XPATH_SYNTAX_ERR;
+    }
     return 0;
 
 } /* xpathParse */
@@ -4757,8 +4763,8 @@ int xpathEval (
     xpathRSInit( &nodeList);
     rsAddNodeFast( &nodeList, node);
 
-    rc = xpathEvalSteps( t, &nodeList, node, exprContext, 1, &docOrder, cbs, result,
-                         errMsg);
+    rc = xpathEvalSteps( t, &nodeList, node, exprContext, 1, &docOrder, cbs,
+                         result, errMsg);
     freeAst(t);
     xpathRSFree( &nodeList );
     CHECK_RC;
@@ -5262,8 +5268,9 @@ int xpathMatches (
 
             case ExecIdKey:
                 xpathRSInit (&stepResult);
-                rc = xpathEvalStep (steps, nodeToMatch, exprContext, currentPos,
-                                    &nodeList, cbs, &stepResult, &docOrder, errMsg);
+                rc = xpathEvalStep (steps, nodeToMatch, exprContext,
+                                    currentPos, &nodeList, cbs, &stepResult,
+                                    &docOrder, errMsg);
                 CHECK_RC;
                 if (stepResult.type != xNodeSetResult) {
                     xpathRSFree (&stepResult);
