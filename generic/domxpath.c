@@ -1951,7 +1951,10 @@ double xpathFuncNumber (
     switch (rs->type) {
         case BoolResult:   return (rs->intvalue? 1.0 : 0.0);
         case IntResult:    return rs->intvalue;
-        case RealResult:   return rs->realvalue;
+        case RealResult:   {
+            if (isnan(rs->realvalue)) *NaN = 1;
+            return rs->realvalue;
+        }
         case StringResult:
               strncpy(tmp, rs->string, (rs->string_len<79) ? rs->string_len : 79);
               tmp[(rs->string_len<79) ? rs->string_len : 79] = '\0';
@@ -3239,6 +3242,7 @@ static int xpathEvalStep (
                 return rc;
             }
             leftReal = xpathFuncNumber(&leftResult, &NaN);
+            
             if (NaN) { rsSetReal(result, leftReal); return XPATH_OK; }
             
             if      (IS_FUNC('f',"floor"))   leftReal = floor(leftReal);
