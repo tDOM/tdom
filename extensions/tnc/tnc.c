@@ -493,7 +493,7 @@ printf ("'one' pointer %p\n", &one);
         tmodel = (TNC_Content*) Tcl_Alloc (sizeof (TNC_Content));
         TncRewriteModel (emodel, tmodel, tncdata->tagNames);
         Tcl_SetHashValue (entryPtr, tmodel);
-        free (emodel);
+/*          free (emodel); */
         entryPtr = Tcl_NextHashEntry (&search);
     }
     /* Checks, if every used notation name is in deed declared */
