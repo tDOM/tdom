@@ -1004,6 +1004,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     }
                     i += clen;
                 }
+                if (!i) signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                 break;
             case TNC_ATTTYPE_NMTOKENS:
                 i = 0;
@@ -1021,6 +1022,7 @@ TncAttDeclCommand (userData, elname, attname, att_type, dflt, isrequired)
                     }
                     i += clen;
                 }
+                if (!i) signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                 break;
             case TNC_ATTTYPE_NOTATION:
                 if (!Tcl_FindHashEntry (attDecl->lookupTable, dflt)) {
@@ -1753,6 +1755,7 @@ TncElementStartCommand (userData, name, atts)
                    haven't deeply checked - QUESTION -), expat would have
                    already complained otherwise. */
                 pc = (char*)atPtr[1];
+                clen = 0;
                 while (1) {
                     if (*pc == '\0') {
                         break;
@@ -1764,9 +1767,12 @@ TncElementStartCommand (userData, name, atts)
                     }
                     pc += clen;
                 }
+                if (!clen) 
+                    signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                 break;
             case TNC_ATTTYPE_NMTOKENS:
                 pc = (char*)atPtr[1];
+                clen = 0;
                 while (1) {
                     if (*pc == '\0') {
                         break;
@@ -1783,6 +1789,8 @@ TncElementStartCommand (userData, name, atts)
                     }
                     pc += clen;
                 }
+                if (!clen)
+                    signalNotValid (userData, TNC_ERROR_NMTOKEN_REQUIRED);
                 break;
             case TNC_ATTTYPE_NOTATION:
                 entryPtr = Tcl_FindHashEntry (attDecl->lookupTable, atPtr[1]);
@@ -2407,7 +2415,12 @@ TclTncObjCmd(dummy, interp, objc, objv)
  *----------------------------------------------------------------------------
  */
 
-int
+#if defined(_MSC_VER)
+#  undef TCL_STORAGE_CLASS
+#  define TCL_STORAGE_CLASS DLLEXPORT
+#endif
+
+EXTERN int
 Tnc_Init (interp)
     Tcl_Interp *interp;
 {
