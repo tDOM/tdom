@@ -422,6 +422,20 @@ tree made later one.</desc>
       </commanddef>
 
       <commanddef>
+        <command><method>disableOutputEscaping</method> <m>?boolean?</m></command>
+        <desc>This method works only for text nodes; for every other nodes it
+returns error. Without the optional argument it returns, if disabling output
+escaping is on. The return value 0 means, the characters of the text node will
+be escaped, to gerenerate valid XML, if serialized. This is the default for
+every parsed or created text node. The return value 1 means, that output
+escaping is disabled for this text node. If such a text node is serialized
+(with asXML or asHTML), it is literarily written, without escaping of the
+special XML characters. If the optional boolean value <m>boolean</m> is given,
+the flag is set accordingly. You should not set this flag to 1, until you
+really know, what you do.</desc>
+      </commanddef>
+
+      <commanddef>
         <command><method>xslt</method> <option>?-parameters
 parameterList?</option> <m>stylesheet</m> <m>?outputVar?</m></command>
         <desc>Applies a XSLT transformation on the whole document of the node
