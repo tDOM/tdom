@@ -191,8 +191,20 @@ static char *astType2str[] = {
     "ExecIdKey"
 };
 
+/*----------------------------------------------------------------------------
+|   functionTag
+|
+\---------------------------------------------------------------------------*/
+typedef enum {
 
-
+    f_unknown = 1,
+    f_boolean, f_ceiling, f_concat, f_contains, f_count, f_false, f_floor,
+    f_generateId, f_id, f_lang, f_last, f_localName, f_name, f_namespaceUri,
+    f_normalizeSpace, f_not, f_number, f_position, f_round, f_startsWith,
+    f_string, f_stringLength, f_substring, f_substringAfter,
+    f_substringBefore, f_sum, f_translate, f_true, f_unparsedEntityUri
+    
+} functionTag;
 
 /*----------------------------------------------------------------------------
 |   Prototypes / Forwards
@@ -204,6 +216,10 @@ DeclProduction(RelativeLocationPath);
 DeclProduction(AbsoluteLocationPath);
 
 char *xpathFuncString (xpathResultSet  *rs );
+static int xpathEvalStep (ast step, domNode *ctxNode, domNode *exprContext,
+                          int position, xpathResultSet *nodeList,
+                          xpathCBs *cbs, xpathResultSet *result,
+                          int *docOrder, char **errMsg);
 
 int dbonerow = 0;
 
@@ -215,17 +231,17 @@ int isnan(double number) { return (!(number == number)); }
 |   xpath result set functions
 |
 \---------------------------------------------------------------------------*/
-void xpathRSInit ( xpathResultSet *rs ) {
+/*  void xpathRSInit ( xpathResultSet *rs ) { */
 
-    rs->type       = EmptyResult;
-    rs->realvalue  = 0.0;
-    rs->nodes      = NULL;
-    rs->string     = NULL;
-    rs->allocated  = 0;
-    rs->nr_nodes   = 0;
-    rs->string_len = 0;
-    rs->intvalue   = 0;
-}
+/*      rs->type       = EmptyResult; */
+/*      rs->realvalue  = 0.0; */
+/*      rs->nodes      = NULL; */
+/*      rs->string     = NULL; */
+/*      rs->allocated  = 0; */
+/*      rs->nr_nodes   = 0; */
+/*      rs->string_len = 0; */
+/*      rs->intvalue   = 0; */
+/*  } */
 void xpathRSFree ( xpathResultSet *rs ) {
 
     if (rs->type == xNodeSetResult) {
@@ -1023,8 +1039,72 @@ Production(AbbreviatedBasis)
     }
 EndProduction
 
-
-
+/*-----------------------------------------------------------------
+|   getFunctionTag
+|
+\----------------------------------------------------------------*/
+static functionTag
+getFunctionTag (char *funcName) 
+{
+    switch (funcName[0]) {
+    case 'b':
+        if (strcmp (funcName, "boolean")==0) return f_boolean;
+        break;
+    case 'c':
+        if (strcmp (funcName, "ceiling")==0) return f_ceiling;
+        else if (strcmp (funcName, "concat")==0) return f_concat;
+        else if (strcmp (funcName, "contains")==0) return f_contains;
+        else if (strcmp (funcName, "count")==0) return f_count;
+        break;
+    case 'f':
+        if (strcmp (funcName, "false")==0) return f_false;
+        else if (strcmp (funcName, "floor")==0) return f_floor;
+        break;
+    case 'g':
+        if (strcmp (funcName, "generate-id")==0) return f_generateId;
+        break;
+    case 'i':
+        if (strcmp (funcName, "id")==0) return f_id;
+    case 'l':
+        if (strcmp (funcName, "lang")==0) return f_lang;
+        else if (strcmp (funcName, "last")==0) return f_last;
+        else if (strcmp (funcName, "local-name")==0) return f_localName;
+        break;
+    case 'n':
+        if (strcmp (funcName, "name")==0) return f_name;
+        else if (strcmp (funcName, "namespace-uri")==0) return f_namespaceUri;
+        else if (strcmp (funcName, "normalize-space")==0) return f_normalizeSpace;
+        else if (strcmp (funcName, "not")==0) return f_not;
+        else if (strcmp (funcName, "number")==0) return f_number;
+        break;
+    case 'p':
+        if (strcmp (funcName, "position")==0) return f_position;
+        break;
+    case 'r':
+        if (strcmp (funcName, "round")==0) return f_round;
+        break;
+    case 's':
+        if (strcmp (funcName, "starts-with")==0) return f_startsWith;
+        else if (strcmp (funcName, "string")==0) return f_string;
+        else if (strcmp (funcName, "string-length")==0) return f_stringLength;
+        else if (strcmp (funcName, "substring")==0) return f_substring;
+        else if (strcmp (funcName, "substring-after")==0) return f_substringAfter;
+        else if (strcmp (funcName, "substring-before")==0) return f_substringBefore;
+        else if (strcmp (funcName, "sum")==0) return f_sum;
+        break;
+    case 't':
+        if (strcmp (funcName, "translate")==0) return f_translate;
+        else if (strcmp (funcName, "true")==0) return f_true;
+        break;
+    case 'u':
+        if (strcmp (funcName, "unparsed-entity-uri")==0) return f_unparsedEntityUri;
+        break;
+    default:
+        break;
+    }
+    return f_unknown;
+}
+        
 /*-----------------------------------------------------------------
 |   FilterExpr  production
 |
@@ -1055,6 +1135,7 @@ Production(FilterExpr)
     } else if (LA==FUNCTION) {
         Consume(FUNCTION);
         a = NewStr( ExecFunction, STRVAL);
+        a->intvalue = getFunctionTag (STRVAL);
         Consume(LPAR);
         if (LA!=RPAR) {
             AddChildWithEvalSteps (a, Recurse(OrExpr));
@@ -1620,6 +1701,7 @@ Production(IdKeyPattern)
         ast b;
         /* id */
         a = NewStr( ExecIdKey, STRVAL);
+        a->intvalue = f_id;
         Consume(LPAR);
         Consume(LITERAL);
         /* STRVAL */
@@ -1824,7 +1906,6 @@ int xpathParse (
     return 0;
 
 } /* xpathParse */
-
 
 
 /*----------------------------------------------------------------------------
@@ -2261,6 +2342,882 @@ int xpathRound (double r) {
     }
 }
 
+/*----------------------------------------------------------------------------
+|   xpathEvalFunction
+|
+\---------------------------------------------------------------------------*/
+static int 
+xpathEvalFunction (
+    ast                step,
+    domNode           *ctxNode,
+    domNode           *exprContext,
+    int                position,
+    xpathResultSet    *nodeList,
+    xpathCBs          *cbs,
+    xpathResultSet    *result,
+    int               *docOrder,
+    char             **errMsg
+    )
+{
+    xpathResultSet   leftResult, rightResult, replaceResult;
+    int              i, j, rc, pwhite, len,  NaN;
+    char            *replaceStr, *pfrom, *pto, tmp[80], tmp1[80];
+    domNode         *node;
+    domAttrNode     *attr;
+    double           leftReal;
+    ast              nextStep;
+    int              argc, savedDocOrder, from;
+    xpathResultSets *args;
+    xpathResultSet  *arg;
+    Tcl_HashEntry   *entryPtr;
+    int              left = 0, useFastAdd;
+    double           dRight = 0.0;
+    char            *leftStr = NULL, *rightStr = NULL;
+#if TclOnly8Bits
+    char            *fStr;
+#else 
+    int              found;
+    int              lenstr, fromlen, utfCharLen;
+    char             utfBuf[TCL_UTF_MAX];        
+    Tcl_DString      tstr, tfrom, tto, tresult;
+    Tcl_UniChar     *ufStr, *upfrom, unichar;
+#endif    
+
+    if (result->type == EmptyResult) useFastAdd = 1;
+    else useFastAdd = 0;
+
+    switch (step->intvalue) {
+
+    case f_position:
+        XPATH_ARITYCHECK(step,0,errMsg);
+        if (*docOrder) {
+            rsSetInt (result, position+1);
+        } else {
+            rsSetInt (result, nodeList->nr_nodes - position);
+        }
+        break;
+
+    case f_last:
+        XPATH_ARITYCHECK(step,0,errMsg);
+        rsSetInt (result, nodeList->nr_nodes);
+        break;
+
+    case f_number:
+        xpathRSInit (&leftResult);
+        if (xpathArity(step) == 0) {
+            /*  no parameter, the context node is the nodeset to
+             *  operate with
+             */
+            rsAddNode( &leftResult, ctxNode);
+        } else {
+            XPATH_ARITYCHECK(step,1,errMsg);
+            xpathRSInit (&leftResult);
+            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                nodeList, cbs, &leftResult, docOrder, errMsg);
+            if (rc) {
+                xpathRSFree( &leftResult );
+                return rc;
+            }
+        }
+        leftReal = xpathFuncNumber(&leftResult, &NaN);
+        rsSetReal (result, leftReal);
+        xpathRSFree( &leftResult );
+        break;
+
+    case f_floor:
+    case f_ceiling:
+    case f_round:
+        XPATH_ARITYCHECK(step,1,errMsg);
+        xpathRSInit (&leftResult);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
+        if (rc) {
+            xpathRSFree( &leftResult );
+            return rc;
+        }
+        leftReal = xpathFuncNumber(&leftResult, &NaN);
+    
+        if (NaN) { rsSetReal(result, leftReal); return XPATH_OK; }
+    
+        if      (step->intvalue == f_floor)   leftReal = floor(leftReal);
+        else if (step->intvalue == f_ceiling) leftReal = ceil(leftReal);
+        else                                  leftReal = xpathRound(leftReal);
+    
+        rsSetReal (result, leftReal);
+        xpathRSFree( &leftResult );
+        break;
+
+    case f_boolean:
+          XPATH_ARITYCHECK(step,1,errMsg);
+          xpathRSInit (&leftResult);
+          rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                              nodeList, cbs, &leftResult, docOrder, errMsg);
+          if (rc) {
+              xpathRSFree( &leftResult );
+              return rc;
+          }
+          left = xpathFuncBoolean(&leftResult);
+          rsSetBool (result, left);
+          xpathRSFree( &leftResult );
+          break;
+          
+    case f_string:
+    case f_normalizeSpace:
+    case f_stringLength:
+           xpathRSInit (&leftResult);
+           if (step->child == NULL) {
+               /*  no parameter, the context node is the nodeset to
+                *  operate with
+                */
+               rsAddNode( &leftResult, ctxNode);
+      
+           } else {
+               XPATH_ARITYCHECK(step,1,errMsg);
+               xpathRSInit (&leftResult);
+               rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                   nodeList, cbs, &leftResult, docOrder, errMsg);
+               if (rc) {
+                   xpathRSFree( &leftResult );
+                   return rc;
+               }
+               DBG(fprintf(stderr, "normalize-space: \n");
+                   rsPrint(&leftResult);
+               )
+           }
+      
+           leftStr = xpathFuncString (&leftResult );
+           DBG(fprintf(stderr, "leftStr='%s'\n", leftStr);)
+           if      (step->intvalue == f_string)
+               rsSetString (result, leftStr);
+           else if (step->intvalue == f_stringLength) 
+               rsSetInt (result, strlen(leftStr));
+           else {
+               pwhite = 1;
+               pfrom = pto = leftStr;
+               while (*pfrom) {
+                   switch (*pfrom) {
+                       case ' ' : case '\n': case '\r': case '\t':
+                           if (!pwhite) {
+                               *pto++ = ' ';
+                               pwhite = 1;
+                           }
+                           break;
+                       default:
+                           *pto++ = *pfrom;
+                           pwhite = 0;
+                           break;
+                   }
+                   pfrom++;
+               }
+               if ((pto > leftStr) && (*(pto-1) == ' ')) {
+                   pto--;  /* cut last empty space */
+               }
+               *pto = '\0';
+               rsSetString (result, leftStr);
+           }
+           xpathRSFree( &leftResult );
+           free(leftStr);
+           break;
+      
+    case f_not:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                   nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree (&leftResult);
+               return rc;
+           }
+           left = xpathFuncBoolean(&leftResult);
+           xpathRSFree (&leftResult);
+           rsSetBool (result, !left);
+           break;
+      
+    case f_true:
+           XPATH_ARITYCHECK(step,0,errMsg);
+           rsSetBool (result, 1);
+           break;
+
+    case f_false:
+           XPATH_ARITYCHECK(step,0,errMsg);
+           rsSetBool (result, 0);
+           break;
+      
+    case f_id:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                               nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree( &leftResult );
+               return rc;
+           }
+           DBG(fprintf(stderr, "id: \n");
+               rsPrint(&leftResult);
+           )
+           if (leftResult.type == EmptyResult) {
+               *errMsg = (char*)strdup ("id() requires an argument!");
+               return XPATH_EVAL_ERR;
+           }
+           if (leftResult.type == xNodeSetResult) {
+               for (i=0; i < leftResult.nr_nodes; i++) {
+                   leftStr = xpathFuncStringForNode (leftResult.nodes[i]);
+                   entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
+                                                 leftStr);
+                   if (entryPtr) {
+                       node = (domNode*) Tcl_GetHashValue (entryPtr);
+                       /* Don't report nodes out of the fragment list */
+                       if (node->parentNode != NULL || 
+                           (node == node->ownerDocument->documentElement)) {
+                           checkRsAddNode (result, node);
+                       }
+                   }
+                   free (leftStr);
+                   /*xpathRSFree (&newNodeList);*/
+               }
+           } else {
+               leftStr = xpathFuncString (&leftResult);
+               from = 0;
+               pwhite = 0;
+               pfrom = pto = leftStr;
+               while (*pto) {
+                   switch (*pto) {
+                   case ' ' : case '\n': case '\r': case '\t':
+                       if (pwhite) {
+                           pto++;
+                           continue;
+                       }
+                       *pto = '\0';
+                       entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
+                                                     pfrom);
+                       if (entryPtr) {
+                           node = (domNode*) Tcl_GetHashValue (entryPtr);
+                           /* Don't report nodes out of the fragment list */
+                           if (node->parentNode != NULL || 
+                               (node == node->ownerDocument->documentElement)) {
+                               checkRsAddNode (result, node);
+                           }
+                       }
+                       pwhite = 1;
+                       pto++;
+                       continue;
+                   default:
+                       if (pwhite) {
+                           pfrom = pto;
+                           pwhite = 0;
+                       }
+                       pto++;
+                   }
+               }
+               if (!pwhite) {
+                   entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
+                                                 pfrom);
+                   if (entryPtr) {
+                       node = (domNode*) Tcl_GetHashValue (entryPtr);
+                       /* Don't report nodes out of the fragment list */
+                       if (node->parentNode != NULL || 
+                           (node == node->ownerDocument->documentElement)) {
+                           rsAddNode (result, node);
+                       }
+                   }
+               }
+               free (leftStr);
+           }
+           sortByDocOrder (result);
+           xpathRSFree (&leftResult);
+           break;
+      
+    case f_sum:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                               nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree( &leftResult );
+               return rc;
+           }
+           if (leftResult.type != xNodeSetResult) {
+               if (leftResult.type == EmptyResult) {
+                   rsSetInt (result, 0);
+                   xpathRSFree( &leftResult );
+                   return XPATH_OK;
+               } else {
+                   xpathRSFree( &leftResult );
+                   *errMsg = (char*)strdup("sum() requires a node set!");
+                   xpathRSFree( &leftResult );
+                   return XPATH_EVAL_ERR;
+               }
+           }
+      
+           xpathRSInit(&rightResult);
+           rightResult.nr_nodes = 1;
+           rightResult.type     = leftResult.type;
+           leftReal = 0.0;
+           for (i=0; i<leftResult.nr_nodes; i++) {
+               rightResult.nodes = &(leftResult.nodes[i]);
+               DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
+               leftReal += xpathFuncNumber(&rightResult, &NaN);
+               if (NaN) { 
+                   leftReal = strtod ("nan", &leftStr);
+                   rsSetReal (result, leftReal);
+                   return XPATH_OK;
+               }
+               DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
+           }
+           rsSetReal (result, leftReal);
+           xpathRSFree( &leftResult );
+           break;
+           
+    case f_lang:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                               nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree (&leftResult);
+               return rc;
+           }
+           leftStr = xpathFuncString (&leftResult);
+           if (ctxNode->nodeType != ELEMENT_NODE) {
+               node = ctxNode->parentNode;
+           } else {
+               node = ctxNode;
+           }
+           while (node) {
+               attr = node->firstAttr;
+               while (attr) {
+                   if (strcmp (attr->nodeName, "xml:lang")!=0) {
+                       attr = attr->nextSibling;
+                       continue;
+                   }
+                   tcldom_tolower (attr->nodeValue, tmp, 80);
+                   tcldom_tolower (leftStr, tmp1, 80);
+                   if (strcmp (tmp, tmp1)==0) {
+                       rsSetBool (result, 1);
+                       free (leftStr);
+                       xpathRSFree (&leftResult);
+                       return XPATH_OK;
+                   } else {
+                       pfrom = tmp;
+                       i = 0;
+                       while (*pfrom && i < 79) {
+                           if (*pfrom == '-') {
+                               *pfrom = '\0';
+                               break;
+                           }
+                           pfrom++;
+                           i++;
+                       }
+                       if (strcmp (tmp, tmp1)==0) {
+                           rsSetBool (result, 1);
+                           free (leftStr);
+                           xpathRSFree (&leftResult);
+                           return XPATH_OK;
+                       } else {
+                           rsSetBool (result, 0);
+                           free (leftStr);
+                           xpathRSFree (&leftResult);
+                           return XPATH_OK;
+                       }
+                   }
+               }
+               node = node->parentNode;
+           }
+           rsSetBool (result, 0);
+           free (leftStr);
+           xpathRSFree (&leftResult);
+           break;
+      
+    case f_startsWith:
+    case f_contains:
+    case f_substringBefore:
+    case f_substringAfter:
+           XPATH_ARITYCHECK(step,2,errMsg);
+           xpathRSInit (&leftResult);
+           xpathRSInit (&rightResult);
+      
+           savedDocOrder = *docOrder;
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+      
+           rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
+                               nodeList, cbs, &rightResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+      
+      
+           DBG(fprintf(stderr, "\nsubstring-* left,right:\n");
+               rsPrint(&leftResult);
+               rsPrint(&rightResult);
+           )
+           leftStr  = xpathFuncString( &leftResult  );
+           rightStr = xpathFuncString( &rightResult );
+           DBG(fprintf(stderr, "substring-* '%s' '%s' \n", leftStr, rightStr);)
+           if (step->intvalue == f_contains) {
+               if (strstr(leftStr, rightStr) != NULL) {
+                   rsSetBool (result, 1);
+               } else {
+                   rsSetBool (result, 0);
+               }
+           } else
+           if (step->intvalue == f_substringBefore) {
+               pfrom = strstr(leftStr, rightStr);
+               if (pfrom != NULL) {
+                   DBG(fprintf(stderr, "substring-before '%s' '%s' : ", leftStr, rightStr);)
+                   *pfrom = '\0';
+                   DBG(fprintf(stderr, "'%s' \n", leftStr);)
+                   rsSetString (result, leftStr);
+               } else {
+                   rsSetString (result, "");
+               }
+           } else
+           if (step->intvalue == f_substringAfter) {
+               pfrom = strstr(leftStr, rightStr);
+               if (pfrom != NULL) {
+                   rsSetString (result, pfrom + strlen (rightStr));
+               } else {
+                   rsSetString (result, "");
+               }
+           } else {
+               /* starts-with */
+               i = strlen(rightStr);
+               if(strncmp(leftStr, rightStr, i)==0) {
+                   rsSetBool (result, 1);
+               } else {
+                   rsSetBool (result, 0);
+               }
+           }
+           xpathRSFree (&leftResult);
+           xpathRSFree (&rightResult);
+           free(rightStr);
+           free(leftStr);
+           break;
+      
+    case f_concat:
+           nextStep = step->child;
+           pto = malloc(1);
+           *pto = '\0';
+           len = 0;
+           while (nextStep) {
+               xpathRSInit (&leftResult);
+               savedDocOrder = *docOrder;
+               rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
+                                   nodeList, cbs, &leftResult, docOrder, errMsg);
+               CHECK_RC;
+               *docOrder = savedDocOrder;
+      
+               leftStr  = xpathFuncString( &leftResult  );
+               pto = (char*)realloc(pto, 1+len+strlen(leftStr));
+               memmove(pto + len, leftStr, strlen(leftStr));
+               len += strlen(leftStr);
+               *(pto + len) = '\0';
+               xpathRSFree( &leftResult );
+               free(leftStr);
+               nextStep = nextStep->next;
+           }
+           rsSetString (result, pto);
+           free(pto);
+           break;
+           
+    case f_substring:
+           xpathRSInit (&leftResult);
+           savedDocOrder = *docOrder;
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+      
+           xpathRSInit (&rightResult);
+           rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
+                               nodeList, cbs, &rightResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+      
+           leftStr  = xpathFuncString( &leftResult );
+           xpathRSFree (&leftResult);
+           from = xpathRound(xpathFuncNumber(&rightResult, &NaN))-1;
+           xpathRSFree( &rightResult );
+           if (NaN) {
+               free (leftStr);
+               rsSetString (result, "");
+               return XPATH_OK;
+           }
+      
+           if (step->child->next->next) {
+               xpathRSInit (&rightResult);
+               savedDocOrder = *docOrder;
+               rc = xpathEvalStep( step->child->next->next, ctxNode, exprContext, 
+                                   position, nodeList, cbs, &rightResult, docOrder,
+                                   errMsg);
+               CHECK_RC;
+               *docOrder = savedDocOrder;
+      
+               dRight = xpathFuncNumber (&rightResult, &NaN);
+               len = xpathRound(dRight);
+               xpathRSFree (&rightResult);
+               if (NaN) {
+                   if (isinf (dRight) == 1) {
+                       len = INT_MAX;
+                   } else {
+                       free (leftStr);
+                       rsSetString (result, "");
+                       return XPATH_OK;
+                   }
+               }
+               xpathRSFree (&rightResult);
+               if (from < 0) {
+                   len = len + from;
+                   if (len <= 0) {
+                       free (leftStr);
+                       rsSetString (result, "");
+                       return XPATH_OK;
+                   }
+                   from = 0;
+               }
+           } else {
+               if (from < 0) from = 0;
+               len = strlen(leftStr) - from;
+           }
+      
+           if (from >= strlen(leftStr)) {
+               rsSetString (result, "");
+               free(leftStr);
+               return XPATH_OK;
+           } else {
+               if ( (len == INT_MAX) || ((from + len) > strlen(leftStr)) ) {
+                   len =  strlen(leftStr) - from;
+               }
+           }
+           DBG(fprintf(stderr, "substring leftStr='%s' from=%d len=%d \n",
+                           leftStr, from, len);
+           )
+      
+           *(leftStr+from+len) = '\0';
+           rsSetString (result, (leftStr+from));
+           free(leftStr);
+           break;
+           
+    case f_translate:
+           XPATH_ARITYCHECK(step,3,errMsg);
+           xpathRSInit (&leftResult);
+           savedDocOrder = *docOrder;
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
+                               cbs, &leftResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+           xpathRSInit (&rightResult);
+           rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
+                               nodeList, cbs, &rightResult, docOrder, errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+           xpathRSInit (&replaceResult);
+           rc = xpathEvalStep( step->child->next->next, ctxNode, exprContext, 
+                               position, nodeList, cbs, &replaceResult, docOrder,
+                               errMsg);
+           CHECK_RC;
+           *docOrder = savedDocOrder;
+           leftStr    = xpathFuncString( &leftResult    );
+           rightStr   = xpathFuncString( &rightResult   );
+           replaceStr = xpathFuncString( &replaceResult );
+      
+      
+#if TcOnly8Bits
+           len = strlen(replaceStr);
+           pfrom = pto = leftStr;
+           while (*pfrom) {
+               fStr = strchr(rightStr, *pfrom);
+               if (fStr == NULL) {
+                   *pto++ = *pfrom;
+               } else {
+                   i = (fStr - rightStr);
+                   if (i < len) {
+                       *pto++ = *(replaceStr+i);
+                   }
+               }
+               pfrom++;
+           }
+           *pto = '\0';
+           rsSetString (result, leftStr);
+#else 
+           Tcl_DStringInit (&tstr);
+           Tcl_DStringInit (&tfrom);
+           Tcl_DStringInit (&tto);
+           Tcl_DStringInit (&tresult);
+      
+           Tcl_UtfToUniCharDString (leftStr, -1, &tstr);
+           Tcl_UtfToUniCharDString (rightStr, -1, &tfrom);
+           Tcl_UtfToUniCharDString (replaceStr, -1, &tto);
+      
+           lenstr  = Tcl_DStringLength (&tstr) / sizeof (Tcl_UniChar);
+           fromlen = Tcl_DStringLength (&tfrom) / sizeof (Tcl_UniChar); 
+           len     = Tcl_DStringLength (&tto) / sizeof (Tcl_UniChar);
+           
+           upfrom = (Tcl_UniChar *)Tcl_DStringValue (&tstr);
+           for (i = 0; i < lenstr; i++) {
+               found = 0;
+               ufStr = (Tcl_UniChar *)Tcl_DStringValue (&tfrom);
+               for (j = 0; j < fromlen; j++) {
+                   if (*ufStr == *upfrom) {
+                       found = 1;
+                       break;
+                   }
+                   ufStr++;
+               }
+               if (found) {
+                   if (j < len) {
+                       unichar = Tcl_UniCharAtIndex (replaceStr, j);
+                       utfCharLen = Tcl_UniCharToUtf (unichar, utfBuf);
+                       Tcl_DStringAppend (&tresult, utfBuf, utfCharLen);
+                   }
+               } else {
+                   utfCharLen = Tcl_UniCharToUtf (*upfrom, utfBuf);
+                   Tcl_DStringAppend (&tresult, utfBuf, utfCharLen);
+               }
+               upfrom++;
+           }
+           rsSetString (result, Tcl_DStringValue (&tresult));
+           Tcl_DStringFree (&tstr);
+           Tcl_DStringFree (&tfrom);
+           Tcl_DStringFree (&tto);
+           Tcl_DStringFree (&tresult);
+#endif               
+      
+           xpathRSFree( &replaceResult );
+           xpathRSFree( &rightResult   );
+           xpathRSFree( &leftResult    );
+           free(leftStr); free(rightStr); free(replaceStr);
+           break;
+           
+    case f_count:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                               nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree( &leftResult );
+               return rc;
+           }
+           if (leftResult.type == EmptyResult) {
+               rsSetInt (result, 0);
+               return XPATH_OK;
+           } 
+           if (leftResult.type != xNodeSetResult) {
+               *errMsg = (char*)strdup("count() requires a node set!");
+               xpathRSFree( &leftResult );
+               return XPATH_EVAL_ERR;
+           }
+           rsSetInt (result, leftResult.nr_nodes);
+           xpathRSFree (&leftResult);
+           break;
+           
+    case f_unparsedEntityUri:
+           XPATH_ARITYCHECK(step,1,errMsg);
+           xpathRSInit (&leftResult);
+           rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                               nodeList, cbs, &leftResult, docOrder, errMsg);
+           if (rc) {
+               xpathRSFree( &leftResult );
+               return rc;
+           }
+           leftStr = xpathFuncString (&leftResult);
+           entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->unparsedEntities, 
+                                         leftStr);
+           if (entryPtr) {
+               rsSetString (result, (char *)Tcl_GetHashValue (entryPtr));
+           } else {
+               rsSetString (result, "");
+           }
+           free (leftStr);
+           break;
+               
+    case f_localName:
+    case f_name:
+    case f_namespaceUri:
+    case f_generateId:
+           xpathRSInit (&leftResult);
+           if (step->child == NULL) {
+               /*  no parameter, the context node is the nodeset to
+                *  operate with
+                */
+               rsAddNode( &leftResult, ctxNode);
+           } else {
+               XPATH_ARITYCHECK(step,1,errMsg);
+               xpathRSInit (&leftResult);
+               rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                                   nodeList, cbs, &leftResult, docOrder, errMsg);
+               if (rc) {
+                   xpathRSFree( &leftResult );
+                   return rc;
+               }
+           }
+           if (leftResult.type == EmptyResult) {
+               rsSetString (result, "");
+               return XPATH_OK;
+           }
+           
+           if (step->intvalue == f_generateId) {
+               if (leftResult.type != xNodeSetResult) {
+                   *errMsg = (char*)strdup("generate-id() requires a nodeset or no argument!");
+                   xpathRSFree (&leftResult);
+                   return XPATH_EVAL_ERR;
+               }
+               if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
+                   node = ((domAttrNode*)leftResult.nodes[0])->parentNode;
+                   i = 0;
+                   attr = node->firstAttr;
+                   while (attr) {
+                       if ((domNode*)attr == leftResult.nodes[0]) break;
+                       attr = attr->nextSibling;
+                       i++;
+                   }
+                   sprintf(tmp,"node%d-%d", node->nodeNumber, i);
+               } else {
+                   sprintf(tmp,"node%d", leftResult.nodes[0]->nodeNumber);
+               }
+               rsSetString (result, tmp);
+           } else
+           
+           if (step->intvalue == f_namespaceUri) {
+               if (leftResult.type != xNodeSetResult) {
+                   *errMsg = (char*)strdup("namespace-uri() requires a node set!");
+                   xpathRSFree( &leftResult );
+                   return XPATH_EVAL_ERR;
+               }
+               if ( (leftResult.nr_nodes <= 0) 
+                    || (   leftResult.nodes[0]->nodeType != ELEMENT_NODE
+                        && leftResult.nodes[0]->nodeType != ATTRIBUTE_NODE )
+                  )
+               {
+                   rsSetString (result, "");
+               } else {
+                   rsSetString (result, domNamespaceURI(leftResult.nodes[0]));
+               }
+           } else
+           
+           if (step->intvalue == f_localName) {
+               if (leftResult.type != xNodeSetResult) {
+                   *errMsg = (char*)strdup("local-name() requires a node set!");
+                   xpathRSFree( &leftResult );
+                   return XPATH_EVAL_ERR;
+               }
+               if (leftResult.nodes[0]->nodeType == ELEMENT_NODE) {
+                   if (leftResult.nodes[0] == 
+                       leftResult.nodes[0]->ownerDocument->rootNode) {
+                       rsSetString (result, "");
+                   } else {
+                       rsSetString (result, domGetLocalName(leftResult.nodes[0]->nodeName));
+                   } 
+               } else 
+               if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
+                   leftStr = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
+                   if (leftStr[0] == 'x' && strcmp(leftStr, "xmlns")==0) {
+                       rsSetString (result, "");
+                   } else {
+                       rsSetString (result, leftStr);
+                   }
+               } else 
+               if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
+                   if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
+                       memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue, 79);
+                       tmp[79]= '\0';
+                   } else {
+                       memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue,
+                               ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength);
+                       tmp[((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
+                   }
+                   rsSetString (result, tmp);
+               } else {
+                   rsSetString (result, "");
+               }
+           } else
+           
+           if (step->intvalue == f_name) {
+               if (   leftResult.type != xNodeSetResult ) {
+                   *errMsg = (char*)strdup("name() requires a node set!");
+                   xpathRSFree( &leftResult );
+                   return XPATH_EVAL_ERR;
+               }
+               if (leftResult.nodes[0]->nodeType == ELEMENT_NODE) {
+                   if (leftResult.nodes[0] == 
+                       leftResult.nodes[0]->ownerDocument->rootNode) {
+                       rsSetString (result, "");
+                   } else {
+                       rsSetString (result, leftResult.nodes[0]->nodeName);
+                   }
+               } else 
+               if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
+                   if (leftResult.nodes[0]->nodeFlags & IS_NS_NODE) {
+                       if (((domAttrNode *)leftResult.nodes[0])->nodeName[5] == '\0') {
+                           rsSetString (result, "");
+                       } else {
+                           rsSetString (result, &((domAttrNode*)leftResult.nodes[0])->nodeName[6]);
+                       }
+                   } else {
+                       rsSetString (result, ((domAttrNode*)leftResult.nodes[0])->nodeName );
+                   }
+               } else 
+               if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
+                   if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
+                       memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue, 79);
+                       tmp[79]= '\0';
+                   } else {
+                       memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue,
+                               ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength);
+                       tmp[((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
+                   }
+                   rsSetString (result, tmp);
+               } else {
+                   rsSetString (result, "");
+               }
+           }
+           xpathRSFree( &leftResult );
+           break;
+
+    default:
+           if (cbs->funcCB != NULL) {
+               /* count number of arguments (to be able to allocate later) */
+               argc = 0;
+               nextStep = step->child;
+               while (nextStep) {
+                   argc++;
+                   nextStep = nextStep->next;
+               }
+               args = (xpathResultSets*) malloc( (argc+1) * sizeof(xpathResultSets));
+               args[0] = NULL;
+               argc = 0;
+               nextStep = step->child;
+               savedDocOrder = *docOrder;
+               while (nextStep) {
+                   arg = (xpathResultSet*) malloc (sizeof(xpathResultSet));
+                   args[argc++] = arg;
+                   args[argc]   = NULL;
+                   xpathRSInit (arg);
+                   rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
+                                       nodeList, cbs, arg, docOrder, errMsg);
+                   CHECK_RC;
+                   *docOrder = savedDocOrder;
+                   nextStep = nextStep->next;
+               }
+               rc = (cbs->funcCB) (cbs->funcClientData, step->strvalue,
+                                   ctxNode, position, nodeList, argc, args,
+                                   result, errMsg);
+               argc = 0;
+               while ( args[argc] != NULL) {
+                   xpathRSFree( args[argc++] );
+               }
+               free(args);
+               return rc;
+           } else {
+               if (strlen(step->strvalue)>50) *(step->strvalue + 50) = '\0';
+               sprintf(tmp, "Unknown function '%s'!", step->strvalue);
+               *errMsg = (char*)strdup(tmp);
+           }
+           return XPATH_EVAL_ERR;
+    }
+    return XPATH_OK;
+}
 
 /*----------------------------------------------------------------------------
 |   xpathEvalStep
@@ -2278,32 +3235,17 @@ static int xpathEvalStep (
     char             **errMsg
 )
 {
-    xpathResultSet   leftResult, rightResult, replaceResult;
+    xpathResultSet   leftResult, rightResult;
     xpathResultSet  *pleftResult, *prightResult, tResult;
-    int              i, j, k, rc, res, pwhite, len,  NaN, switchResult;
-    char            *replaceStr, *pfrom, *pto, tmp[80], tmp1[80], *uri;
+    int              i, j, k, rc, res, NaN, switchResult;
     domNode         *node, *child, *startingNode, *ancestor;
     domAttrNode     *attr;
     domNS           *ns;
-    double           leftReal;
-    ast              nextStep;
-    int              argc, savedDocOrder, from;
-    xpathResultSets *args;
-    xpathResultSet  *arg;
-    Tcl_HashEntry   *entryPtr;
+    int              savedDocOrder;
     unsigned int     leftNodeNr, rightNodeNr;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;
-#if TclOnly8Bits
-    char            *fStr;
-#else 
-    int              found;
-    int              lenstr, fromlen, utfCharLen;
-    char             utfBuf[TCL_UTF_MAX];        
-    Tcl_DString      tstr, tfrom, tto, tresult;
-    Tcl_UniChar     *ufStr, *upfrom, unichar;
-#endif    
 
     if (result->type == EmptyResult) useFastAdd = 1;
     else useFastAdd = 0;
@@ -3204,849 +4146,14 @@ static int xpathEvalStep (
 
     case ExecFunction:
     case ExecIdKey:
-        if (IS_FUNC('p',"position")) {
-            XPATH_ARITYCHECK(step,0,errMsg);
-            if (*docOrder) {
-                rsSetInt (result, position+1);
-            } else {
-                rsSetInt (result, nodeList->nr_nodes - position);
-            }
-        } else
-
-        if (IS_FUNC('l',"last")) {
-            XPATH_ARITYCHECK(step,0,errMsg);
-            rsSetInt (result, nodeList->nr_nodes);
-        } else
-
-        if (IS_FUNC('n',"number")) {
-            xpathRSInit (&leftResult);
-            if (xpathArity(step) == 0) {
-                /*  no parameter, the context node is the nodeset to
-                 *  operate with
-                 */
-                rsAddNode( &leftResult, ctxNode);
-            } else {
-                XPATH_ARITYCHECK(step,1,errMsg);
-                xpathRSInit (&leftResult);
-                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                    nodeList, cbs, &leftResult, docOrder, errMsg);
-                if (rc) {
-                    xpathRSFree( &leftResult );
-                    return rc;
-                }
-            }
-            leftReal = xpathFuncNumber(&leftResult, &NaN);
-            rsSetReal (result, leftReal);
-            xpathRSFree( &leftResult );
-        } else
-
-        if ((IS_FUNC('f',"floor"))   ||
-            (IS_FUNC('c',"ceiling")) ||
-            (IS_FUNC('r',"round"))
-        ) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            leftReal = xpathFuncNumber(&leftResult, &NaN);
-            
-            if (NaN) { rsSetReal(result, leftReal); return XPATH_OK; }
-            
-            if      (IS_FUNC('f',"floor"))   leftReal = floor(leftReal);
-            else if (IS_FUNC('c',"ceiling")) leftReal = ceil(leftReal);
-            else if (IS_FUNC('r',"round"))   leftReal = xpathRound(leftReal);
-
-            rsSetReal (result, leftReal);
-            xpathRSFree( &leftResult );
-        } else
-
-        if (IS_FUNC('b',"boolean")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-           if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            left = xpathFuncBoolean(&leftResult);
-            rsSetBool (result, left);
-            xpathRSFree( &leftResult );
-        } else
-
-        if ((IS_FUNC('s',"string"))          ||
-            (IS_FUNC('n',"normalize-space")) ||
-            (IS_FUNC('s',"string-length"))
-        ) {
-            xpathRSInit (&leftResult);
-            if (step->child == NULL) {
-                /*  no parameter, the context node is the nodeset to
-                 *  operate with
-                 */
-                rsAddNode( &leftResult, ctxNode);
-
-            } else {
-                XPATH_ARITYCHECK(step,1,errMsg);
-                xpathRSInit (&leftResult);
-                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                    nodeList, cbs, &leftResult, docOrder, errMsg);
-                if (rc) {
-                    xpathRSFree( &leftResult );
-                    return rc;
-                }
-                DBG(fprintf(stderr, "normalize-space: \n");
-                    rsPrint(&leftResult);
-                )
-            }
-
-            leftStr = xpathFuncString (&leftResult );
-            DBG(fprintf(stderr, "leftStr='%s'\n", leftStr);)
-            if (IS_FUNC('s',"string")) {
-                rsSetString (result, leftStr);
-            } else
-            if (IS_FUNC('s',"string-length")) {
-                rsSetInt (result, strlen(leftStr));
-            } else
-            if (IS_FUNC('n',"normalize-space")) {
-                pwhite = 1;
-                pfrom = pto = leftStr;
-                while (*pfrom) {
-                    switch (*pfrom) {
-                        case ' ' : case '\n': case '\r': case '\t':
-                            if (!pwhite) {
-                                *pto++ = ' ';
-                                pwhite = 1;
-                            }
-                            break;
-                        default:
-                            *pto++ = *pfrom;
-                            pwhite = 0;
-                            break;
-                    }
-                    pfrom++;
-                }
-                if ((pto > leftStr) && (*(pto-1) == ' ')) {
-                    pto--;  /* cut last empty space */
-                }
-                *pto = '\0';
-                rsSetString (result, leftStr);
-            }
-            xpathRSFree( &leftResult );
-            free(leftStr);
-        } else
-
-        if (IS_FUNC('n',"not")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                    nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree (&leftResult);
-                return rc;
-            }
-            left = xpathFuncBoolean(&leftResult);
-            xpathRSFree (&leftResult);
-            rsSetBool (result, !left);
-        } else
-
-        if (IS_FUNC('t',"true")) {
-            XPATH_ARITYCHECK(step,0,errMsg);
-            rsSetBool (result, 1);
-        } else
-        if (IS_FUNC('f',"false")) {
-            XPATH_ARITYCHECK(step,0,errMsg);
-            rsSetBool (result, 0);
-        } else
-
-        if (IS_FUNC('i',"id")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            DBG(fprintf(stderr, "id: \n");
-                rsPrint(&leftResult);
-            )
-            if (leftResult.type == EmptyResult) {
-                *errMsg = (char*)strdup ("id() requires an argument!");
-                return XPATH_EVAL_ERR;
-            }
-            if (leftResult.type == xNodeSetResult) {
-                for (i=0; i < leftResult.nr_nodes; i++) {
-                    leftStr = xpathFuncStringForNode (leftResult.nodes[i]);
-                    entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
-                                                  leftStr);
-                    if (entryPtr) {
-                        node = (domNode*) Tcl_GetHashValue (entryPtr);
-                        /* Don't report nodes out of the fragment list */
-                        if (node->parentNode != NULL || 
-                            (node == node->ownerDocument->documentElement)) {
-                            checkRsAddNode (result, node);
-                        }
-                    }
-                    free (leftStr);
-                    /*xpathRSFree (&newNodeList);*/
-                }
-            } else {
-                leftStr = xpathFuncString (&leftResult);
-                from = 0;
-                pwhite = 0;
-                pfrom = pto = leftStr;
-                while (*pto) {
-                    switch (*pto) {
-                    case ' ' : case '\n': case '\r': case '\t':
-                        if (pwhite) {
-                            pto++;
-                            continue;
-                        }
-                        *pto = '\0';
-                        entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
-                                                      pfrom);
-                        if (entryPtr) {
-                            node = (domNode*) Tcl_GetHashValue (entryPtr);
-                            /* Don't report nodes out of the fragment list */
-                            if (node->parentNode != NULL || 
-                                (node == node->ownerDocument->documentElement)) {
-                                checkRsAddNode (result, node);
-                            }
-                        }
-                        pwhite = 1;
-                        pto++;
-                        continue;
-                    default:
-                        if (pwhite) {
-                            pfrom = pto;
-                            pwhite = 0;
-                        }
-                        pto++;
-                    }
-                }
-                if (!pwhite) {
-                    entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->ids,
-                                                  pfrom);
-                    if (entryPtr) {
-                        node = (domNode*) Tcl_GetHashValue (entryPtr);
-                        /* Don't report nodes out of the fragment list */
-                        if (node->parentNode != NULL || 
-                            (node == node->ownerDocument->documentElement)) {
-                            rsAddNode (result, node);
-                        }
-                    }
-                }
-                free (leftStr);
-            }
-            sortByDocOrder (result);
-            xpathRSFree (&leftResult);
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('s',"sum")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            if (leftResult.type != xNodeSetResult) {
-                if (leftResult.type == EmptyResult) {
-                    rsSetInt (result, 0);
-                    xpathRSFree( &leftResult );
-                    return XPATH_OK;
-                } else {
-                    xpathRSFree( &leftResult );
-                    *errMsg = (char*)strdup("sum() requires a node set!");
-                    xpathRSFree( &leftResult );
-                    return XPATH_EVAL_ERR;
-                }
-            }
-
-            xpathRSInit(&rightResult);
-            rightResult.nr_nodes = 1;
-            rightResult.type     = leftResult.type;
-            leftReal = 0.0;
-            for (i=0; i<leftResult.nr_nodes; i++) {
-                rightResult.nodes = &(leftResult.nodes[i]);
-                DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
-                leftReal += xpathFuncNumber(&rightResult, &NaN);
-                if (NaN) { 
-                    leftReal = strtod ("nan", &leftStr);
-                    rsSetReal (result, leftReal);
-                    return XPATH_OK;
-                }
-                DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
-            }
-            rsSetReal (result, leftReal);
-            xpathRSFree( &leftResult );
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('l', "lang")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree (&leftResult);
-                return rc;
-            }
-            leftStr = xpathFuncString (&leftResult);
-            if (ctxNode->nodeType != ELEMENT_NODE) {
-                node = ctxNode->parentNode;
-            } else {
-                node = ctxNode;
-            }
-            while (node) {
-                attr = node->firstAttr;
-                while (attr) {
-                    if (strcmp (attr->nodeName, "xml:lang")!=0) {
-                        attr = attr->nextSibling;
-                        continue;
-                    }
-                    tcldom_tolower (attr->nodeValue, tmp, 80);
-                    tcldom_tolower (leftStr, tmp1, 80);
-                    if (strcmp (tmp, tmp1)==0) {
-                        rsSetBool (result, 1);
-                        free (leftStr);
-                        xpathRSFree (&leftResult);
-                        return XPATH_OK;
-                    } else {
-                        pfrom = tmp;
-                        i = 0;
-                        while (*pfrom && i < 79) {
-                            if (*pfrom == '-') {
-                                *pfrom = '\0';
-                                break;
-                            }
-                            pfrom++;
-                            i++;
-                        }
-                        if (strcmp (tmp, tmp1)==0) {
-                            rsSetBool (result, 1);
-                            free (leftStr);
-                            xpathRSFree (&leftResult);
-                            return XPATH_OK;
-                        } else {
-                            rsSetBool (result, 0);
-                            free (leftStr);
-                            xpathRSFree (&leftResult);
-                            return XPATH_OK;
-                        }
-                    }
-                }
-                node = node->parentNode;
-            }
-            rsSetBool (result, 0);
-            free (leftStr);
-            xpathRSFree (&leftResult);
-        } else 
-
-        if (IS_FUNC('s',"starts-with")      ||
-            IS_FUNC('c',"contains")         ||
-            IS_FUNC('s',"substring-before") ||
-            IS_FUNC('s',"substring-after")
-        ) {
-            XPATH_ARITYCHECK(step,2,errMsg);
-            xpathRSInit (&leftResult);
-            xpathRSInit (&rightResult);
-
-            savedDocOrder = *docOrder;
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                                cbs, &leftResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-
-            rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
-                                nodeList, cbs, &rightResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-
-
-            DBG(fprintf(stderr, "\nsubstring-* left,right:\n");
-                rsPrint(&leftResult);
-                rsPrint(&rightResult);
-            )
-            leftStr  = xpathFuncString( &leftResult  );
-            rightStr = xpathFuncString( &rightResult );
-            DBG(fprintf(stderr, "substring-* '%s' '%s' \n", leftStr, rightStr);)
-            if (IS_FUNC('c',"contains")) {
-                if (strstr(leftStr, rightStr) != NULL) {
-                    rsSetBool (result, 1);
-                } else {
-                    rsSetBool (result, 0);
-                }
-            } else
-            if (IS_FUNC('s',"substring-before")) {
-                pfrom = strstr(leftStr, rightStr);
-                if (pfrom != NULL) {
-                    DBG(fprintf(stderr, "substring-before '%s' '%s' : ", leftStr, rightStr);)
-                    *pfrom = '\0';
-                    DBG(fprintf(stderr, "'%s' \n", leftStr);)
-                    rsSetString (result, leftStr);
-                } else {
-                    rsSetString (result, "");
-                }
-            } else
-            if (IS_FUNC('s',"substring-after")) {
-                pfrom = strstr(leftStr, rightStr);
-                if (pfrom != NULL) {
-                    rsSetString (result, pfrom + strlen (rightStr));
-                } else {
-                    rsSetString (result, "");
-                }
-            } else {
-                /* starts-with */
-                i = strlen(rightStr);
-                if(strncmp(leftStr, rightStr, i)==0) {
-                    rsSetBool (result, 1);
-                } else {
-                    rsSetBool (result, 0);
-                }
-            }
-            xpathRSFree (&leftResult);
-            xpathRSFree (&rightResult);
-            free(rightStr);
-            free(leftStr);
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('c',"concat")) {
-            nextStep = step->child;
-            pto = malloc(1);
-            *pto = '\0';
-            len = 0;
-            while (nextStep) {
-                xpathRSInit (&leftResult);
-                savedDocOrder = *docOrder;
-                rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
-                                    nodeList, cbs, &leftResult, docOrder, errMsg);
-                CHECK_RC;
-                *docOrder = savedDocOrder;
-
-                leftStr  = xpathFuncString( &leftResult  );
-                pto = (char*)realloc(pto, 1+len+strlen(leftStr));
-                memmove(pto + len, leftStr, strlen(leftStr));
-                len += strlen(leftStr);
-                *(pto + len) = '\0';
-                xpathRSFree( &leftResult );
-                free(leftStr);
-                nextStep = nextStep->next;
-            }
-            rsSetString (result, pto);
-            free(pto);
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('s',"substring")) {
-            xpathRSInit (&leftResult);
-            savedDocOrder = *docOrder;
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                                cbs, &leftResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-
-            xpathRSInit (&rightResult);
-            rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
-                                nodeList, cbs, &rightResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-
-            leftStr  = xpathFuncString( &leftResult );
-            xpathRSFree (&leftResult);
-            from = xpathRound(xpathFuncNumber(&rightResult, &NaN))-1;
-            xpathRSFree( &rightResult );
-            if (NaN) {
-                free (leftStr);
-                rsSetString (result, "");
-                return XPATH_OK;
-            }
-
-            if (step->child->next->next) {
-                xpathRSInit (&rightResult);
-                savedDocOrder = *docOrder;
-                rc = xpathEvalStep( step->child->next->next, ctxNode, exprContext, 
-                                    position, nodeList, cbs, &rightResult, docOrder,
-                                    errMsg);
-                CHECK_RC;
-                *docOrder = savedDocOrder;
-
-                dRight = xpathFuncNumber (&rightResult, &NaN);
-                len = xpathRound(dRight);
-                xpathRSFree (&rightResult);
-                if (NaN) {
-                    if (isinf (dRight) == 1) {
-                        len = INT_MAX;
-                    } else {
-                        free (leftStr);
-                        rsSetString (result, "");
-                        return XPATH_OK;
-                    }
-                }
-                xpathRSFree (&rightResult);
-                if (from < 0) {
-                    len = len + from;
-                    if (len <= 0) {
-                        free (leftStr);
-                        rsSetString (result, "");
-                        return XPATH_OK;
-                    }
-                    from = 0;
-                }
-            } else {
-                if (from < 0) from = 0;
-                len = strlen(leftStr) - from;
-            }
-
-            if (from >= strlen(leftStr)) {
-                rsSetString (result, "");
-                free(leftStr);
-                return XPATH_OK;
-            } else {
-                if ( (len == INT_MAX) || ((from + len) > strlen(leftStr)) ) {
-                    len =  strlen(leftStr) - from;
-                }
-            }
-            DBG(fprintf(stderr, "substring leftStr='%s' from=%d len=%d \n",
-                            leftStr, from, len);
-            )
-
-            *(leftStr+from+len) = '\0';
-            rsSetString (result, (leftStr+from));
-            free(leftStr);
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('t',"translate")) {
-            XPATH_ARITYCHECK(step,3,errMsg);
-            xpathRSInit (&leftResult);
-            savedDocOrder = *docOrder;
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                                cbs, &leftResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-            xpathRSInit (&rightResult);
-            rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
-                                nodeList, cbs, &rightResult, docOrder, errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-            xpathRSInit (&replaceResult);
-            rc = xpathEvalStep( step->child->next->next, ctxNode, exprContext, 
-                                position, nodeList, cbs, &replaceResult, docOrder,
-                                errMsg);
-            CHECK_RC;
-            *docOrder = savedDocOrder;
-            leftStr    = xpathFuncString( &leftResult    );
-            rightStr   = xpathFuncString( &rightResult   );
-            replaceStr = xpathFuncString( &replaceResult );
-
-
-#if TclOnly8Bits
-            len = strlen(replaceStr);
-            pfrom = pto = leftStr;
-            while (*pfrom) {
-                fStr = strchr(rightStr, *pfrom);
-                if (fStr == NULL) {
-                    *pto++ = *pfrom;
-                } else {
-                    i = (fStr - rightStr);
-                    if (i < len) {
-                        *pto++ = *(replaceStr+i);
-                    }
-                }
-                pfrom++;
-            }
-            *pto = '\0';
-            rsSetString (result, leftStr);
-#else
-            Tcl_DStringInit (&tstr);
-            Tcl_DStringInit (&tfrom);
-            Tcl_DStringInit (&tto);
-            Tcl_DStringInit (&tresult);
-
-            Tcl_UtfToUniCharDString (leftStr, -1, &tstr);
-            Tcl_UtfToUniCharDString (rightStr, -1, &tfrom);
-            Tcl_UtfToUniCharDString (replaceStr, -1, &tto);
-
-            lenstr  = Tcl_DStringLength (&tstr) / sizeof (Tcl_UniChar);
-            fromlen = Tcl_DStringLength (&tfrom) / sizeof (Tcl_UniChar); 
-            len     = Tcl_DStringLength (&tto) / sizeof (Tcl_UniChar);
-            
-            upfrom = (Tcl_UniChar *)Tcl_DStringValue (&tstr);
-            for (i = 0; i < lenstr; i++) {
-                found = 0;
-                ufStr = (Tcl_UniChar *)Tcl_DStringValue (&tfrom);
-                for (j = 0; j < fromlen; j++) {
-                    if (*ufStr == *upfrom) {
-                        found = 1;
-                        break;
-                    }
-                    ufStr++;
-                }
-                if (found) {
-                    if (j < len) {
-                        unichar = Tcl_UniCharAtIndex (replaceStr, j);
-                        utfCharLen = Tcl_UniCharToUtf (unichar, utfBuf);
-                        Tcl_DStringAppend (&tresult, utfBuf, utfCharLen);
-                    }
-                } else {
-                    utfCharLen = Tcl_UniCharToUtf (*upfrom, utfBuf);
-                    Tcl_DStringAppend (&tresult, utfBuf, utfCharLen);
-                }
-                upfrom++;
-            }
-            rsSetString (result, Tcl_DStringValue (&tresult));
-            Tcl_DStringFree (&tstr);
-            Tcl_DStringFree (&tfrom);
-            Tcl_DStringFree (&tto);
-            Tcl_DStringFree (&tresult);
-#endif                
-
-            xpathRSFree( &replaceResult );
-            xpathRSFree( &rightResult   );
-            xpathRSFree( &leftResult    );
-            free(leftStr); free(rightStr); free(replaceStr);
-            return XPATH_OK;
-        } else
-
-        if (IS_FUNC('c',"count")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            if (leftResult.type == EmptyResult) {
-                rsSetInt (result, 0);
-                return XPATH_OK;
-            } 
-            if (leftResult.type != xNodeSetResult) {
-                *errMsg = (char*)strdup("count() requires a node set!");
-                xpathRSFree( &leftResult );
-                return XPATH_EVAL_ERR;
-            }
-            rsSetInt (result, leftResult.nr_nodes);
-            return XPATH_OK;
-        } else 
-
-        if (IS_FUNC('u',"unparsed-entity-uri")) {
-            XPATH_ARITYCHECK(step,1,errMsg);
-            xpathRSInit (&leftResult);
-            rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                nodeList, cbs, &leftResult, docOrder, errMsg);
-            if (rc) {
-                xpathRSFree( &leftResult );
-                return rc;
-            }
-            leftStr = xpathFuncString (&leftResult);
-            entryPtr = Tcl_FindHashEntry (ctxNode->ownerDocument->unparsedEntities, 
-                                          leftStr);
-            if (entryPtr) {
-                rsSetString (result, (char *)Tcl_GetHashValue (entryPtr));
-            } else {
-                rsSetString (result, "");
-            }
-            free (leftStr);
-        } else
-                
-        if (IS_FUNC('l',"local-name")   ||
-            IS_FUNC('n',"name")         ||
-            IS_FUNC('n',"namespace-uri")||
-            IS_FUNC('g',"generate-id")
-        ) {
-            xpathRSInit (&leftResult);
-            if (step->child == NULL) {
-                /*  no parameter, the context node is the nodeset to
-                 *  operate with
-                 */
-                rsAddNode( &leftResult, ctxNode);
-            } else {
-                XPATH_ARITYCHECK(step,1,errMsg);
-                xpathRSInit (&leftResult);
-                rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
-                                    nodeList, cbs, &leftResult, docOrder, errMsg);
-                if (rc) {
-                    xpathRSFree( &leftResult );
-                    return rc;
-                }
-            }
-            if (leftResult.type == EmptyResult) {
-                rsSetString (result, "");
-                return XPATH_OK;
-            }
-            
-            if (IS_FUNC('g',"generate-id")) {
-                if (leftResult.type != xNodeSetResult) {
-                    *errMsg = (char*)strdup("generate-id() requires a nodeset or no argument!");
-                    xpathRSFree (&leftResult);
-                    return XPATH_EVAL_ERR;
-                }
-                if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                    node = ((domAttrNode*)leftResult.nodes[0])->parentNode;
-                    i = 0;
-                    attr = node->firstAttr;
-                    while (attr) {
-                        if ((domNode*)attr == leftResult.nodes[0]) break;
-                        attr = attr->nextSibling;
-                        i++;
-                    }
-                    sprintf(tmp,"node%d-%d", node->nodeNumber, i);
-                } else {
-                    sprintf(tmp,"node%d", leftResult.nodes[0]->nodeNumber);
-                }
-                rsSetString (result, tmp);
-            } else
-            
-            if (IS_FUNC('n',"namespace-uri")) {
-                if (leftResult.type != xNodeSetResult) {
-                    *errMsg = (char*)strdup("namespace-uri() requires a node set!");
-                    xpathRSFree( &leftResult );
-                    return XPATH_EVAL_ERR;
-                }
-                if ( (leftResult.nr_nodes <= 0) 
-                     || (   leftResult.nodes[0]->nodeType != ELEMENT_NODE
-                         && leftResult.nodes[0]->nodeType != ATTRIBUTE_NODE )
-                   )
-                {
-                    rsSetString (result, "");
-                } else {
-                    rsSetString (result, domNamespaceURI(leftResult.nodes[0]));
-                }
-            } else
-            
-            if (IS_FUNC('l',"local-name")) {
-                if (leftResult.type != xNodeSetResult) {
-                    *errMsg = (char*)strdup("local-name() requires a node set!");
-                    xpathRSFree( &leftResult );
-                    return XPATH_EVAL_ERR;
-                }
-                if (leftResult.nodes[0]->nodeType == ELEMENT_NODE) {
-                    if (leftResult.nodes[0] == 
-                        leftResult.nodes[0]->ownerDocument->rootNode) {
-                        rsSetString (result, "");
-                    } else {
-                        rsSetString (result, domGetLocalName(leftResult.nodes[0]->nodeName));
-                    } 
-                } else 
-                if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                    leftStr = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
-                    if (leftStr[0] == 'x' && strcmp(leftStr, "xmlns")==0) {
-                        rsSetString (result, "");
-                    } else {
-                        rsSetString (result, leftStr);
-                    }
-                } else 
-                if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
-                    if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
-                        memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue, 79);
-                        tmp[79]= '\0';
-                    } else {
-                        memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue,
-                                ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength);
-                        tmp[((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
-                    }
-                    rsSetString (result, tmp);
-                } else {
-                    rsSetString (result, "");
-                }
-            } else
-            
-            if (IS_FUNC('n',"name")) {
-                if (   leftResult.type != xNodeSetResult ) {
-                    *errMsg = (char*)strdup("name() requires a node set!");
-                    xpathRSFree( &leftResult );
-                    return XPATH_EVAL_ERR;
-                }
-                if (leftResult.nodes[0]->nodeType == ELEMENT_NODE) {
-                    if (leftResult.nodes[0] == 
-                        leftResult.nodes[0]->ownerDocument->rootNode) {
-                        rsSetString (result, "");
-                    } else {
-                        rsSetString (result, leftResult.nodes[0]->nodeName);
-                    }
-                } else 
-                if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                    if (leftResult.nodes[0]->nodeFlags & IS_NS_NODE) {
-                        if (((domAttrNode *)leftResult.nodes[0])->nodeName[5] == '\0') {
-                            rsSetString (result, "");
-                        } else {
-                            rsSetString (result, &((domAttrNode*)leftResult.nodes[0])->nodeName[6]);
-                        }
-                    } else {
-                        rsSetString (result, ((domAttrNode*)leftResult.nodes[0])->nodeName );
-                    }
-                } else 
-                if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
-                    if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
-                        memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue, 79);
-                        tmp[79]= '\0';
-                    } else {
-                        memmove(tmp, ((domProcessingInstructionNode*)leftResult.nodes[0])->targetValue,
-                                ((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength);
-                        tmp[((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength] = '\0';
-                    }
-                    rsSetString (result, tmp);
-                } else {
-                    rsSetString (result, "");
-                }
-            }
-            xpathRSFree( &leftResult );
-            return XPATH_OK;
-
-         } else {
-            if (cbs->funcCB != NULL) {
-                /* count number of arguments (to be able to allocate later) */
-                argc = 0;
-                nextStep = step->child;
-                while (nextStep) {
-                    argc++;
-                    nextStep = nextStep->next;
-                }
-                args = (xpathResultSets*) malloc( (argc+1) * sizeof(xpathResultSets));
-                args[0] = NULL;
-                argc = 0;
-                nextStep = step->child;
-                savedDocOrder = *docOrder;
-                while (nextStep) {
-                    arg = (xpathResultSet*) malloc (sizeof(xpathResultSet));
-                    args[argc++] = arg;
-                    args[argc]   = NULL;
-                    xpathRSInit (arg);
-                    rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
-                                        nodeList, cbs, arg, docOrder, errMsg);
-                    CHECK_RC;
-                    *docOrder = savedDocOrder;
-                    nextStep = nextStep->next;
-                }
-                rc = (cbs->funcCB) (cbs->funcClientData, step->strvalue,
-                                    ctxNode, position, nodeList, argc, args,
-                                    result, errMsg);
-                argc = 0;
-                while ( args[argc] != NULL) {
-                    xpathRSFree( args[argc++] );
-                }
-                free(args);
-                return rc;
-            } else {
-                if (strlen(step->strvalue)>50) *(step->strvalue + 50) = '\0';
-                sprintf(tmp, "Unknown function '%s'!", step->strvalue);
-                *errMsg = (char*)strdup(tmp);
-            }
-            return XPATH_EVAL_ERR;
-        }
+        rc = xpathEvalFunction (step, ctxNode, exprContext, position, nodeList,
+                                cbs, result, docOrder, errMsg);
+        CHECK_RC;
     }
     return XPATH_OK;
 
 } /* xpathEvalStep */
+
 
 
 
