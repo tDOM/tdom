@@ -7,6 +7,9 @@
 	  since Starkit users need that. Also, fixed alternative libdir
 	  usage when installing in non-standard (user-given) location.
 
+	* unix/CONFIG: new file. Adds some examples how to build
+	  the extension on some common Unix platforms.
+
 2003-03-03  Rolf Ade  <rolf@pointsman.de>
 
         * tests/dom.test    
