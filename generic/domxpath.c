@@ -2247,7 +2247,7 @@ static int xpathArityCheck (
 \---------------------------------------------------------------------------*/
 int xpathRound (double r) {
     if (r < 0.0) {
-        return (int)(r - 0.5);
+        return floor (r + 0.5);
     } else {
         return (int)(r + 0.5);
     }
