@@ -30,19 +30,21 @@ COMPILING tDOM
 
     For AOLserver 3.x:
 
-      This builds the tdom library as AOLserver module. Please consult
+      This builds the library as AOLserver module. Please consult
       the AOLserver documentation how to setup the server to load 
       AOLserver module(s).
 
     For AOLserver 4.x:
 
       This version supports standard Tcl "pacakge require" mechanism
-      so you can just do:
+      so you can just:
 
         make install
 
       and it will install the library in the proper place. All you
       need to do then is to use "ns_eval package require tdom" to
       load the library and register it for every connection thread.
+      You should add this command to some of the Tcl startup files
+      in modules/tcl, so it loads the library on server startup. 
 
 - EOF -
