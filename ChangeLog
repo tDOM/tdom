@@ -1,5 +1,7 @@
 2005-01-10  Rolf Ade  <rolf@pointsman.de>
 
+       * doc/dom.*: Corrected typo.     
+
        * generic/dom.c: Fixed a leftover reference to embedded hash
          table in domDocument struct.
 
