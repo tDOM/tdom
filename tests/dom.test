@@ -30,6 +30,7 @@
 #    dom-28.*: getAttributeNS
 #    dom-29.*: ownerDocument 
 #    dom-30.*: precedes
+#    dom-31.*: insertBefore
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
@@ -58,7 +59,7 @@ test dom-1.3 {to less arguments to domNode command} {
     catch {domNode}
 } {1}
 
-test dom-3.1 {repetitived documentElement with objVar, then delete} {knownBug} {
+test dom-3.1 {repetitived documentElement with objVar, then delete} {
     dom createDocument "root" doc 
     $doc documentElement root
     $doc delete
@@ -70,17 +71,17 @@ test dom-3.1 {repetitived documentElement with objVar, then delete} {knownBug} {
     set result
 } "\u00c4\u00d4\u00dc"
 
-#  test dom-3.2 {repetitived documentElement, then delete} {
-#      set doc [dom createDocument "root"] 
-#      $doc documentElement root
-#      $doc delete
-    
-#      set doc [dom createDocument "\u00c4\u00d4\u00dc"]
-#      $doc documentElement root
-#      set result [$root nodeName]
-#      $doc delete
-#      set result
-#  } "\u00c4\u00d4\u00dc"
+test dom-3.2 {repetitived documentElement, then delete} {
+    set doc [dom createDocument "root"] 
+    $doc documentElement root
+    $doc delete
+   
+    set doc [dom createDocument "\u00c4\u00d4\u00dc"]
+    $doc documentElement root
+    set result [$root nodeName]
+    $doc delete
+    set result
+} "\u00c4\u00d4\u00dc"
 
 test dom-3.3 {repetitived documentElement, then delete} {
     set doc [dom createDocument "root"] 
@@ -925,7 +926,7 @@ test dom-13.8 {appendFromScript - textnode with -disableOutputEscaping} {
     set result
 } {<root><p>Some <b>important</b> stuff</p></root>}
 
-test dom-13.9 {appendFromScript while fragment list isn't empty (leaks memory)} {knownBug} {
+test dom-13.9 {appendFromScript while fragment list isn't empty} {
     set doc [dom parse <root>text</root>]
     set root [$doc documentElement]
     $root removeChild [$root firstChild]
@@ -1537,6 +1538,321 @@ test dom-30.10 {precedes} {
 } {1 {Cannot compare the relative order of a node with a node out of the fragment list.}}
 
 $doc delete
+
+test dom-31.1 {insertBefore - syntax check} {
+    set doc [dom parse <root/>]
+    set root [$doc documentElement]
+    set result [catch {$root insertBefore}]
+    $doc delete
+    set result
+} {1}
+
+test dom-31.2 {insertBefore - syntax check} {
+    set doc [dom parse <root><a/><b/></root>]
+    set root [$doc documentElement]
+    set result [catch {$root insertBefore [$root firstChild]}]
+    $doc delete
+    set result
+} {1}
+
+test dom-31.3 {insertBefore - tries to insert node as child of node} {
+    set doc [dom parse <root><a/><b/></root>]
+    set root [$doc documentElement]
+    catch {$root insertBefore $root [$root lastChild]} errMsg
+    $doc delete
+    set errMsg
+} {HIERARCHY_REQUEST_ERR}
+
+test dom-31.4 {insertBefore - refnode invalide} {
+    set doc [dom parse <root><a/><b/></root>]
+    set root [$doc documentElement]
+    set newElement [$doc createElement new]
+    catch {$root insertBefore $newElement $root} errMsg
+    $doc delete
+    set errMsg
+} {NOT_FOUND_ERR}
+
+# Prior to dom.c r1.63 insertBefore leaks the node to insert, if the refnode
+# isn't valid. 
+test dom-31.5 {insertBefore - refnode invalide} {
+    set doc [dom parse <root><one><b/></one><two/></root>]
+    set root [$doc documentElement]
+    set oneChild [$root firstChild]
+    set twoChild [$root lastChild]
+    catch {$oneChild insertBefore [$oneChild firstChild] $root} errMsg
+    set result [list $errMsg [llength [$oneChild childNodes]]]
+    $doc delete
+    set result
+} {NOT_FOUND_ERR 1}
+
+test dom-31.6 {insertBefore - refnode and new node to insert are the same} {
+    dom parse <root><a/></root> doc
+    $doc documentElement root
+    $root firstChild firstChild
+    $root insertBefore $firstChild $firstChild
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a/></root>}
+
+test dom-31.7 {insertBefore - insert a sibling of node} {
+    dom parse {<root><a><aa/></a><b/></root>} doc
+    set root [$doc documentElement]
+    $root firstChild a
+    $root lastChild b
+    $a insertBefore $b [$a firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a><b/><aa/></a></root>}
+
+test dom-31.8 {insertBefore - new node is node} {
+    dom parse <root><a/></root> doc
+    $doc documentElement root
+    $root firstChild firstChild
+    catch {$root insertBefore $root $firstChild} errMsg
+    $doc delete
+    set errMsg
+} {HIERARCHY_REQUEST_ERR}
+
+test dom-31.9 {insertBefore tries to insert a parent of node as child} {
+    set doc [dom parse <root><a><aa/></a></root>]
+    set root [$doc documentElement]
+    $root firstChild a
+    catch {$a insertBefore $root [$a firstChild]} errMsg
+    $doc delete
+    set errMsg
+} {HIERARCHY_REQUEST_ERR}
+
+test dom-31.10 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a lastChild] [$a firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a><two/><one/></a></root>}
+
+test dom-31.11 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a lastChild] [$a firstChild]
+    catch {unset result}
+    set node [$a firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {two one}
+
+test dom-31.12 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a lastChild] [$a firstChild]
+    catch {unset result}
+    set node [$a lastChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {one two}
+
+test dom-31.13 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a firstChild] [$a lastChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a><one/><two/></a></root>}
+
+test dom-31.14 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a firstChild] [$a lastChild]
+    catch {unset result}
+    set node [$a firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {one two}
+
+test dom-31.15 {insertBefore - node to insert is a sibling of ref node} {
+    set doc [dom parse <root><a><one/><two/></a></root>]
+    $doc documentElement root
+    $root firstChild a
+    $a insertBefore [$a firstChild] [$a lastChild]
+    catch {unset result}
+    set node [$a lastChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {two one}
+
+test dom-31.16 {insertBefore - empty ref node} {
+    dom parse <root/> doc
+    $doc documentElement root
+    $doc createElement new newNode
+    $root insertBefore $newNode ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><new/></root>}
+
+test dom-31.17 {insertBefore - empty ref node} {
+    dom parse <root><a/></root> doc
+    $doc documentElement root
+    $doc createElement new newNode
+    $root insertBefore $newNode ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a/><new/></root>}
+
+test dom-31.18 {insertBefore - try to insert the root node of the doc} {
+    dom parse <root><a/></root> doc
+    $doc documentElement root
+    catch {$root insertBefore [$root selectNodes /] [$root firstChild]} errMsg
+    $doc delete
+    set errMsg
+} {HIERARCHY_REQUEST_ERR}
+
+test dom-31.19 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root firstChild] ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><b/><c/><a/></root>}
+
+test dom-31.20 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root firstChild] ""
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {b c a}
+
+test dom-31.21 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root firstChild] ""
+    catch {unset result}
+    set node [$root lastChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {a c b}
+
+test dom-31.22 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root lastChild] ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a/><b/><c/></root>}
+
+test dom-31.23 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root lastChild] ""
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {a b c}
+
+test dom-31.24 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root lastChild] ""
+    catch {unset result}
+    set node [$root lastChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {c b a}
+
+test dom-31.25 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root selectNodes {*[2]}] ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a/><c/><b/></root>}
+
+test dom-31.26 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root selectNodes {*[2]}] ""
+    catch {unset result}
+    set node [$root firstChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node nextSibling]
+    }
+    $doc delete
+    set result
+} {a c b}
+
+test dom-31.27 {insertBefore - empty ref node} {
+    dom parse <root><a/><b/><c/></root> doc
+    $doc documentElement root
+    $root insertBefore [$root selectNodes {*[2]}] ""
+    catch {unset result}
+    set node [$root lastChild]
+    while {$node != ""} {
+        lappend result [$node nodeName]
+        set node [$node previousSibling]
+    }
+    $doc delete
+    set result
+} {b c a}
+
+test dom-31.28 {insertBefore - empty ref node} {
+    dom parse <root><a><aa/><aa/></a><b><bb/></b></root> doc
+    $doc documentElement root
+    $root firstChild a
+    $root lastChild b
+    $a insertBefore $b ""
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><a><aa/><aa/><b><bb/></b></a></root>}
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
