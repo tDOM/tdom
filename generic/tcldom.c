@@ -228,6 +228,7 @@ static char node_usage[] =
                 "    appendXML xmlString         \n"
                 "    selectNodes xpathQuery ?typeVar? \n"
                 "    toXPath                     \n"
+                "    disableOutputEscaping ?boolean? \n"
                 "    xslt <xsltDocNode>          \n"
                 TDomThreaded(
                 "    readlock                    \n"
@@ -1970,7 +1971,7 @@ int tcldom_NodeObjCmd (
                 *attr_name, *attr_val, *filter, *option, *errMsg, *uri,
                **parameters;
     int          result, length, methodIndex, i, line, column, indent, mode;
-    int          nsIndex;
+    int          nsIndex, bool;
     Tcl_Obj     *namePtr, *resultPtr, *objPtr, *localListPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
@@ -1992,6 +1993,7 @@ int tcldom_NodeObjCmd (
         "asHTML",          "prefix",         "getBaseURI",      "appendFromScript",
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
+        "disableOutputEscaping",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -2011,7 +2013,8 @@ int tcldom_NodeObjCmd (
         m_getAttributeNS,  m_setAttributeNS, m_hasAttributeNS,  m_removeAttributeNS,
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
-        m_getElementsByTagName,              m_getElementsByTagNameNS
+        m_getElementsByTagName,              m_getElementsByTagNameNS,
+        m_disableOutputEscaping
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -2980,6 +2983,27 @@ int tcldom_NodeObjCmd (
             }
             break;
 
+        case m_disableOutputEscaping:
+            CheckArgs (2,3,2,"?boolean?");
+            if (node->nodeType != TEXT_NODE) {
+                SetResult ("not a TEXT_NODE!");
+                return TCL_ERROR;
+            }
+            SetIntResult (
+                (((node->nodeFlags & DISABLE_OUTPUT_ESCAPING) == 0) ? 0 : 1));
+            if (objc == 3) {
+                result = Tcl_GetBooleanFromObj (interp, objv[2], &bool);
+                if (result != TCL_OK) {
+                    SetResult ("second arg must be a boolean value1");
+                }
+                if (bool) {
+                    node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
+                } else {
+                    node->nodeFlags &= (~DISABLE_OUTPUT_ESCAPING);
+                }
+            }
+            break;
+            
         TDomThreaded(
         case m_writelock:
             CheckArgs(3,3,2,"script");
