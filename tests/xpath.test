@@ -544,6 +544,25 @@ test xpath-7.4 {Name test * in a union expr} {
     set result
 } {div}
 
+test xpath-7.5 {ancestor-or-self axis on /} {
+    dom parse {<root/>} doc
+    set result [$doc selectNodes {count(./ancestor-or-self::*)}]
+    lappend result [$doc selectNodes {count(ancestor-or-self::*)}]
+    lappend result [$doc selectNodes {count(./ancestor-or-self::node())}]
+    lappend result [$doc selectNodes {count(ancestor-or-self::node())}]
+    $doc delete
+    set result
+} {0 0 1 1}
+
+test xpath-7.6 {parent axis on /} {
+    dom parse {<root/>} doc
+    set result [$doc selectNodes {count(parent::*)}]
+    lappend result [$doc selectNodes {count(parent::node())}]
+    lappend result [$doc selectNodes {count(..)}]
+    $doc delete
+    set result
+} {0 0 0}
+
 # cleanup
 ::tcltest::cleanupTests
 return
