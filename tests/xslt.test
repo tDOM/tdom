@@ -766,6 +766,18 @@ test xslt-7.6 {namespaces in the result doc} {
     set result
 } {element}
 
+test xslt-7.7 {parent of the result doc documentElement} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set resultRoot [$resultDoc documentElement]
+    set result [$resultRoot parentNode]
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {}
+
 # cleanup
 ::tcltest::cleanupTests
 return
