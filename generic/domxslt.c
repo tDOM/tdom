@@ -815,9 +815,8 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {
         clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
-            reportError (xs->currentXSLTNode,
-                         "xsl:number: UTF-8 form of character longer than 3 Byte", 
-                         errMsg);
+            reportError (xs->currentXSLTNode, "xsl:number: UTF-8 form of"
+                         " character longer than 3 Byte", errMsg);
             return NULL;
         }
         if (clen > 1) {
@@ -912,8 +911,8 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     return format;
 
  wrongSyntax:
-    reportError (xs->currentXSLTNode, 
-                 "xsl:number: Wrong syntax in format attribute", errMsg);
+    reportError (xs->currentXSLTNode, "xsl:number: Wrong syntax in"
+                 " format attribute", errMsg);
     return NULL;
 }
 
@@ -2051,9 +2050,8 @@ static int xsltXPathFuncs (
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (exprContext, prefix);
             if (!ns) {
-                reportError (exprContext, 
-                             "There isn't a namespace bound to the prefix.",
-                             errMsg);
+                reportError (exprContext, "There isn't a namespace bound to"
+                             " the prefix.", errMsg);
                 FREE(keyId);
                 return -1;
             }
@@ -2171,7 +2169,8 @@ static int xsltXPathFuncs (
             if (prefix[0] != '\0') {
                 ns = domLookupPrefix (exprContext, prefix);
                 if (!ns) {
-                    reportError (exprContext, "There isn't a namespace bound to the prefix.", errMsg);
+                    reportError (exprContext, "There isn't a namespace bound"
+                                 " to the prefix.", errMsg);
                     FREE(str);
                     return -1;
                 }
@@ -2189,14 +2188,16 @@ static int xsltXPathFuncs (
             }
             FREE(str);
             if (df == NULL) {
-                reportError (exprContext, "There isn't a decimal format with this name.", errMsg);
+                reportError (exprContext, "There isn't a decimal format with"
+                             " this name.", errMsg);
                 return -1;
             }
         } else
         if (argc == 2) {
             df = xs->decimalFormats;
         } else {
-            reportError (exprContext, "format-number: wrong # parameters: format-number(number, string, ?string?)!", errMsg);
+            reportError (exprContext, "format-number: wrong # parameters:"
+                         " format-number(number, string, ?string?)!", errMsg);
             return -1;
         }
         NaN = 0;
@@ -2291,9 +2292,8 @@ static int xsltXPathFuncs (
         } else
         if (argc == 2) {
             if (argv[1]->type != xNodeSetResult) {
-                reportError (exprContext, 
-                             "second arg of document() has to be a nodeset!",
-                             errMsg);
+                reportError (exprContext, "second arg of document() has to be"
+                             " a nodeset!", errMsg);
                 return -1;
             }
             if (argv[1]->nodes[0]->nodeType == ATTRIBUTE_NODE) {
@@ -2700,9 +2700,8 @@ static int xsltSetVar (
     if (prefix[0] != '\0') {
         ns = domLookupPrefix (actionNode, prefix);
         if (!ns) {
-            reportError (actionNode,
-                         "There isn't a namespace bound to the prefix.",
-                         errMsg);
+            reportError (actionNode, "There isn't a namespace bound to"
+                         " the prefix.", errMsg);
             return -1;
         }
         var->uri  = ns->uri;
@@ -2835,9 +2834,8 @@ static int xsltGetVar (
             varInProcess = xs->varsInProcess;
             while (varInProcess) {
                 if (strcmp(varInProcess->name, variableName)==0) {
-                    reportError (topLevelVar->node,
-                                 "circular top level variabale definition detected",
-                                 errMsg);
+                    reportError (topLevelVar->node, "circular top level"
+                                 " variabale definition detected", errMsg);
                     return XPATH_EVAL_ERR;
                 }
                 varInProcess = varInProcess->next;
@@ -3024,7 +3022,8 @@ static int xsltAddTemplate (
     tpl->match      = getAttr(node,"match", a_match);
     str = getAttr(node, "name", a_name);
     if (!tpl->match && !str) {
-        reportError (node, " xsl:template must have a a name or match attribute (or both)", errMsg);
+        reportError (node, " xsl:template must have a a name or" 
+                     " match attribute (or both)", errMsg);
         FREE ((char*)tpl);
         return -1;
     }
@@ -3032,7 +3031,8 @@ static int xsltAddTemplate (
     tpl->nameURI    = NULL;
     if (str) {
         if (!domIsQNAME (str)) {
-            reportError (node, "The value of the \"name\" attribute must be a qname", errMsg);
+            reportError (node, "The value of the \"name\" attribute must"
+                         " be a qname", errMsg);
             FREE ((char*)tpl);
             return -1;
         }
@@ -3040,7 +3040,8 @@ static int xsltAddTemplate (
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
-                reportError (node, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                reportError (node, "The prefix of the \"name\" attribute"
+                             " value isn't bound to a namespace.", errMsg);
                 FREE ((char*)tpl);
                 return -1;
             }
@@ -3059,7 +3060,8 @@ static int xsltAddTemplate (
         if (!hnew) {
             t = (xsltTemplate *) Tcl_GetHashValue (h);
             if (t->precedence == precedence) {
-                reportError (node, "There is already a template with the same name and precedence.", errMsg);
+                reportError (node, "There is already a template with the"
+                             " same name and precedence.", errMsg);
                 FREE ((char*)tpl);
                 return -1;
             }
@@ -3078,18 +3080,21 @@ static int xsltAddTemplate (
     if (str) {
         rc = 0;
         if (!domIsQNAME (str)) {
-            reportError (node, "The value of the \"mode\" attribute must be a qname.", errMsg);
+            reportError (node, "The value of the \"mode\" attribute must"
+                         " be a qname.", errMsg);
             rc = -1;
         }
         if (!tpl->match) {
-            reportError (node, "A template without a \"match\" attribute must not have a \"mode\" attribute.", errMsg);
+            reportError (node, "A template without a \"match\" attribute must"
+                         " not have a \"mode\" attribute.", errMsg);
             rc = -1;
         }
         domSplitQName (str, prefix, &localName);
         if (prefix[0] != '\0') {
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
-                reportError (node, "The prefix of the \"mode\" attribute value isn't bound to a namespace.", errMsg);
+                reportError (node, "The prefix of the \"mode\" attribute value"
+                             " isn't bound to a namespace.", errMsg);
                 rc = -1;
             }
             tpl->modeURI = ns->uri;
@@ -3346,7 +3351,9 @@ static int setParamVars (
                     xs->currentXSLTNode = child;
                     select = getAttr(child, "select", a_select);
                     if (select && child->firstChild) {
-                        reportError (child, "An xsl:parameter element with a select attribute must be empty", errMsg);
+                        reportError (child, "An xsl:parameter element with a"
+                                     " select attribute must be empty",
+                                     errMsg);
                         return -1;
                     }
                     TRACE1("with-param select='%s'\n", select);
@@ -3354,7 +3361,8 @@ static int setParamVars (
                                     currentPos, select, child, 0, errMsg);
                     CHECK_RC;
                 } else {
-                    reportError (child, "xsl:with-param: missing mandatory attribute \"name\".", errMsg);
+                    reportError (child, "xsl:with-param: missing mandatory"
+                                 " attribute \"name\".", errMsg);
                     return -1;
                 }
             }
@@ -3414,7 +3422,8 @@ static int doSortActions (
                     else {
                         domSplitQName (evStr, prefix, &localName);
                         if (prefix[0] == '\0') {
-                            reportError (child, "data-type must be text, number, or a prefixed name", errMsg);                            
+                            reportError (child, "data-type must be text, "
+                                         "number or a prefixed name", errMsg);
                             FREE(evStr);
                             rc = -1;
                             break;
@@ -3433,9 +3442,8 @@ static int doSortActions (
                     if (strcmp(evStr,"descending")==0) ascending = 0;
                     else if (strcmp(evStr, "ascending")==0) ascending = 1;
                     else {
-                        reportError (child, 
-                                     "order must be ascending or descending",
-                                     errMsg);
+                        reportError (child, "order must be ascending or"
+                                     " descending", errMsg);
                         FREE(evStr);
                         rc = -1;
                         break;
@@ -3450,7 +3458,8 @@ static int doSortActions (
                     if (strcmp(evStr,"lower-first")==0) upperFirst = 0;
                     else if (strcmp(evStr, "upper-first")==0) upperFirst = 1;
                     else {
-                        reportError (child, "case-order must be lower-first or upper-first", errMsg);
+                        reportError (child, "case-order must be lower-first"
+                                     " or upper-first", errMsg);
                         FREE(evStr);
                         rc = -1;
                         break;
@@ -3567,9 +3576,8 @@ static int xsltNumber (
             if (groupingSize <= 0) {
                 /* This covers both cases: non integer value after evaluation
                    and wrong (<= 0) integer value. */
-                reportError (actionNode, 
-                             "The value of \"grouping-size\" must evaluate to a positiv integer.",
-                             errMsg);
+                reportError (actionNode, "The value of \"grouping-size\" must"
+                             " evaluate to a positiv integer.", errMsg);
             }
         }
     }
@@ -3764,9 +3772,8 @@ static int xsltNumber (
                 node = node->parentNode;
             }
         } else {
-            reportError (actionNode, 
-                         "xsl:number: Wrong \"level\" attribute value!",
-                         errMsg);
+            reportError (actionNode, "xsl:number: Wrong \"level\" attribute"
+                         " value!", errMsg);
             return -1;
         }
     }
@@ -3896,11 +3903,13 @@ static int ExecAction (
 
         case applyImports:
             if (actionNode->firstChild) {
-                reportError(actionNode, "xsl:apply-imports has to be empty!", errMsg);
+                reportError(actionNode, "xsl:apply-imports has to be empty!", 
+                            errMsg);
                 return -1;
             }
             if (!xs->currentTplRule) {
-                reportError(actionNode, "xsl:apply-imports not allowed here!", errMsg);
+                reportError(actionNode, "xsl:apply-imports not allowed here!",
+                            errMsg);
                 return -1;
             }
             tplChoosen = NULL;
@@ -4057,7 +4066,9 @@ static int ExecAction (
                 if (prefix[0] != '\0') {
                     ns = domLookupPrefix (actionNode, prefix);
                     if (!ns) {
-                        reportError (actionNode, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                        reportError (actionNode, "The prefix of the \"name\""
+                                     " attribute value isn't bound to a"
+                                     " namespace.", errMsg);
                         return -1;
                     }
                     modeURI = ns->uri;
@@ -4089,7 +4100,9 @@ static int ExecAction (
 
             if (rs.type == EmptyResult) break;
             else if (rs.type != xNodeSetResult) {
-                reportError (actionNode, "The \"select\" expression of xsl:apply-templates elements must evaluate to a node set.", errMsg);
+                reportError (actionNode, "The \"select\" expression of"
+                             " xsl:apply-templates elements must evaluate to"
+                             " a node set.", errMsg);
                 xpathRSFree (&rs);
                 return -1;
             }
@@ -4123,7 +4136,8 @@ static int ExecAction (
             nsAT = getAttr(actionNode, "namespace", a_namespace);
             str = getAttr(actionNode, "name", a_name);
             if (!str) {
-                reportError (actionNode, "xsl:attribute: missing mandatory attribute \"name\".", errMsg);
+                reportError (actionNode, "xsl:attribute: missing mandatory"
+                             " attribute \"name\".", errMsg);
                 return -1;
             }
 
@@ -4134,7 +4148,8 @@ static int ExecAction (
             domSplitQName (str2, prefix, &localName);
             if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                  || !domIsNCNAME (localName)) {
-                reportError (actionNode, "xsl:attribute: Attribute name is not a valid QName.", errMsg);
+                reportError (actionNode, "xsl:attribute: Attribute name is not"
+                             " a valid QName.", errMsg);
                 FREE(str2);
                 return -1;
             }
@@ -4217,7 +4232,8 @@ static int ExecAction (
             break;
 
         case attributeSet: 
-            reportError (actionNode, "xsl:attribute-set is only allowed at top-level.", errMsg);
+            reportError (actionNode, "xsl:attribute-set is only allowed at"
+                         " top-level.", errMsg);
             return -1;
 
         case callTemplate:
@@ -4225,9 +4241,8 @@ static int ExecAction (
             currentPrec = INT_MIN;
             str = getAttr(actionNode, "name", a_name);
             if (!str) {
-                reportError (actionNode,
-                             "xsl:call-template must have a \"name\" attribute",
-                             errMsg);
+                reportError (actionNode, "xsl:call-template must have a"
+                             " \"name\" attribute", errMsg);
                 return -1;
             }
             domSplitQName (str, prefix, &localName);
@@ -4235,7 +4250,9 @@ static int ExecAction (
             if (prefix[0] != '\0') {
                 ns = domLookupPrefix (actionNode, prefix);
                 if (!ns) {
-                    reportError (actionNode, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                    reportError (actionNode, "The prefix of the \"name\""
+                                 " attribute value isn't bound to a"
+                                 " namespace.", errMsg);
                     return -1;
                 }
                 uri = ns->uri;
@@ -4254,9 +4271,8 @@ static int ExecAction (
                 h = Tcl_FindHashEntry (&(xs->namedTemplates), localName);
             }
             if (!h) {
-                reportError (actionNode,
-                             "xsl:call-template calls a non existend template!",
-                             errMsg);
+                reportError (actionNode, "xsl:call-template calls a non"
+                             " existend template!", errMsg);
                 return -1;
             } 
             tplChoosen = (xsltTemplate *) Tcl_GetHashValue (h);
@@ -4292,7 +4308,9 @@ static int ExecAction (
                 switch (child->info) {
                     case when:
                         if (chooseState > 1) {
-                            reportError (actionNode, "\"otherwise\" clause must be after all \"when\" clauses", errMsg);
+                            reportError (actionNode, "\"otherwise\" clause"
+                                         " must be after all \"when\""
+                                         " clauses", errMsg);
                             return -1;
                         } else {
                             chooseState = 1;
@@ -4301,8 +4319,8 @@ static int ExecAction (
                         if (str) {
                             TRACE1("checking when test '%s' \n", str);
                             xs->current = currentNode;
-                            rc = evalXPath(xs, context, currentNode, currentPos,
-                                           str, &rs, errMsg);
+                            rc = evalXPath(xs, context, currentNode, 
+                                           currentPos, str, &rs, errMsg);
                             CHECK_RC;
                             b = xpathFuncBoolean( &rs );
                             xpathRSFree( &rs );
@@ -4318,7 +4336,8 @@ static int ExecAction (
                                 return 0;
                             }
                         } else {
-                            reportError (child, "xsl:when: missing mandatory attribute \"test\".", errMsg);
+                            reportError (child, "xsl:when: missing mandatory"
+                                         " attribute \"test\".", errMsg);
                             return -1;
                         }
                         break;
@@ -4326,9 +4345,13 @@ static int ExecAction (
                     case otherwise:
                         if (chooseState != 1) {
                             if (chooseState == 0) {
-                                reportError (actionNode, "\"choose\" must have at least one \"when\" clause", errMsg);
+                                reportError (actionNode, "\"choose\" must"
+                                             " have at least one \"when\""
+                                             " clause", errMsg);
                             } else {
-                                reportError (child, "only one \"otherwise\" clause allowed inside a \"choose\"", errMsg);
+                                reportError (child, "only one \"otherwise\""
+                                             " clause allowed inside a"
+                                             " \"choose\"", errMsg);
                             }
                             return -1;
                         } else {
@@ -4343,14 +4366,15 @@ static int ExecAction (
                         break;
 
                     default:
-                        reportError (actionNode,
-                                     "only otherwise or when allowed in choose!",
+                        reportError (actionNode, "only otherwise or when"
+                                     " allowed in choose!",
                                      errMsg);
                         return -1;
                 }
             }
             if (chooseState == 0) {
-                reportError (actionNode, "\"choose\" must have at least one \"when\" clause", errMsg);
+                reportError (actionNode, "\"choose\" must have at least"
+                             " one \"when\" clause", errMsg);
                 return -1;
             }
             break;
@@ -4368,7 +4392,8 @@ static int ExecAction (
             while (child) {
                 if (child->nodeType != TEXT_NODE) {
                     domDeleteNode (fragmentNode, NULL, NULL);
-                    reportError (actionNode, "xsl:comment must not create nodes other than text nodes.", errMsg);
+                    reportError (actionNode, "xsl:comment must not create"
+                                 " nodes other than text nodes.", errMsg);
                     return -1;
                 }
                 child = child->nextSibling;
@@ -4448,7 +4473,8 @@ static int ExecAction (
                     break;
                 }
                 if (xs->lastNode == xs->resultDoc->rootNode) {
-                    reportError (actionNode, "Cannot write an attribute when there is no open start tag", errMsg);
+                    reportError (actionNode, "Cannot write an attribute"
+                                 " when there is no open start tag", errMsg);
                     return -1;
                 }
                 attr = (domAttrNode *)currentNode;
@@ -4470,12 +4496,14 @@ static int ExecAction (
 
         case copyOf:
             if (actionNode->firstChild) {
-                reportError (actionNode, "xsl:copy-of has to be empty.", errMsg);
+                reportError (actionNode, "xsl:copy-of has to be empty.", 
+                             errMsg);
                 return -1;
             }
             select = getAttr(actionNode, "select", a_select);
             if (!select) {
-                reportError (actionNode, "xsl:copy-of: missing mandatory attribute \"select\".", errMsg);
+                reportError (actionNode, "xsl:copy-of: missing mandatory"
+                             " attribute \"select\".", errMsg);
                 return -1;
             }
 
@@ -4515,7 +4543,9 @@ static int ExecAction (
                         if (ns) uri = ns->uri;
                         else uri = NULL;
                         if (xs->lastNode == xs->resultDoc->rootNode) {
-                            reportError (actionNode, "Cannot write an attribute when there is no open start tag", errMsg);
+                            reportError (actionNode, "Cannot write an"
+                                         " attribute when there is no open"
+                                         " start tag", errMsg);
                             xpathRSFree (&rs);
                             return -1;
                         }
@@ -4546,14 +4576,16 @@ static int ExecAction (
             break;
 
         case decimalFormat: 
-            reportError (actionNode, "xsl:decimal-format is only allowed at toplevel.", errMsg);
+            reportError (actionNode, "xsl:decimal-format is only allowed"
+                         " at toplevel.", errMsg);
             return -1;
 
         case element:
             nsAT = getAttr(actionNode, "namespace", a_namespace);
             str  = getAttr(actionNode, "name", a_name);
             if (!str) {
-                reportError (actionNode, "xsl:element: missing mandatory attribute \"name\".", errMsg);
+                reportError (actionNode, "xsl:element: missing mandatory"
+                             " attribute \"name\".", errMsg);
                 return -1;
             }
 
@@ -4561,7 +4593,8 @@ static int ExecAction (
                                     str, &str2, errMsg);
             CHECK_RC;
             if (!domIsNAME (str2)) {
-                reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                reportError (actionNode, "xsl:element: Element name is not a"
+                             " valid QName.", errMsg);
                 FREE(str2);
                 return -1;
             }
@@ -4574,7 +4607,8 @@ static int ExecAction (
                 domSplitQName (str2, prefix, &localName);
                 if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                     || !domIsNCNAME (localName)) {
-                    reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
+                    reportError (actionNode, "xsl:element: Element name is"
+                                 " not a valid QName.", errMsg);
                     FREE(str2);
                     return -1;
                 }
@@ -4582,7 +4616,9 @@ static int ExecAction (
                 if (ns) nsStr = ns->uri;
                 else {
                     if (prefix[0] != '\0') {
-                        reportError (actionNode, "xsl:element: there isn't a URI associated with the prefix of the element name.", errMsg);
+                        reportError (actionNode, "xsl:element: there isn't"
+                                     " a URI associated with the prefix of"
+                                     " the element name.", errMsg);
                         FREE(str2);
                         return -1;
                     }
@@ -4616,7 +4652,8 @@ static int ExecAction (
         case forEach:
             select = getAttr(actionNode, "select", a_select);
             if (!select) {
-                reportError (actionNode, "xsl:for-each: The select attribute is required.", errMsg);
+                reportError (actionNode, "xsl:for-each: The select attribute"
+                             " is required.", errMsg);
                 return -1;
             }
             DBG (
@@ -4683,7 +4720,9 @@ static int ExecAction (
                 xs->currentTplRule = currentTplRule;
             } else {
                 if (rs.type != EmptyResult) {
-                    reportError (actionNode, "The \"select\" expression of xsl:for-each elements must evaluate to a node set.", errMsg);
+                    reportError (actionNode, "The \"select\" expression of"
+                                 " xsl:for-each elements must evaluate to a"
+                                 " node set.", errMsg);
                     xpathRSFree (&rs);
                     return -1;
                 }
@@ -4709,19 +4748,23 @@ static int ExecAction (
                     CHECK_RC;
                 }
             } else {
-                reportError (actionNode, "xsl:if: missing mandatory attribute \"test\".", errMsg);
+                reportError (actionNode, "xsl:if: missing mandatory attribute"
+                             " \"test\".", errMsg);
                 return -1;
             }
             break;
 
         case import:
-            reportError (actionNode, "xsl:import is only allowed at toplevel.", errMsg);
+            reportError (actionNode, "xsl:import is only allowed at toplevel.",
+                         errMsg);
             return -1;
         case include:
-            reportError (actionNode, "xsl:include is only allowed at toplevel.", errMsg);
+            reportError (actionNode, "xsl:include is only allowed at"
+                         " toplevel.", errMsg);
             return -1;
         case key:
-            reportError (actionNode, "xsl:key is only allowed at toplevel.", errMsg);
+            reportError (actionNode, "xsl:key is only allowed at toplevel.", 
+                         errMsg);
             return -1;
 
         case message:
@@ -4730,9 +4773,8 @@ static int ExecAction (
             else if (strcmp (str, "yes") == 0) terminate = 1;
             else if (strcmp (str, "no")  == 0) terminate = 0;
             else {
-                reportError (actionNode, 
-                             "Value for terminate should equal 'yes' or 'no'",
-                             errMsg);
+                reportError (actionNode, "Value for terminate should equal"
+                             " 'yes' or 'no'", errMsg);
                 return -1;
             }
             fragmentNode = domNewElementNode(xs->resultDoc, "",
@@ -4751,18 +4793,21 @@ static int ExecAction (
             xs->lastNode = savedLastNode;
             domDeleteNode (fragmentNode, NULL, NULL);
             if (terminate) {
-                reportError (actionNode, "xsl:message with attribute \"terminate\"=\"yes\"", errMsg);
+                reportError (actionNode, "xsl:message with attribute"
+                             " \"terminate\"=\"yes\"", errMsg);
                 return -1;
             }
             return 0;
 
         case namespaceAlias: 
-            reportError (actionNode, "xsl:namespaceAlias is only allowed at toplevel.", errMsg);
+            reportError (actionNode, "xsl:namespaceAlias is only allowed"
+                         " at toplevel.", errMsg);
             return -1;
 
         case number:
             if (actionNode->firstChild) {
-                reportError (actionNode, "xsl:number has to be empty.", errMsg);
+                reportError (actionNode, "xsl:number has to be empty.",
+                             errMsg);
                 return -1;
             }
             rc = xsltNumber(xs, context, currentNode, currentPos,
@@ -4773,9 +4818,8 @@ static int ExecAction (
         case output:  return 0;
 
         case otherwise:
-            reportError (actionNode, 
-                         "xsl:otherwise must be immediately within xsl:choose",
-                         errMsg);
+            reportError (actionNode, "xsl:otherwise must be immediately"
+                         " within xsl:choose", errMsg);
             return -1;
             
         case param:
@@ -4787,7 +4831,7 @@ static int ExecAction (
                     select = getAttr(actionNode, "select", a_select);
                     if (select && actionNode->firstChild) {
                         reportError (actionNode, "An xsl:parameter element "
-                                     "with a select attribute must be empty",
+                                     " with a select attribute must be empty",
                                      errMsg);
                         return -1;
                     }
@@ -4798,7 +4842,7 @@ static int ExecAction (
                 } 
             } else {
                 reportError (actionNode, "xsl:param: missing mandatory "
-                             "attribute \"name\".", errMsg);
+                             " attribute \"name\".", errMsg);
                 return -1;
             }
             break;
@@ -4813,13 +4857,14 @@ static int ExecAction (
                 CHECK_RC;
                 if (!domIsPINAME (str2) || !domIsNCNAME(str2)) {
                     reportError (actionNode, "xsl:processing-instruction: "
-                                 "Processing instruction name is invalid.",
+                                 " Processing instruction name is invalid.",
                                  errMsg);
                     FREE(str2);
                     return -1;
                 }
             } else {
-                reportError (actionNode, "xsl:processing-instruction: missing mandatory attribute \"name\".", errMsg);
+                reportError (actionNode, "xsl:processing-instruction:"
+                             " missing mandatory attribute \"name\".", errMsg);
                 return -1;
             }
             fragmentNode = domNewElementNode(xs->resultDoc, "", ELEMENT_NODE);
@@ -4835,7 +4880,7 @@ static int ExecAction (
                 if (child->nodeType != TEXT_NODE) {
                     domDeleteNode (fragmentNode, NULL, NULL);
                     reportError (actionNode, "xsl:processing-instruction must "
-                                 "not create nodes other than text nodes.",
+                                 " not create nodes other than text nodes.",
                                  errMsg);
                     FREE(str2);
                     return -1;
@@ -4845,7 +4890,7 @@ static int ExecAction (
             str = xpathGetStringValue (fragmentNode, &len);
             if (!domIsPIValue (str)) {
                 reportError (actionNode, "Invalide processing instruction "
-                             "value", errMsg);
+                             " value", errMsg);
                 domDeleteNode (fragmentNode, NULL, NULL);
                 FREE(str);
                 FREE(str2);
@@ -4907,9 +4952,8 @@ static int ExecAction (
                 xpathRSFree( &rs );
                 FREE(str);
             } else {
-                reportError (actionNode,
-                             "xsl:value-of must have a \"select\" attribute!",
-                             errMsg);
+                reportError (actionNode, "xsl:value-of must have a"
+                             " \"select\" attribute!", errMsg);
                 return -1;
             }
             break;
@@ -4928,7 +4972,8 @@ static int ExecAction (
                 }
                 select = getAttr(actionNode, "select", a_select);
                 if (select && actionNode->firstChild) {
-                    reportError (actionNode, "An xsl:variable element with a select attribute must be empty", errMsg);
+                    reportError (actionNode, "An xsl:variable element with a"
+                                 " select attribute must be empty", errMsg);
                     return -1;
                 }
                 TRACE1("variable select='%s'\n", select);
@@ -4936,17 +4981,15 @@ static int ExecAction (
                                 select, actionNode, 1, errMsg);
                 CHECK_RC;
             } else {
-                reportError (actionNode,
-                             "xsl:variable must have a \"name\" attribute!",
-                             errMsg);
+                reportError (actionNode, "xsl:variable must have a \"name\""
+                             " attribute!", errMsg);
                 return -1;
             }
             break;
 
         case when:
-            reportError (actionNode, 
-                         "xsl:when must be immediately within xsl:choose",
-                         errMsg);
+            reportError (actionNode, "xsl:when must be immediately within"
+                         " xsl:choose", errMsg);
             return -1;
             
         case withParam:
@@ -5621,14 +5664,20 @@ parseList (
             if (strcmp (start, "#default")==0) {
                 ns = domLookupPrefix (xsltRoot, "");
                 if (!ns) {
-                    reportError (xsltRoot, "All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.",
+                    reportError (xsltRoot, "All prefixes listed in"
+                                 " exclude-result-prefixes and"
+                                 " extension-element-prefixes must be"
+                                 " bound to a namespace.",
                                  errMsg);
                     return -1;
                 }
             } else {
                 ns = domLookupPrefix (xsltRoot, start);
                 if (!ns) {
-                    reportError (xsltRoot, "All prefixes listed in exclude-result-prefixes and extension-element-prefixes must be bound to a namespace.",
+                    reportError (xsltRoot, "All prefixes listed in"
+                                 " exclude-result-prefixes and"
+                                 " extension-element-prefixes must be"
+                                 " bound to a namespace.",
                                  errMsg);
                     return -1;
                 }
@@ -5653,14 +5702,14 @@ addExclExtNS (
 
     str = getAttr (xsltRoot, "version", a_version);
     if (!str) {
-        reportError (xsltRoot, "missing mandatory attribute \"version\".", errMsg);
+        reportError (xsltRoot, "missing mandatory attribute \"version\".",
+                     errMsg);
         return -1;
     }
     d = strtod (str, &tailptr);
     if (d == 0.0 && tailptr == str) {
-        reportError (xsltRoot, 
-                     "The value of the attribute \"version\" must be a number.",
-                     errMsg);
+        reportError (xsltRoot, "The value of the attribute \"version\" must"
+                     " be a number.", errMsg);
         return -1;
     }
     if (d > 1.0) {
@@ -5915,7 +5964,8 @@ static int processTopLevelVars (
                 ns = domLookupPrefix (xs->xsltDoc->documentElement, prefix);
                 if (!ns) {
                     Tcl_DStringInit (&dStr);
-                    Tcl_DStringAppend (&dStr, "No namespace bound to prefix (passed parameter \"", -1);
+                    Tcl_DStringAppend (&dStr, "No namespace bound to prefix"
+                                       " (passed parameter \"", -1);
                     Tcl_DStringAppend (&dStr, parameters[i], -1);
                     Tcl_DStringAppend (&dStr, "\")", -1);
                     *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
@@ -5999,7 +6049,9 @@ static int processTopLevelVars (
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
         if (select && topLevelVar->node->firstChild) {
-            reportError (topLevelVar->node, "xsl:variable and xsl:param elements with a select attribute must be empty", errMsg);
+            reportError (topLevelVar->node, "xsl:variable and xsl:param"
+                         " elements with a select attribute must be empty",
+                         errMsg);
             return -1;
         }
         rc = xsltSetVar(xs, topLevelVar->name, &nodeList, xmlNode, 0, select,
@@ -6063,14 +6115,16 @@ static int processTopLevel (
                     if (prefix[0] != '\0') {
                         ns = domLookupPrefix (node, prefix);
                         if (!ns) {
-                            reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                            reportError (node, "There isn't a namespace"
+                                         " bound to the prefix.", errMsg);
                             return -1;
                         }
                     }
                     if (xs->attrSets) {
                         attrSet = xs->attrSets;
                         while (attrSet->next) attrSet = attrSet->next;
-                        attrSet->next = (xsltAttrSet*)MALLOC(sizeof(xsltAttrSet));
+                        attrSet->next = 
+                            (xsltAttrSet*)MALLOC(sizeof(xsltAttrSet));
                         attrSet = attrSet->next;
                     } else {
                         attrSet = (xsltAttrSet*)MALLOC(sizeof(xsltAttrSet));
@@ -6085,14 +6139,16 @@ static int processTopLevel (
                         attrSet->uri = NULL;
                     }
                 } else {
-                    reportError (node, "xsl:attribute-set: missing mandatory attribute \"name\".", errMsg);
+                    reportError (node, "xsl:attribute-set: missing mandatory"
+                                 " attribute \"name\".", errMsg);
                     return -1;
                 }
                 break;
 
             case decimalFormat:
                 if (node->firstChild) {
-                    reportError (node, "xsl:decimal-format has to be empty.", errMsg);
+                    reportError (node, "xsl:decimal-format has to be empty.", 
+                                 errMsg);
                     return -1;
                 }
                 str = getAttr(node, "name", a_name);
@@ -6102,7 +6158,8 @@ static int processTopLevel (
                     if (prefix[0] != '\0') {
                         ns = domLookupPrefix (node, prefix);
                         if (!ns) {
-                            reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                            reportError (node, "There isn't a namespace bound"
+                                         " to the prefix.", errMsg);
                             return -1;
                         }
                     }
@@ -6162,7 +6219,8 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "decimal-separator has to be a single char", errMsg);
+                        reportError (node, "decimal-separator has to be a"
+                                     " single char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6170,7 +6228,8 @@ static int processTopLevel (
 #else
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "decimal-separator has to be a single char", errMsg);
+                        reportError (node, "decimal-separator has to be a"
+                                     " single char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6181,7 +6240,8 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "grouping-separator has to be a single char", errMsg);
+                        reportError (node, "grouping-separator has to be a"
+                                     " single char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6189,7 +6249,8 @@ static int processTopLevel (
 #else 
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "groupingSeparator has to be a single char", errMsg);
+                        reportError (node, "groupingSeparator has to be a"
+                                     " single char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6202,14 +6263,16 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "minus-sign has to be a single char", errMsg);
+                        reportError (node, "minus-sign has to be a single"
+                                     " char", errMsg);
                         return -1;
                     }
                     df->minusSign = str[0];
 #else                     
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "minus-sign has to be a single char", errMsg);
+                        reportError (node, "minus-sign has to be a single"
+                                     " char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6222,14 +6285,16 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "percent has to be a single char", errMsg);
+                        reportError (node, "percent has to be a single"
+                                     " char", errMsg);
                         return -1;
                     }
                     df->percent = str[0];
 #else
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "percent has to be a single char", errMsg);
+                        reportError (node, "percent has to be a single"
+                                     " char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6239,12 +6304,14 @@ static int processTopLevel (
                 str = getAttr(node, "per-mille",          a_perMille);
                 if (str) {
 #if TclOnly8Bits
-                    reportError (node, "User defined per-mille sign not supported, sorry.", errMsg);
+                    reportError (node, "User defined per-mille sign not"
+                                 " supported, sorry.", errMsg);
                     return -1;
 #else
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "per-mille has to be a single char", errMsg);
+                        reportError (node, "per-mille has to be a single"
+                                     " char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6255,14 +6322,16 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits                    
                     if (str[1] != '\0') {
-                        reportError (node, "zero-digit has to be a single char", errMsg);
+                        reportError (node, "zero-digit has to be a single"
+                                     " char", errMsg);
                         return -1;
                     }
                     df->zeroDigit = str[0];
 #else
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "zero-digit has to be a single char", errMsg);
+                        reportError (node, "zero-digit has to be a single"
+                                     " char", errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6273,14 +6342,16 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "digit has to be a single char", errMsg);
+                        reportError (node, "digit has to be a single char",
+                                     errMsg);
                         return -1;
                     }
                     df->digit = str[0];
 #else 
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "digit has to be a single char", errMsg);
+                        reportError (node, "digit has to be a single char",
+                                     errMsg);
                         if (newdf) FREE((char*)df);
                         return -1;
                     }
@@ -6291,14 +6362,16 @@ static int processTopLevel (
                 if (str) {
 #if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "pattern-separator has to be a single char", errMsg);
+                        reportError (node, "pattern-separator has to be a"
+                                     " single char", errMsg);
                         return -1;
                     }
                     df->patternSeparator = str[0];
 #else
                     clen = UTF8_CHAR_LEN (str[0]);
                     if (str[clen] != '\0') {
-                        reportError (node, "pattern-separator has to be a single char", errMsg);
+                        reportError (node, "pattern-separator has to be a"
+                                     " single char", errMsg);
                         return -1;
                     }
                     Tcl_UtfToUniChar (str, &df->patternSeparator);
@@ -6317,14 +6390,16 @@ static int processTopLevel (
                     return -1;
                 }
                 if (!node->ownerDocument->extResolver) {
-                    reportError (node, "need resolver Script to include Stylesheet! (use \"-externalentitycommand\")", errMsg);
+                    reportError (node, "need resolver Script to include"
+                                 " Stylesheet! (use"
+                                 " \"-externalentitycommand\")", errMsg);
                     return -1;
                 }
                 baseURI = findBaseURI (node);
                 href = getAttr (node, "href", a_href);
                 if (!href) {
-                    reportError (node, "xsl:import: missing mandatory attribute \"href\".",
-                                 errMsg);
+                    reportError (node, "xsl:import: missing mandatory"
+                                 " attribute \"href\".", errMsg);
                     return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
@@ -6351,14 +6426,16 @@ static int processTopLevel (
                     return -1;
                 }
                 if (!node->ownerDocument->extResolver) {
-                    reportError (node, "need resolver Script to include Stylesheet. (use \"-externalentitycommand\")", errMsg);
+                    reportError (node, "need resolver Script to include"
+                                 "Stylesheet. (use"
+                                 " \"-externalentitycommand\")", errMsg);
                     return -1;
                 }
                 baseURI = findBaseURI (node);
                 href = getAttr (node, "href", a_href);
                 if (!href) {
-                    reportError (node, "xsl:include: missing mandatory attribute \"href\".",
-                                 errMsg);
+                    reportError (node, "xsl:include: missing mandatory"
+                                 " attribute \"href\".", errMsg);
                     return -1;
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
@@ -6384,17 +6461,20 @@ static int processTopLevel (
                 }
                 name = getAttr(node, "name", a_name);
                 if (!name) {
-                    reportError (node, "xsl:key: missing mandatory attribute \"name\".", errMsg);
+                    reportError (node, "xsl:key: missing mandatory"
+                                 " attribute \"name\".", errMsg);
                     return -1;
                 }
                 match = getAttr(node, "match", a_match);
                 if (!match) {
-                    reportError (node, "xsl:key: missing mandatory attribute \"match\".", errMsg);
+                    reportError (node, "xsl:key: missing mandatory"
+                                 " attribute \"match\".", errMsg);
                     return -1;
                 }
                 use = getAttr(node, "use", a_use);
                 if (!use) {
-                    reportError (node, "xsl:key: missing mandatory attribute \"use\".", errMsg);
+                    reportError (node, "xsl:key: missing mandatory"
+                                 " attribute \"use\".", errMsg);
                     return -1;
                 }
 
@@ -6420,7 +6500,8 @@ static int processTopLevel (
                 if (prefix[0] != '\0') {
                     ns = domLookupPrefix (node, prefix);
                     if (!ns) {
-                        reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                        reportError (node, "There isn't a namespace bound"
+                                     " to the prefix.", errMsg);
                         FREE((char*)keyInfo);
                         return -1;
                     }
@@ -6447,7 +6528,9 @@ static int processTopLevel (
 
                 str = getAttr (node, "stylesheet-prefix", a_stylesheetPrefix);
                 if (!str) {
-                    reportError (node, "xsl:namespace-alias: missing mandatory attribute \"stylesheet-prefix\".", errMsg);
+                    reportError (node, "xsl:namespace-alias: missing"
+                                 " mandatory attribute"
+                                 " \"stylesheet-prefix\".", errMsg);
                     return -1 ;
                 }
                 if (strcmp (str, "#default")==0) {
@@ -6457,13 +6540,16 @@ static int processTopLevel (
                     nsFrom = domLookupPrefix (node, str);
                 }
                 if (!nsFrom) {
-                    reportError (node, "xsl:namespace-alias: no namespace bound to the \"stylesheet-prefix\".", errMsg);
+                    reportError (node, "xsl:namespace-alias: no namespace"
+                                 " bound to the \"stylesheet-prefix\".", 
+                                 errMsg);
                     return -1;
                 }
 
                 str = getAttr (node, "result-prefix", a_resultPrefix);
                 if (!str) {
-                    reportError (node, "xsl:namespace-alias: missing mandatory attribute \"result-prefix\".", errMsg);
+                    reportError (node, "xsl:namespace-alias: missing mandatory"
+                                 " attribute \"result-prefix\".", errMsg);
                     return -1;
                 }
                 if (strcmp (str, "#default")==0) {
@@ -6472,7 +6558,8 @@ static int processTopLevel (
                     nsTo = domLookupPrefix (node, str);
                 }
                 if (!nsTo) {
-                    reportError (node, "xsl:namespace-alias: no namespace bound to the \"result-prefix\".", errMsg);
+                    reportError (node, "xsl:namespace-alias: no namespace"
+                                 " bound to the \"result-prefix\".", errMsg);
                     return -1;
                 }
 
@@ -6541,11 +6628,8 @@ static int processTopLevel (
                     } else if (strcmp (str, "no") == 0) {
                         xs->indentOutput = 0;
                     } else {
-                        reportError (
-                            node,
-                            "Unexpected value for 'indent' attribute.",
-                            errMsg
-                            );
+                        reportError (node, "Unexpected value for 'indent'"
+                                     " attribute.", errMsg);
                         return -1;
                     }
                 }
@@ -6557,7 +6641,9 @@ static int processTopLevel (
                     } else if (strcmp (str, "no") == 0) {
                         xs->doctype.omitXMLDeclaration = 0;
                     } else {
-                        reportError (node, "Unexpected value for 'omit-xml-declaration' attribute", errMsg);
+                        reportError (node, "Unexpected value for"
+                                     " 'omit-xml-declaration' attribute",
+                                     errMsg);
                         return -1;
                     }
                 }
@@ -6568,7 +6654,8 @@ static int processTopLevel (
                     } else if (strcmp (str, "no") == 0) {
                         xs->doctype.standalone = 0;
                     } else {
-                        reportError (node, "Unexpected value for 'standalone' attribute", errMsg);
+                        reportError (node, "Unexpected value for 'standalone'"
+                                     " attribute", errMsg);
                         return -1;
                     }
                 }
@@ -6576,7 +6663,8 @@ static int processTopLevel (
 
             case preserveSpace:
                 if (node->firstChild) {
-                    reportError (node, "xsl:preserve-space has to be empty.", errMsg);
+                    reportError (node, "xsl:preserve-space has to be empty.",
+                                 errMsg);
                     return -1;
                 }
                 str = getAttr(node, "elements", a_elements);
@@ -6585,14 +6673,16 @@ static int processTopLevel (
                                          node, str, errMsg);
                     CHECK_RC;
                 } else {
-                    reportError (node, "xsl:preserve-space: missing required attribute \"elements\".", errMsg);
+                    reportError (node, "xsl:preserve-space: missing required"
+                                 " attribute \"elements\".", errMsg);
                     return -1;
                 }
                 break;
 
             case stripSpace:
                 if (node->firstChild) {
-                    reportError (node, "xsl:strip-space has to be empty.", errMsg);
+                    reportError (node, "xsl:strip-space has to be empty.", 
+                                 errMsg);
                     return -1;
                 }
                 str = getAttr(node, "elements", a_elements);
@@ -6601,7 +6691,8 @@ static int processTopLevel (
                                          str, errMsg);
                     CHECK_RC;
                 } else {
-                    reportError (node, "xsl:strip-space: missing required attribute \"elements\".", errMsg);
+                    reportError (node, "xsl:strip-space: missing required"
+                                 " attribute \"elements\".", errMsg);
                     return -1;
                 }
                 break;
@@ -6615,8 +6706,8 @@ static int processTopLevel (
             case variable:
                 str = getAttr(node, "name", a_name);
                 if (!str) {
-                    reportError (node, "xsl:variable and xsl:param elements must have a \"name\" attribute.",
-                                     errMsg);
+                    reportError (node, "xsl:variable and xsl:param elements"
+                                 " must have a \"name\" attribute.", errMsg);
                     return -1;
                 }
                 domSplitQName (str, prefix, &localName);
@@ -6624,7 +6715,8 @@ static int processTopLevel (
                 if (prefix[0] != '\0') {
                     ns = domLookupPrefix (node, prefix);
                     if (!ns) {
-                        reportError (node, "There isn't a namespace bound to the prefix.", errMsg);
+                        reportError (node, "There isn't a namespace bound"
+                                     " to the prefix.", errMsg);
                         return -1;
                     }
                 }
@@ -6644,11 +6736,14 @@ static int processTopLevel (
                        Therefor we have only to check, if there is a
                        top level var or parm with the same precedence */
                     if (topLevelVar->precedence == precedence) {
-                        reportError (node, "There is already a variable or parameter with this name with the same import precedence.", errMsg);
+                        reportError (node, "There is already a variable"
+                                     " or parameter with this name with the"
+                                     " same import precedence.", errMsg);
                         return -1;
                     }
                 } else {
-                    topLevelVar = (xsltTopLevelVar*)MALLOC(sizeof (xsltTopLevelVar));
+                    topLevelVar = (xsltTopLevelVar *)
+                        MALLOC (sizeof (xsltTopLevelVar));
                     Tcl_SetHashValue (h, topLevelVar);
                 }
                 topLevelVar->node = node;
@@ -6665,12 +6760,15 @@ static int processTopLevel (
             default:
                 if (node->nodeType == ELEMENT_NODE) {
                     if (!node->namespace) {
-                        reportError (node, "Top level elements must have a non-null namespace URI.", errMsg);
+                        reportError (node, "Top level elements must have a"
+                                     " non-null namespace URI.", errMsg);
                         return -1;
                     }
                     if (strcmp (XSLT_NAMESPACE, domNamespaceURI (node))==0) {
                         if (!xs->currentSubDoc->fwCmpProcessing) {
-                            reportError (node, "XSLT element not allowed on top level or unknown XSLT element.", errMsg);
+                            reportError (node, "XSLT element not allowed"
+                                         " on top level or unknown XSLT"
+                                         " element.", errMsg);
                             
                             return -1;
                         }
@@ -6689,7 +6787,9 @@ static int processTopLevel (
                         }
                     }
                     if (!only_whites) {
-                        reportError (node, "Non-whitespace text is not allowed between top level elements.", errMsg);
+                        reportError (node, "Non-whitespace text is not"
+                                     " allowed between top level elements.",
+                                     errMsg);
                         return -1;
                     }
                 }
@@ -7013,16 +7113,16 @@ xsltCompileStylesheet (
     xs->orig_funcClientData = xpathFuncClientData;
     xs->xsltMsgCB           = NULL;
     xs->xsltMsgClientData   = NULL;
-    xs->varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame) * 4);
+    xs->varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame)*4);
     xs->varFramesStackPtr   = -1;
     xs->varFramesStackLen   = 4;
-    xs->varStack            = (xsltVariable *)MALLOC(sizeof (xsltVariable) * 8);
+    xs->varStack            = (xsltVariable *)MALLOC(sizeof (xsltVariable)*8);
     xs->varStackPtr         = -1;
     xs->varStackLen         = 8;
     xs->templates           = NULL;
     xs->lastNode            = NULL;
     xs->attrSets            = NULL;
-    xs->decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
+    xs->decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof (xsltDecimalFormat));
     xs->subDocs             = NULL;
     xs->currentTplRule      = NULL;
     xs->currentXSLTNode     = NULL;
@@ -7093,18 +7193,21 @@ xsltCompileStylesheet (
         /* Check for "Literal Result Element as Stylesheet" (XSLT rec 2.3) */
         attr = domGetAttributeNodeNS (node, XSLT_NAMESPACE, "version");
         if (!attr) {
-            reportError (node, "The supplied DOM tree does not appear to be a stylesheet.", errMsg);
+            reportError (node, "The supplied DOM tree does not appear to be"
+                         " a stylesheet.", errMsg);
             goto error;
         }
         d = strtod (attr->nodeValue, &tailptr);
         if (d == 0.0 && tailptr == attr->nodeValue) {
-            reportError (node, "The value of the attribute \"version\" must be a number.", errMsg);
+            reportError (node, "The value of the attribute \"version\" must"
+                         " be a number.", errMsg);
             goto error;
         }
         if (d > 1.0) {
             sdoc->fwCmpProcessing = 1;
         } else if (d < 1.0) {
-            reportError (node, "Strange \"xsl:version\" value, don't know, how to handle.", errMsg);
+            reportError (node, "Strange \"xsl:version\" value, don't know,"
+                         " how to handle.", errMsg);
             goto error;
         }
         StripXSLTSpace (xsltDoc->rootNode);
