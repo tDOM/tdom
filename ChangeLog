@@ -1,3 +1,22 @@
+2003-10-16  Zoran Vasiljevic  <zv@archiware.com>
+
+	* generic/tcldom.c: added "dom detachDocument" command
+	  to match the already present "dom attachDocument".
+	  This is used only for threaded tdom builds.
+
+	* generic/domlock.c: changed lock caching to accomodate for
+	  situation with huge number of created documnents
+	
+	  Also, added new "domDoc" command as a first-class tdom citizen,
+	  analogous to the already existing "domNode". It operates on the
+	  document token.
+
+	  Attempt has been made to start to follow Tcl-style-guide
+	  but we still have a way to go. The first thing is to try
+	  to force the 78-chars margin where possible/feasible.
+	  Therefore, many of the source files have been cosmetically
+	  touched, without code or functionality changes.
+
 2003-10-12  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
