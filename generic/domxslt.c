@@ -36,6 +36,11 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.11  2002/04/06 18:05:14  rolf
+|   Bug fix for attribute value templates: "A right curly brace inside a
+|   Literal in an expression is not recognized as terminating the
+|   expression." (xslt rec 7.6.2)
+|
 |   Revision 1.10  2002/04/05 16:47:13  rolf
 |   Bug fix for attribute value templates. Should now handle cases
 |   like attr="}}" and attr="{{" right.
@@ -2391,14 +2396,28 @@ static int evalAttrTemplates (
 )
 {
     xpathResultSet  rs;
-    char           *tplStart = NULL, *tplResult, *pc;
-    int             rc, aLen, inTpl = 0, p = 0;
+    char           *tplStart = NULL, *tplResult, *pc, literalChar;
+    int             rc, aLen, inTpl = 0, p = 0, inLiteral;
     
     aLen = 500;
     *out = malloc(aLen);
     while (*str) {
         if (inTpl) {
-            if (*str == '}') {
+            if (!inLiteral) {
+                if (*str == '\'') {
+                    inLiteral = 1;
+                    literalChar = '\'';
+                } else 
+                if (*str == '"') {
+                    inLiteral = 1;
+                    literalChar = '"';
+                }
+            } else {
+                if (*str == literalChar) {
+                    inLiteral = 0;
+                }
+            }
+            if (*str == '}' && !inLiteral) {
             
                 *str = '\0';
                 TRACE1("attrTpl: '%s' \n", tplStart);
@@ -2445,6 +2464,7 @@ static int evalAttrTemplates (
                 } else {
                     tplStart = str+1;
                     inTpl = 1;
+                    inLiteral = 0;
                 }
             } else {
                 if (*str == '}' && *(str+1) == '}') {
