@@ -2953,7 +2953,7 @@ int tcldom_NodeObjCmd (
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
-        m_disableOutputEscaping,             m_precedes,
+        m_disableOutputEscaping,             m_precedes
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
