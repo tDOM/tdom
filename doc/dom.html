@@ -4,16 +4,16 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1407">KEYWORDS</a>
+<a href="#SECTnode6451">NAME</a> · <a href="#SECTnode6462">SYNOPSIS</a> · <a href="#SECTnode6476">DESCRIPTION </a> · <a href="#SECTnode6981">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode6451">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTnode6462">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTnode908">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTnode6476">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -173,7 +173,7 @@ iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</dd>
         
           <dt>
 <b class="cmd">dom</b> <b class="method">createNodeCmd</b>
-<i class="m">(element|comment|text|cdata|pi)Node</i> <i class="m">commandName</i>
+<i class="m">?-returnNodeCmd?</i> <i class="m">(element|comment|text|cdata|pi)Node</i> <i class="m">commandName</i>
 </dt>
           <dd>This method creates Tcl commands, which in turn create tDOM nodes.
 Tcl commands created by this command are only avaliable inside a script given to the
@@ -186,7 +186,9 @@ it is created in the specified namespace.
 <p>If such command is invoked inside a script given as argument to
 the domNode method <i class="m">appendFromScript</i>, it creates a new node and
 appends this node at the end of the child list of the invoking element
-node. Each command creates always the same type of node. Which type of 
+node. If the option <i class="m">-returnNodeCmd</i> was given, the command returns the
+created node as Tcl command. If this option was omitted, the command returns
+nothing. Each command creates always the same type of node. Which type of 
 node is created by the command is determined by the first argument to the
 <i class="m">createNodeCmd</i>. The syntax of the created command depends on the 
 type of the node it creates.</p>
@@ -250,7 +252,6 @@ command is:</p>
           <dt>
 <b class="cmd">dom</b> <b class="method">setStoreLineColumn</b> <i class="m">?boolean</i>
 </dt>
-
           <dd>If switched on, the DOM nodes will contain line and column
 position information for the original XML document after parsing.</dd>
         
@@ -259,7 +260,7 @@ position information for the original XML document after parsing.</dd>
           <dt>
 <b class="cmd">dom</b> <b class="method">isName</b> <i class="m">name</i>
 </dt>
-          <dd>Returns 1, if the <i class="m">name</i> is a valid XML Name according to
+          <dd>Returns 1, if <i class="m">name</i> is a valid XML Name according to
 production 5 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a> recommendation. Otherwise it returns 0.</dd>
         
 
@@ -267,7 +268,7 @@ production 5 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XM
           <dt>
 <b class="cmd">dom</b> <b class="method">isNCName</b> <i class="m">name</i>
 </dt>
-          <dd>Returns 1, if the <i class="m">name</i> is a valid NCName according
+          <dd>Returns 1, if <i class="m">name</i> is a valid NCName according
 to production 4 of the of the <a href="http://www.w3.org/TR/1999/REC-xml-names-19990114">Namespaces in XML</a> recommendation. Otherwise it returns
 0.</dd>
         
@@ -276,7 +277,7 @@ to production 4 of the of the <a href="http://www.w3.org/TR/1999/REC-xml-names-1
           <dt>
 <b class="cmd">dom</b> <b class="method">isQName</b> <i class="m">name</i>
 </dt>
-          <dd>Returns 1, if the <i class="m">name</i> is a valid QName according
+          <dd>Returns 1, if <i class="m">name</i> is a valid QName according
 to production 6 of the of the <a href="http://www.w3.org/TR/1999/REC-xml-names-19990114">Namespaces in XML</a> recommendation. Otherwise it returns
 0.</dd>
         
@@ -293,7 +294,7 @@ recommendation. Otherwise it returns 0.</dd>
 
       </dl>
 
-  <h2><a name="SECTnode1407">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode6981">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><div class="footer">
