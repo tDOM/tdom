@@ -459,12 +459,11 @@ really know, what you do.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>startBefore</method> <m>refnode</m></command>
-        <desc>Compares the relative order of node and <m>refnode</m>. Both
+        <command><method>precedes</method> <m>refnode</m></command>
+        <desc>Compares the relative order of the node and <m>refnode</m>. Both
 nodes must be part of the same documents and not out of the fragment list of
-the document. Returns 1, if node is in document order before (or, in case of
-nested element nodes, start before) <m>refnode</m>, 0 if node and
-<m>refnode</m> are the same node and -1 otherwise.</desc>
+the document. Returns true, if node is in document order (in the sense of the
+XPath 1.0 recommendation) before <m>refnode</m> and false otherwise.</desc>
       </commanddef>
 
       <commanddef>

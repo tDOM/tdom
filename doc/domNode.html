@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1983">SEE ALSO</a> · <a href="#SECTid1992">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1980">SEE ALSO</a> · <a href="#SECTid1989">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
@@ -525,13 +525,12 @@ really know, what you do.</dd>
 
       
         <dt>
-<b class="method">startBefore</b> <i class="m">refnode</i>
+<b class="method">precedes</b> <i class="m">refnode</i>
 </dt>
-        <dd>Compares the relative order of node and <i class="m">refnode</i>. Both
+        <dd>Compares the relative order of the node and <i class="m">refnode</i>. Both
 nodes must be part of the same documents and not out of the fragment list of
-the document. Returns 1, if node is in document order before (or, in case of
-nested element nodes, start before) <i class="m">refnode</i>, 0 if node and
-<i class="m">refnode</i> are the same node and -1 otherwise.</dd>
+the document. Returns true, if node is in document order (in the sense of the
+XPath 1.0 recommendation) before <i class="m">refnode</i> and false otherwise.</dd>
       
 
       
@@ -574,11 +573,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid1983">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTid1980">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTid1992">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid1989">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
