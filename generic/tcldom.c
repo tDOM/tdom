@@ -2552,7 +2552,15 @@ int tcldom_NodeObjCmd (
             uri       = Tcl_GetStringFromObj (objv[2], NULL);
             attr_name = Tcl_GetStringFromObj (objv[3], NULL);
             attr_val  = Tcl_GetStringFromObj (objv[4], NULL);
-            domSetAttributeNS (node, attr_name, attr_val, uri, 0);
+            attrs = domSetAttributeNS (node, attr_name, attr_val, uri, 0);
+            if (!attrs) {
+                if (uri[0]) {
+                    SetResult ("A attribute in a namespace must have a prefix");
+                } else {
+                    SetResult ("For all prefixed attributes with prefixes other than 'xml' or 'xmlns' you have to provide a namespace URI");
+                }
+                return TCL_ERROR;
+            }
             return tcldom_returnNodeObj (interp, node, 0, NULL);
 
         case m_hasAttribute:
