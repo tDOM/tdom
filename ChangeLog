@@ -1,3 +1,13 @@
+2003-05-16  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/dom.h 
+	* generic/tdom.decls
+	* generic/tdomDecls.h
+	* generic/tdomStubInit.c 
+	* generic/tdomStubLib.c 
+	* generic/tdominit.c: fixed so it compiles cleanly when 
+	  -NS_AOLSERVER is defined.
+
 2003-05-16  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.h
