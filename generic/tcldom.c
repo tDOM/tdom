@@ -163,6 +163,8 @@ static char domObj_usage[] =
                 "          createTextNode text ?objVar?            \n"
                 "          createComment text ?objVar?             \n"
                 "          createProcessingInstruction target data ?objVar? \n"
+                "          asXML ?-indent <none,0..8>? ?-channel <channelId>?\n" 
+                "          asHTML ?-channel <channelId>?           \n"
                 "          getDefaultOutputMethod                  \n"
                 "          delete                                  \n"
                 TDomThreaded(
@@ -1786,7 +1788,7 @@ void tcldom_treeAsHTML (
 
 
 /*----------------------------------------------------------------------------
-|   tcldom_oldtreeAsXML
+|   tcldom_treeAsXML
 |
 \---------------------------------------------------------------------------*/
 static
@@ -1955,6 +1957,116 @@ char *findBaseURI (
 }
 
 /*----------------------------------------------------------------------------
+|   serializeAsXML
+|
+\---------------------------------------------------------------------------*/
+static int serializeAsXML (
+    domNode    *node,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    *CONST objv[]
+)
+{
+    char       *option, *channelId;
+    int         indent, mode;
+    Tcl_Obj    *resultPtr;
+    Tcl_Channel chan = (Tcl_Channel) NULL;
+
+    if ((objc != 2) && (objc != 4) && (objc != 6)) {
+        Tcl_WrongNumArgs(interp, 2, objv, "?-indent <0..8>? ?-channel <channelID>?");
+        return TCL_ERROR;
+    }
+    indent = 4;
+    while (objc > 2) {
+        option = Tcl_GetStringFromObj (objv[2], NULL);
+        if (strcmp (option, "-indent") == 0)  {
+            if (strcmp("none", Tcl_GetStringFromObj (objv[3], NULL))==0) {
+                indent = -1;
+            }
+            else if (strcmp("no", Tcl_GetStringFromObj (objv[3], NULL))==0) {
+                indent = -1;
+            }
+            else if (Tcl_GetIntFromObj(interp, objv[3], &indent) != TCL_OK) {
+                SetResult ( "indent must be an integer (0..8) or 'no'/'none'");
+                return TCL_ERROR;
+            }
+            objc -= 2;
+            objv += 2;
+            continue;
+        }
+        else if (strcmp (option, "-channel") == 0) {
+            channelId = Tcl_GetStringFromObj (objv[3], NULL);
+            chan = Tcl_GetChannel (interp, channelId, &mode);
+            if (chan == (Tcl_Channel) NULL) {
+                return TCL_ERROR;
+            }
+            if ((mode & TCL_WRITABLE) == 0) {
+                Tcl_AppendResult(interp, "channel \"", channelId,
+                                 "\" wasn't opened for writing", (char *) NULL);
+                return TCL_ERROR;
+            }
+            objc -= 2;
+            objv += 2;
+            continue;
+        }
+        else {
+            SetResult ("-indent and -channel are the only recognized options");
+            return TCL_ERROR;
+        }
+    }
+    if (indent > 8)  indent = 8;
+    if (indent < -1) indent = -1;
+    resultPtr = Tcl_GetObjResult(interp);
+    Tcl_SetStringObj (resultPtr, "", -1);
+    tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan);
+    return TCL_OK;
+}
+
+/*----------------------------------------------------------------------------
+|   serializeAsHTML
+|
+\---------------------------------------------------------------------------*/
+static int serializeAsHTML (
+    domNode    *node,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    *CONST objv[]
+)
+{
+    char       *option, *channelId;
+    int         mode;
+    Tcl_Obj    *resultPtr;
+    Tcl_Channel chan = (Tcl_Channel) NULL;
+
+    if ((objc != 2) && (objc != 4)) {
+        Tcl_WrongNumArgs(interp, 2, objv, "?-channel <channelId>?");
+        return TCL_ERROR;
+    }
+    if (objc == 4) {
+        option = Tcl_GetStringFromObj (objv[2], NULL);
+        if (strcmp (option, "-channel") != 0) {
+            SetResult ("-channel <channelId> is the only recognized option");
+            return TCL_ERROR;
+        }
+        channelId = Tcl_GetStringFromObj (objv[3], NULL);
+        chan = Tcl_GetChannel (interp, channelId, &mode);
+        if (chan == (Tcl_Channel) NULL) {
+            return TCL_ERROR;
+        }
+        if ((mode & TCL_WRITABLE) == 0) {
+            Tcl_AppendResult(interp, "channel \"", channelId,
+                             "\" wasn't opened for writing", (char *) NULL);
+            return TCL_ERROR;
+        }
+    }
+    resultPtr = Tcl_GetObjResult(interp);
+    Tcl_SetStringObj (resultPtr, "", -1);
+    tcldom_treeAsHTML(resultPtr, node, chan);
+    return TCL_OK;
+}
+
+
+/*----------------------------------------------------------------------------
 |   tcldom_NodeObjCmd
 |
 \---------------------------------------------------------------------------*/
@@ -1972,15 +2084,14 @@ int tcldom_NodeObjCmd (
     domAttrNode *attrs;
     domException exception;
     char         tmp[200], objCmdName[40], prefix[MAX_PREFIX_LEN],
-                *method, *nodeName, *str, *localName, *channelId,
-                *attr_name, *attr_val, *filter, *option, *errMsg, *uri,
+                *method, *nodeName, *str, *localName,
+                *attr_name, *attr_val, *filter, *errMsg, *uri,
                **parameters;
-    int          result, length, methodIndex, i, line, column, indent, mode;
+    int          result, length, methodIndex, i, line, column;
     int          nsIndex, bool;
     Tcl_Obj     *namePtr, *resultPtr, *objPtr, *localListPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
-    Tcl_Channel  chan = (Tcl_Channel) NULL;
     Tcl_HashEntry *entryPtr;
 
     static CONST84 char *nodeMethods[] = {
@@ -2292,81 +2403,15 @@ int tcldom_NodeObjCmd (
             break;
 
         case m_asXML:
-            if ((objc != 2) && (objc != 4) && (objc != 6)) {
-                Tcl_WrongNumArgs(interp, 2, objv, "?-indent <0..8>? ?-channel <channelID>?");
+            if (serializeAsXML (node, interp, objc, objv) != TCL_OK) {
                 return TCL_ERROR;
             }
-            indent = 4;
-            while (objc > 2) {
-                option = Tcl_GetStringFromObj (objv[2], NULL);
-                if (strcmp (option, "-indent") == 0)  {
-                    if (strcmp("none", Tcl_GetStringFromObj (objv[3], NULL))==0) {
-                        indent = -1;
-                    }
-                    else if (strcmp("no", Tcl_GetStringFromObj (objv[3], NULL))==0) {
-                        indent = -1;
-                    }
-                    else if (Tcl_GetIntFromObj(interp, objv[3], &indent) != TCL_OK) {
-                        SetResult ( "indent must be an integer (0..8) or 'no'/'none'");
-                        return TCL_ERROR;
-                    }
-                    objc -= 2;
-                    objv += 2;
-                    continue;
-                }
-                else if (strcmp (option, "-channel") == 0) {
-                    channelId = Tcl_GetStringFromObj (objv[3], NULL);
-                    chan = Tcl_GetChannel (interp, channelId, &mode);
-                    if (chan == (Tcl_Channel) NULL) {
-                        return TCL_ERROR;
-                    }
-                    if ((mode & TCL_WRITABLE) == 0) {
-                        Tcl_AppendResult(interp, "channel \"", channelId,
-                                "\" wasn't opened for writing", (char *) NULL);
-                        return TCL_ERROR;
-                    }
-                    objc -= 2;
-                    objv += 2;
-                    continue;
-                }
-                else {
-                    SetResult ("-indent and -channel are the only recognized options");
-                    return TCL_ERROR;
-                }
-            }
-            if (indent > 8)  indent = 8;
-            if (indent < -1) indent = -1;
-            resultPtr = Tcl_GetObjResult(interp);
-            Tcl_SetStringObj (resultPtr, "", -1);
-/*              tcldom_oldtreeAsXML(resultPtr, node, indent, 0, 1, chan); */
-            tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan);
             break;
 
         case m_asHTML:
-            if ((objc != 2) && (objc != 4)) {
-                Tcl_WrongNumArgs(interp, 2, objv, "?-channel <channelId>?");
+            if (serializeAsHTML (node, interp, objc, objv) != TCL_OK) {
                 return TCL_ERROR;
             }
-            if (objc == 4) {
-                option = Tcl_GetStringFromObj (objv[2], NULL);
-                if (strcmp (option, "-channel") != 0) {
-                    SetResult ("-channel <channelId> is the only recognized option");
-                    return TCL_ERROR;
-                }
-                channelId = Tcl_GetStringFromObj (objv[3], NULL);
-                chan = Tcl_GetChannel (interp, channelId, &mode);
-                if (chan == (Tcl_Channel) NULL) {
-                    return TCL_ERROR;
-                }
-                if ((mode & TCL_WRITABLE) == 0) {
-                    Tcl_AppendResult(interp, "channel \"", channelId,
-                                     "\" wasn't opened for writing", (char *) NULL);
-                    return TCL_ERROR;
-                }
-            }
-            resultPtr = Tcl_GetObjResult(interp);
-            Tcl_SetStringObj (resultPtr, "", -1);
-            tcldom_treeAsHTML(resultPtr, node, chan);
             break;
 
         case m_getAttribute:
@@ -3051,8 +3096,8 @@ int tcldom_DocObjCmd (
         "documentElement", "getElementsByTagName",       "delete",
         "createElement",   "createCDATASection",         "createTextNode",
         "createComment",   "createProcessingInstruction",
-        "createElementNS", "getDefaultOutputMethod",
-        "getElementsByTagNameNS",
+        "createElementNS", "getDefaultOutputMethod",     "asXML",
+        "asHTML",          "getElementsByTagNameNS", 
 #ifdef TCL_THREADS
         "readlock", "writelock",
 #endif
@@ -3062,8 +3107,8 @@ int tcldom_DocObjCmd (
         m_documentElement,  m_getElementsByTagName,       m_delete,
         m_createElement,    m_createCDATASection,         m_createTextNode,
         m_createComment,    m_createProcessingInstruction,
-        m_createElementNS,  m_getdefaultoutputmethod,
-        m_getElementsByTagNameNS
+        m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
+        m_asHTML,           m_getElementsByTagNameNS
 #ifdef TCL_THREADS
         ,m_readlock, m_writelock
 #endif
@@ -3101,7 +3146,7 @@ int tcldom_DocObjCmd (
         return (cmdInfo.objProc (cmdInfo.objClientData, interp, objc, mobjv));
     }
 
-    CheckArgs (2,4,1,domObj_usage);
+    CheckArgs (2,6,1,domObj_usage);
 
     /*----------------------------------------------------------------------
     |   dispatch the doc object method
@@ -3113,6 +3158,7 @@ int tcldom_DocObjCmd (
     switch ((enum docMethod) methodIndex ) {
 
         case m_documentElement:
+            CheckArgs (2,2,2,"");
             return tcldom_returnNodeObj (interp, doc->documentElement,
                                          (objc == 3), (objc == 3) ? objv[2] : NULL);
 
@@ -3227,6 +3273,26 @@ int tcldom_DocObjCmd (
                 SetResult ("unknown");
             } else {
                 SetResult ("none");
+            }
+            return TCL_OK;
+
+        case m_asXML:
+            n = doc->rootNode->firstChild;
+            while (n) {
+                if (serializeAsXML (n, interp, objc, objv) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+                n = n->nextSibling;
+            }
+            return TCL_OK;
+
+        case m_asHTML:
+            n = doc->rootNode->firstChild;
+            while (n) {
+                if (serializeAsHTML (n, interp, objc, objv) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+                n = n->nextSibling;
             }
             return TCL_OK;
 
