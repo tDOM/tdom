@@ -4481,16 +4481,24 @@ int xpathMatches (
                     child = (domNode*)  ((domAttrNode*)nodeToMatch)->parentNode->firstAttr;
                     DBG(fprintf(stderr, "FillNodeList all attribute\n");)
                 } else {
-                    if (nodeToMatch->parentNode == NULL) {
+                    if (nodeToMatch->ownerDocument->rootNode == nodeToMatch) {
                         xpathRSFree (&nodeList); return 0;
                     }
-                    DBG(fprintf(stderr, "FillNodeList on %s/%s...\n", nodeToMatch->parentNode->nodeName,nodeToMatch->nodeName);)
-                    child = nodeToMatch->parentNode->firstChild;
+                    DBG(if (nodeToMatch->parentNode) {
+                            fprintf(stderr, "FillNodeList on %s/%s...\n", nodeToMatch->parentNode->nodeName,nodeToMatch->nodeName);
+                        } else {
+                            fprintf(stderr, "FillNodeList on (null)/%s...\n", nodeToMatch->nodeName);
+                        })
+                    if (nodeToMatch->parentNode == NULL) {
+                        child = nodeToMatch->ownerDocument->rootNode->firstChild;
+                    } else {
+                        child = nodeToMatch->parentNode->firstChild;
+                    }
                 }
                 currentPos = -1;
                 i = 0;
                 if (nodeList.nr_nodes == 0) useFastAdd = 1;
-                else useFastAdd = 1;
+                else useFastAdd = 0;
                 while (child) {
                     rc = xpathMatches (steps->child, exprContext, child, cbs, errMsg);
                     if (rc == 1) {
