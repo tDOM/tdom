@@ -1,5 +1,9 @@
 2003-12-11  Rolf Ade  <rolf@pointsman.de>
 
+        * tests/xslt.test
+        * generic/domxpath.c: Bug fix: double mem free in case of
+          pattern w/ FQ element with positional dependent predicate.
+
         * generic/dom.c
         * tests/domCmd.test
         * tests/pcdata.test
@@ -87,10 +91,9 @@
           external entity. Minor code clean up. 
           
         * tests/parser.test:  
-        * generic/tclexpat.c: Fixed memeory problem, if handler
-          script return TCL_ERROR. Made the cget method work for the
-          parser related options, even if there are no handler scripts
-          set.
+        * generic/tclexpat.c: Fixed memory problem, if handler script
+          return TCL_ERROR. Made the cget method work for the parser
+          related options, even if there are no handler scripts set.
 
         * generic/tcldom.c  
         * generic/dom.c
