@@ -36,19 +36,23 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.15  2002/04/09 01:17:26  rolf
+|   Corrected the check in log for the least check in...
+|
 |   Revision 1.14  2002/04/09 01:14:54  rolf
 |   Allowed reseting of variable in successive for-each loops (of course
 |   not in one loop) and inside template bodys of xsl elements. xt, xalan
 |   (and gnomexslt, for what is's worth) do, saxon don't - and the spec
 |   isn't really clear about this (I would say, it's right now). Anyway,
 |   there are only two clear ways, to handle this: allow it, or
-|   don't. tDOM does, but variable declarations inside the for-each (or
+|   don't. tDOM did, but variable declarations inside the for-each (or
 |   other template bodies of xslt elements) polluted the var context
 |   outside the for-each or template bodies, which is clearly wrong
-|   (example: xalan tests: variable20, local: varscope). Unfortunately,
-|   the XSLT 2.0 WD is a bit clearer about this and does it the saxon way
-|   (no wonder, since Kay is the editor of that spec ;-)). But then XSLT
-|   2.0 is another story, where currently definitely not in.
+|   (example: xalan tests: variable20, local: varscope). No it does it the
+|   right way. Unfortunately, the XSLT 2.0 WD is a bit clearer about this
+|   and does it the saxon way (no wonder, since Kay is the editor of that
+|   spec ;-)). But then XSLT 2.0 is another story, where currently
+|   definitely not in.
 |
 |   Revision 1.13  2002/04/08 03:43:04  rolf
 |   Optimation: re-initialize current var frame in ApplyTemplates() loop
