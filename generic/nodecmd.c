@@ -320,11 +320,11 @@ NodeObjCmd (arg, interp, objc, objv)
             opts = (Tcl_Obj**)objv + 1;
         }
         for (i = 0; i < len; i += 2) {
-            tval = Tcl_GetStringFromObj(opts[i], NULL);
+            tval = Tcl_GetString(opts[i]);
             if (*tval == '-') {
                 tval++;
             }
-            aval = Tcl_GetStringFromObj(opts[i+1], NULL);
+            aval = Tcl_GetString(opts[i+1]);
             domSetAttribute(newNode, tval, aval);
         }
         if (cmdObj) {
@@ -408,7 +408,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
         goto usage;
     }
     if (objc == 4) {
-        if (strcmp(Tcl_GetStringFromObj(objv[1], NULL), "-returnNodeCmd")) {
+        if (strcmp(Tcl_GetString(objv[1]), "-returnNodeCmd")) {
             goto usage;
         }
         nodecmd = 1;
@@ -437,7 +437,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     if (strcmp(nsName, "::")) {
         Tcl_DStringAppend(&cmdName, "::", 2);
     }
-    Tcl_DStringAppend(&cmdName, Tcl_GetStringFromObj(objv[ix+1], NULL), -1);
+    Tcl_DStringAppend(&cmdName, Tcl_GetString(objv[ix+1]), -1);
 
     switch (index) {
     case PRS_NODE: type = PARSER_NODE;                 break;

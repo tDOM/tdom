@@ -96,9 +96,11 @@
 /*
  * Starting with Tcl 8.2 the Tcl_Panic() is defined properly
  * over the stubs table.
+ * Also, we have a proper Tcl_GetString() shortcut afterwards.
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION < 2)
 # define Tcl_Panic panic
+# define Tcl_GetString(a) Tcl_GetStringFromObj((a), NULL)
 #endif
 
 #define domPanic(msg) Tcl_Panic((msg));
@@ -119,7 +121,7 @@
 # define NODE_NO(doc)       ++domUniqueNodeNr
 # define DOC_NO(doc)        ++domUniqueDocNr
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
-# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd%d", (doc)->documentNumber)
+# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd%d",(doc)->documentNumber)
 #else
 # define TDomNotThreaded(x)
 # define TDomThreaded(x)    x
@@ -130,8 +132,7 @@
 # define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd0x%x", (doc)->documentNumber)
 #endif /* TCL_THREADS */
 
-# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
-
+#define NODE_CMD(s,node)    sprintf((s), "domNode0x%x", (unsigned int)(node))
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
 #define XMLNS_NAMESPACE "http://www.w3.org/2000/xmlns"
@@ -585,6 +586,17 @@ typedef struct domNode {
 
 } domNode;
 
+/*--------------------------------------------------------------------------
+|   domDeleteInfo
+|
+\-------------------------------------------------------------------------*/
+
+typedef struct domDeleteInfo {
+    domDocument * document;
+    domNode     * node;
+    Tcl_Interp  * interp;
+    char        * traceVarName;
+} domDeleteInfo;
 
 
 /*--------------------------------------------------------------------------
@@ -664,42 +676,49 @@ typedef void (*domFreeCallback) (domNode * node, void * clientData);
 \-------------------------------------------------------------------------*/
 char *         domException2String (domException expection);
 
+
 void           domModuleInitialize (void);
 domDocument *  domCreateDoc (char *baseURI, int storeLineColumn);
 domDocument *  domCreateDocument (Tcl_Interp *interp,
                                   char *documentElementTagName,
                                   char *uri);
 
-domDocument *  domReadDocument (XML_Parser parser,
-                                char *xml,
-                                int   length,
-                                int   ignoreWhiteSpaces,
-                                TEncoding *encoding_8bit,
-                                int   storeLineColumn,
-                                int   feedbackAfter,
-                                Tcl_Channel channel,
-                                char *baseurl,
-                                Tcl_Obj *extResolver,
-                                int   useForeignDTD,
-                                int   paramEntityParsing,
-                                Tcl_Interp *interp);
+domDocument *  domReadDocument   (XML_Parser parser,
+                                  char *xml,
+                                  int   length,
+                                  int   ignoreWhiteSpaces,
+                                  TEncoding *encoding_8bit,
+                                  int   storeLineColumn,
+                                  int   feedbackAfter,
+                                  Tcl_Channel channel,
+                                  char *baseurl,
+                                  Tcl_Obj *extResolver,
+                                  int   useForeignDTD,
+                                  int   paramEntityParsing,
+                                  Tcl_Interp *interp);
 
-void           domFreeDocument (domDocument *doc, domFreeCallback freeCB, void * clientData);
-void           domFreeNode (domNode *node, domFreeCallback freeCB, void *clientData, int dontfree);
+void           domFreeDocument   (domDocument *doc, 
+                                  domFreeCallback freeCB, 
+                                  void * clientData);
 
-domTextNode *  domNewTextNode (domDocument *doc,
-                               char        *value,
-                               int          length,
-                               domNodeType  nodeType);
+void           domFreeNode       (domNode *node, 
+                                  domFreeCallback freeCB, 
+                                  void *clientData, 
+                                  int dontfree);
+
+domTextNode *  domNewTextNode    (domDocument *doc,
+                                  char        *value,
+                                  int          length,
+                                  domNodeType  nodeType);
 
 domNode *      domNewElementNode (domDocument *doc,
                                   char        *tagName,
-		                  domNodeType  nodeType);
+                                  domNodeType  nodeType);
 		
 domNode *      domNewElementNodeNS (domDocument *doc,
                                     char        *tagName,
                                     char        *uri,
-		                    domNodeType  nodeType);
+                                    domNodeType  nodeType);
 
 domProcessingInstructionNode * domNewProcessingInstructionNode (
                                   domDocument *doc,

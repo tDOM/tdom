@@ -40,8 +40,9 @@
 
 void tcldom_initialize(void);
 
-Tcl_ObjCmdProc tcldom_domCmd;     
-Tcl_ObjCmdProc tcldom_NodeObjCmd; 
+Tcl_ObjCmdProc tcldom_DomObjCmd;
+Tcl_ObjCmdProc tcldom_DocObjCmd;
+Tcl_ObjCmdProc tcldom_NodeObjCmd;
 Tcl_ObjCmdProc TclExpatObjCmd;
 Tcl_ObjCmdProc tcldom_unknownCmd;
 Tcl_ObjCmdProc TclTdomObjCmd;

@@ -75,9 +75,9 @@ Tdom_Init (interp)
 
 #ifdef TCL_THREADS
     bool = (char*)Tcl_GetVar2(interp, "::tcl_platform", "threaded", 0);
-    if (bool == NULL || atoi(bool) == 0) { 
-        Tcl_SetObjResult(interp, Tcl_NewStringObj(
-                         "Tcl core wasn't compiled for multithreading.", -1));
+    if (bool == NULL || atoi(bool) == 0) {
+        char *err = "Tcl core wasn't compiled for multithreading.";
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(err, -1));
         return TCL_ERROR;
     }
     domModuleInitialize();
@@ -87,24 +87,25 @@ Tdom_Init (interp)
 #endif /* TCL_THREADS */
 
 #ifndef TDOM_NO_UNKNOWN_CMD
-    Tcl_Eval (interp,"rename unknown unknown_tdom");   
-    Tcl_CreateObjCommand (interp, "unknown", tcldom_unknownCmd,  NULL, NULL );
+    Tcl_Eval(interp, "rename unknown unknown_tdom");   
+    Tcl_CreateObjCommand(interp, "unknown", tcldom_unknownCmd,  NULL, NULL );
 #endif
 
-    Tcl_CreateObjCommand (interp, "dom",     tcldom_domCmd,      NULL, NULL );
-    Tcl_CreateObjCommand (interp, "domNode", tcldom_NodeObjCmd,  NULL, NULL );
-    Tcl_CreateObjCommand (interp, "tdom",    TclTdomObjCmd,      NULL, NULL );
+    Tcl_CreateObjCommand(interp, "dom",     tcldom_DomObjCmd,   NULL, NULL );
+    Tcl_CreateObjCommand(interp, "domDoc",  tcldom_DocObjCmd,   NULL, NULL );
+    Tcl_CreateObjCommand(interp, "domNode", tcldom_NodeObjCmd,  NULL, NULL );
+    Tcl_CreateObjCommand(interp, "tdom",    TclTdomObjCmd,      NULL, NULL );
 
 #ifndef TDOM_NO_EXPAT    
-    Tcl_CreateObjCommand (interp, "expat",       TclExpatObjCmd, NULL, NULL );
-    Tcl_CreateObjCommand (interp, "xml::parser", TclExpatObjCmd, NULL, NULL );
+    Tcl_CreateObjCommand(interp, "expat",       TclExpatObjCmd, NULL, NULL );
+    Tcl_CreateObjCommand(interp, "xml::parser", TclExpatObjCmd, NULL, NULL );
 #endif
     
 #ifdef USE_TCL_STUBS
-    Tcl_PkgProvideEx (interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION), 
-                      (ClientData) &tdomStubs);
+    Tcl_PkgProvideEx(interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION), 
+                     (ClientData) &tdomStubs);
 #else
-    Tcl_PkgProvide (interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION));
+    Tcl_PkgProvide(interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION));
 #endif
 
     return TCL_OK;
@@ -112,9 +113,8 @@ Tdom_Init (interp)
 
 int
 Tdom_SafeInit (interp)
-     Tcl_Interp *interp; /* Interpreter to initialise. */
+     Tcl_Interp *interp;
 {
-    /* nothing special for safe interpreters -> just call Tdom_Init */
     return Tdom_Init (interp);
 }
 
