@@ -6,7 +6,8 @@
   <!--
   
   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
-  
+  Copyright (c) 2002-2005 Rolf Ade (rolf@pointsman.de)
+
   See the file "LICENSE" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
   
@@ -206,6 +207,25 @@ serialized as CDATA section nodes.</desc>
       </commanddef>
 
       <commanddef>
+        <command><method>selectNodesNamespaces</method> <option>?prefixUriList?</option>
+        <desc> This method allows to control a document global prefix
+to namespace URI mapping, which will be used for selectNodes method
+calls (on document as well as on all nodes, which belongs to the
+document), if it is not overwritten by using the -namespaces option of
+the selectNodes method. Any namespace prefix within an xpath
+expression will be first resolved against this list. If the list bind
+the same prefix to different namespaces, then the first binding will
+win. If a prefix could not resolved against the document global prefix
+/ namespaces list, then the namespace definitions in scope of the
+context node will be used to resolve the prefix, as usual. If the
+optional argument <m>prefixUriList</m> is given, then the global prefix /
+namespace list is set to this list and returns it. Without
+the optional argument the method returns the current list. The
+default is the empty list.</desc>
+        </command>
+      </commanddef>
+
+      <commanddef>
         <command><method>xslt</method> <option>?-parameters
 parameterList?</option> <option>?-ignoreUndeclaredParameters?</option>
 <option>?-xsltmessagecmd script?</option> <m>stylesheet</m> <m>?outputVar?</m></command>
@@ -391,12 +411,18 @@ the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).</p>
 
 <p>The option <m>-namespaces</m> expects a tcl list with prefix /
-namespace pairs as argument. If this option is given, any
-namespace prefix within the xpath expression will be first
-resolved against this list. If the list bind the same prefix
-to different namespaces, then the first binding will win. 
-If this fails, then the namespace definitions in scope of the
-context node will be used to resolve the prefix, as usual.</p>
+namespace pairs as argument. If this option is not given, then any
+namespace prefix within the xpath expression will be first resolved
+against the list of prefix / namespace pairs set with the
+selectNodesNamespaces method for the document, the node belongs to. If
+this fails, then the namespace definitions in scope of the context
+node will be used to resolve the prefix. If this option is given, any
+namespace prefix within the xpath expression will be first resolved
+against that given list (and ignoring the document global prefix /
+namespace list). If the list bind the same prefix to different
+namespaces, then the first binding will win.  If this fails, then the
+namespace definitions in scope of the context node will be used to
+resolve the prefix, as usual.</p>
 
 <p>If the <m>-cache</m> option is used with a true value, then the
 <m>xpathQuery</m> will be looked up in a document specific cache. If the query

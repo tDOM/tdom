@@ -287,6 +287,9 @@ value.
 \&\fB\fBcdataSectionElements (?URI:?localname|*) ?<boolean>?\fP          This method allows to control, for which element nodes the text node childs will be serialized as CDATA sections (this affects only serialization with the asXML method, no text node is altered in any way by this method). IF the method is called with an element name as first argument and a boolean with value true as second argument, every text node child of every element node in the document with the same name as the first argument will be serialized as CDATA section. If the second argument is a boolean with value false, all text nodes of all elements with the same name as the first argument will be serialized as usual. Namespaced element names have to given in the form namespace_URI:localname, not in the otherwise usual prefix:localname form. With two arguments called, the method returns the used boolean value. If the method is called with only an element name, it will return a boolean value, indicating, if the text nodes childs of all elements with that name in the document will be serialized as CDATA section elements (return value 1) or not (return value 0). If the method is called with only one argument and that argument is an asterisk ('*'), then the method returns an unordered list of all element names of the document, for which the text node childs will be serialized as CDATA section nodes.
 \&\fR
 .TP
+\&\fB\fBselectNodesNamespaces\fP \fB?prefixUriList?\fP          This method allows to control a document global prefix to namespace URI mapping, which will be used for selectNodes method calls (on document as well as on all nodes, which belongs to the document), if it is not overwritten by using the -namespaces option of the selectNodes method. Any namespace prefix within an xpath expression will be first resolved against this list. If the list bind the same prefix to different namespaces, then the first binding will win. If a prefix could not resolved against the document global prefix / namespaces list, then the namespace definitions in scope of the context node will be used to resolve the prefix, as usual. If the optional argument \fIprefixUriList\fB is given, then the global prefix / namespace list is set to this list and returns it. Without the optional argument the method returns the current list. The default is the empty list.
+\&\fR
+.TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the whole document of the node
 object using the XSLT \fIstylesheet\fR (given as domDoc). Returns a document
@@ -438,12 +441,18 @@ the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).
 .PP
 The option \fI-namespaces\fR expects a tcl list with prefix /
-namespace pairs as argument. If this option is given, any
-namespace prefix within the xpath expression will be first
-resolved against this list. If the list bind the same prefix
-to different namespaces, then the first binding will win.
-If this fails, then the namespace definitions in scope of the
-context node will be used to resolve the prefix, as usual.
+namespace pairs as argument. If this option is not given, then any
+namespace prefix within the xpath expression will be first resolved
+against the list of prefix / namespace pairs set with the
+selectNodesNamespaces method for the document, the node belongs to. If
+this fails, then the namespace definitions in scope of the context
+node will be used to resolve the prefix. If this option is given, any
+namespace prefix within the xpath expression will be first resolved
+against that given list (and ignoring the document global prefix /
+namespace list). If the list bind the same prefix to different
+namespaces, then the first binding will win.  If this fails, then the
+namespace definitions in scope of the context node will be used to
+resolve the prefix, as usual.
 .PP
 If the \fI-cache\fR option is used with a true value, then the
 \&\fIxpathQuery\fR will be looked up in a document specific cache. If the query

@@ -417,12 +417,18 @@ the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).
 .PP
 The option \fI-namespaces\fR expects a tcl list with prefix /
-namespace pairs as argument. If this option is given, any
-namespace prefix within the xpath expression will be first
-resolved against this list. If the list bind the same prefix
-to different namespaces, then the first binding will win.
-If this fails, then the namespace definitions in scope of the
-context node will be used to resolve the prefix, as usual.
+namespace pairs as argument. If this option is not given, then any
+namespace prefix within the xpath expression will be first resolved
+against the list of prefix / namespace pairs set with the
+selectNodesNamespaces method for the document, the node belongs to. If
+this fails, then the namespace definitions in scope of the context
+node will be used to resolve the prefix. If this option is given, any
+namespace prefix within the xpath expression will be first resolved
+against that given list (and ignoring the document global prefix /
+namespace list). If the list bind the same prefix to different
+namespaces, then the first binding will win.  If this fails, then the
+namespace definitions in scope of the context node will be used to
+resolve the prefix, as usual.
 .PP
 If the \fI-cache\fR option is used with a true value, then the
 \&\fIxpathQuery\fR will be looked up in a document specific cache. If the query
