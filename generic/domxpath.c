@@ -221,23 +221,11 @@ static int xpathEvalStep (ast step, domNode *ctxNode, domNode *exprContext,
                           xpathCBs *cbs, xpathResultSet *result,
                           int *docOrder, char **errMsg);
 
-int dbonerow = 0;
-
 /*----------------------------------------------------------------------------
 |   xpath result set functions
 |
 \---------------------------------------------------------------------------*/
-/*  void xpathRSInit ( xpathResultSet *rs ) { */
 
-/*      rs->type       = EmptyResult; */
-/*      rs->realvalue  = 0.0; */
-/*      rs->nodes      = NULL; */
-/*      rs->string     = NULL; */
-/*      rs->allocated  = 0; */
-/*      rs->nr_nodes   = 0; */
-/*      rs->string_len = 0; */
-/*      rs->intvalue   = 0; */
-/*  } */
 void xpathRSFree ( xpathResultSet *rs ) {
 
     if (rs->type == xNodeSetResult) {
@@ -1430,6 +1418,48 @@ EndProduction
 |   Step  production
 |
 \----------------------------------------------------------------*/
+static int IsStepPredOptimizable (ast a) {
+    ast b;
+    int left;
+    
+    DBG (
+        fprintf (stderr, "IsStepPredOptimizable:\n");
+        printAst (0,a);
+    )
+    switch (a->type) {
+    case Int: return a->intvalue;
+    case Less:
+    case LessOrEq:
+        b = a->child;
+        if (b->type != ExecFunction 
+            || strcmp (b->strvalue, "position")!=0) return 0;
+        b = b->next;
+        if (b->type != Int) return 0;
+        if (a->type == Less) return b->intvalue;
+        else                 return b->intvalue + 1;
+    case Greater:
+    case GreaterOrEq:
+        b = a->child;
+        if (b->type != Int) return 0;
+        left = b->intvalue;
+        b = b->next;
+        if (b->type != ExecFunction 
+            || strcmp (b->strvalue, "position")!=0) return 0;
+        if (a->type == Greater) return left;
+        else                    return left + 1;
+    case Equal:
+        b = a->child;
+        if (b->type == Int
+            && b->next->type == ExecFunction
+            && strcmp (b->next->strvalue, "position")==0) return b->intvalue;
+        if (b->type == ExecFunction
+            && strcmp (b->strvalue, "position")==0
+            && b->next->type == Int) return b->next->intvalue;
+        return 0;
+    default: return 0;
+    }
+}
+
 Production(Step)
 
     if (LA==DOT) {
@@ -1443,9 +1473,17 @@ Production(Step)
         /* a = New1( AxisParent, New (IsNode)); */
 
     } else {
+        ast b;
+        int isFirst = 1;
         a = Recurse(Basis);
         while (LA==LBRACKET) {
-            Append( a, New1WithEvalSteps( Pred, Recurse(Predicate)));
+            b = Recurse (Predicate);
+            if (isFirst) {
+                a->intvalue = IsStepPredOptimizable (b);
+                DBG (fprintf (stderr, "step type %s, intvalue: %d\n", astType2str[a->type], a->intvalue);)
+                isFirst = 0;
+            }
+            Append( a, New1WithEvalSteps( Pred, b));
         }
     }
 EndProduction
@@ -1544,7 +1582,7 @@ static int usesPositionInformation ( ast a) {
     }
     return 0;
 }
-static int checkPredOptimizability ( ast a ) {
+static int checkStepPatternPredOptimizability ( ast a ) {
 
     switch (a->type) {
         case Literal:
@@ -1585,17 +1623,17 @@ static int checkPredOptimizability ( ast a ) {
     }
     a = a->child;
     while (a) {
-        if (!checkPredOptimizability(a)) return 0;
+        if (!checkStepPatternPredOptimizability(a)) return 0;
         a = a->next;
     }
     return 1;
 }
-static int IsPredOptimizable ( ast a ) {
+static int IsStepPatternPredOptimizable ( ast a ) {
     int f;
-    f = checkPredOptimizability(a);
+    f = checkStepPatternPredOptimizability(a);
     if (f) {
        DBG(
-         fprintf(stderr, "\nPred is optimizable:\n");
+         fprintf(stderr, "\nStepPattern Pred is optimizable:\n");
          printAst(0,a);
        )
     }
@@ -1643,7 +1681,7 @@ Production(StepPattern)
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
             if (stepIsOptimizable) {
-                if (!IsPredOptimizable(b)) stepIsOptimizable = 0;
+                if (!IsStepPatternPredOptimizable(b)) stepIsOptimizable = 0;
             }
             if (isFirst) {
                 c = New1WithEvalSteps( Pred, b);
@@ -3308,11 +3346,11 @@ static int xpathEvalStep (
 {
     xpathResultSet   leftResult, rightResult;
     xpathResultSet  *pleftResult, *prightResult, tResult;
-    int              i, j, k, rc, res, NaN, NaN1, switchResult;
+    int              i, j, k, rc, res, NaN, NaN1, switchResult, count = 0;
     domNode         *node, *child, *startingNode, *ancestor;
     domAttrNode     *attr;
     domNS           *ns;
-    int              savedDocOrder;
+    int              savedDocOrder, predLimit;
     unsigned int     leftNodeNr, rightNodeNr;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
@@ -3330,13 +3368,25 @@ static int xpathEvalStep (
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         DBG(fprintf(stderr, "AxisChild: scanning \n");)
         child = ctxNode->firstChild;
-        while (child) {
-            DBG(fprintf(stderr, "AxisChild: child '%s' %d \n", child->nodeName, child->nodeNumber);)
-            if (xpathNodeTest(child, exprContext, step)) {
-                DBG(fprintf(stderr, "AxisChild: after node taking child '%s' %d \n", child->nodeName, child->nodeNumber);)
-                checkRsAddNode( result, child);
+        if (step->intvalue) {
+            while (child && (count < step->intvalue)) {
+                DBG(fprintf(stderr, "AxisChild: child '%s' %d \n", child->nodeName, child->nodeNumber);)
+                if (xpathNodeTest(child, exprContext, step)) {
+                    DBG(fprintf(stderr, "AxisChild: after node taking child '%s' %d \n", child->nodeName, child->nodeNumber);)
+                    checkRsAddNode( result, child);
+                    count++;
+                }
+                child = child->nextSibling;
             }
-            child = child->nextSibling;
+        } else {
+            while (child) {
+                DBG(fprintf(stderr, "AxisChild: child '%s' %d \n", child->nodeName, child->nodeNumber);)
+                if (xpathNodeTest(child, exprContext, step)) {
+                    DBG(fprintf(stderr, "AxisChild: after node taking child '%s' %d \n", child->nodeName, child->nodeNumber);)
+                    checkRsAddNode( result, child);
+                }
+                child = child->nextSibling;
+            }
         }
         DBG( fprintf(stderr,"AxisChild result:\n");
              rsPrint(result);
@@ -3348,7 +3398,10 @@ static int xpathEvalStep (
     case AxisDescendantOrSelf:
     case AxisDescendantOrSelfLit:
         *docOrder = 1;
-
+        if (step->intvalue
+            && (step->type == AxisDescendantLit 
+                || step->type == AxisDescendantOrSelfLit)) predLimit = 1;
+        else predLimit = 0;
         if (ctxNode->nodeType == ATTRIBUTE_NODE
             && (
                 step->type == AxisDescendantOrSelf
@@ -3360,8 +3413,12 @@ static int xpathEvalStep (
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         if (step->type == AxisDescendantOrSelf
             || step->type == AxisDescendantOrSelfLit) {
-            if (xpathNodeTest(ctxNode, exprContext, step))
+            if (xpathNodeTest(ctxNode, exprContext, step)) {
                 rsAddNode( result, ctxNode);
+                if (predLimit) {
+                    count++;
+                }
+            }
         }
 
         startingNode = ctxNode;
@@ -3369,6 +3426,10 @@ static int xpathEvalStep (
         while (node && node != startingNode) {
             if (xpathNodeTest(node, exprContext, step)) {
                  checkRsAddNode( result, node);
+                 if (predLimit) {
+                     count++;
+                     if (count >= step->intvalue) break;
+                 }
             }
             if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
                 node = node->firstChild;
@@ -3511,10 +3572,20 @@ static int xpathEvalStep (
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             return XPATH_OK;
         }
-        while (ctxNode->nextSibling) {
-            ctxNode = ctxNode->nextSibling;
-            if (xpathNodeTest(ctxNode, exprContext, step)) {
-                checkRsAddNode(result, ctxNode);
+        if (step->intvalue) {
+            while (ctxNode->nextSibling && (count < step->intvalue)) {
+                ctxNode = ctxNode->nextSibling;
+                if (xpathNodeTest(ctxNode, exprContext, step)) {
+                    checkRsAddNode(result, ctxNode);
+                    count++;
+                }
+            }
+        } else {
+            while (ctxNode->nextSibling) {
+                ctxNode = ctxNode->nextSibling;
+                if (xpathNodeTest(ctxNode, exprContext, step)) {
+                    checkRsAddNode(result, ctxNode);
+                }
             }
         }
         break;
@@ -3524,17 +3595,32 @@ static int xpathEvalStep (
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             return XPATH_OK;
         }
-        startingNode = ctxNode;
-        if (startingNode->parentNode) {
-            node = (startingNode->parentNode)->firstChild;
+        if (step->intvalue) {
+            node = ctxNode->previousSibling;
+            xpathRSInit (&tResult);
+            while (node && (count < step->intvalue)) {
+                if (xpathNodeTest (node, exprContext, step)) {
+                    rsAddNodeFast (&tResult, node);
+                    count++;
+                }
+                node = node->previousSibling;
+            }
+            for (i = tResult.nr_nodes -1; i >= 0; i--) {
+                checkRsAddNode (result, tResult.nodes[i]);
+            }
         } else {
-            return XPATH_OK;
-        }
-        while (node != startingNode) {
-            if (xpathNodeTest(node, exprContext, step)) {
-                checkRsAddNode(result, node);
-            } 
-            node = node->nextSibling;
+            startingNode = ctxNode;
+            if (startingNode->parentNode) {
+                node = (startingNode->parentNode)->firstChild;
+            } else {
+                return XPATH_OK;
+            }
+            while (node != startingNode) {
+                if (xpathNodeTest(node, exprContext, step)) {
+                    checkRsAddNode(result, node);
+                } 
+                node = node->nextSibling;
+            }
         }
         break;
 
@@ -3558,6 +3644,10 @@ static int xpathEvalStep (
         while (1) {
             if (xpathNodeTest (node, exprContext, step)) {
                 checkRsAddNode (result, node);
+                if (step->intvalue) {
+                    count++;
+                    if (count >= step->intvalue) break;
+                }
             }
             if (node->nodeType == ELEMENT_NODE &&
                 node->firstChild) {
