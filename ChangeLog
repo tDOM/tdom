@@ -1,10 +1,33 @@
+2005-01-07  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/domalloc.c
+        * generic/domxslt.c
+        * generic/domxpath.c
+        * generic/tclexpat.c
+        * generic/nodecmd.c
+        * generic/nodecmd.h
+        * generic/tcldom.c
+        * tests/domDoc.test
+        * generic/tcldom.h: Clean up, to decrease (innocuous) compiler
+          warnings (thanks to Pat Thoyts for triggering input and
+          patch).
+
+        * win/makefile.vc: Improved VC++ compiler makefile. Thanks to
+          Pat Thoyts for contribution.
+
+        * win/nmakehlp.c
+        * win/rules.vc
+        * win/tdom.rc: Added this files. Thanks to Pat Thoyts for
+          contribution.      
+
 2005-01-06  Rolf Ade  <rolf@pointsman.de>
         
         * generic/tcldom.c
         * tests/domDoc.test
         * tests/domNode.test
         * doc/domDoc.*
-        * doc/domNode:*: Handle multiple -namespaces option to
+        * doc/domNode:*: Handle multiple -namespaces options to
           selectNodes method. Added methods transform and delete to
           xsltCmds. Ensure, that documents created with the [dom
           createDocument* methods] are created as docCmds in case of
