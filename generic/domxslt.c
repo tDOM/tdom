@@ -90,7 +90,6 @@
 #else
 # define STRCASECMP(a,b)  strcasecmp (a,b)
 #endif
-#define IS_WHITESPACE(c)    ((c)==' ' || (c)=='\n' || (c)=='\r' || (c)=='\t')
 
 extern void printAst (int depth, ast t);
 
@@ -1905,7 +1904,7 @@ static void StripXMLSpace (
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
         for (i=0; i<len; i++) {
-            if (!IS_WHITESPACE(*p)) {
+            if (!IS_XML_WHITESPACE(*p)) {
                 onlySpace = 0;
                 break;
             }
@@ -3162,10 +3161,10 @@ static int ExecUseAttributeSets (
 
     pc = styles;
     while (*pc) {
-        while (*pc && IS_WHITESPACE(*pc)) pc++;
+        while (*pc && IS_XML_WHITESPACE(*pc)) pc++;
         if (*pc == '\0') break;
         aSet = pc;
-        while (*pc && !IS_WHITESPACE(*pc)) pc++;
+        while (*pc && !IS_XML_WHITESPACE(*pc)) pc++;
         save = *pc;
         *pc = '\0';
         TRACE1("use-attribute-set '%s' \n", aSet);
@@ -5380,10 +5379,10 @@ static int fillElementList (
 
     pc = str;
     while (*pc) {
-        while (*pc && IS_WHITESPACE(*pc)) pc++;
+        while (*pc && IS_XML_WHITESPACE(*pc)) pc++;
         if (*pc == '\0') break;
         start = pc;
-        while (*pc && !IS_WHITESPACE(*pc)) pc++;
+        while (*pc && !IS_XML_WHITESPACE(*pc)) pc++;
         save = *pc;
         *pc = '\0';
         wsInfo->hasData = 1;
@@ -5473,7 +5472,7 @@ static void StripXSLTSpace (
         len = ((domTextNode*)node)->valueLength;
         onlySpace = 1;
         for (i=0; i<len; i++) {
-            if (!IS_WHITESPACE(*p)) {
+            if (!IS_XML_WHITESPACE(*p)) {
                 onlySpace = 0;
                 break;
             }
@@ -5532,11 +5531,11 @@ parseList (
     if (str) {
         pc = str;
         while (*pc) {
-            while (*pc && IS_WHITESPACE(*pc))
+            while (*pc && IS_XML_WHITESPACE(*pc))
                 pc++;
             if (*pc == '\0') break;
             start = pc;
-            while (*pc && !IS_WHITESPACE(*pc))
+            while (*pc && !IS_XML_WHITESPACE(*pc))
                 pc++;
             save = *pc;
             *pc = '\0';
@@ -6566,7 +6565,7 @@ static int processTopLevel (
                     for (i=0, pc = ((domTextNode*)node)->nodeValue;
                          i < ((domTextNode*)node)->valueLength;
                          i++, pc++) {
-                        if (!IS_WHITESPACE(*pc)) {
+                        if (!IS_XML_WHITESPACE(*pc)) {
                             only_whites = 0;
                             break;
                         }
@@ -7173,7 +7172,7 @@ int xsltProcess (
                 for (i=0, pc = ((domTextNode*)node)->nodeValue;
                      i < ((domTextNode*)node)->valueLength;
                      i++, pc++) {
-                    if (!IS_WHITESPACE(*pc)) {
+                    if (!IS_XML_WHITESPACE(*pc)) {
                         only_whites = 0;
                         break;
                     }

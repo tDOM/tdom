@@ -372,6 +372,8 @@ static int isNCNameChar(char *c)
 }
 #endif
 
+#define IS_XML_WHITESPACE(c)  ((c)==' ' || (c)=='\n' || (c)=='\r' || (c)=='\t')
+
 /*--------------------------------------------------------------------------
 |   DOMString
 |
