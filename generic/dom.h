@@ -29,6 +29,9 @@
 |
 |
 |   $Log$
+|   Revision 1.15  2002/07/28 08:43:48  zoran
+|   Fixed reference to old expat directory
+|
 |   Revision 1.14  2002/07/28 08:27:50  zoran
 |   Moved to new memory allocation macros.
 |
@@ -290,7 +293,7 @@ We need 8 bits to index into pages, 3 bits to add to that index and
       : 0)))
 
 
-#include "../expat-1.95.1/nametab.h"
+#include "../expat/nametab.h"
 
 static const unsigned char nameChar7Bit[] = {
 /* 0x00 */    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
