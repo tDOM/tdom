@@ -1013,6 +1013,9 @@ XML_SimpleParse (
                     RetError("Syntax Error",(x - xml - 1) );
                 }
             }
+            if (x[1] == 0) {
+                return TCL_OK;
+            }
             if (*x=='>') {
                 x++;
             }
