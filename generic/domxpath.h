@@ -32,8 +32,15 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/03/21 01:47:22  rolf
+|   Collected the various nodeSet Result types into "nodeSetResult" (there
+|   still exists a seperate emptyResult type). Reworked
+|   xpathEvalStep. Fixed memory leak in xpathMatches, added
+|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
+|   already in the nodeSet.
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -101,7 +108,7 @@ typedef astElem *ast;
 \---------------------------------------------------------------------------*/
 typedef enum { 
     EmptyResult, BoolResult, IntResult, RealResult, StringResult, 
-    NodeSetResult, AttrNodeSetResult, AttrValueSetResult, MixedSetResult
+    xNodeSetResult
 } xpathResultType;
 
 
@@ -179,6 +186,7 @@ void rsSetInt       ( xpathResultSet *rs, int          i    );
 void rsSetReal      ( xpathResultSet *rs, double       d    );
 void rsSetString    ( xpathResultSet *rs, char        *s    );
 void rsAddNode      ( xpathResultSet *rs, domNode     *node );
+void rsAddNodeFast  ( xpathResultSet *rs, domNode     *node );
 void rsAddAttrNode  ( xpathResultSet *rs, domAttrNode *node );
 void rsAddAttrValue ( xpathResultSet *rs, domAttrNode *node );
 

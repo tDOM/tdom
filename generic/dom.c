@@ -36,6 +36,13 @@
 |
 |
 |   $Log$
+|   Revision 1.7  2002/03/21 01:47:22  rolf
+|   Collected the various nodeSet Result types into "nodeSetResult" (there
+|   still exists a seperate emptyResult type). Reworked
+|   xpathEvalStep. Fixed memory leak in xpathMatches, added
+|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
+|   already in the nodeSet.
+|
 |   Revision 1.6  2002/03/10 01:16:12  rolf
 |   Added support for [dom createDocumentNS]. Added tests for correctness
 |   of document Element tag name.
@@ -157,7 +164,6 @@ typedef struct _domActiveNS {
     domNS *namespace;
 
 } domActiveNS;
-
 
 /*---------------------------------------------------------------------------
 |   type domReadInfo
@@ -350,23 +356,76 @@ domLookupPrefix (
     char        *prefix
     )
 {
-    domNS *ns;
+    domNS         *ns;
+    domNSContext  *NSContext;
+    Tcl_HashEntry *h;
+    int            i;
     
-    ns = node->ownerDocument->namespaces;
-    while (ns) {
-        if ((ns->prefix != NULL) && (strcmp (prefix, ns->prefix) == 0)) {
-            return ns;
+    while (node) {
+        if (node->nodeFlags & HAS_NS_INFO) break;
+        node = node->parentNode;
+    }
+    if (!(node->nodeFlags & HAS_NS_INFO)) return NULL;
+    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes, 
+                           (char *) node->nodeNumber);
+    if (!h) {
+        fprintf (stderr, "Invalid internal data in domLookupPrefix!!!\n");
+        return NULL;
+    }
+    NSContext = Tcl_GetHashValue (h);
+    for (i = 0; i < NSContext->nrOfNS; i++) {
+        if (NSContext->ns[i]->prefix != NULL
+            && strcmp (prefix, NSContext->ns[i]->prefix) == 0) {
+            return NSContext->ns[i];
         }
-        ns = ns->next;
     }
     return NULL;
 }
+            
+/*---------------------------------------------------------------------------
+|   domIsNodeNSInScope
+|
+\--------------------------------------------------------------------------*/
+int
+domIsNodeNSInScope (
+    domNode *node
+    )
+{
+    domNode       *n;
+    Tcl_HashEntry *h;
+    domNS         *ns;
+    domNSContext  *NSContext;
+    int            i;
+    
+    if (!node->namespace) return 1;
+    
+    if (node->nodeType == ATTRIBUTE_NODE)
+        n = ((domAttrNode *) node)->parentNode;
+    else
+        n = node;
 
+    while (n) {
+        if (n->nodeFlags & HAS_NS_INFO) break;
+        n = n->parentNode;
+    }
+    if (!n) return 0;
+    h = Tcl_FindHashEntry (n->ownerDocument->NSscopes, (char *) n->nodeNumber);
+    if (!h) {
+        fprintf (stderr, "Invalid internal data in domLookupPrefix!!!\n");
+        return 0;
+    }
+    NSContext = Tcl_GetHashValue (h);
+    for (i = 0; i < NSContext->nrOfNS; i++) {
+        if (NSContext->ns[i]->index == node->namespace) return 1;
+    }
+    return 0;
+}
+            
 /*---------------------------------------------------------------------------
 |   domIsNamespaceInScope
 |
 \--------------------------------------------------------------------------*/
-int 
+static int 
 domIsNamespaceInScope (
     domActiveNS *NSstack,
     int          NSstackPos,
@@ -626,12 +685,14 @@ startElement(
     domAttrNode   *attrnode, *lastAttr;
     const char   **atPtr, **idAttPtr;
     Tcl_HashEntry *h;
-    int            hnew, len, pos, idatt, newNSdecls;
+    int            hnew, len, pos, idatt, newNSdecls, nrOfNSinScope;
+    int            haveDefaultNS, NSinScope, j, i;
     char          *xmlns, *localname;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];    
-    domNS         *ns;
+    domNS         *ns, NS;
     char           feedbackCmd[24];
+    domNSContext  *NSContext;
     GetTDomTSD();
 
     if (info->feedbackAfter) {
@@ -733,7 +794,66 @@ startElement(
         } 
     }
     if (newNSdecls) {
-        
+        if (newNSdecls > info->document->NSbufferLen) {
+            info->document->NSbuffer = (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
+                                                           sizeof (domNS *) * newNSdecls);
+            info->document->NSbufferLen = newNSdecls;
+        }
+        j = 0;
+        haveDefaultNS = 0;
+        for (i = info->activeNSpos; i > info->activeNSpos - newNSdecls; i--) {
+            ns = info->activeNS[i].namespace;
+            info->document->NSbuffer[j] = ns;
+            if (ns->prefix[0] == '\0') 
+                haveDefaultNS = 1;
+            j++;
+        }
+        nrOfNSinScope = newNSdecls;
+        for (i = info->activeNSpos - newNSdecls; i >= 0; i--) {
+            ns = info->activeNS[i].namespace;
+            if (ns->prefix[0] == '\0') {
+                if (haveDefaultNS) continue;
+                nrOfNSinScope++;
+                if (nrOfNSinScope > info->document->NSbufferLen) {
+                    info->document->NSbuffer = 
+                        (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
+                                                sizeof (domNS *) * 2 * info->document->NSbufferLen);
+                    info->document->NSbufferLen *= 2;
+                }
+                info->document->NSbuffer[nrOfNSinScope-1] = ns;
+                haveDefaultNS = 1;
+            } else {
+                NSinScope = 1;
+                for (j = i+1; j <= info->activeNSpos; j++) {
+                    if (strcmp (info->activeNS[i].namespace->prefix,
+                                info->activeNS[j].namespace->prefix)==0) {
+                        /* prefix was re-declared later and therefor we
+                           have it already. */
+                        NSinScope = 0;
+                        break;
+                    }
+                }
+                if (!NSinScope) continue;
+                nrOfNSinScope++;
+                if (nrOfNSinScope > info->document->NSbufferLen) {
+                    info->document->NSbuffer = 
+                        (domNS **) Tcl_Realloc ((char *) info->document->NSbuffer,
+                                                sizeof (domNS *) * 2 * info->document->NSbufferLen);
+                    info->document->NSbufferLen *= 2;
+                }
+                info->document->NSbuffer[nrOfNSinScope-1] = ns;
+            }
+        }
+        NSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
+        NSContext->newNS = newNSdecls;
+        NSContext->nrOfNS = nrOfNSinScope;
+        NSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * nrOfNSinScope);
+        memcpy (NSContext->ns, info->document->NSbuffer, 
+                sizeof (domNS *) * nrOfNSinScope);
+        h = Tcl_CreateHashEntry (info->document->NSscopes, 
+                                 (char *) node->nodeNumber, &hnew);
+        Tcl_SetHashValue (h, NSContext);
+        node->nodeFlags |= HAS_NS_INFO;
     }
     
     /*----------------------------------------------------------
@@ -745,6 +865,14 @@ startElement(
            || ((tagPrefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
                && (strcmp(tagPrefix, info->activeNS[pos].namespace->prefix) == 0))
         ) {
+            if (info->activeNS[pos].namespace->prefix[0] == '\0'
+                && info->activeNS[pos].namespace->uri[0] == '\0') {
+                /* xml-names rec. 5.2: "The default namespace can be
+                   set to the empty string. This has the same effect,
+                   within the scope of the declaration, of there being
+                   no default namespace." */
+                break;
+            }
             node->namespace = info->activeNS[pos].namespace->index;
             DBG(fprintf(stderr, "tag='%s' uri='%s' \n", 
                         node->nodeName, 
@@ -1412,6 +1540,8 @@ domReadDocument (
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
     doc->extResolver      = extResolver;
+    doc->NSbufferLen      = 8;
+    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
 
     info.parser               = parser;
     info.document             = doc;
@@ -1632,6 +1762,8 @@ domCreateDoc ( )
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
+    doc->NSbufferLen      = 8;
+    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
 
     h = Tcl_CreateHashEntry( &TSDPTR(tagNames), "(rootNode)", &hnew);
     rootNode = (domNode*) domAlloc(sizeof(domNode));
@@ -1656,8 +1788,8 @@ domCreateDoc ( )
 domDocument *
 domCreateDocument (
     Tcl_Interp *interp,
-    char       *documentElementTagName,
-    char       *uri
+    char       *uri,
+    char       *documentElementTagName
 )
 {
     Tcl_HashEntry *h;
@@ -1666,6 +1798,7 @@ domCreateDocument (
     domDocument   *doc;
     char           prefix[MAX_PREFIX_LEN], *localName;
     domNS         *ns = NULL;
+    domNSContext  *NSContext;
     GetTDomTSD();
 
     if (uri) {
@@ -1711,6 +1844,17 @@ domCreateDocument (
     Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     
+    if (uri) {
+        NSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
+        NSContext->newNS = 1;
+        NSContext->nrOfNS = 1;
+        NSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
+        NSContext->ns[0] = ns;
+        h = Tcl_CreateHashEntry (doc->NSscopes, (char*) node->nodeNumber,
+                                 &hnew);
+        Tcl_SetHashValue (h, NSContext);
+        node->nodeFlags |= HAS_NS_INFO;
+    }
     doc->rootNode->firstChild = doc->rootNode->lastChild = doc->documentElement;
 
     return doc;
@@ -1862,8 +2006,9 @@ domFreeDocument (
     void            * clientData 
 )
 {
-    domNode *node, *next;
-    domNS   *ns, *nsNext;
+    domNode      *node, *next;
+    domNS        *ns, *nsNext;
+    domNSContext *NSContext;
     Tcl_HashEntry *entryPtr;
     Tcl_HashSearch search;
     
@@ -1936,7 +2081,29 @@ domFreeDocument (
     if (doc->extResolver) {
         Tcl_DecrRefCount (doc->extResolver);
     }
+
+    /*-----------------------------------------------------------
+    | delete NS scopes  hash table
+    \-----------------------------------------------------------*/    
+    if (doc->NSscopes) {
+        entryPtr = Tcl_FirstHashEntry (doc->NSscopes, &search);
+        while (entryPtr) {
+            NSContext = (domNSContext *) Tcl_GetHashValue (entryPtr);
+            Tcl_Free ((char *) NSContext->ns);
+            Tcl_Free ((char *) NSContext);
+            entryPtr = Tcl_NextHashEntry (&search);
+        }
+        Tcl_DeleteHashTable (doc->NSscopes);
+        Tcl_Free ((char *)doc->NSscopes);
+    }
+
+    /*-----------------------------------------------------------
+    | delete NS buffer array
+    \-----------------------------------------------------------*/    
+    if (doc->NSbuffer) 
+        Tcl_Free ((char *)doc->NSbuffer);
     
+
     domFree ((void*)doc->rootNode);
     Tcl_Free ((void*)doc);
 }
@@ -1995,7 +2162,9 @@ domSetAttribute (
         h = Tcl_CreateHashEntry( &TSDPTR(attrNames), attributeName, &hnew);
         attr->nodeType    = ATTRIBUTE_NODE;     
         attr->nodeFlags   = 0;
-        attr->namespace   = node->namespace;
+/*          attr->namespace   = node->namespace; */
+/* attribute does not get namespace of owner node automatically */
+        attr->namespace   = 0;
         attr->nodeName    = (char *)&(h->key);     
         attr->parentNode  = node;        
         attr->valueLength = strlen(attributeValue);
@@ -2316,7 +2485,10 @@ domAppendChild (
     domNode *childToAppend
 )
 {
-    domNode *frag_node, *n;
+    domNode       *frag_node, *n;
+    Tcl_HashEntry *h;
+    domNSContext  *NSContext, newNSContext;
+    int            i;
 
     if (node->nodeType != ELEMENT_NODE) {
         return HIERARCHY_REQUEST_ERR;
@@ -2374,6 +2546,31 @@ domAppendChild (
             }
         }
     }
+
+    n = node;
+    while (n) {
+        if (n->nodeFlags & HAS_NS_INFO) break;
+        n = n->parentNode;
+    }
+/*      if (n) { */
+/*          h = Tcl_FindHashEntry (n->ownerDocument->NSscopes, n->nodeNumber); */
+/*          if (!h) { */
+/*              fprintf (stderr, "Invalid internal data in domAppendChild!!!\n"); */
+/*              NSContext == NULL; */
+/*          } else { */
+/*              NSContext = Tcl_GetHashValue (h); */
+/*          } */
+/*      } */
+
+/*      if (frag_node) { */
+/*          if (frag_node->namespace && !NSContext) { */
+/*              newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext)); */
+/*              newNSContext->nrOfNS = 1; */
+/*              newNSContext->newNS = 1; */
+/*              newNSContext->ns = (domNS**) Tcl_Alloc (sizeof (domNS*)); */
+/*              newNSContext->ns[0] = domGetNamespaceByIndex (childToAppend->namespace); */
+/*              childToAppend->nodeFlags */
+                                                          
 
     if (node->lastChild) {
         node->lastChild->nextSibling = childToAppend;
@@ -2669,6 +2866,11 @@ domEscapeCData (
         if (*pc == '>') {
             Tcl_DStringAppend (escapedData, &value[start], i - start);
             Tcl_DStringAppend (escapedData, "&gt;", 4);
+            start = i+1;
+        } else 
+        if (*pc == '\'') {
+            Tcl_DStringAppend (escapedData, &value[start], i - start);
+            Tcl_DStringAppend (escapedData, "&apos;", 6);
             start = i+1;
         }
         pc++;
@@ -3442,6 +3644,8 @@ tdom_resetProc (
     Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
     Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
+    doc->NSbufferLen      = 8;
+    doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
 
     info->document          = doc;
     info->currentNode       = NULL;
@@ -3549,6 +3753,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
         Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
         Tcl_InitHashTable (doc->NSscopes, TCL_ONE_WORD_KEYS);
+        doc->NSbufferLen      = 8;
+        doc->NSbuffer         = (domNS **) Tcl_Alloc (sizeof (domNS *) * doc->NSbufferLen); 
 
         info = (domReadInfo *) Tcl_Alloc (sizeof (domReadInfo));
         info->document          = doc;

@@ -36,6 +36,13 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.7  2002/03/21 01:47:22  rolf
+|   Collected the various nodeSet Result types into "nodeSetResult" (there
+|   still exists a seperate emptyResult type). Reworked
+|   xpathEvalStep. Fixed memory leak in xpathMatches, added
+|   rsAddNodeFast(), if it's known for sure, that the node to add isn't
+|   already in the nodeSet.
+|
 |   Revision 1.6  2002/03/16 13:06:06  rolf
 |   Optimised xsl:sort: the string or numeric value of the nodes to sort
 |   are computed only once and cached for further comparisons in the sort
@@ -1199,10 +1206,7 @@ static int buildKeyInfoForDoc (
                         return rc;
                     }
                     DBG(rsPrint(&rs));
-                    if ((rs.type == NodeSetResult) ||
-                        (rs.type == AttrNodeSetResult) ||
-                        (rs.type == AttrValueSetResult) ||
-                        (rs.type == MixedSetResult)) {
+                    if (rs.type == xNodeSetResult) {
                         for (i = 0; i < rs.nr_nodes; i++) {
                             useValue = xpathFuncStringForNode (rs.nodes[i]);
                             TRACE1("use value = '%s'\n", useValue);
@@ -1279,6 +1283,7 @@ static void sortNodeSetByNodeNumber(
     domNode *tmp;
     int i, j, ln, rn;
 
+    /* TODO_RDE: ATTRIBUTE_NODE? TEXT_NODE? */
     while (n > 1) {
         tmp = nodes[0]; nodes[0] = nodes[n/2]; nodes[n/2] = tmp;
         for (i = 0, j = n; ; ) {
@@ -1309,7 +1314,7 @@ void sortByDocOrder (
     xpathResultSet  * rs
 )
 {
-    if (rs->type != NodeSetResult) return;
+    if (rs->type != xNodeSetResult) return;
     sortNodeSetByNodeNumber(rs->nodes, rs->nr_nodes);
 }
 
@@ -1529,10 +1534,7 @@ static int xsltXPathFuncs (
 
         docKeyData = (Tcl_HashTable *) Tcl_GetHashValue (h);
 
-        if ((argv[1]->type == NodeSetResult) ||
-            (argv[1]->type == AttrNodeSetResult) ||
-            (argv[1]->type == AttrValueSetResult) ||
-            (argv[1]->type == MixedSetResult)) {
+        if (argv[1]->type == xNodeSetResult) {
             for (i = 0; i < argv[1]->nr_nodes; i++) {
                 filterValue = xpathFuncStringForNode (argv[1]->nodes[i]);
                 TRACE1("filterValue='%s' \n", filterValue); 
@@ -1605,17 +1607,14 @@ static int xsltXPathFuncs (
         \-------------------------------------------------------------------*/
         DBG(fprintf(stderr, "xsltXPathFuncs 'document' \n");)
         if (argc == 1) {
-            if ((argv[0]->type == NodeSetResult) ||
-                (argv[0]->type == AttrNodeSetResult) ||
-                (argv[0]->type == AttrValueSetResult) ||
-                (argv[0]->type == MixedSetResult)) {
+            if (argv[0]->type == xNodeSetResult) {
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
-                    if (argv[0]->nodes[i]->nodeType == ELEMENT_NODE) {
-                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
-                        baseURI = findBaseURI (argv[0]->nodes[i]);
-                    } else {
+                    if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                         baseURI = findBaseURI (((domAttrNode*)argv[0]->nodes[i])->parentNode);
+                    } else {
+                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
+                        baseURI = findBaseURI (argv[0]->nodes[i]);
                     }
                     if (*str == '\0') {
                         str = baseURI;
@@ -1663,26 +1662,20 @@ static int xsltXPathFuncs (
             }
         } else
         if (argc == 2) {
-            if ((argv[1]->type != NodeSetResult)  &&
-                (argv[1]->type != AttrNodeSetResult) &&
-                (argv[1]->type != AttrValueSetResult) &&
-                (argv[1]->type != MixedSetResult)) {
+            if (argv[1]->type != xNodeSetResult) {
                 *errMsg = strdup("second arg of document() has to be a nodeset!");
             }
-            if (argv[1]->nodes[0]->nodeType == ELEMENT_NODE) {
-                baseURI = findBaseURI (argv[1]->nodes[0]);
-            } else {
+            if (argv[1]->nodes[0]->nodeType == ATTRIBUTE_NODE) {
                 baseURI = findBaseURI (((domAttrNode*)argv[1]->nodes[0])->parentNode);
+            } else {
+                baseURI = findBaseURI (argv[1]->nodes[0]);
             }
-            if ((argv[0]->type == NodeSetResult) ||
-                (argv[0]->type == AttrNodeSetResult) ||
-                (argv[0]->type == AttrValueSetResult) ||
-                (argv[0]->type == MixedSetResult)) {
+            if (argv[0]->type == xNodeSetResult) {
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
-                    if (argv[0]->nodes[i]->nodeType == ELEMENT_NODE) {
-                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
-                    } else {
+                    if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
+                    } else {
+                        str = xpathGetTextValue (argv[0]->nodes[i], &len);
                     }
                     if (*str == '\0') {
                         str = baseURI;
@@ -3206,7 +3199,7 @@ static int ExecAction (
                 }
                 xpathRSInit( &rs );
                 while (child) {    
-                    rsAddNode( &rs, child);
+                    rsAddNodeFast ( &rs, child);
                     child = child->nextSibling; 
                 }
                 savedLastNode = xs->lastNode;
@@ -3239,7 +3232,7 @@ static int ExecAction (
                 if (currentNode->nodeType == ELEMENT_NODE) {
                     child = currentNode->firstChild;
                     while (child) {
-                        rsAddNode (&rs, child);
+                        rsAddNodeFast (&rs, child);
                         child = child->nextSibling;
                     }
                 }
@@ -3545,15 +3538,12 @@ static int ExecAction (
             CHECK_RC;            
             TRACE1(" copyOf select='%s':\n", select);
             DBG(rsPrint(&rs));
-            if (rs.type == NodeSetResult) {
+            if (rs.type == xNodeSetResult) {
                 for (i=0; i<rs.nr_nodes; i++) { 
-                    if (rs.nodes[i]->nodeType == DOCUMENT_NODE) {
-                        child = rs.nodes[i]->firstChild;
-                        while (child) {
-                            n = domCloneNode(child, 1);
-                            domAppendChild(xs->lastNode, n);
-                            child = child->nextSibling;
-                        }
+                    if (rs.nodes[i]->nodeType == ATTRIBUTE_NODE) {
+                        attr = (domAttrNode*)rs.nodes[i];
+                        domSetAttribute(xs->lastNode, 
+                                        attr->nodeName, attr->nodeValue);
                     } else {
                         if (*(rs.nodes[i]->nodeName) == '(' &&
                             ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
@@ -3570,22 +3560,13 @@ static int ExecAction (
                         }
                     }
                 }
-            } else
-                if ((rs.type == AttrNodeSetResult) ||
-                    (rs.type == AttrValueSetResult)) {
-                    for (i=0; i<rs.nr_nodes; i++) { 
-                        attr = (domAttrNode*)rs.nodes[i];
-                        domSetAttribute(xs->lastNode, 
-                                        attr->nodeName, attr->nodeValue);
-                    }
-                } 
-                else {
-                    str = xpathFuncString( &rs );
-                    TRACE1("copyOf: xpathString='%s' \n", str);
-                    domAppendNewTextNode(xs->lastNode, str, strlen(str),
-                                         TEXT_NODE, 0);
-                    free(str);
-                }
+            } else {
+                str = xpathFuncString( &rs );
+                TRACE1("copyOf: xpathString='%s' \n", str);
+                domAppendNewTextNode(xs->lastNode, str, strlen(str),
+                                     TEXT_NODE, 0);
+                free(str);
+            }
             xpathRSFree( &rs );               
             break;
             
@@ -3655,11 +3636,7 @@ static int ExecAction (
             TRACE1("forEach: evalXPath for select = '%s' gave back:\n", select);
             DBG(rsPrint(&rs));
 
-            if ((rs.type == NodeSetResult) 
-                || (rs.type == AttrNodeSetResult)
-                || (rs.type == AttrValueSetResult)
-                || (rs.type == MixedSetResult)) {
-
+            if (rs.type == xNodeSetResult) {
                 rc = doSortActions (xs, &rs, actionNode, context, currentNode,
                                     currentPos, errMsg);
                 CHECK_RC;
@@ -3994,11 +3971,29 @@ int ApplyTemplate (
         TRACE4("tpl has prio='%f' precedence='%f', currentPrio='%f', currentPrec='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
         /* According to xslt rec 5.5: First trest precedence */
         if (tpl->match &&  tpl->precedence >= currentPrec) {
-            /* Higher precedence wins always. If precedences are equal, use prio
-               for decision. */
+            /* Higher precedence wins always. If precedences are equal,
+               use priority for decision. */
             if (tpl->precedence > currentPrec ||  tpl->prio >= currentPrio) {
                 
                 TRACE2("testing XLocPath '%s' for node %d \n", tpl->match, currentNode->nodeNumber);
+                /* Short cut for simple common cases */
+                switch (tpl->ast->type) {
+                case IsElement:
+                    if (currentNode->nodeType == ELEMENT_NODE) {
+                        if (tpl->ast->strvalue[0] != '*' 
+                            && strcmp (tpl->ast->strvalue, currentNode->nodeName)!=0) 
+                            continue;
+                    } else continue;
+                    break;
+                case IsText:
+                    if (currentNode->nodeType != TEXT_NODE)
+                        continue;
+                    break;
+                case IsAttr:
+                    if (currentNode->nodeType != ATTRIBUTE_NODE) 
+                        continue;
+                    break;
+                }
                 rc = xpathMatches ( tpl->ast, exprContext, currentNode, &(xs->cbs), errMsg);
                 TRACE1("xpathMatches = %d \n", rc);
                 if (rc < 0) {
@@ -4045,7 +4040,7 @@ int ApplyTemplate (
         }
         xpathRSInit( &rs );
         while (child) {    
-            rsAddNode( &rs, child);
+            rsAddNodeFast ( &rs, child);
             child = child->nextSibling; 
         }
         savedLastNode = xs->lastNode;
@@ -4090,11 +4085,7 @@ int ApplyTemplates (
     domNode  * savedLastNode;
     int        i, rc;
         
-    if ((nodeList->type == NodeSetResult) || 
-        (nodeList->type == AttrNodeSetResult) ||
-        (nodeList->type == AttrValueSetResult) ||
-        (nodeList->type == MixedSetResult)
-    ) {
+    if (nodeList->type == xNodeSetResult) {
         savedLastNode = xs->lastNode;
         for (i=0; i < nodeList->nr_nodes; i++) {
             xsltPushVarFrame (xs);
