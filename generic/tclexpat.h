@@ -107,6 +107,13 @@ typedef struct TclHandlerSet {
     Tcl_Obj *entityDeclCommand;        /* Script for <!ENTITY decl's */
 } TclHandlerSet;
 
+typedef struct expatElemContent {
+
+    XML_Content             *content;
+    struct expatElemContent *next;
+
+} ExpatElemContent;
+
 typedef struct TclGenExpatInfo {
     XML_Parser  parser;		/* The expat parser structure */
     Tcl_Interp *interp;		/* Interpreter for this instance */
@@ -117,6 +124,7 @@ typedef struct TclGenExpatInfo {
     Tcl_Obj *result;		/* application return result */
     const char *context;        /* reference to the context pointer */  
     Tcl_Obj *cdata;             /* Accumulates character data */ 
+    ExpatElemContent *eContents;/* As linked list, the reported XML_Content's*/
     int      ns_mode;           /* namespace mode */
     XML_Char nsSeparator; 
   

@@ -96,6 +96,7 @@ typedef enum {
 } TclExpat_InputType;
 
 
+
 /*----------------------------------------------------------------------------
 |   local globals
 |
@@ -370,6 +371,7 @@ TclExpatObjCmd(dummy, interp, objc, objv)
 
   genexpat->firstTclHandlerSet = NULL;
   genexpat->firstCHandlerSet   = NULL;
+  genexpat->eContents          = NULL;
 
   if (objc > 1) {
       nsoption = Tcl_GetStringFromObj(objv[1], NULL);
@@ -3317,6 +3319,7 @@ TclGenExpatElementDeclHandler(userData, name, model)
   int result;
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
+  ExpatElemContent *eContent;
 
   TclExpatDispatchPCDATA(expat);
 
@@ -3329,7 +3332,7 @@ TclGenExpatElementDeclHandler(userData, name, model)
 
       switch (activeTclHandlerSet->status) {
       case TCL_CONTINUE:
-          /* Make not much sense... */
+          /* Makes not much sense... */
       case TCL_BREAK:
           goto nextTcl;
           break;
@@ -3343,8 +3346,6 @@ TclGenExpatElementDeclHandler(userData, name, model)
 
       cmdPtr = Tcl_DuplicateObj(activeTclHandlerSet->elementDeclCommand);
       Tcl_IncrRefCount(cmdPtr);
-      Tcl_Preserve((ClientData) expat->interp);
-
       Tcl_ListObjAppendElement(expat->interp, cmdPtr,
                                Tcl_NewStringObj((char *)name, strlen(name)));
 
@@ -3357,7 +3358,6 @@ TclGenExpatElementDeclHandler(userData, name, model)
       result = Tcl_GlobalEvalObj(expat->interp, cmdPtr);
 
       Tcl_DecrRefCount(cmdPtr);
-      Tcl_Release((ClientData) expat->interp);
 
       TclExpatHandlerResult(expat, activeTclHandlerSet, result);
   nextTcl:
@@ -3372,6 +3372,11 @@ TclGenExpatElementDeclHandler(userData, name, model)
       }
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
   }
+  eContent = (ExpatElemContent *) Tcl_Alloc (sizeof (ExpatElemContent));
+  eContent->content = model;
+  eContent->next = expat->eContents;
+  expat->eContents = eContent;
+
   return;
 }
 
@@ -3596,6 +3601,7 @@ TclGenExpatEndDoctypeDeclHandler(userData)
   int result;
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
+  ExpatElemContent *eContent, *eContentSave;
 
   TclExpatDispatchPCDATA(expat);
 
@@ -3639,6 +3645,14 @@ TclGenExpatEndDoctypeDeclHandler(userData)
           activeCHandlerSet->endDoctypeDeclCommand (activeCHandlerSet->userData);
       }
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
+  }
+
+  eContent = expat->eContents;
+  while (eContent) {
+      free (eContent->content);
+      eContentSave = eContent;
+      eContent = eContent->next;
+      Tcl_Free ((char *) eContentSave);
   }
   return;
 }
