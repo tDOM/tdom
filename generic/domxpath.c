@@ -950,6 +950,7 @@ static XPathTokens xpathLexer (
                                    && (tokens[l-1].token != COMMA)
                                    && (tokens[l-1].token != SLASH)
                                    && (tokens[l-1].token != SLASHSLASH)
+                                   && (tokens[l-1].token != PIPE)
                                    && (tokens[l-1].token != PLUS)
                                    && (tokens[l-1].token != MINUS)
                                    && (tokens[l-1].token != EQUAL)
