@@ -3574,6 +3574,13 @@ static int xsltNumber (
         if (rc < 0) goto xsltNumberError;
         vVals = 1;
         v[0] = xpathRound(xpathFuncNumber( &rs, &NaN ));
+        /* MARK recoverable error */
+        /* This is one of the not so satisfying corners of the xslt
+         * rec. The rec doesn't say, what to do, if the value isn't a
+         * (finit) number. E24 from the erratas doesn't makes things
+         * much better - a little bit dubious wording and a not very
+         * convincing decision. Well, at least saxon seems to follow
+         * the words of E24. I'll postpone this topic. */
         if (NaN) v[0] = 0;
         xpathRSFree( &rs );
     } else {
@@ -4486,7 +4493,30 @@ static int ExecAction (
                 for (i=0; i<rs.nr_nodes; i++) {
                     if (rs.nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         attr = (domAttrNode*)rs.nodes[i];
-                        ns = domGetNamespaceByIndex (attr->parentNode->ownerDocument, attr->namespace);
+                        if (attr ->nodeFlags & IS_NS_NODE) {
+                            fprintf (stderr, "copyOF: copy NS-attr\n");
+                            /* If someone selects explicitely namespace nodes
+                               to copy-of with e.g namespace::* (remember: @*
+                               doesn't select namespace nodes), wie must this
+                               handle seperately.*/
+                            /* The xmlns:xml namespace node will always
+                               be in scope, but never needed to be copied,
+                               because the result tree will also always
+                               already have it. To surpress, that the result
+                               tree gets glutted with xmlns:xml declarations
+                               (they would not harm, but ev. irritate some and
+                               are unnecessary, we check this here as a 
+                               special case */
+                            if (attr->namespace == 1) {
+                                continue;
+                            }
+                            ns = NULL;
+                        } else {
+                            ns = domGetNamespaceByIndex (
+                                attr->parentNode->ownerDocument, 
+                                attr->namespace
+                                );
+                        }
                         if (ns) uri = ns->uri;
                         else uri = NULL;
                         if (xs->lastNode == xs->resultDoc->rootNode) {
@@ -4673,6 +4703,8 @@ static int ExecAction (
                 rc = evalXPath(xs, context, currentNode, currentPos, str,
                                &rs, errMsg);
                 CHECK_RC;
+/*                fprintf (stderr, "xsltif, result node set: \n");
+                  rsPrint (&rs); */
                 b = xpathFuncBoolean( &rs );
                 xpathRSFree( &rs );
                 if (b) {
