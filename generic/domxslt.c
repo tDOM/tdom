@@ -2024,7 +2024,7 @@ static int xsltXPathFuncs (
         FREE(keyId);
         h = Tcl_FindHashEntry (&xs->keyInfos, Tcl_DStringValue (&dStr));
         if (!h) {
-            *errMsg = tdomstrdup("Unkown key in key() function call!");
+            *errMsg = tdomstrdup("Unknown key in key() function call!");
             Tcl_DStringFree (&dStr);
             return 1;
         }
@@ -6512,6 +6512,11 @@ int xsltProcess (
     }
     DBG(printXML(xmlNode, 0, 1);)
 
+    if (xmlNode->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
+        domRenumberTree (xmlNode->ownerDocument->rootNode);
+        xmlNode->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+    }
+        
     Tcl_InitHashTable ( &(xs.namedTemplates), TCL_STRING_KEYS);
     Tcl_InitHashTable ( &(xs.isElementTpls), TCL_STRING_KEYS);
     xs.cbs.varCB           = xsltGetVar;
@@ -6668,7 +6673,7 @@ int xsltProcess (
         if (strcmp (xs.outputMethod, "text")==0) {
             xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_TEXT;
         } else {
-            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_UNKOWN;
+            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_UNKNOWN;
         }
     } else {
         /* default output method */

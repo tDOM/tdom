@@ -315,6 +315,23 @@ domLookupNamespace (
     return NULL;
 }
 
+/*---------------------------------------------------------------------------
+|   domRenumberTree
+|
+\--------------------------------------------------------------------------*/
+void
+domRenumberTree (
+    domNode *node
+)
+{
+    while (node) {
+        node->nodeNumber = NODE_NO(node->document);
+        if (node->nodeType == ELEMENT_NODE) {
+            domRenumberTree (node->firstChild);
+        }
+        node = node->nextSibling;
+    }
+}
 
 /*---------------------------------------------------------------------------
 |   domLookupPrefix
@@ -2663,6 +2680,7 @@ domAppendChild (
     childToAppend->parentNode = node;
 
     domSetDocument (childToAppend, node->ownerDocument);
+    node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
     MutationEvent();
     return OK;
 }
@@ -2753,6 +2771,7 @@ domInsertBefore (
             referenceChild->previousSibling = childToInsert;
             childToInsert->parentNode = node;
             domSetDocument (childToInsert, node->ownerDocument);
+            node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
             MutationEvent3(DOMNodeInsert, childToInsert, node);
             MutationEvent2(DOMSubtreeModified, node);
             return OK;
@@ -2866,6 +2885,7 @@ domReplaceChild (
                 oldChild->nextSibling = oldChild->previousSibling = NULL;
             }
             oldChild->parentNode = NULL;
+            node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
             MutationEvent();
             return OK;
         }

@@ -341,7 +341,8 @@ NodeObjCmd (arg, interp, objc, objv)
         tcldom_createNodeObj(interp, newNode, buf);
         Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, strlen(buf)));
     }
-
+    
+    if (ret == TCL_OK) doc->nodeFlags |= NEEDS_RENUMBERING;
     return ret;
 }
 
