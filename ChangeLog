@@ -1,3 +1,20 @@
+2003-10-01  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxpath.c
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * tests/dom.test: Reworked usage of nodeNumber. It is now used
+          only in one place, the new domPrecedes function. Also in
+          domPrecedes is a fall-back mechanism, which is used if the
+          document has an invalid node numbering. Removed the forced
+          re-numbering in case of invalid node numbering of the doc
+          for every single selectNodes. Added preliminary method
+          renumber for MT-enabled builds. Carefully reviewed every
+          rsAddNode usage in domxpath.c. Some minor editorial
+          changes.
+
 2003-09-28  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tclexpat.c: Removed two unused vars.
