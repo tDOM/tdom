@@ -98,32 +98,27 @@ domLocksUnlock(domlock *dl)
 
 
 /*----------------------------------------------------------------------------
-|   Associate a lock with the document. Attempt is made to locate a free
-|   lock from the global list of already used lock structures. If a free
-|   one could not be found, allocate new lock.
+|   Associate a lock with the document..
 |
 \---------------------------------------------------------------------------*/
 void
 domLocksAttach(domDocument *doc)
 {
-    domlock *dl = doc->lock, *tmp = NULL;
+    domlock *dl, *tmp = NULL;
 
     Tcl_MutexLock(&lockMutex);
-    for (dl = domLocks, tmp = dl; dl && dl->doc; dl = dl->next) {
-        tmp = dl;
-    }
+    
+    dl = domLocks;
     if (dl == NULL) {
         dl = (domlock*)MALLOC(sizeof(domlock));
         memset(dl, 0, sizeof(domlock));
-        if (domLocks == NULL) {
-            domLocks = dl;
-        } else {
-            tmp->next = dl;
-        }
+    } else {
+        domLocks = dl->next;
     }
 
     dl->doc = doc;
     doc->lock = dl;
+
     Tcl_MutexUnlock(&lockMutex);
 }
 
@@ -139,11 +134,17 @@ domLocksDetach(domDocument *doc)
     domlock *dl = doc->lock;
 
     Tcl_MutexLock(&lockMutex);
+
     if (dl->doc != doc) {
         Tcl_Panic("document lock mismatch");
     }
+
+    dl->next = domLocks;
+    domLocks = dl;
+
     dl->doc = NULL;
     doc->lock = NULL;
+
     Tcl_MutexUnlock(&lockMutex);
 }
 
@@ -156,9 +157,11 @@ domLocksDetach(domDocument *doc)
 void
 domLocksFinalize(ClientData dummy)
 {
-    domlock *tmp, *dl = domLocks;
+    domlock *tmp, *dl;
 
     Tcl_MutexLock(&lockMutex);
+
+    dl = domLocks;
 
     while (dl != NULL) {
         Tcl_MutexFinalize(&dl->mutex);
