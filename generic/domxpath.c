@@ -38,6 +38,9 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.9  2002/04/01 04:24:13  rolf
+|   Closed a memory leak in not().
+|
 |   Revision 1.8  2002/03/31 03:27:20  rolf
 |   Enhanced the useage of rsAddNodeFast(). Fixed a bug in
 |   Production(StepPattern) and closed a memory leak in xpathMatches().
@@ -3220,6 +3223,7 @@ static int xpathEvalStep (
                 return rc;
             }
             left = xpathFuncBoolean(&leftResult);
+            xpathRSFree (&leftResult);
             rsSetBool (result, !left);
         } else
 
