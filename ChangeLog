@@ -1,3 +1,12 @@
+2004-12-10  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/expat.*
+        * generic/tclexpat.c
+        * generic/tclexpat.h
+        * tests/parser.test: Don't allow the methods parse,
+          parsechannel, parsefile, free and reset from within a
+          callback of the parser be used but raise a tcl error.
+    
 2004-10-25  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domNode.*: Added documentation for the '-namespaces'
@@ -26,7 +35,6 @@
         * generic/domxpath.c
         * generic/domxpath.h
         * generic/domxslt.c
-
         * generic/tcldom.c: Added the '-namespaces' option to the
           selectNodes method. Not resolved namespace prefixes within
           the xpath expression now raises an error.
