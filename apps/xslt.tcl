@@ -39,7 +39,7 @@ package require tdom 0.8.0
 # installed. This code only ensures, that the tDOM script library gets
 # sourced, if the script is called with a tcldomsh out of the build
 # dir of a complete tDOM source installation.
-if {[lsearch [namespace children] ::tdom] == -1} {
+if {[lsearch [namespace children] ::tDOM] == -1} {
     # tcldomsh without the script library. Source the lib.
     source [file join [file dir [info script]] ../lib tdom.tcl]
 }
