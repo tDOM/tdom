@@ -1,3 +1,20 @@
+2002-11-01  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * test/xpath.c: Full qualified XPath function names now are
+          accepted as syntactical correct expr. The function call is
+          resolved to the Tcl proc
+          dom::xpathFunc::<namespaceURI>::<functionLocalname>.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxslt.c
+        * generic/nodecmd.c
+        * generic/tcldom.c
+        * test/xpath.test: Fixed old problem with Combine Set XPath
+          expressions and XSLT sorts on trees, in which new nodes are
+          inserted after the initial parsing (doc order of result).
+    
 2002-10-31  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* lib/tdom.tcl: does now "package require tdom" only,
