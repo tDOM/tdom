@@ -212,13 +212,14 @@ AC_SUBST(SHARED_BUILD)
 # Note: some of those below are replicated in Makefile.in as well.
 #--------------------------------------------------------------------
 
+# libdir must be a fully qualified path and (not ${exec_prefix}/lib)
+eval libdir="$libdir"
+
 tdom_SRC_DIR=`cd ${srcdir}; pwd`
 
-pkglibdir="${exec_prefix}/lib/${PACKAGE}${VERSION}"
 tdomstub_LIB_FLAG="-ltdomstub${VERSION}${DBGX}"
-
-tdomstub_BUILD_SPEC="-L`pwd` ${tdomstub_LIB_FLAG}"
-tdomstub_FILE_SPEC="-L${pkglibdir} ${tdomstub_LIB_FLAG}"
+tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR} ${tdomstub_LIB_FLAG}"
+tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${tdomstub_LIB_FLAG}"
 
 AC_SUBST(tdomstub_BUILD_SPEC)
 AC_SUBST(tdomstub_FILE_SPEC)
@@ -248,7 +249,7 @@ TEA_MAKE_LIB
 # Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
 #--------------------------------------------------------------------
 
-#LIBS="${LIBS} -lsuperfly"
+LIBS="${LIBS} -lm"
 
 #--------------------------------------------------------------------
 # Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
