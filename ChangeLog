@@ -1,3 +1,8 @@
+2002-12-21  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c: Fixed the changes by me in rev. 1.60 in
+          the XPath Lexer.
+
 2002-12-20  Zoran Vasiljevic  (zoran@archiware.com)
 
 	* generic/tcldom.c
