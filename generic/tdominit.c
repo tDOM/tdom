@@ -28,6 +28,9 @@
 |
 |
 |   $Log$
+|   Revision 1.9  2002/07/14 07:07:56  zoran
+|   Was including WRONG stub file (should test more before commit!)
+|
 |   Revision 1.8  2002/07/14 07:00:35  zoran
 |   Added small comment describing what aolstub.cpp does.
 |
@@ -154,7 +157,7 @@ Tdom_SafeInit (interp)
  * to be loaded as AOLserver module.
  */
 
-#ifdef NS_AOLSERVER
-# include "aolserver.cpp"
+#if defined (NS_AOLSERVER)
+# include "aolstub.cpp"
 #endif
 
