@@ -418,6 +418,7 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
                         break;
                     }
                 }
+                if (insertIndex == rs->nr_nodes) insertIndex = 0;
             }
         }
 #undef NODE_NR
