@@ -286,6 +286,70 @@ test xslt-2.11 {xslt top level parameter: set with 'strange' value} {
     set result
 } {foo&quot;'&lt;&gt;bar}
 
+test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:foo="bar"  
+  version="1.0">
+  <xsl:param name="foo:parameter1" select="'parameter1Value'"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$foo:parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {foo:parameter1 setValue} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {setValue}
+
+
+test xslt-2.12 {xslt top level parameter: set FQ top-level param} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:foo="bar"  
+  version="1.0">
+  <xsl:param name="boo:parameter1" select="'parameter1Value'" xmlns:boo="bar"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$foo:parameter1"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {foo:parameter1 setValue} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {setValue}
+
+test xslt-2.13 {xslt top level parameter: set FQ top-level param} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:foo="bar"  
+  version="1.0">
+  <xsl:param name="boo:parameter1" select="'parameter1Value'" xmlns:boo="bar"/>
+  <xsl:template match="/">
+    <xsl:value-of select="$boz:parameter1" xmlns:boz="bar"/>
+  </xsl:template>
+</xsl:stylesheet>}] 
+    set xmlroot [$xml documentElement]
+    $xmlroot xslt -parameters {foo:parameter1 setValue} $xslt resultDoc
+    set resultroot [$resultDoc documentElement]
+    set result [$resultroot asXML]
+    $xml delete
+    $xslt delete
+    $resultDoc delete
+    set result
+} {setValue}
+
 test xslt-3.1 {xslt variable scope} {
     set xml [dom parse {<root/>}]
     set xslt [dom parse {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
