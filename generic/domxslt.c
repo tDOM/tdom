@@ -3942,45 +3942,57 @@ static int ExecAction (
                 reportError (actionNode, "xsl:element: Element name is not a valid QName.", errMsg);
                 return -1;
             }
-            if (prefix[0] != '\0') {
-                if (strcmp (prefix, "xmlns")==0) goto ignoreAttribute;
-            } else {
-                if (strcmp (str2, "xmlns")==0) goto ignoreAttribute;
-            }
-            Tcl_DStringInit (&dStr);
+            nsStr = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         nsAT, &nsStr, errMsg);
                 CHECK_RC;
-                if (nsStr[0] == '\0') {
-                    if (prefix[0] != '\0') {
-                        Tcl_DStringAppend (&dStr, localName, -1);
+            }
+
+            Tcl_DStringInit (&dStr);
+            if (prefix[0] == '\0' && (strcmp(str2, "xmlns")==0)) {
+                goto ignoreAttribute;
+            }
+            /* It isn't allowed to create namespace attributes with
+               xsl:attribute, a "xmlns" prefix must be rewritten; see
+               XSLT rec 7.1.3 */
+            if (prefix[0] && (strcmp(prefix, "xmlns")==0)) {
+                sprintf (prefix, "ns%d", xs->nsUniqeNr++);
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+                Tcl_DStringAppend (&dStr, localName, -1);
+            } else {
+                if (nsStr) {
+                    if (nsStr[0] == '\0') {
+                        if (prefix[0] != '\0') {
+                            Tcl_DStringAppend (&dStr, localName, -1);
+                        } else {
+                            Tcl_DStringAppend (&dStr, str2, -1);
+                        }
+                        FREE(nsStr);
+                        nsStr = NULL;
                     } else {
+                        if (prefix[0] == '\0') {
+                            ns = domLookupURI (xs->lastNode, nsStr);
+                            if (ns && (ns->prefix[0] != '\0')) {
+                                Tcl_DStringAppend (&dStr, ns->prefix, -1);
+                                Tcl_DStringAppend (&dStr, ":", 1);
+                            } else {
+                                sprintf (prefix, "ns%d", xs->nsUniqeNr++);
+                                Tcl_DStringAppend (&dStr, prefix, -1);
+                                Tcl_DStringAppend (&dStr, ":", 1);
+                            }
+                        }
                         Tcl_DStringAppend (&dStr, str2, -1);
                     }
-                    FREE(nsStr);
-                    nsStr = NULL;
                 } else {
-                    if (prefix[0] == '\0') {
-                        ns = domLookupURI (xs->lastNode, nsStr);
-                        if (ns && (ns->prefix[0] != '\0')) {
-                            Tcl_DStringAppend (&dStr, ns->prefix, -1);
-                            Tcl_DStringAppend (&dStr, ":", 1);
-                        } else {
-                            sprintf (prefix, "ns%d", xs->nsUniqeNr++);
-                            Tcl_DStringAppend (&dStr, prefix, -1);
-                            Tcl_DStringAppend (&dStr, ":", 1);
-                        }
+                    if (prefix[0] != '\0') {
+                        ns = domLookupPrefix (actionNode, prefix);
+                        if (ns) nsStr = tdomstrdup (ns->uri);
+                        else goto ignoreAttribute;
                     }
                     Tcl_DStringAppend (&dStr, str2, -1);
                 }
-            } else {
-                if (prefix[0] != '\0') {
-                    ns = domLookupPrefix (actionNode, prefix);
-                    if (ns) nsStr = tdomstrdup (ns->uri);
-                    else goto ignoreAttribute;
-                }
-                Tcl_DStringAppend (&dStr, str2, -1);
             }
 
             savedLastNode = xs->lastNode;
