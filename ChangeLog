@@ -1,9 +1,18 @@
+2003-10-10  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.h
+        * generic/dom.c
+        * generic/tcldom.c
+        * tests/domCmd.test: Added implementation for new method
+          normalize (and as a by-product a C implementation for the
+          method appendData).
+
 2003-10-09  Rolf Ade  <rolf@pointsman.de>
 
         * tests/domCmd.test    
         * generic/tcldom.c: Made code robust against renaming of
           domDoc cmds (well, unlikely, not to say very unlikely, but
-          at least it also simplified code and reduced obj size by a
+          at least it also simplified code and reduces obj size by a
           few bytes). Changed sharedDocs hash table (only MT build)
           from TCL_STRING_KEYS to TCL_ONE_WORD_KEYS.
 
@@ -17,7 +26,7 @@
         * generic/nodecmd.c
         * generic/nodecmd.h
         * generic/tcldom.c
-        * tests/dom.tests
+        * tests/dom.test
         * doc/domNode.*
         * CHANGES: Added new method insertBeforeFromScript to
           domNodes. Bug fixes for appendFromScript: In case of error
