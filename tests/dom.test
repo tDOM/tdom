@@ -34,6 +34,7 @@
 #    dom-31.*: insertBefore
 #    dom-32.*: asText
 #    dom-33.*: insertBeforeFromScript
+#    dom-34.*: getBaseURI
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003 Rolf Ade.
@@ -2364,6 +2365,38 @@ test dom-33.6 {insertBefore- insert more then one node} {
     $doc delete
     set result
 } {grill bar e1 e2 e1 foo }
+
+test dom-34.1 {getBaseURI} {
+    makeFile <y/> dom-34.1-e1.xml [file join [file dir [info script]] data]
+    makeFile <y/> dom-34.1-e2.xml [file join [file dir [info script]] data]
+
+    set baseURI file://[file join [pwd] [file dir [info script]] dom.test]
+    set doc [dom parse \
+                 -baseurl $baseURI \
+                 -externalentitycommand ::tDOM::extRefHandler {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "data/dom-34.1-e1.xml">
+                                  <!ENTITY b SYSTEM "data/dom-34.1-e2.xml">
+                                 ]>
+                     <x>
+                     &a;
+                     &b;
+                     <y/>
+                     </x>}]
+    $doc documentElement root
+    set result 1
+    foreach child [$root childNodes] {
+        lappend baseURIs [$child getBaseURI]
+    }
+    if {([lindex $baseURIs 0] == [lindex $baseURIs 1])
+        || ([lindex $baseURIs 0] == [lindex $baseURIs 2])
+        || ([lindex $baseURIs 1] == [lindex $baseURIs 2])
+        || ([lindex $baseURIs 2] != [$root getBaseURI])} {
+        set result 0
+    }
+    $doc delete
+    set result
+} {1}
 
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
