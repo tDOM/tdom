@@ -36,6 +36,9 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.8  2002/03/25 01:28:35  rolf
+|   Closed a cuple of memory leaks. A bit Code cleanup.
+|
 |   Revision 1.7  2002/03/21 01:47:22  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -656,6 +659,7 @@ static void xsltPopVarFrame (
         var = currentFrame->vars;
         while (var) {
             free(var->name);
+            xpathRSFree (&(var->rs));
             vtmp = var;
             var = var->next;
             free(vtmp);
@@ -1197,46 +1201,27 @@ static int buildKeyInfoForDoc (
                 xpathRSInit (&context);
                 rsAddNode (&context, node);
                 DBG(printXML(node, 0, 2);)
-                    docOrder = 1;
-                    rc = xpathEvalSteps (kinfo->useAst, &context, node, kinfo->node,
-                                         0, &docOrder, &(xs->cbs), &rs, errMsg);
-                    if (rc != XPATH_OK) {
-                        xpathRSFree (&rs);
-                        xpathRSFree (&context);
-                        return rc;
-                    }
-                    DBG(rsPrint(&rs));
-                    if (rs.type == xNodeSetResult) {
-                        for (i = 0; i < rs.nr_nodes; i++) {
-                            useValue = xpathFuncStringForNode (rs.nodes[i]);
-                            TRACE1("use value = '%s'\n", useValue);
-                            keyValue = 
-                                (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
-                            keyValue->node = node;
-                            keyValue->next = NULL;
-                            h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
-                            if (hnew) {
-                                keyValues = 
-                                    (xsltKeyValues*)Tcl_Alloc(sizeof (xsltKeyValues));
-                                Tcl_SetHashValue (h, keyValues);
-                                keyValues->value = keyValue;
-                            } else {
-                                keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
-                                keyValues->lastvalue->next = keyValue;
-                            }
-                            keyValues->lastvalue = keyValue;
-                        }
-                    }
-                    else {
-                        useValue = xpathFuncString (&rs);
+                docOrder = 1;
+                rc = xpathEvalSteps (kinfo->useAst, &context, node, kinfo->node,
+                                     0, &docOrder, &(xs->cbs), &rs, errMsg);
+                if (rc != XPATH_OK) {
+                    xpathRSFree (&rs);
+                    xpathRSFree (&context);
+                    return rc;
+                }
+                DBG(rsPrint(&rs));
+                if (rs.type == xNodeSetResult) {
+                    for (i = 0; i < rs.nr_nodes; i++) {
+                        useValue = xpathFuncStringForNode (rs.nodes[i]);
                         TRACE1("use value = '%s'\n", useValue);
-                        keyValue = (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
+                        keyValue = 
+                            (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
                         keyValue->node = node;
                         keyValue->next = NULL;
                         h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                         if (hnew) {
                             keyValues = 
-                                (xsltKeyValues*)Tcl_Alloc (sizeof (xsltKeyValues));
+                                (xsltKeyValues*)Tcl_Alloc(sizeof (xsltKeyValues));
                             Tcl_SetHashValue (h, keyValues);
                             keyValues->value = keyValue;
                         } else {
@@ -1244,9 +1229,30 @@ static int buildKeyInfoForDoc (
                             keyValues->lastvalue->next = keyValue;
                         }
                         keyValues->lastvalue = keyValue;
+                        free (useValue);
                     }
-                    xpathRSFree( &context );
-                    xpathRSFree( &rs );                   
+                }
+                else {
+                    useValue = xpathFuncString (&rs);
+                    TRACE1("use value = '%s'\n", useValue);
+                    keyValue = (xsltKeyValue *) Tcl_Alloc (sizeof(xsltKeyValue));
+                    keyValue->node = node;
+                    keyValue->next = NULL;
+                    h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
+                    if (hnew) {
+                        keyValues = 
+                            (xsltKeyValues*)Tcl_Alloc (sizeof (xsltKeyValues));
+                        Tcl_SetHashValue (h, keyValues);
+                        keyValues->value = keyValue;
+                    } else {
+                        keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
+                        keyValues->lastvalue->next = keyValue;
+                    }
+                    keyValues->lastvalue = keyValue;
+                    free (useValue);
+                }
+                xpathRSFree( &context );
+                xpathRSFree( &rs );                   
             }
             kinfo = kinfo->next;
         }
@@ -1487,7 +1493,7 @@ static int xsltXPathFuncs (
 {
     xsltState     * xs = clientData;
     char          * keyId, *filterValue, *str, *baseURI;
-    int             rc, i, len, NaN;
+    int             rc, i, len, NaN, freeStr;
     double          n;
     xsltKeyValue  * value;
     xsltKeyValues * keyValues;
@@ -1512,6 +1518,7 @@ static int xsltXPathFuncs (
         h = Tcl_FindHashEntry (&xs->keyInfos, keyId);
         if (!h) {
             *errMsg = strdup("Unkown key in key() function call!");
+            free (keyId);
             return 1;
         }
 
@@ -1527,11 +1534,13 @@ static int xsltXPathFuncs (
         h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         if (!h) {
             if (buildKeyInfoForDoc(sdoc,keyId,&(xs->keyInfos),xs,errMsg)<0) {
+                free (keyId);
                 return 1;
             }
             h = Tcl_FindHashEntry (&(sdoc->keyData), keyId);
         }
-
+        free (keyId);
+        
         docKeyData = (Tcl_HashTable *) Tcl_GetHashValue (h);
 
         if (argv[1]->type == xNodeSetResult) {
@@ -1547,6 +1556,7 @@ static int xsltXPathFuncs (
                         value = value->next;
                     }
                 }
+                free (filterValue);
             }
             sortByDocOrder (result);
             return 0;
@@ -1562,6 +1572,7 @@ static int xsltXPathFuncs (
                    value = value->next;
                }
            }
+           free (filterValue);
            return 0;
         }
     } else
@@ -1609,26 +1620,36 @@ static int xsltXPathFuncs (
         if (argc == 1) {
             if (argv[0]->type == xNodeSetResult) {
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
+                    freeStr = 0;
                     if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                         baseURI = findBaseURI (((domAttrNode*)argv[0]->nodes[i])->parentNode);
                     } else {
                         str = xpathGetTextValue (argv[0]->nodes[i], &len);
+                        freeStr = 1;
                         baseURI = findBaseURI (argv[0]->nodes[i]);
                     }
+                    /* the case document('') */
                     if (*str == '\0') {
+                        if (freeStr) {
+                            free (str);
+                            freeStr = 0;
+                        }
                         str = baseURI;
                     }
                     if (xsltAddExternalDocument(xs, baseURI, str, 
                                                 result, errMsg) < 0) {
+                        if (freeStr) free (str);
                         return -1;
                     }
                     if (xs->stripInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
+                    if (freeStr) free (str);
                 }
             }  
             else {
+                freeStr = 1;
                 str = xpathFuncString (argv[0]);
                 /* TODO. Hack.This could be wrong. document() has to
                    use the baseURI of the stylesheet node with the
@@ -1649,16 +1670,20 @@ static int xsltXPathFuncs (
                     baseURI = findBaseURI (xs->xsltDoc->rootNode);
                 }
                 if (*str == '\0') {
+                    free (str);
+                    freeStr = 0;
                     str = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
                 if (xsltAddExternalDocument(xs, baseURI, str, 
                                             result, errMsg) < 0) {
+                    if (freeStr) free (str);
                     return -1;
                 }
                 if (xs->stripInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
+                if (freeStr) free (str);
             }
         } else
         if (argc == 2) {
@@ -1672,31 +1697,39 @@ static int xsltXPathFuncs (
             }
             if (argv[0]->type == xNodeSetResult) {
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
+                    freeStr = 0;
                     if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                     } else {
                         str = xpathGetTextValue (argv[0]->nodes[i], &len);
+                        freeStr = 1;
                     }
                     if (*str == '\0') {
+                        free (str);
+                        freeStr = 0;
                         str = baseURI;
                     }
                     if (xsltAddExternalDocument(xs, baseURI, str, 
                                                 result, errMsg) < 0) {
+                        if (freeStr) free (str);
                         return -1;
                     }
                     if (xs->stripInfo.hasData) {
                         StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                     }
+                    if (freeStr) free (str);
                 }
             } else {
                 str = xpathFuncString (argv[0]);
                 if (xsltAddExternalDocument(xs, baseURI, str, 
                                             result, errMsg) < 0) {
+                    free (str);
                     return -1;
                 }
                 if (xs->stripInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
+                free (str);
             }
         } else {
             *errMsg = strdup("wrong # of args in document() call!");
@@ -1761,130 +1794,6 @@ static int evalXPath (
 |
 \---------------------------------------------------------------------------*/
 static int nodeGreater (
-    xsltState * xs,
-    ast         t,
-    char      * select,
-    int         typeText,
-    int         asc,
-    int         upperFirst,
-    domNode   * a,
-    int         pos_a,
-    domNode   * b, 
-    int         pos_b,
-    char     ** errMsg,
-    int       * greater
-)
-{
-    xpathResultSet  inA, inB, rsA, rsB;
-    int             rc, ANaN, BNaN, docOrder;
-    char           *strA, *strB;
-    double          realA, realB;
-#if TclOnly8Bits == 0
-    char           *strAptr, *strBptr;
-    int             lenA, lenB, len;
-    Tcl_UniChar     unicharA, unicharB;
-#endif
-
-    *greater = 0;
-
-    xpathRSInit(&inA   ); xpathRSInit( &rsA );
-    rsAddNode  (&inA, a);  
-
-    xpathRSInit(&inB   ); xpathRSInit( &rsB );
-    rsAddNode  (&inB, b);  
- 
-    docOrder = 1;
-    rc = xpathEvalSteps( t, &inA, a, xs->currentXSLTNode, pos_a, &docOrder,
-                         &(xs->cbs), &rsA, errMsg); 
-    if (rc != XPATH_OK) {
-        xpathRSFree( &inA ); xpathRSFree( &rsA );
-        xpathRSFree( &inB ); xpathRSFree( &rsB );
-        return rc;
-    }                         
-    docOrder = 1;
-    rc = xpathEvalSteps( t, &inB, b, xs->currentXSLTNode, pos_b, &docOrder, &(xs->cbs), &rsB, errMsg); 
-    if (rc != XPATH_OK) {
-        xpathRSFree( &inA ); xpathRSFree( &rsA );
-        xpathRSFree( &inB ); xpathRSFree( &rsB );
-        return rc;
-    }
-
-    if (typeText) {
-        strA = xpathFuncString( &rsA );
-        strB = xpathFuncString( &rsB );
-
-#if TclOnly8Bits
-        /* TODO: this only works for 7 bit ASCII */
-        rc = STRCASECMP(strA, strB);
-        if (rc == 0) {
-            rc = strcmp (strA, strB);
-            if (!upperFirst) {
-                rc *= -1;
-            }
-        }
-DBG(   fprintf(stderr, "nodeGreater %d <-- strA='%s' strB='%s'\n", rc, strA, strB);)
-#else    
-        lenA = Tcl_NumUtfChars (strA, -1);
-        lenB = Tcl_NumUtfChars (strB, -1);
-        len = (lenA < lenB ? lenA : lenB);
-        rc = Tcl_UtfNcasecmp (strA, strB, len);
-        if (rc == 0) {
-            if (lenA > lenB) {
-                rc = 1;
-            } else if (lenA < lenB) {
-                rc = -1;
-            }
-        }
-        if (rc == 0) {
-            strAptr = strA;
-            strBptr = strB;
-            while (len-- > 0) {
-                strAptr += Tcl_UtfToUniChar(strAptr, &unicharA);
-                strBptr += Tcl_UtfToUniChar(strBptr, &unicharB);
-                if (unicharA != unicharB) {
-                    rc = unicharA - unicharB;
-                    break;
-                }
-            }
-            if (!upperFirst) {
-                rc *= -1;
-            }
-        }
-#endif
-        if (asc) *greater = (rc > 0);
-            else *greater = (rc < 0);
-
-        free(strA); free(strB);       
-    } else {
-        realA = xpathFuncNumber( &rsA, &ANaN );
-        realB = xpathFuncNumber( &rsB, &BNaN );
-DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
-        if (ANaN || BNaN) {
-            if (asc) {
-                if (ANaN && !BNaN) {
-                    *greater = 0;
-                } else {
-                    if (BNaN && !ANaN) *greater = 1;
-                }
-            } else {
-                if (ANaN && !BNaN) {
-                    *greater = 1;
-                } else {
-                    if (BNaN && !ANaN) *greater = 0;
-                }
-            }
-        } else {
-            if (asc) *greater = (realA > realB); 
-            else *greater = (realA < realB);        
-        } 
-    }
-    
-    xpathRSFree( &inA ); xpathRSFree( &rsA );
-    xpathRSFree( &inB ); xpathRSFree( &rsB );
-    return 0;
-}
-
-static int myNodeGreater (
     int         typeText,
     int         asc,
     int         upperFirst,
@@ -1971,127 +1880,7 @@ DBG(   fprintf(stderr, "nodeGreater  realA='%f' realB='%f'\n",realA, realB);)
     return 0;
 }
 
-/*----------------------------------------------------------------------------
-|   sortNodeSetFastMerge  -   use FastMergeSort of fast sorting
-|
-\---------------------------------------------------------------------------*/
 static int fastMergeSort (
-    xsltState * xs,
-    ast         t,
-    char      * sel,
-    int         txt,
-    int         asc,
-    int         upperFirst,
-    domNode   * a[],
-    int         posa[],
-    domNode   * b[],
-    int         posb[],
-    int         size,
-    char     ** errMsg
-) {
-    domNode *tmp;
-    int tmpPos, lptr, rptr, middle, i, j, gt, rc;
-    
-    if (size < 10) {
-        /* use simple and fast insertion for small sizes ! */
-        for (i = 1; i < size; i++) {
-            tmp    = a   [i];
-            tmpPos = posa[i];
-            j = i; 
-            if (j>0) {
-                rc = nodeGreater(xs, t, sel, txt, asc, upperFirst, a[j-1],
-                                 posa[j-1], tmp, tmpPos, errMsg, &gt);
-                CHECK_RC;
-            }            
-            while ( j > 0 && gt) {
-                a   [j] = a   [j-1];
-                posa[j] = posa[j-1];
-                j--;
-                if (j>0) {
-                    rc = nodeGreater(xs, t, sel, txt, asc, upperFirst, a[j-1],
-                                     posa[j-1], tmp, tmpPos, errMsg, &gt);
-                    CHECK_RC;
-                }
-            }
-            a   [j] = tmp;
-            posa[j] = tmpPos;
-        }
-        return 0;
-    }
-    middle = size/2;
- 
-    rc = fastMergeSort(xs, t, sel, txt, asc, upperFirst, a, posa, b, posb,
-                       middle, errMsg);
-    CHECK_RC;
-    rc = fastMergeSort(xs, t, sel, txt, asc, upperFirst, a+middle,
-                       posa+middle, b+middle, posb+middle, size-middle,
-                       errMsg);
-    CHECK_RC;
- 
-    lptr = 0;
-    rptr = middle;
- 
-    for (i = 0; i < size; i++) {
-        if (lptr == middle) {
-            b   [i] = a   [rptr  ];
-            posb[i] = posa[rptr++];
-        } else if (rptr < size) {
-            rc = nodeGreater(xs, t, sel, txt, asc, upperFirst, a[lptr],
-                             posa[lptr], a[rptr], posa[rptr], errMsg, &gt); 
-            if (gt) {
-                b   [i] = a   [rptr  ];
-                posb[i] = posa[rptr++];
-            } else {
-                b   [i] = a   [lptr  ];
-                posb[i] = posa[lptr++];
-            }
-        } else {
-            b   [i] = a   [lptr  ];
-            posb[i] = posa[lptr++];
-        } 
-    } 
-    memcpy(a,    b,    size*sizeof(domNode*));
-    memcpy(posa, posb, size*sizeof(int*));
-    return 0;
-}
-
-static int sortNodeSetFastMerge(
-    xsltState * xs,
-    ast         t,
-    char      * sel,
-    int         txt,
-    int         asc,
-    int         upperFirst,
-    domNode   * nodes[], 
-    int         n,
-    int       * pos,
-    char     ** errMsg
-)
-{
-    domNode **b;
-    int *posb;
-    int rc;
-
-    b = (domNode **) malloc( n * sizeof(domNode *) );
-    if (b == NULL) {
-        perror("malloc in sortNodeSetMergeSort");
-        exit(1);
-    }
-    posb = (int *) malloc( n * sizeof(int) );
-    if (posb == NULL) {
-        perror("malloc in sortNodeSetMergeSort");
-        exit(1);
-    }
-    rc = fastMergeSort(xs, t, sel, txt, asc, upperFirst, nodes, pos, b, posb,
-                       n, errMsg);
-    CHECK_RC;
-    free(posb);
-    free(b);
-    return 0;
-}
-
-
-static int myFastMergeSort (
     int         txt,
     int         asc,
     int         upperFirst,
@@ -2120,7 +1909,7 @@ static int myFastMergeSort (
             tmpVd  = vd   [i];
             j = i; 
             if (j>0) {
-                rc = myNodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
+                rc = nodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
                                    vd[j-1], tmpVd, &gt);
                 CHECK_RC;
             }            
@@ -2131,7 +1920,7 @@ static int myFastMergeSort (
                 vd  [j] = vd  [j-1];
                 j--;
                 if (j>0) {
-                    rc = myNodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
+                    rc = nodeGreater(txt, asc, upperFirst, vs[j-1], tmpVs,
                                        vd[j-1], tmpVd, &gt);
                     CHECK_RC;
                 }
@@ -2145,10 +1934,10 @@ static int myFastMergeSort (
     }
     middle = size/2;
  
-    rc = myFastMergeSort(txt, asc, upperFirst, a, posa, b, posb, vs, vd,
+    rc = fastMergeSort(txt, asc, upperFirst, a, posa, b, posb, vs, vd,
                          vstmp, vdtmp, middle, errMsg);
     CHECK_RC;
-    rc = myFastMergeSort(txt, asc, upperFirst, a+middle, posa+middle, b+middle,
+    rc = fastMergeSort(txt, asc, upperFirst, a+middle, posa+middle, b+middle,
                          posb+middle, vs+middle, vd+middle, vstmp+middle,
                          vdtmp+middle, size-middle, errMsg);
     CHECK_RC;
@@ -2163,7 +1952,7 @@ static int myFastMergeSort (
             vstmp[i] = vs  [rptr  ];
             vdtmp[i] = vd  [rptr++];
         } else if (rptr < size) {
-            rc = myNodeGreater(txt, asc, upperFirst, vs[lptr], vs[rptr],
+            rc = nodeGreater(txt, asc, upperFirst, vs[lptr], vs[rptr],
                              vd[lptr], vd[rptr], &gt); 
             if (gt) {
                 b    [i] = a   [rptr  ];
@@ -2190,7 +1979,7 @@ static int myFastMergeSort (
     return 0;
 }
 
-static int mysortNodeSetFastMerge(
+static int sortNodeSetFastMerge(
     xsltState * xs,
     int         txt,
     int         asc,
@@ -2222,7 +2011,7 @@ static int mysortNodeSetFastMerge(
     vstmp = (char **) malloc (sizeof (char *) * n);
     vdtmp = (double *)malloc (sizeof (double) * n);
     
-    rc = myFastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd, 
+    rc = fastMergeSort(txt, asc, upperFirst, nodes, pos, b, posb, vs, vd, 
                          vstmp, vdtmp, n, errMsg);
     free (posb);
     free (b);
@@ -2732,7 +2521,6 @@ static int doSortActions (
     double        *vd = NULL;
     int            rc = 0, typeText, ascending, upperFirst, *pos = NULL, i, NaN;
     xpathResultSet rs;
-    ast            t;
     
     child = actionNode->lastChild; /* do it backwards, so that multiple sort
                                       levels are correctly processed */
@@ -2779,7 +2567,6 @@ static int doSortActions (
                 
                 TRACE4("sorting with '%s' typeText %d ascending %d nodeSetLen=%d\n", 
                        select, typeText, ascending, nodelist->nr_nodes);
-                rc = xpathParse(select, errMsg, &t, 0);
                 CHECK_RC;
                 if (!pos) 
                     pos = (int*) malloc( sizeof(int) * nodelist->nr_nodes);
@@ -2806,14 +2593,10 @@ static int doSortActions (
                     }
                     xpathRSFree (&rs);
                 }
-                rc = mysortNodeSetFastMerge (xs, typeText, ascending,
-                                             upperFirst, nodelist->nodes,
-                                             nodelist->nr_nodes, vs, vd,
-                                             pos, errMsg);
-/*                  rc = sortNodeSetFastMerge(xs, t, select, typeText, ascending, */
-/*                                            upperFirst, nodelist->nodes, */
-/*                                            nodelist->nr_nodes, pos, errMsg); */
-/*                  free(pos); */
+                rc = sortNodeSetFastMerge (xs, typeText, ascending,
+                                           upperFirst, nodelist->nodes,
+                                           nodelist->nr_nodes, vs, vd,
+                                           pos, errMsg);
                 if (typeText) {
                     for (i = 0; i < nodelist->nr_nodes; i++) {
                         free (vs[i]);
@@ -3024,6 +2807,7 @@ static int xsltNumber (
                     node = node->previousSibling;
                 }
             }
+            xpathRSFree (&rs);
         } else 
         if (strcmp (level, "any")==0) {
             v[0] = 0;
@@ -3437,12 +3221,14 @@ static int ExecAction (
                     if (i == len - 1) {
                         reportError (actionNode, "The text produced by xsl:comment must not end with the '-' character.", errMsg);
                         domDeleteNode (fragmentNode, NULL, NULL);
+                        free (str);
                         return -1;
                     }
                     pc++; i++;
                     if (*pc == '-') {
                         reportError (actionNode, "The text produced by xsl:comment must not contain the string \"--\"", errMsg);
                         domDeleteNode (fragmentNode, NULL, NULL);
+                        free (str);
                         return -1;
                     }
                 }
@@ -3451,6 +3237,7 @@ static int ExecAction (
             xs->lastNode = savedLastNode;
             domAppendNewTextNode(xs->lastNode, str, len, COMMENT_NODE, 0);
             domDeleteNode (fragmentNode, NULL, NULL);
+            free (str);
             break;
             
         case copy:
@@ -3663,6 +3450,7 @@ static int ExecAction (
                 }
             }
             xpathRSFree( &rs );
+            xpathRSFree (&nodeList);
             break;
             
         case xsltIf:
@@ -3702,7 +3490,9 @@ static int ExecAction (
                              actionNode->firstChild, errMsg);
             CHECK_RC;
             
-            fprintf (stderr, "xsl:message %s\n", xpathGetTextValue(fragmentNode, &len));
+            str2 = xpathGetTextValue(fragmentNode, &len);
+            fprintf (stderr, "xsl:message %s\n", str2);
+            free (str2);
             xs->lastNode = savedLastNode;
             domDeleteNode (fragmentNode, NULL, NULL);
             if (strcmp (str, "yes")==0) {
@@ -3768,6 +3558,7 @@ static int ExecAction (
                                  xs->resultDoc, str2, strlen(str), pc, len);
                 domAppendChild(xs->lastNode, n);
                 free(str2);
+                free(pc);
             } else {
                 reportError (actionNode, "xsl:processing-instruction: missing mandatory attribute \"name\".", errMsg);
                 return -1;
@@ -3788,6 +3579,7 @@ static int ExecAction (
             pc = xpathGetTextValue (actionNode, &len);
             DBG(fprintf(stderr, "text: pc='%s'%d \n", pc, len);)
             domAppendNewTextNode(xs->lastNode, pc, len, TEXT_NODE, disableEsc);
+            free (pc);
             break;
             
         case transform: return 0;
@@ -4401,8 +4193,8 @@ static int processTopLevelVars (
     xsltTopLevelVar   *topLevelVar;
     xsltVarInProcess   varInProcess;
     
-    xpathRSInit( &nodeList );
-    rsAddNode( &nodeList, xmlNode); 
+    xpathRSInit (&nodeList);
+    rsAddNode (&nodeList, xmlNode); 
     
     for (entryPtr = Tcl_FirstHashEntry(&xs->topLevelVars, &search);
             entryPtr != (Tcl_HashEntry*) NULL;
@@ -4427,6 +4219,7 @@ static int processTopLevelVars (
         }
         CHECK_RC;
     }
+    xpathRSFree (&nodeList);
     xs->currentXSLTNode = NULL;
     xs->varsInProcess = NULL;
     return 0;
@@ -4737,6 +4530,7 @@ static int processTopLevel (
         }
         node = node->nextSibling;
     }
+    xpathRSFree (&nodeList);
     return 0;
 }
 
@@ -4860,6 +4654,7 @@ void xsltFreeState (
         var = vf->vars;  /* free vars */ 
         while (var) {
             free(var->name);
+            xpathRSFree (&(var->rs));
             vtmp = var;
             var = var->next;
             free(vtmp);
@@ -4932,9 +4727,9 @@ void xsltFreeState (
     }
     Tcl_DeleteHashTable (&(xs->preserveInfo.NSWildcards));
 
-    free(xs->outputMethod);
-    free(xs->outputEncoding);
-    free(xs->outputMediaType);
+    if (xs->outputMethod) free(xs->outputMethod);
+    if (xs->outputEncoding) free(xs->outputEncoding);
+    if (xs->outputMediaType) free(xs->outputMediaType);
 }
 
 /*----------------------------------------------------------------------------
