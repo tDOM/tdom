@@ -317,6 +317,34 @@ appends this subtree at the end of the current list of top level nodes of the do
       </commanddef>
 
       <commanddef>
+          <command><method>selectNodes</method> <option>?-namespaces prefixUriList?</option> <m>xpathQuery</m> <option>?typeVar?</option></command>
+          <desc>Returns the result of applying the XPath query
+<m>xpathQuery</m> to the subtree. This can be a
+string/value, a list of strings, a list of nodes or a list
+of attribute name / value pairs. If <m>typeVar</m> is given
+the result type name is stored into that variable (empty,
+bool, number, string, nodes, attrnodes or mixed). The option
+<m>-namespaces</m> expects a tcl list with prefix /
+namespace pairs as argument. If this option is given, any
+namespace prefix within the xpath expression will be first
+resolved against this list. If this fails, then the
+namespace definitions in scope of the context node will be
+used to resolve the prefix, as usual.
+
+<p>Examples:</p>
+          <example>set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
+foreach paragraph $paragraphNodes {
+    lappend  values [$paragraph selectNodes attribute::type]
+}
+
+set doc [dom parse {&lt;doc xmlns="http://www.defaultnamespace.org"&gt;&lt;child/&gt;&lt;/doc&gt;}]
+set root [$doc documentElement]
+set childNodes [$root selectNodes -namespaces {default http://www.defaultnamespace.org} default:child]</example>
+
+          </desc>
+      </commanddef>
+
+      <commanddef>
         <command><method>baseURI <m>?URI?</m></method></command>
         <desc>Returns the present baseURI of the document. If the optional 
 argument URI is given, sets the base URI of the document to the given URI.</desc>
@@ -331,13 +359,14 @@ of the current list of top level nodes of the document.</desc>
 
       <commanddef>
         <command><method>insertBeforeFromScript</method> <m>tclScript</m> <m>refChild</m></command>
-        <desc>Inserts the nodes created in the <m>tclScript</m> by
-Tcl functions, which have been built using <m>dom createNodeCmd</m>, before the
-<m>refChild</m> into to the list of top level nodes of the document. If <m>refChild</m> is
-the empty string, the new nodes will be appended.</desc>
+        <desc>Inserts the nodes created in the <m>tclScript</m> by Tcl
+functions, which have been built using <m>dom
+createNodeCmd</m>, before the <m>refChild</m> into to the list
+of top level nodes of the document. If <m>refChild</m> is the
+empty string, the new nodes will be appended.</desc>
       </commanddef>
 
-      </commandlist>
+  </commandlist>
 
       <p>Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace <samp>::dom::domDoc</samp> is
