@@ -1,5 +1,3 @@
-
-
 /*---------------------------------------------------------------------------
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
@@ -2098,7 +2096,7 @@ domSetAttributeNS (
 {
     domAttrNode   *attr, *lastAttr;
     Tcl_HashEntry *h;
-    int            hnew, isNSAttr = 0;
+    int            hnew, isNSAttr = 0, isDftNS = 0;
     domNS         *ns;
     char          *localName, prefix[MAX_PREFIX_LEN], *newLocalName;
     Tcl_DString    dStr;
@@ -2114,6 +2112,7 @@ domSetAttributeNS (
             || (strcmp (prefix, "xmlns")==0)) {
             uri = attributeValue;
             isNSAttr = 1;
+            if (strcmp (localName, "xmlns")==0) isDftNS = 0;
         }
     }
     if (!uri || uri[0]=='\0') {
@@ -2168,14 +2167,22 @@ domSetAttributeNS (
         attr->nodeType = ATTRIBUTE_NODE;
         if (uri) {
             if (isNSAttr) {
-                ns = domLookupNamespace (node->ownerDocument, localName, uri);
+                if (isDftNS) {
+                    ns = domLookupNamespace (node->ownerDocument, "", uri);
+                } else {
+                    ns = domLookupNamespace (node->ownerDocument, localName, uri);
+                }
             } else {
                 ns = domLookupPrefix (node, prefix);
                 if (ns && (strcmp (ns->uri, uri)!=0)) ns = NULL;
             }
             if (!ns) {
                 if (isNSAttr) {
-                    ns = domNewNamespace (node->ownerDocument, localName, uri);
+                    if (isDftNS) {
+                        ns = domNewNamespace (node->ownerDocument, "", uri);
+                    } else {
+                        ns = domNewNamespace (node->ownerDocument, localName, uri);
+                    }
                 } else {
                     if (createNSIfNeeded) {
                         ns = domNewNamespace (node->ownerDocument, prefix,
