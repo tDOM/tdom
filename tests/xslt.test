@@ -9,10 +9,11 @@
 #
 # Copyright (c) 2002 Rolf Ade.
 
+source [file join [file dir [info script]] loadtdom.tcl]
 
 test xslt-1.1 {unicode chars outside of US-ASCII in var name} {
      set xml [dom parse {<root/>}]
-     set xslt [dom parse [tDOM::xmlReadFile data/xslt_1.xsl]]
+     set xslt [dom parse [tDOM::xmlReadFile [file join [pwd] [file dir [info script]] data/xslt_1.xsl]]]
      set xmlroot [$xml documentElement]
      $xmlroot xslt $xslt resultDoc
      set resultroot [$resultDoc documentElement]

@@ -8,18 +8,7 @@
 #
 # $Id$
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    source [file join [pwd] [file dirname [info script]] defs.tcl]
-}
-
-if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
-    set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
-}
-
-if {[catch {package require tdom}]} {
-    catch {puts stderr "Cannot load tDOM package"}
-    return
-}
+source [file join [file dir [info script]] loadtdom.tcl]
 
 proc parray arrayName {
     upvar #0 $arrayName arr
@@ -256,7 +245,7 @@ test parser-5.1 {parse channel input} {
 
     catch {rename parser-5.1 {}}
     set parser [::xml::parser parser-5.1 -elementstartcommand Count]
-    set fd [open data/books.xml]
+    set fd [open [file join [pwd] [file dir [info script]] data/books.xml]]
     $parser parsechannel $fd
     close $fd
     list $::count

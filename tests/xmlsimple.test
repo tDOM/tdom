@@ -7,15 +7,7 @@
 #
 # Copyright (c) 2002 Rolf Ade.
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    package require tcltest
-    namespace import -force ::tcltest::*
-}
-
-if {[catch {package require tdom 0.7}]} {
-   puts stderr "Cannot load tDOM 0.7 package"
-   return
-}
+source [file join [file dir [info script]] loadtdom.tcl]
 
 test simple-1.1 {document as only root node} {
     set doc [dom parse -simple {<doc/>}]

@@ -6,16 +6,7 @@
 #
 # Copyright (c) 2002 Rolf Ade.
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    package require tcltest
-    namespace import -force ::tcltest::*
-}
-
-if {[catch {package require tdom 0.7}]} {
-   puts stderr "Cannot load tDOM 0.7 package"
-   return
-}
-
+source [file join [file dir [info script]] loadtdom.tcl]
 
 test html-1.1 {HTML character entities} {
     set doc [dom parse -html {<html><body>&nbsp;&iexcl;&Auml;&uuml;</body></html>}]

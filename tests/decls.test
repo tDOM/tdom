@@ -8,19 +8,9 @@
 #
 # $Id$
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    source [file join [pwd] [file dirname [info script]] defs.tcl]
-}
+source [file join [file dir [info script]] loadtdom.tcl]
 
-if {[lsearch $auto_path [file dirname [file dirname [info script]]]] == -1} {
-    set auto_path [linsert $auto_path 0 [file dirname [file dirname [file join [pwd] [info script]]]]]
-}
-
-if {[catch {package require tdom}]} {
-    catch {puts stderr "Cannot load tDOM package"}
-    return
-}
-
+set baseURI file://[file join [pwd] [file dir [info script]] decls.test]
 catch {unset elements}
 proc elementDecl {name cmodel} {
     set ::elements($name) $cmodel
@@ -173,9 +163,9 @@ test decls-5.1 {external entity} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-5.1.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-5.1.dtd">
 <Test/>}
 
     array get ::elements
@@ -192,9 +182,9 @@ test decls-5.2 {external DTD subset} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-5.2.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-5.2.dtd">
 <Test/>}
 
     array get ::elements
@@ -213,10 +203,10 @@ test decls-5.3 {external entity} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
 <!DOCTYPE Test [
-<!ENTITY % module SYSTEM "dtd-5.2.dtd">
+<!ENTITY % module SYSTEM "data/dtd-5.2.dtd">
 %module;
 ]>
 <Test/>}
@@ -234,9 +224,9 @@ test decls-5.4 {external entity} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefHstr \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-5.1.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-5.1.dtd">
 <Test/>}
 
     array get ::elements
@@ -253,9 +243,9 @@ test decls-5.5 {external DTD subset} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefHstr \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-5.2.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-5.2.dtd">
 <Test/>}
 
     array get ::elements
@@ -275,10 +265,10 @@ test decls-5.6 {external entity} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefHstr \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
 <!DOCTYPE Test [
-<!ENTITY % module SYSTEM "dtd-5.2.dtd">
+<!ENTITY % module SYSTEM "data/dtd-5.2.dtd">
 %module;
 ]>
 <Test/>}
@@ -298,9 +288,9 @@ test decls-6.1 {conditional section: include} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-6.1.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-6.1.dtd">
 <Test/>}
 
     array get ::elements
@@ -315,9 +305,9 @@ test decls-6.2 {conditional section: include, empty} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-6.2.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-6.2.dtd">
 <Test/>}
 
     array get ::elements
@@ -332,9 +322,9 @@ test decls-6.3 {conditional section: include, empty} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-6.3.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-6.3.dtd">
 <Test/>}
 
     array get ::elements
@@ -349,9 +339,9 @@ test decls-6.4 {conditional section: include, nested} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-6.4.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-6.4.dtd">
 <Test/>}
 
     array size ::elements
@@ -366,9 +356,9 @@ test decls-6.6 {conditional section/PE combo} {
             -paramentityparsing notstandalone \
             -externalentitycommand extRefH \
             -elementdeclcommand elementDecl \
-            -baseurl file://[file join [pwd] decls.test]]
+            -baseurl $baseURI]
     $parser parse {<?xml version='1.0'?>
-<!DOCTYPE Test SYSTEM "dtd-6.6.dtd">
+<!DOCTYPE Test SYSTEM "data/dtd-6.6.dtd">
 <Test/>}
 
     array size ::elements

@@ -7,7 +7,10 @@
 #    xpath-2.*: i18n
 #    xpath-3.*: NaN/Inf
 #    xpath-4.*: math
+#
 # Copyright (c) 2002 Rolf Ade.
+
+source [file join [file dir [info script]] loadtdom.tcl]
 
 test xpath-1.1 {function normalize-space} {
     set doc [dom createDocument foo]
