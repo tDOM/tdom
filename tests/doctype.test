@@ -52,6 +52,9 @@ test doctype-2.1 {Document Type Declaration: internal DTD subset} {
     set ::result
 } {Test NULL NULL 1}
 
+foreach parser [info commands doctype-*] {
+    $parser free
+}
 
 # cleanup
 ::tcltest::cleanupTests

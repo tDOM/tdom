@@ -312,6 +312,9 @@ test cdata-5.2 {CDATA section whiteCDATAs} {
     list $::result
 } {{ foo }}    
 
+foreach parser [info commands cdata-*] {
+    $parser free
+}
 
 # cleanup
 ::tcltest::cleanupTests

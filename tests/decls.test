@@ -84,7 +84,6 @@ test decls-1.1 {element declaration} {
 ]>
 <Test></Test>
 }
-
     array get ::elements
 } {Test {MIXED {} {} {}}}
 
@@ -375,7 +374,9 @@ test decls-6.6 {conditional section/PE combo} {
     array size ::elements
 } 2
 
-# Comments
+foreach parser [info commands decls-*] {
+    $parser free
+}
 
 # cleanup
 ::tcltest::cleanupTests
