@@ -1,3 +1,8 @@
+2003-11-10  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Replaced a C++ style comment with a C
+          style comment.
+    
 2003-11-02  Rolf Ade  <rolf@pointsman.de>
 
         * tests/xpath.test: Added a few tests related to declarations
