@@ -144,7 +144,7 @@ typedef struct _domReadInfo {
     int            activeNSsize;
     int            activeNSpos;
     domActiveNS   *activeNS;
-    const char    *baseURI;
+    int            baseURIHasChanged;
     int            insideDTD;
 
 } domReadInfo;
@@ -906,13 +906,15 @@ startElement(
     node->nodeNumber    = NODE_NO(info->document);
     node->ownerDocument = info->document;
 
-    if (info->baseURI != XML_GetBase (info->parser)) {
-        info->baseURI  = XML_GetBase (info->parser);
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+    if (info->baseURIHasChanged) {
+        if (XML_GetBase (info->parser)) {
+            h = Tcl_CreateHashEntry (&info->document->baseURIs,
                                  (char*) node,
                                  &hnew);
-        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
-        node->nodeFlags |= HAS_BASEURI;
+            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+            node->nodeFlags |= HAS_BASEURI;
+        }
+        info->baseURIHasChanged = 0;
     }
 
     if (info->depth == 0) {
@@ -1234,12 +1236,14 @@ characterDataHandler (
         node->nodeFlags   = 0;
         node->namespace   = 0;
         node->nodeNumber  = NODE_NO(info->document);
-        if (info->baseURI != XML_GetBase (info->parser)) {
-            info->baseURI  = XML_GetBase (info->parser);
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*) node, &hnew);
-            Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
-            node->nodeFlags |= HAS_BASEURI;
+        if (info->baseURIHasChanged) {
+            if (XML_GetBase (info->parser)) {
+                h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                         (char*) node, &hnew);
+                Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+                node->nodeFlags |= HAS_BASEURI;
+            }
+            info->baseURIHasChanged  = 0;
         }
 
         node->valueLength = len;
@@ -1306,13 +1310,15 @@ commentHandler (
     node->nodeFlags   = 0;
     node->namespace   = 0;
     node->nodeNumber  = NODE_NO(info->document);
-    if (info->baseURI != XML_GetBase (info->parser)) {
-        info->baseURI  = XML_GetBase (info->parser);
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                 (char*) node,
-                                 &hnew);
-        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
-        node->nodeFlags |= HAS_BASEURI;
+    if (info->baseURIHasChanged) {
+        if (XML_GetBase (info->parser)) {
+            h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                     (char*) node,
+                                     &hnew);
+            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+            node->nodeFlags |= HAS_BASEURI;
+        }
+        info->baseURIHasChanged  = 0;
     }
 
     node->valueLength = len;
@@ -1383,13 +1389,15 @@ processingInstructionHandler(
     node->nodeFlags   = 0;
     node->namespace   = 0;
     node->nodeNumber  = NODE_NO(info->document);
-    if (info->baseURI != XML_GetBase (info->parser)) {
-        info->baseURI  = XML_GetBase (info->parser);
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                 (char*) node,
-                                 &hnew);
-        Tcl_SetHashValue (h, tdomstrdup (info->baseURI));
-        node->nodeFlags |= HAS_BASEURI;
+    if (info->baseURIHasChanged) {
+        if (XML_GetBase (info->parser)) {
+            h = Tcl_CreateHashEntry (&info->document->baseURIs,
+                                     (char*) node,
+                                     &hnew);
+            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
+            node->nodeFlags |= HAS_BASEURI;
+        }
+        info->baseURIHasChanged  = 0;
     }
 
     len = strlen(target);
@@ -1608,6 +1616,7 @@ externalEntityRefHandler (
     oldparser = info->parser;
     info->parser = extparser;
     XML_SetBase (extparser, extbase);
+    info->baseURIHasChanged = 1;
 
     if (chan == NULL) {
         if (!XML_Parse(extparser, xmlstring, strlen (xmlstring), 1)) {
@@ -1667,6 +1676,7 @@ externalEntityRefHandler (
 
     XML_ParserFree (extparser);
     info->parser = oldparser;
+    info->baseURIHasChanged = 1;
 
     Tcl_DecrRefCount (resultObj);
     Tcl_ResetResult (info->interp);
@@ -1778,7 +1788,7 @@ domReadDocument (
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
     info.activeNS             = (domActiveNS*) MALLOC (sizeof(domActiveNS) * info.activeNSsize);
-    info.baseURI              = NULL;
+    info.baseURIHasChanged    = 1;
     info.insideDTD            = 0;
 
     XML_SetUserData(parser, &info);
@@ -4604,6 +4614,8 @@ tdom_resetProc (
     info->lastFeedbackPosition = 0;
     info->interp            = interp;
     info->activeNSpos       = -1;
+    info->baseURIHasChanged = 1;
+    info->insideDTD         = 0;
 }
 
 void
@@ -4713,7 +4725,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->activeNSpos       = -1;
         info->activeNSsize      = 8;
         info->activeNS          = (domActiveNS*) MALLOC(sizeof(domActiveNS) * info->activeNSsize);
-        info->baseURI           = NULL;
+        info->baseURIHasChanged = 1;
         info->insideDTD         = 0;
 
         expat = GetExpatInfo (interp, objv[1]);
