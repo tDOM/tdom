@@ -1,4 +1,4 @@
-2005-03-11  Rolf Ade  <rolf@pointsman.de>
+2005-03-12  Rolf Ade  <rolf@pointsman.de>
 
         * tests/xslt.test: Added two tests about two subtleties of
           the XPath syntax: white space between the $ and a varname
