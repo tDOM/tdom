@@ -782,6 +782,8 @@ char *         domGetLocalName    (char *nodeName);
 int            domSplitQName (char *name, char *prefix, char **localName);
 domNS *        domLookupNamespace (domDocument *doc, char *prefix, char *namespaceURI);
 domNS *        domLookupPrefix  (domNode *node, char *prefix);
+char *         domLookupPrefixWithMappings (domNode *node, char *prefix,
+                                            char **prefixMappings);
 domNS *        domLookupURI     (domNode *node, char *uri);
 domNS *        domGetNamespaceByIndex (domDocument *doc, int nsIndex);
 domNS *        domNewNamespace (domDocument *doc, char *prefix, char *namespaceURI);

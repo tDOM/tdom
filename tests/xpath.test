@@ -310,7 +310,7 @@ test xpath-4.9 {tcl coded XPath function - erroneous function name} {
 test xpath-4.10 {full qualified tcl coded XPath function - erroneous prefix} {
     catch {$root selectNodes notdefinedprefix:mycontains()} errMsg
     set errMsg
-} {There isn't a namespace bound to the prefix.}
+} {Prefix doesn't resolve}
 
 namespace eval ::dom::xpathFunc::myNS {
     proc mycontains {ctxNode pos nodeListNode nodeList args} {
@@ -338,7 +338,7 @@ test xpath-4.12 {full qualified tcl coded XPath function} {
 } {0}
 
 test xpath-4.13 {error in arg expr of tcl coded XPath function} {
-    catch {$root selectNodes {mycontains(foo::bar, 'bo')}}
+    catch {$root selectNodes {mycontains(foo::bar, 'bo')}} errMsg
 } {1}
 
 test xpath-4.14 {error in arg expr of full qual. tcl coded XPath function} {
@@ -455,7 +455,7 @@ test xpath-5.3 {erroneous XPath expr: missing left brace in predicate} {
 } {1}
 
 test xpath-5.4 {erroneous XPath expr} {
-    catch {$root selectNodes {foo: bar}} errMsg
+    catch {$root selectNodes {myNS: bar}} errMsg
     set errMsg
 } {Illegal character in localname}
 
