@@ -37,8 +37,7 @@
 # directory (/usr/local/aolserver). 
 # ----------------------------------------------------
 # ../configure --enable-threads --disable-tdomalloc \
-#   --prefix=/usr/local/aolserver \
-#   --exec-prefix=/usr/local/aolserver
+#   --prefix=/usr/local/aolserver
 #
 #
 # Mac OS X. Uses public Tcl library.
