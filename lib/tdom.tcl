@@ -861,7 +861,7 @@ if {![catch {package require uri}]} {
             if {$useForeignDTD != ""} {
                 set systemId $useForeignDTD
             } else {
-                return -code error -errorinfo "::tDOM::useForeignDTD does\
+                error "::tDOM::useForeignDTD does\
                         not point to the foreign DTD"
             }
         }
@@ -872,7 +872,7 @@ if {![catch {package require uri}]} {
                 return [list string $absolutURI [xmlReadFile $uriData(path)]]
             }
             default {
-                return -code error  -errorinfo "can only handle file URI's"
+                error "can only handle file URI's"
             }
         }
     }
