@@ -177,20 +177,12 @@ at these documents for a deeper understanding of the functionality.
 The valid methods are:
 .TP
 \&\fB\fBdocumentElement\fP ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Returns the top most element in the document (the root
+\&\fRReturns the top most element in the document (the root
 element).
-.RE
 .TP
 \&\fB\fBgetElementsByTagName\fP \fIname\fB
-\&\fR
-.RS
-.PP
-Returns a list of all elements in the document matching
+\&\fRReturns a list of all elements in the document matching
 (glob style) \fIname\fR.
-.RE
 .TP
 \&\fB\fBgetElementsByTagNameNS\fP \fIuri\fB \fIlocalname\fB
 \&\fR Returns a list of all elements in the subtree
@@ -198,91 +190,72 @@ matching (glob style) \fIlocalname\fR and having the given namespace
 \&\fIuri\fR.
 .TP
 \&\fB\fBcreateElement\fP \fItagName\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates (allocates) a new element node with node name
+\&\fRCreates (allocates) a new element node with node name
 \&\fItagName\fR, append it to the hidden fragment list in the document
 object and returns the node object.  If \fIobjVar\fR is given the new
 node object store in this variable.
-.RE
 .TP
 \&\fB\fBcreateElementNS\fP \fIurl\fB \fItagName\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates (allocates) a new element node within a namespace
+\&\fRCreates (allocates) a new element node within a namespace
 having \fIuri\fR as the URI and node name \fItagName\fR, which
 could include the namespace prefix, append it to the hidden fragment list in
 the document object and returns the node object.  If \fIobjVar\fR is
 given the new node object store in this variable.
-.RE
 .TP
 \&\fB\fBcreateTextNode\fP \fItext\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates (allocates) a new text node with node value
+\&\fRCreates (allocates) a new text node with node value
 \&\fItext\fR, appends it to the hidden fragment list in the document
 object and returns the node object.  If \fIobjVar\fR is given, the new
 node object is stored in this variable.
-.RE
 .TP
 \&\fB\fBcreateComment\fP \fItext\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates (allocates) a new comment node with value
+\&\fRCreates (allocates) a new comment node with value
 \&\fItext\fR, appends it to the hidden fragment list in the document
 object and returns the node object.  If \fIobjVar\fR is given, the new
 comment node object is stored in this variable.
-.RE
 .TP
 \&\fB\fBcreateCDATASection\fP \fIdata\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates (allocates) a new CDATA node with node value
+\&\fRCreates (allocates) a new CDATA node with node value
 \&\fIdata\fR, appends it to the hidden fragment list in the document
 object and returns the node object.  If \fIobjVar\fR is given, the new
 node object is stored in this variable.
-.RE
 .TP
 \&\fB\fBcreateProcessingInstruction\fP \fItarget\fB \fIdata\fB ?\fIobjVar\fB?
-\&\fR
-.RS
-.PP
-Creates a process instruction, appends it to the hidden
+\&\fRCreates a process instruction, appends it to the hidden
 fragment list in the document object and returns the node object.  If
 \&\fIobjVar\fR is given, the new node object is stored in this variable.
-.RE
 .TP
 \&\fB\fBdelete\fP
-\&\fR
-.RS
-.PP
-Explicitly deletes the document, including the associated
+\&\fRExplicitly deletes the document, including the associated
 Tcl object commands (for nodes, fragment/new nodes, the document object itself)
 and the underlying DOM tree.
-.RE
 .TP
 \&\fB\fBgetDefaultOutputMethod\fP
-\&\fR
-.RS
-.PP
-Returns the default output method of the document. This is
+\&\fRReturns the default output method of the document. This is
 usually a result of a XSLT transformation.
-.RE
 .TP
-\&\fB\fBasXML\fP \fB-indent none/1..8\fP \fB-channel channelId\fP
-\&\fRReturns the document as an (optional indented) XML string or
-sends the output directly to the given channelId.
+\&\fB\fBasXML\fP \fB?-indent none/1..8?\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP
+\&\fRReturns the DOM tree as an (optional indented) XML string or
+sends the output directly to the given channelId. If the option
+\&\fI-escapeNonASCII\fR is given, every non 7 bit ASCII character in attribute
+values or element PCDATA content will be escaped as character reference in
+decimal representation.
 .TP
-\&\fB\fBasHTML\fP \fB-channel channelId\fP
-\&\fRReturns the document serialized acording to HTML rules (HTML
+\&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP
+\&\fRReturns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
-channelId.
+channelId. If the option \fI-escapeNonASCII\fR is given, every non 7 bit ASCII
+character in attribute values or element PCDATA content will be escaped as
+character reference in decimal representation.
+.TP
+\&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fIstylesheet\fB \fI?outputVar?\fB
+\&\fRApplies an XSLT transformation on the whole document of the node
+object using the XSLT \fIstylesheet\fR (given as domDoc). Returns a document
+object containing the result document of that transformation and stores it in
+optional \fIoutputVar\fR. The optional \fI-parameters\fR option sets top
+level <xsl:param> to string values. The \fIparameterList\fR has to be a
+tcl list consisting of parameter name and value pairs.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is

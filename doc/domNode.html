@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode2706">NAME</a> · <a href="#SECTnode2717">SYNOPSIS</a> · <a href="#SECTnode2728"> DESCRIPTION </a> · <a href="#SECTnode3736">SEE ALSO</a> · <a href="#SECTnode3745">KEYWORDS</a>
+<a href="#SECTnode2805">NAME</a> · <a href="#SECTnode2816">SYNOPSIS</a> · <a href="#SECTnode2827"> DESCRIPTION </a> · <a href="#SECTnode3847">SEE ALSO</a> · <a href="#SECTnode3856">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode2706">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode2805">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode2717">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTnode2816">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode2728"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTnode2827"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -232,7 +232,7 @@ prefix.</p>
 
       
         <dt>
-<b class="method">attributes</b> <b class="option">attributeNamePattern</b>
+<b class="method">attributes</b> <b class="option">?attributeNamePattern?</b>
 </dt>
         <dd>Returns all attributes matching the <i class="m">attributeNamePattern</i>.
 If <i class="m">attributeNamePattern</i> isn't given all attributes are returned as a Tcl
@@ -283,7 +283,7 @@ through the document fragment list.</dd>
 
       
         <dt>
-<b class="method">cloneNode</b> <b class="option">-deep</b>
+<b class="method">cloneNode</b> <b class="option">?-deep?</b>
 </dt>
         <dd>Clones this node and adds the new create node into the document
 fragment list. If the <i class="m">-deep</i> option is specified, all descendant nodes
@@ -301,7 +301,7 @@ to.</dd>
       
         <dt>
 <b class="method">find</b> <i class="m">attrName</i> <i class="m">attrVal</i>
-<b class="option">objVar</b>
+<b class="option">?objVar?</b>
 </dt>
         <dd>Finds the node with the attribute name <i class="m">attrName</i>, and
 attribute value <i class="m">attrVal</i> in the subtree starting the current node.</dd>
@@ -390,7 +390,7 @@ Otherwise an error is generated.</dd>
 
       
         <dt>
-<b class="method">selectNodes</b> <i class="m">xpathQuery</i> <b class="option">typeVar</b>
+<b class="method">selectNodes</b> <i class="m">xpathQuery</i> <b class="option">?typeVar?</b>
 </dt>
         <dd>Returns the result of applying the XPath query <i class="m">xpathQuery</i>
 to the subtree. This can be a string/value, a list of strings, a list of nodes,
@@ -426,22 +426,28 @@ nested Tcl list.</dd>
 
       
         <dt>
-<b class="method">asXML</b> <b class="option">-indent none/1..8</b>
-<b class="option">-channel channelId</b>
+<b class="method">asXML</b> <b class="option">?-indent none/1..8?</b>
+<b class="option">?-channel channelId?</b> <b class="option">?-escapeNonASCII?</b>
 </dt>
         <dd>Returns the DOM substree starting from the current node as the
 root node of the result as an (optional indented) XML string or sends the
-output directly to the given channelId.</dd>
+output directly to the given channelId. If the option <i class="m">-escapeNonASCII</i> is
+given, every non 7 bit ASCII character in attribute values or element PCDATA
+content will be escaped as character reference in decimal
+representation.</dd>
       
 
       
         <dt>
-<b class="method">asHTML</b> <b class="option">-channel channelId</b>
+<b class="method">asHTML</b> <b class="option">?-channel channelId?</b> <b class="option">?-escapeNonASCII?</b>
 </dt>
         <dd>Returns the DOM substree starting from the current node as the
 root node of the result serialized acording to HTML rules (HTML elements are
 recognized regardless of case, without end tags for emtpy HTML elements etc.),
-as string or sends the output directly to the given channelId.</dd>
+as string or sends the output directly to the given channelId. If the option
+<i class="m">-escapeNonASCII</i> is given, every non 7 bit ASCII character in attribute
+values or element PCDATA content will be escaped as character reference in
+decimal representation.</dd>
       
 
       
@@ -515,12 +521,12 @@ really know, what you do.</dd>
 <b class="method">xslt</b> <b class="option">?-parameters
 parameterList?</b> <i class="m">stylesheet</i> <i class="m">?outputVar?</i>
 </dt>
-        <dd>Applies a XSLT transformation on the whole document of the node
-object using the XSLT <i class="m">stylesheet</i> (given as domDoc). Returns a document
-object containing the result document of that transformation and stores it in
-optional <i class="m">outputVar</i>. The optional <i class="m">-parameters</i> option sets top
-level &lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a
-tcl list consisting of parameter name and value pairs.</dd>
+        <dd>Applies an XSLT transformation on the document using the XSLT
+<i class="m">stylesheet</i> (given as domDoc). Returns a document object containing the
+result document of that transformation and stores it in optional
+<i class="m">outputVar</i>. The optional <i class="m">-parameters</i> option sets top level
+&lt;xsl:param&gt; to string values. The <i class="m">parameterList</i> has to be a tcl
+list consisting of parameter name and value pairs.</dd>
       
 
       
@@ -533,11 +539,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode3736">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode3847">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode3745">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode3856">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
