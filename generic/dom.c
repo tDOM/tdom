@@ -149,13 +149,6 @@ typedef struct _domReadInfo {
 
 } domReadInfo;
 
-/*--------------------------------------------------------------------------
-|   Prototypes
-|
-\-------------------------------------------------------------------------*/
-static domAttrNode *domCreateXMLNamespaceNode (domNode *parent);
-
-
 #ifndef TCL_THREADS
 
 /*---------------------------------------------------------------------------
@@ -312,6 +305,7 @@ domLookupPrefix (
     )
 {
     domAttrNode   *NSattr;
+    domNode       *orgNode = node;
     int            found;
 
     found = 0;
@@ -340,6 +334,11 @@ domLookupPrefix (
                                            NSattr->namespace);
         }
         node = node->parentNode;
+    }
+    if (prefix && (strcmp (prefix, "xml")==0)) {
+        NSattr = orgNode->ownerDocument->rootNode->firstAttr;
+        return domGetNamespaceByIndex (orgNode->ownerDocument,
+                                       NSattr->namespace);
     }
     return NULL;
 }
@@ -764,16 +763,24 @@ startElement(
                    set to the empty string. This has the same effect,
                    within the scope of the declaration, of there being
                    no default namespace." */
-                break;
+                goto elemNSfound;
             }
             node->namespace = info->activeNS[pos].namespace->index;
             DBG(fprintf(stderr, "tag='%s' uri='%s' \n",
                         node->nodeName,
                         info->activeNS[pos].namespace->uri);
             )
-            break;
+            goto elemNSfound;
         }
     }
+    if (tagPrefix[0] != '\0' && strcmp (tagPrefix, "xml")==0) {
+        node->namespace = info->document->rootNode->firstAttr->namespace;
+    } else {
+        /* Since where here, this means, the element has a
+           up to now not declared namespace prefix. We probably
+           should return this as an error, shouldn't we?*/
+    }
+ elemNSfound:
 #endif
 
     /*--------------------------------------------------------------
@@ -854,9 +861,18 @@ startElement(
                                 attrnode->nodeName,
                                 info->activeNS[pos].namespace->uri);
                         )
-                    break;
+                    goto attrNSfound;
                 }
             }
+            if (strcmp (prefix, "xml")==0) {
+                attrnode->namespace = 
+                    info->document->rootNode->firstAttr->namespace;
+            } else {
+                /* Since where here, this means, the attribute has a
+                   up to now not declared namespace prefix. We probably
+                   should return this as an error, shouldn't we?*/
+            }
+        attrNSfound:
         }
 #endif
     }
@@ -1466,7 +1482,9 @@ domReadDocument (
     rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
+#ifdef TDOM_NS
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
+#endif
     if (storeLineColumn) {
         lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
         rootNode->nodeFlags |= HAS_LINE_COLUMN;
@@ -1610,7 +1628,8 @@ domGetLineColumn (
     }
 }
 
-static domAttrNode *
+#ifdef TDOM_NS
+domAttrNode *
 domCreateXMLNamespaceNode (
     domNode  *parent
 )
@@ -1635,6 +1654,7 @@ domCreateXMLNamespaceNode (
     MutationEvent();
     return attr;
 }
+#endif /* TDOM_NS */
 
 /*---------------------------------------------------------------------------
 |   domCreateEmptyDoc
@@ -1687,8 +1707,9 @@ domCreateDoc ( )
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
     rootNode->firstChild    = rootNode->lastChild = NULL;
+#ifdef TDOM_NS
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
-
+#endif
     doc->rootNode = rootNode;
 
     return doc;
