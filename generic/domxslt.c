@@ -64,6 +64,7 @@
 |
 \---------------------------------------------------------------------------*/
 #define XSLT_NAMESPACE  "http://www.w3.org/1999/XSL/Transform"
+#define INITIAL_SIZE_FOR_KEYSETS 10
 
 
 /*----------------------------------------------------------------------------
@@ -202,28 +203,16 @@ typedef struct xsltAttrSet {
 } xsltAttrSet;
 
 /*--------------------------------------------------------------------------
-|   xsltKeyValue
+|   xsltNodeSet
 |
 \-------------------------------------------------------------------------*/
-typedef struct xsltKeyValue {
-
-    domNode       * node;
-
-    struct xsltKeyValue * next;
-
-} xsltKeyValue;
-
-/*--------------------------------------------------------------------------
-|   xsltKeyValues
-|
-\-------------------------------------------------------------------------*/
-typedef struct xsltKeyValues {
-
-    xsltKeyValue  * value;
-    xsltKeyValue  * lastvalue;
-
-} xsltKeyValues;
-
+typedef struct xsltNodeSet {
+    
+    domNode       **nodes;
+    int             nr_nodes;
+    int             allocated;
+    
+} xsltNodeSet;
 
 /*--------------------------------------------------------------------------
 |   xsltKeyInfo
@@ -1677,6 +1666,60 @@ static int xsltFormatNumber (
 
 #endif /* TclOnly8Bits */
 
+
+static xsltNodeSet *
+createXsltNodeSet () 
+{
+    xsltNodeSet * ns;
+
+    ns = (xsltNodeSet *) MALLOC (sizeof(xsltNodeSet));
+    ns->nodes = (domNode**)MALLOC(INITIAL_SIZE_FOR_KEYSETS * sizeof(domNode*));
+    ns->allocated = INITIAL_SIZE_FOR_KEYSETS;
+    ns->nr_nodes = 0;
+    return ns;
+}
+
+    
+
+/* Helper proc for buildKeyInfoForDoc. Adds node to the node set ns at
+   the right position (in document order), if not already
+   present. This is the same as the core of rsAddNode does. The used
+   method to add may look a bit simpleminded, but experience shows,
+   that in the vast majority of the cases node simply has to be
+   appended to the array. */
+
+static void nsAddNode ( 
+    xsltNodeSet *ns,
+    domNode *node 
+    ) 
+{
+    int insertIndex, i;
+    
+    insertIndex = ns->nr_nodes;
+    for (i = ns->nr_nodes - 1; i >= 0; i--) {
+        if (node == ns->nodes[i]) return;
+        if (!domPrecedes (node, ns->nodes[i])) {
+            break;
+        }
+        insertIndex--;
+    }
+    if (ns->nr_nodes + 1 >= ns->allocated) {
+        ns->nodes = (domNode**)REALLOC((void*)ns->nodes,
+                               2 * ns->allocated * sizeof(domNode*));
+        ns->allocated *= 2;
+    }
+    if (insertIndex == ns->nr_nodes) {
+        ns->nodes[ns->nr_nodes++] = node;
+    } else {
+        for (i = ns->nr_nodes - 1; i >= insertIndex; i--) {
+            ns->nodes[i+1] = ns->nodes[i];
+        }
+        ns->nodes[insertIndex] = node;
+        ns->nr_nodes++;
+    }
+}
+
+
 static int buildKeyInfoForDoc (
     xsltSubDoc     *sd,
     char           *keyId,
@@ -1692,8 +1735,7 @@ static int buildKeyInfoForDoc (
     Tcl_HashTable  *valueTable;
     Tcl_HashEntry  *h;
     xsltKeyInfo    *kinfo, *kinfoStart;
-    xsltKeyValues  *keyValues;
-    xsltKeyValue   *keyValue;
+    xsltNodeSet    *keyValues;
 
     h = Tcl_FindHashEntry (keyInfos, keyId);
     /* key must exist, this is already checked */
@@ -1734,41 +1776,28 @@ static int buildKeyInfoForDoc (
                     for (i = 0; i < rs.nr_nodes; i++) {
                         useValue = xpathFuncStringForNode (rs.nodes[i]);
                         TRACE1("use value = '%s'\n", useValue);
-                        keyValue =
-                            (xsltKeyValue *)MALLOC(sizeof(xsltKeyValue));
-                        keyValue->node = node;
-                        keyValue->next = NULL;
                         h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                         if (hnew) {
-                            keyValues =
-                                (xsltKeyValues*)MALLOC(sizeof (xsltKeyValues));
-                            Tcl_SetHashValue (h, keyValues);
-                            keyValues->value = keyValue;
+                            keyValues = createXsltNodeSet();
                         } else {
-                            keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
-                            keyValues->lastvalue->next = keyValue;
+                            keyValues = (xsltNodeSet *) Tcl_GetHashValue (h);
                         }
-                        keyValues->lastvalue = keyValue;
+                        nsAddNode (keyValues, node);
+                        if (hnew) Tcl_SetHashValue (h, keyValues);
                         FREE(useValue);
                     }
                 }
                 else if (rs.type != EmptyResult) {
                     useValue = xpathFuncString (&rs);
                     TRACE1("use value = '%s'\n", useValue);
-                    keyValue = (xsltKeyValue *)MALLOC(sizeof(xsltKeyValue));
-                    keyValue->node = node;
-                    keyValue->next = NULL;
                     h = Tcl_CreateHashEntry (valueTable, useValue, &hnew);
                     if (hnew) {
-                        keyValues =
-                            (xsltKeyValues*)MALLOC(sizeof (xsltKeyValues));
-                        Tcl_SetHashValue (h, keyValues);
-                        keyValues->value = keyValue;
+                        keyValues = createXsltNodeSet();
                     } else {
-                        keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
-                        keyValues->lastvalue->next = keyValue;
+                        keyValues = (xsltNodeSet *) Tcl_GetHashValue (h);
                     }
-                    keyValues->lastvalue = keyValue;
+                    nsAddNode (keyValues, node);
+                    if (hnew) Tcl_SetHashValue (h, keyValues);
                     FREE(useValue);
                 }
                 xpathRSFree( &context );
@@ -1982,10 +2011,9 @@ static int xsltXPathFuncs (
     xsltState         * xs = clientData;
     char              * keyId, *filterValue, *str, *baseURI;
     char              * localName, prefix[MAX_PREFIX_LEN];
-    int                 rc, i, len, NaN, freeStr;
+    int                 rc, i, len, NaN, freeStr, x;
     double              n;
-    xsltKeyValue      * value;
-    xsltKeyValues     * keyValues;
+    xsltNodeSet       * keyValues;
     Tcl_HashEntry     * h;
     Tcl_HashTable     * docKeyData;
     xsltSubDoc        * sdoc;
@@ -2070,11 +2098,17 @@ static int xsltXPathFuncs (
                 TRACE1("filterValue='%s' \n", filterValue);
                 h = Tcl_FindHashEntry (docKeyData, filterValue);
                 if (h) {
-                    keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
-                    value = keyValues->value;
-                    while (value) {
-                        rsAddNode(result, value->node);
-                        value = value->next;
+                    keyValues = (xsltNodeSet *) Tcl_GetHashValue (h);
+                    if (result->type == EmptyResult) {
+                        result->type = xNodeSetResult;
+                        result->nodes = keyValues->nodes;
+                        result->intvalue = 1;
+                        result->nr_nodes = keyValues->nr_nodes;
+                        result->allocated = keyValues->allocated;
+                    } else {
+                        for (x = 0; x < keyValues->nr_nodes; x++) {
+                            rsAddNode(result, keyValues->nodes[x]);
+                        }
                     }
                 }
                 FREE(filterValue);
@@ -2084,11 +2118,17 @@ static int xsltXPathFuncs (
            TRACE1("filterValue='%s' \n", filterValue);
            h = Tcl_FindHashEntry (docKeyData, filterValue);
            if (h) {
-               keyValues = (xsltKeyValues *) Tcl_GetHashValue (h);
-               value = keyValues->value;
-               while (value) {
-                   rsAddNode(result, value->node);
-                   value = value->next;
+               keyValues = (xsltNodeSet *) Tcl_GetHashValue (h);
+               if (result->type == EmptyResult) {
+                   result->type = xNodeSetResult;
+                   result->nodes = keyValues->nodes;
+                   result->intvalue = 1;
+                   result->nr_nodes = keyValues->nr_nodes;
+                   result->allocated = keyValues->allocated;
+               } else {
+                   for (x = 0; x < keyValues->nr_nodes; x++) {
+                       rsAddNode(result, keyValues->nodes[x]);
+                   }
                }
            }
            FREE(filterValue);
@@ -3322,7 +3362,7 @@ static int doSortActions (
     char           ** errMsg
 )
 {
-    domNode       *child;
+    domNode       *child, *savedCurrentNode;
     char          *str, *evStr, *select, *lang;
     char         **vs = NULL;
     char          *localName, prefix[MAX_PREFIX_LEN];
@@ -3418,8 +3458,10 @@ static int doSortActions (
                     vd = (double *)MALLOC(sizeof (double) * nodelist->nr_nodes);
                     for (i=0; i<nodelist->nr_nodes;i++) vd[i] = 0.0;
                 }
+                savedCurrentNode = xs->current;
                 for (i = 0; i < nodelist->nr_nodes; i++) {
                     xpathRSInit (&rs);
+                    xs->current = nodelist->nodes[i];
                     rc = evalXPath (xs, nodelist, nodelist->nodes[i], i,
                                     select, &rs, errMsg);
                     if (rc < 0)
@@ -3432,6 +3474,7 @@ static int doSortActions (
                     }
                     xpathRSFree (&rs);
                 }
+                xs->current = savedCurrentNode;
                 rc = sortNodeSetFastMerge (typeText, ascending, upperFirst,
                                            nodelist->nodes, nodelist->nr_nodes,
                                            vs, vd, pos, errMsg);
@@ -6538,8 +6581,7 @@ xsltFreeState (
 ) {
     xsltDecimalFormat *df,  *dfsave;
     xsltKeyInfo       *ki,  *kisave;
-    xsltKeyValues     *kvalues;
-    xsltKeyValue      *kv,  *kvsave;
+    xsltNodeSet       *kvalues;
     xsltSubDoc        *sd,  *sdsave;
     xsltAttrSet       *as,  *assave;
     xsltTemplate      *tpl, *tplsave;
@@ -6642,13 +6684,8 @@ xsltFreeState (
             for (entryPtr1 = Tcl_FirstHashEntry (htable, &search1);
                  entryPtr1 != (Tcl_HashEntry*) NULL;
                  entryPtr1 = Tcl_NextHashEntry (&search1)) {
-                kvalues = (xsltKeyValues *) Tcl_GetHashValue (entryPtr1);
-                kv = kvalues->value;
-                while (kv) {
-                    kvsave = kv;
-                    kv = kv->next;
-                    FREE(kvsave);
-                }
+                kvalues = (xsltNodeSet *) Tcl_GetHashValue (entryPtr1);
+                FREE(kvalues->nodes);
                 FREE(kvalues);
             }
             Tcl_DeleteHashTable (htable);
@@ -6754,8 +6791,7 @@ xsltResetState (
     )
 {
     xsltSubDoc        *sd,  *sdsave, *lastSubDoc = NULL;
-    xsltKeyValues     *kvalues;
-    xsltKeyValue      *kv,  *kvsave;
+    xsltNodeSet       *kvalues;
     Tcl_HashEntry     *entryPtr, *entryPtr1;
     Tcl_HashSearch     search, search1;
     Tcl_HashTable     *htable;
@@ -6773,13 +6809,8 @@ xsltResetState (
                 for (entryPtr1 = Tcl_FirstHashEntry (htable, &search1);
                      entryPtr1 != (Tcl_HashEntry*) NULL;
                      entryPtr1 = Tcl_NextHashEntry (&search1)) {
-                    kvalues = (xsltKeyValues *) Tcl_GetHashValue (entryPtr1);
-                    kv = kvalues->value;
-                    while (kv) {
-                        kvsave = kv;
-                        kv = kv->next;
-                        FREE(kvsave);
-                    }
+                    kvalues = (xsltNodeSet *) Tcl_GetHashValue (entryPtr1);
+                    FREE(kvalues->nodes);
                     FREE(kvalues);
                 }
                 Tcl_DeleteHashTable (htable);
