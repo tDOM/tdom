@@ -76,7 +76,11 @@
 \---------------------------------------------------------------------------*/
 #define DBG(x)          
 #define TDOM_NS
-#define RetError(m,p)   *errStr = m; *pos = p; return TCL_ERROR;
+#ifdef TDOM_NS
+#   define RetError(m,p)   *errStr = m; *pos = p; Tcl_Free ((char *) activeNS); return TCL_ERROR;
+#else 
+#   define RetError(m,p)   *errStr = m; *pos = p; return TCL_ERROR;
+#endif
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 
 /*---------------------------------------------------------------------------
