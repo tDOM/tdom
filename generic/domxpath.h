@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.10  2002/07/05 12:18:56  rolf
+|   Changed handling of nan/inf/-inf. Should now work on a wide(r) range
+|   of plattforms and (hopefully) not any more a build problem.
+|
 |   Revision 1.9  2002/07/03 10:12:51  zoran
 |   Fixed conditional for Sun compilation; now properly checks both __sun__
 |   and __sun to satisfy both GCC and Sun's own compiler.
@@ -82,8 +86,8 @@
 #ifndef __DOMXPATH_H__
 #define __DOMXPATH_H__
 
+#include <float.h>
 #include <dom.h>
-
 
 /*----------------------------------------------------------------------------
 |   Macros
@@ -95,9 +99,19 @@
 #define XPATH_EVAL_ERR      -3
 #define XPATH_VAR_NOT_FOUND -4
 
-#if defined (__sun) || defined (__sun__) 
-#include <ieeefp.h>
-#define isinf(d) ((fpclass(d)==FP_PINF)?1:((fpclass(d)==FP_NINF)?-1:0))
+/*
+ * Macros for testing floating-point values for certain special cases. Test
+ * for not-a-number by comparing a value against itself; test for infinity
+ * by comparing against the largest floating-point value.
+ */
+
+#define IS_NAN(v) ((v) != (v))
+#ifdef DBL_MAX
+/*  #   define IS_INF(v) ((((v) > DBL_MAX) || ((v) < -DBL_MAX)) ? \ */
+/*                               (((v) > DBL_MAX) ? 1 : -1) : 0) */
+#   define IS_INF(v) ((v) > DBL_MAX ? 1 : ((v) < -DBL_MAX ? -1 : 0))
+#else
+#   define IS_INF(v) 0
 #endif
 
 /*----------------------------------------------------------------------------
@@ -142,7 +156,7 @@ typedef astElem *ast;
 \---------------------------------------------------------------------------*/
 typedef enum { 
     EmptyResult, BoolResult, IntResult, RealResult, StringResult, 
-    xNodeSetResult
+    xNodeSetResult, NaNResult, InfResult, NInfResult
 } xpathResultType;
 
 

@@ -51,15 +51,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 #include <math.h>
 #include <limits.h>
 #include <ctype.h>
 #include <dom.h>
 #include <domxpath.h>
 #include <domxslt.h>
-#ifdef _MSC_VER
-#include <win32.h>
-#endif
 
 
 /*----------------------------------------------------------------------------
@@ -332,6 +330,15 @@ void rsSetReal ( xpathResultSet *rs, double d) {
 
     rs->type = RealResult;
     rs->realvalue = d;
+}
+void rsSetNaN ( xpathResultSet *rs ) {
+    rs->type = NaNResult;
+}
+void rsSetInf ( xpathResultSet *rs ) {
+    rs->type = InfResult;
+}
+void rsSetNInf ( xpathResultSet *rs ) {
+    rs-> type = NInfResult;
 }
 void rsSetInt ( xpathResultSet *rs, int i) {
 
@@ -2021,9 +2028,12 @@ int xpathFuncBoolean (
     switch (rs->type) {
         case BoolResult:         return ( rs->intvalue         );
         case IntResult:          return ( rs->intvalue ? 1 : 0 );
-        case RealResult:         return ((rs->realvalue != 0.0 ) && !isnan (rs->realvalue));
+        case RealResult:         return ((rs->realvalue != 0.0 ) && !IS_NAN (rs->realvalue));
         case StringResult:       return ( rs->string_len > 0   );
         case xNodeSetResult:     return ( rs->nr_nodes > 0     );
+        case InfResult:
+        case NInfResult:         return 1;
+        /* NaNResult and EmptyResult are 'false' */
         default:                 return 0;
     }
 }
@@ -2045,20 +2055,29 @@ double xpathFuncNumber (
     switch (rs->type) {
         case BoolResult:   return (rs->intvalue? 1.0 : 0.0);
         case IntResult:    return rs->intvalue;
-        case RealResult:   {
-            if (isnan(rs->realvalue) || (isinf(rs->realvalue)!=0)) *NaN = 1;
+        case RealResult:   
+            if (IS_NAN(rs->realvalue)) *NaN = 2;
+            else if (IS_INF(rs->realvalue)!=0) *NaN = IS_INF(rs->realvalue);
             return rs->realvalue;
-        }
+        case NaNResult:
+            *NaN = 2;
+            return 0.0;
+        case InfResult:
+            *NaN = 1;
+            return 0.0;
+        case NInfResult:
+            *NaN = -1;
+            return 0.0;
         case StringResult:
               strncpy(tmp, rs->string, (rs->string_len<79) ? rs->string_len : 79);
               tmp[(rs->string_len<79) ? rs->string_len : 79] = '\0';
               d = strtod (tmp, &tailptr);
               if (d == 0.0 && tailptr == tmp) {
                   d = strtod ("nan", &tailptr);
-                  *NaN = 1;
+                  *NaN = 2;
               } else
-              if (isnan(d)) {
-                  *NaN = 1;
+              if (IS_NAN(d)) {
+                  *NaN = 2;
               } else
               if (tailptr) {
                   while (*tailptr) {
@@ -2070,7 +2089,7 @@ double xpathFuncNumber (
                       default: break; /*do nothing */
                       }
                       d = strtod ("nan", &tailptr);
-                      *NaN = 1;
+                      *NaN = 2;
                       break;
                   }
               }
@@ -2080,10 +2099,10 @@ double xpathFuncNumber (
               d = strtod (pc, &tailptr);
               if (d == 0.0 && tailptr == pc) {
                   d = strtod ("nan", &tailptr);
-                  *NaN = 1;
+                  *NaN = 2;
               } else
-              if (isnan(d)) {
-                  *NaN = 1;
+              if (IS_NAN(d)) {
+                  *NaN = 2;
               } else
               if (tailptr) {
                   while (*tailptr) {
@@ -2095,7 +2114,7 @@ double xpathFuncNumber (
                       default: break; /*do nothing */
                       }
                       d = strtod ("nan", &tailptr);
-                      *NaN = 1;
+                      *NaN = 2;
                       break;
                   }
               }
@@ -2104,7 +2123,7 @@ double xpathFuncNumber (
         default:
               DBG(fprintf(stderr, "funcNumber: default: 0.0\n");)
               d = strtod ("nan", &tailptr);
-              *NaN = 1;
+              *NaN = 2;
               return d;
     }
 }
@@ -2227,16 +2246,26 @@ char * xpathFuncString (
             return (strdup(tmp));
 
         case RealResult:
+            if (IS_NAN (rs->realvalue)) return strdup ("NaN");
+            else if (IS_INF (rs->realvalue)) {
+                if (IS_INF (rs->realvalue) == 1) return strdup ("Infinity");
+                else                             return strdup ("-Infinity");
+            }
             sprintf(tmp, "%f", rs->realvalue);
             /* strip trailing 0 and . */
             len = strlen(tmp);
             for (; (len > 0) && (tmp[len-1] == '0'); len--) tmp[len-1] = '\0';
             if ((len > 0) && (tmp[len-1] == '.'))   tmp[len-1] = '\0';
-
-            if (strcmp(tmp,"nan")==0)  return strdup("NaN");
-            if (strcmp(tmp,"inf")==0)  return strdup("Infinity");
-            if (strcmp(tmp,"-inf")==0) return strdup("-Infinity");
             return (strdup(tmp));
+            
+        case NaNResult:
+            return strdup ("NaN");
+
+        case InfResult:
+            return strdup ("Infinity");
+
+        case NInfResult:
+            return strdup ("-Infinity");
 
         case StringResult:
             pc = malloc(rs->string_len +1 );
@@ -2286,7 +2315,7 @@ double xpathFuncNumberForNode (
     *NaN = 0;
     pc = xpathGetTextValue (node, &len);
     rc = sscanf (pc,"%lf", &d);
-    if (rc != 1) *NaN = 1;
+    if (rc != 1) *NaN = 2;
     free(pc);
     return d;
 }
@@ -2429,7 +2458,13 @@ xpathEvalFunction (
             }
         }
         leftReal = xpathFuncNumber(&leftResult, &NaN);
-        rsSetReal (result, leftReal);
+        if (NaN) {
+            if      (NaN == 2)  rsSetNaN (result);
+            else if (NaN == 1)  rsSetInf (result);
+            else                rsSetNInf (result);
+        } else {
+            rsSetReal (result, leftReal);
+        }
         xpathRSFree( &leftResult );
         break;
 
@@ -2446,8 +2481,12 @@ xpathEvalFunction (
         }
         leftReal = xpathFuncNumber(&leftResult, &NaN);
 
-        if (NaN) { rsSetReal(result, leftReal); return XPATH_OK; }
-
+        if (NaN) { 
+            if      (NaN == 2)  rsSetNaN (result);
+            else if (NaN == 1)  rsSetInf (result);
+            else                rsSetNInf (result);
+            return XPATH_OK; 
+        }
         if      (step->intvalue == f_floor)   leftReal = floor(leftReal);
         else if (step->intvalue == f_ceiling) leftReal = ceil(leftReal);
         else                                  leftReal = xpathRound(leftReal);
@@ -2667,8 +2706,7 @@ xpathEvalFunction (
                DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
                leftReal += xpathFuncNumber(&rightResult, &NaN);
                if (NaN) {
-                   leftReal = strtod ("nan", &leftStr);
-                   rsSetReal (result, leftReal);
+                   rsSetNaN (result);
                    return XPATH_OK;
                }
                DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
@@ -2867,7 +2905,7 @@ xpathEvalFunction (
                len = xpathRound(dRight);
                xpathRSFree (&rightResult);
                if (NaN) {
-                   if (isinf (dRight) == 1) {
+                   if (NaN == 1) {
                        len = INT_MAX;
                    } else {
                        free (leftStr);
@@ -3248,7 +3286,7 @@ static int xpathEvalStep (
 {
     xpathResultSet   leftResult, rightResult;
     xpathResultSet  *pleftResult, *prightResult, tResult;
-    int              i, j, k, rc, res, NaN, switchResult;
+    int              i, j, k, rc, res, NaN, NaN1, switchResult;
     domNode         *node, *child, *startingNode, *ancestor;
     domAttrNode     *attr;
     domNS           *ns;
@@ -3704,14 +3742,14 @@ static int xpathEvalStep (
 
         dLeft  = xpathFuncNumber(&leftResult, &NaN);
         if (NaN) {
-            rsSetReal (result, dLeft);
+            rsSetNaN (result);
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_OK;
         }
         dRight = xpathFuncNumber(&rightResult, &NaN);
         if (NaN) {
-            rsSetReal (result, dRight);
+            rsSetNaN (result);
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_OK;
@@ -3724,15 +3762,12 @@ static int xpathEvalStep (
         case Mod:
             if (dRight == 0.0) {
                 if (dLeft == 0.0) {
-                    dLeft = strtod ("nan", &leftStr);
-                    rsSetReal (result, dLeft);
+                    rsSetNaN (result);
                 } else {
                     if (dLeft > 0) {
-                        dLeft = strtod ("inf", &leftStr);
-                        rsSetReal (result, dLeft);
+                        rsSetInf (result);
                     } else {
-                        dLeft = strtod ("-inf", &leftStr);
-                        rsSetReal (result, dLeft);
+                        rsSetNInf (result);
                     }
                 }
             } else {
@@ -3964,12 +3999,25 @@ static int xpathEvalStep (
             case IntResult:
             case RealResult:
                 dRight = xpathFuncNumber (prightResult, &NaN);
+                if (NaN) {
+                    /* The real value of a node could never be inf/-inf */
+                    /* And NaN is always != NaN (and != everything else) */
+                    if (step->type == Equal) res = 0;
+                    else                     res = 1;
+                    break;
+                }
                 for (i=0; i < pleftResult->nr_nodes; i++) {
                     dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    if (NaN) continue;
                     if (step->type == Equal) res = (dLeft == dRight);
                     else                     res = (dLeft != dRight);
                     if (res) break;
                 }
+                break;
+            case NaNResult:
+            case InfResult:
+            case NInfResult:
+                res = 0;
                 break;
             case StringResult:
                 rightStr = xpathFuncString (prightResult);
@@ -3996,15 +4044,33 @@ static int xpathEvalStep (
             || leftResult.type  == RealResult
             || rightResult.type == IntResult
             || rightResult.type == RealResult
+            || rightResult.type == NaNResult
+            || rightResult.type == InfResult
+            || rightResult.type == NInfResult
+            || leftResult.type  == NaNResult
+            || leftResult.type  == InfResult
+            || leftResult.type  == NInfResult
             ) {
             if (   leftResult.type == EmptyResult
                 || rightResult.type == EmptyResult) {
                 res = 0;
             } else {
                 dLeft  = xpathFuncNumber (&leftResult, &NaN);
-                dRight = xpathFuncNumber (&rightResult, &NaN);
-                if (step->type == Equal) res = (dLeft == dRight);
-                else                     res = (dLeft != dRight);
+                dRight = xpathFuncNumber (&rightResult, &NaN1);
+                if (NaN || NaN1) {
+                    if (NaN == NaN1) {
+                        if (NaN != 2) {
+                            if (step->type == Equal) res = 1;
+                        } else {
+                            if (step->type == NotEqual) res = 1;
+                        }
+                    } else {
+                        if (step->type == NotEqual) res = 1;
+                    }
+                } else {
+                    if (step->type == Equal) res = (dLeft == dRight);
+                    else                     res = (dLeft != dRight);
+                }
             }
         } else {
             if (   leftResult.type == EmptyResult
@@ -4073,8 +4139,10 @@ static int xpathEvalStep (
                 )
                 for (i=0; i < pleftResult->nr_nodes; i++) {
                     dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    if (NaN) continue;
                     for (j=0; j < prightResult->nr_nodes; j++) {
                         dRight = xpathFuncNumberForNode (prightResult->nodes[j], &NaN);
+                        if (NaN)  continue;
                         if (switchResult) {
                             dTmp   = dLeft;
                             dLeft  = dRight;
@@ -4094,6 +4162,7 @@ static int xpathEvalStep (
                 /* pleftResult is a non-emtpy nodeset, therefor: */
                 dLeft = 1.0;
                 dRight = xpathFuncNumber (prightResult, &NaN);
+                if (NaN) break;
                 if      (step->type == Less)     res = (dLeft < dRight);
                 else if (step->type == LessOrEq) res = (dLeft <= dRight);
                 else if (step->type == Greater)  res = (dLeft >  dRight);
@@ -4103,12 +4172,24 @@ static int xpathEvalStep (
                     res = !res;
                 }
                 break;
+            case NaNResult:
+                break;
+            case InfResult:
+            case NInfResult:
             case IntResult:
             case RealResult:
             case StringResult:
                 dRight = xpathFuncNumber (prightResult, &NaN);
+                if (NaN) {
+                    if (NaN == 2) break;
+#ifdef DBL_MAX                    
+                    if (NaN == 1) dRight = DBL_MAX;
+                    else          dRight = -DBL_MAX;
+#endif
+                }
                 for (i=0; i < pleftResult->nr_nodes; i++) {
                     dLeft = xpathFuncNumberForNode (pleftResult->nodes[i], &NaN);
+                    if (NaN) continue;
                     if (switchResult) {
                         dTmp   = dLeft;
                         dLeft  = dRight;
@@ -4129,13 +4210,28 @@ static int xpathEvalStep (
                 res = 0;
             } else {
                 dLeft  = xpathFuncNumber (&leftResult, &NaN);
+                if (NaN) {
+                    if (NaN == 2) goto compareFinish;
+#ifdef DBL_MAX                    
+                    if (NaN == 1) dLeft = DBL_MAX;
+                    else          dLeft = -DBL_MAX;
+#endif
+                }
                 dRight = xpathFuncNumber (&rightResult, &NaN);
+                if (NaN) {
+                    if (NaN == 2) goto compareFinish;
+#ifdef DBL_MAX                    
+                    if (NaN == 1) dRight = DBL_MAX;
+                    else          dRight = -DBL_MAX;
+#endif
+                }
                 if      (step->type == Less)     res = (dLeft < dRight);
                 else if (step->type == LessOrEq) res = (dLeft <= dRight);
                 else if (step->type == Greater)  res = (dLeft >  dRight);
                 else                             res = (dLeft >= dRight);
             }
         }
+    compareFinish:
         rsSetBool (result, res);
         xpathRSFree (&rightResult);
         xpathRSFree (&leftResult);
@@ -4150,7 +4246,12 @@ static int xpathEvalStep (
         rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext,
                              position, docOrder,cbs, &leftResult, errMsg);
         CHECK_RC;
-        rsSetReal (result , -1 * xpathFuncNumber (&leftResult, &NaN));
+        dLeft = xpathFuncNumber (&leftResult, &NaN);
+        if (NaN) {
+            if (NaN == 2)      rsSetNaN (result);
+            else if (NaN == 1) rsSetNInf (result);
+            else               rsSetInf (result);
+        } else rsSetReal (result , -1 * dLeft);
         xpathRSFree (&leftResult);
         break;
 

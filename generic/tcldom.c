@@ -1057,7 +1057,22 @@ int tcldom_xpathResultSet (
              Tcl_SetStringObj (type, "number", -1);
              Tcl_SetDoubleObj (value, rs->realvalue);
              break;
+             
+        case NaNResult:
+             Tcl_SetStringObj (type, "number", -1);
+             Tcl_SetStringObj (value, "NaN", -1);
+             break;
 
+        case InfResult:
+             Tcl_SetStringObj (type, "number", -1);
+             Tcl_SetStringObj (value, "Infinity", -1);
+             break;
+
+        case NInfResult:
+             Tcl_SetStringObj (type, "number", -1);
+             Tcl_SetStringObj (value, "-Infinity", -1);
+             break;
+             
         case StringResult:
              Tcl_SetStringObj (type, "string", -1);
              Tcl_SetStringObj (value, rs->string, rs->string_len);
