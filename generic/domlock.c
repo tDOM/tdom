@@ -38,7 +38,6 @@
 |   only on application exit.
 |
 \---------------------------------------------------------------------------*/
-
 static Tcl_Mutex lockMutex = 0;
 static domlock *domLocks = NULL;
 
@@ -47,7 +46,6 @@ static domlock *domLocks = NULL;
 |   Lock the document according to passed flag
 |
 \---------------------------------------------------------------------------*/
-
 void
 domLocksLock(domlock *dl, int how)
 {
@@ -77,11 +75,11 @@ domLocksLock(domlock *dl, int how)
     Tcl_MutexUnlock(&dl->mutex);
 }
 
+
 /*----------------------------------------------------------------------------
 |   Unlock the previously locked document.
 |
 \---------------------------------------------------------------------------*/
-
 void
 domLocksUnlock(domlock *dl)
 {
@@ -99,13 +97,13 @@ domLocksUnlock(domlock *dl)
     Tcl_MutexUnlock (&dl->mutex);
 }
 
+
 /*----------------------------------------------------------------------------
 |   Associate a lock with the document. Attempt is made to locate a free
 |   lock from the global list of already used lock structures. If a free
 |   one could not be found, allocate new lock.
 |
 \---------------------------------------------------------------------------*/
-
 void
 domLocksAttach(domDocument *doc)
 {
@@ -130,12 +128,12 @@ domLocksAttach(domDocument *doc)
     Tcl_MutexUnlock(&lockMutex);
 }
 
+
 /*----------------------------------------------------------------------------
 |   Divorce DOM document from its lock. The lock structure is not
 |   disposed and may be used for locking other documents.
 |
 \---------------------------------------------------------------------------*/
-
 void
 domLocksDetach(domDocument *doc)
 {
@@ -150,12 +148,12 @@ domLocksDetach(domDocument *doc)
     Tcl_MutexUnlock(&lockMutex);
 }
 
+
 /*----------------------------------------------------------------------------
 |   Reclaim storage used for lock structures. This should be done only
 |   on application exit.
 |
 \---------------------------------------------------------------------------*/
-
 void
 domLocksFinalize(ClientData dummy)
 {
