@@ -457,6 +457,12 @@ decimal representation. If the option \fI-htmlEntities\fR is given, a
 character is outputed using a HTML 4.01 character entity reference, if one is
 defined for it.
 .TP
+\&\fB\fBasText\fP
+\&\fRFor ELEMENT_NODEs, the asText method outputs
+the string-value of every text node descendant of node in document
+order without any escaping. For every other node type, this method outputs the
+the XPath string value of that node.
+.TP
 \&\fB\fBappendFromList\fP \fIlist\fB
 \&\fRParses \fIlist\fR , creates an according DOM subtree and
 appends this subtree to the current node.

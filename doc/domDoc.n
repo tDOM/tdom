@@ -263,6 +263,12 @@ doctype declaration will be written from the avaliable informations, without
 check, if this is a known (w3c) HTML version information or if the document
 confirms to the given HTML version.
 .TP
+\&\fB\fBasText\fP
+\&\fRThe asText method outputs the result tree by outputting
+the string-value of every text node in the result tree in document
+order without any escaping. In effect, this is what the xslt output method
+"text" (XSLT 1.0 recommendation, section 16.3) does.
+.TP
 \&\fB\fBpublicId\fP \fI?publicId?\fB
 \&\fRReturns the public identifier of the doctype declaration of the
 document, if there is one, otherwise the empty string. If there is a value
