@@ -1,3 +1,22 @@
+2003-07-06  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tclexpat.c: Fixed bug in the subtree skipping
+          feature of event handlers. Should be merged with HEAD.
+
+        --- Backported fixes from HEAD ---
+
+        * generic/domxslt.c: Fixed a bug in xsl:number. If there is no
+          'count' attribute given to xsl:number, it must default to
+          the pattern that matches any node with the same node type as
+          the current node and, if the current node has an
+          expanded-name, with the same expanded-name as the current
+          node. But in case of PROCESSING_INSTRUCTION_NODEs as the
+          current node and no 'count' attribute, it counted all pi's
+          regardless of the name. Now, the name is respected, as it
+          should be.
+
+        * generic/tcldom.c: Added an argument check for XSLTCmds.
+
 2003-07-03  Zoran Vasiljevic  <zoran@archiware.com>
 
 	---- Changes done in rel-0-7-branch ----
