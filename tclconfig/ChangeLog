@@ -1,3 +1,19 @@
+2003-04-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: correct default setting of ARCH for WinCE builds.
+	Correct \ escaping for CE sed macros.
+
+2003-04-10  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: replace $(syscal) construct with older `syscall` for
+	systems where sh != bash.
+
+2003-04-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4 (TEA_WITH_CELIB): add --enable-wince and --with-celib
+	options for Windows/CE compilation support.  Requires the
+	Microsoft eMbedded SDK and Keuchel's celib emulation layer.
+
 2003-02-18  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tcl.m4 (TEA_ENABLE_THREADS): Make sure -lpthread gets passed on
