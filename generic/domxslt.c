@@ -3932,13 +3932,14 @@ static int ExecAction (
             if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                  || !domIsNCNAME (localName)) {
                 reportError (actionNode, "xsl:attribute: Attribute name is not a valid QName.", errMsg);
+                FREE(str2);
                 return -1;
             }
             nsStr = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         nsAT, &nsStr, errMsg);
-                CHECK_RC;
+                CHECK_RC1(str2);
             }
 
             Tcl_DStringInit (&dStr);
@@ -3994,7 +3995,11 @@ static int ExecAction (
             rc = ExecActions(xs, context, currentNode, currentPos,
                              actionNode->firstChild, errMsg);
             xsltPopVarFrame (xs);
-            CHECK_RC;
+            if (rc < 0) {
+                if (nsStr) FREE(nsStr);
+                FREE(str2);
+                return rc;
+            }
             pc = xpathGetTextValue (xs->lastNode, &len);
             DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, nsStr);)
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
@@ -4324,7 +4329,7 @@ static int ExecAction (
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                         nsAT, &nsStr, errMsg);
-                CHECK_RC;
+                CHECK_RC1(str2);
             } else {
                 domSplitQName (str2, prefix, &localName);
                 if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
@@ -4402,7 +4407,10 @@ static int ExecAction (
             if (rs.type == xNodeSetResult) {
                 rc = doSortActions (xs, &rs, actionNode, context, currentNode,
                                     currentPos, errMsg);
-                CHECK_RC;
+                if (rc < 0) {
+                    xpathRSFree (&rs);
+                    return rc;
+                }
                 /* should not be necessary, because every node set is
                    returned already in doc Order */
                 /*  if (!sorted) sortByDocOrder(&rs); */
@@ -5517,6 +5525,10 @@ getExternalDocument (
     sdoc->isStylesheet = isStylesheet;
     if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
+            Tcl_DeleteHashTable (&(sdoc->keyData));
+            FREE (sdoc->baseURI);
+            FREE (sdoc);
+            Tcl_DecrRefCount (resultObj);
             return NULL;
         }
         StripXSLTSpace (doc->rootNode);
@@ -5653,7 +5665,10 @@ static int processTopLevelVars (
         select = getAttr (topLevelVar->node, "select", a_select);
         rc = xsltSetVar(xs, topLevelVar->name, &nodeList, xmlNode, 0, select,
                         topLevelVar->node, 1, errMsg);
-        CHECK_RC;
+        if (rc < 0) {
+            xpathRSFree (&nodeList);
+            return rc;
+        }
     }
     xpathRSFree (&nodeList);
     xs->currentXSLTNode = NULL;
@@ -6063,6 +6078,7 @@ static int processTopLevel (
                 Tcl_DStringAppend (&dStr, localName, -1);
                 h = Tcl_CreateHashEntry (&(xs->keyInfos),
                                          Tcl_DStringValue (&dStr), &hnew);
+                Tcl_DStringFree (&dStr);
                 if (hnew) {
                     keyInfo->next  = NULL;
                 } else {
@@ -6130,6 +6146,7 @@ static int processTopLevel (
                     xs->nsAliases = nsAlias;
                 }
                 nsAlias->toUri = tdomstrdup (nsTo->uri);
+                nsAlias->precedence = precedence;
                 break;
 
             case output:
@@ -6229,6 +6246,7 @@ static int processTopLevel (
                 Tcl_DStringAppend (&dStr, localName, -1);
                 h = Tcl_CreateHashEntry (&(xs->topLevelVars),
                                          Tcl_DStringValue (&dStr), &hnew);
+                Tcl_DStringFree (&dStr);
                 if (!hnew) {
                     topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (h);
                     /* Since imported stylesheets are processed at the
