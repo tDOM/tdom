@@ -36,6 +36,24 @@
         	  automatically untraced. This prevents memory trashing when
         	  such variables are unset by user or by Tcl.
 
+
+2003-09-14  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/tclexpat.c: Added cget method implementation for all
+          parser options with the exceptions of -namespace,
+          -useForeignDTD and -paramentityparsing. Revamped behind the
+          scene code for handling of the -elementstartcommand,
+          -elementendcommand and -characterdatacommand options. Up to
+          now, the arguments to this options must have been the name
+          of an already defined tcl proc. This allowed a special high
+          performance calling of that procs. The new code behaves
+          exactly the same way for every script, which worked with
+          previous versions. Additionally it allows, to specify a not
+          already defined tcl proc and, probably more important,
+          allows 'arbitrary' tcl scripts as argument to that
+          options. All in this checkin in the work of Harry Moreau
+          (hmoreau@online.ie). Many thanks for this contribution.
+
 2003-06-13  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Added an argument check for XSLTCmds.
