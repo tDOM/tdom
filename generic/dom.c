@@ -1830,7 +1830,7 @@ domReadDocument (
             do {
                 len = Tcl_ReadChars (channel, bufObj, 1024, 0);
                 done = (len < 1024);
-                str = Tcl_GetString(bufObj);
+                str = Tcl_GetStringFromObj(bufObj, &len);
                 if (!XML_Parse (parser, str, len, done)) {
                     FREE ( (char*) info.activeNS );
                     domFreeDocument (doc, NULL, NULL);
