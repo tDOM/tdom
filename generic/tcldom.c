@@ -1479,16 +1479,16 @@ int tcldom_selectNodes (
 {
     char          *xpathQuery, *typeVar, *option;
     char          *errMsg = NULL, **mappings = NULL;
-    int            rc, i, len, optionIndex;
+    int            rc, i, len, optionIndex, cache = 0;
     xpathResultSet rs;
     Tcl_Obj       *type, *objPtr;
     xpathCBs       cbs;
 
     static CONST84 char *selectNodesOptions[] = {
-        "-namespaces", NULL
+        "-namespaces", "-cache", NULL
     };
     enum selectNodesOption {
-        o_namespaces
+        o_namespaces, o_cache
     };
 
     GetTcldomTSD();
@@ -1532,6 +1532,15 @@ int tcldom_selectNodes (
             objc -= 2;
             objv += 2;
             break;
+
+        case o_cache:
+            if (Tcl_GetBooleanFromObj (interp, objv[2], &cache) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            objc -= 2;
+            objv += 2;
+            break;
+            
         default:
             Tcl_ResetResult (interp);
             Tcl_AppendResult (interp, "bad option \"", 
@@ -1557,7 +1566,18 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
-    rc = xpathEval (node, node, xpathQuery, mappings, &cbs, &errMsg, &rs);
+    if (cache) {
+        if (!node->ownerDocument->xpathCache) {
+            node->ownerDocument->xpathCache = MALLOC (sizeof (Tcl_HashTable));
+            Tcl_InitHashTable (node->ownerDocument->xpathCache,
+                               TCL_STRING_KEYS);
+        }
+        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, 
+                        node->ownerDocument->xpathCache, &errMsg, &rs);
+    } else {
+        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, NULL, &errMsg,
+                        &rs);
+    }
 
     if (rc != XPATH_OK) {
         xpathRSFree(&rs);
@@ -2725,7 +2745,7 @@ char *findBaseURI (
     orgNode = node;
     do {
         if (node->nodeFlags & HAS_BASEURI) {
-            entryPtr = Tcl_FindHashEntry(&node->ownerDocument->baseURIs,
+            entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                          (char*)node);
             baseURI = (char *)Tcl_GetHashValue(entryPtr);
             break;
@@ -2736,7 +2756,7 @@ char *findBaseURI (
     if (!baseURI) {
         node = orgNode->ownerDocument->rootNode;
         if (node->nodeFlags & HAS_BASEURI) {
-            entryPtr = Tcl_FindHashEntry(&node->ownerDocument->baseURIs,
+            entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                           (char*)node);
             baseURI = (char *)Tcl_GetHashValue(entryPtr);
         }
@@ -3933,11 +3953,13 @@ int tcldom_NodeObjCmd (
             
         case m_getElementById:
             CheckArgs(3,3,2,"id");
-            str = Tcl_GetString(objv[2]);
-            h = Tcl_FindHashEntry(&node->ownerDocument->ids, str);
-            if (h) {
-                domNode *node = Tcl_GetHashValue(h);
-                return tcldom_returnNodeObj(interp, node, 0, NULL);
+            if (node->ownerDocument->ids) {
+                str = Tcl_GetString(objv[2]);
+                h = Tcl_FindHashEntry(node->ownerDocument->ids, str);
+                if (h) {
+                    domNode *node = Tcl_GetHashValue(h);
+                    return tcldom_returnNodeObj(interp, node, 0, NULL);
+                }
             }
             SetResult("");
             return TCL_OK;
@@ -4122,7 +4144,7 @@ int tcldom_NodeObjCmd (
         case m_baseURI:    
             CheckArgs(2,3,2,"?URI?");
             if (objc == 3) {
-                h = Tcl_CreateHashEntry (&node->ownerDocument->baseURIs, 
+                h = Tcl_CreateHashEntry (node->ownerDocument->baseURIs, 
                                          (char *) node, &hnew);
                 if (!hnew) {
                     FREE (Tcl_GetHashValue (h));

@@ -141,6 +141,30 @@ test domNode-2.8 {selectNodes - -namespaces option} {
     
 $doc delete
 
+set doc [dom parse {<root>
+    <child/>
+    <child/>
+    <child/>
+    </root>}]
+$doc documentElement root
+
+test domNode-2.9 {selectNodes - -cache option} {
+    set result [catch {$root selectNodes -cache child} errMsg]
+    lappend result $errMsg
+} {1 {expected boolean value but got "child"}}
+
+test domNode-2.10 {selectNodes - -cache option} {
+    for {set x 0} {$x < 5} {incr x} {
+        set nodes [$root selectNodes -cache 1 {child[2]}]
+    }
+    for {set x 0} {$x < 5} {incr x} {
+        set otherNodes [$root selectNodes -cache 0 {child[2]}]
+    }
+    string equal $nodes $otherNodes
+} {1}
+
+$doc delete
+
 test domNode-3.1 {repetitived documentElement with objVar, then delete} {
     dom createDocument "root" doc 
     $doc documentElement root

@@ -519,9 +519,10 @@ typedef struct domDocument {
     unsigned int      nodeCounter;
 #endif
     struct domNode   *rootNode;
-    Tcl_HashTable     ids;
-    Tcl_HashTable     unparsedEntities;
-    Tcl_HashTable     baseURIs;
+    Tcl_HashTable    *ids;
+    Tcl_HashTable    *unparsedEntities;
+    Tcl_HashTable    *baseURIs;
+    Tcl_HashTable    *xpathCache;
     char             *extResolver;
     domDocInfo       *doctype;
     TDomThreaded (

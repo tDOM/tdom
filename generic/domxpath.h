@@ -163,7 +163,7 @@ void   xpathFreeAst (ast t);
 double xpathGetPrio (ast t);
 int    xpathEval    (domNode *node, domNode *exprContext, char *xpath, 
                      char **prefixMappings, xpathCBs *cbs,
-                     char **errMsg, xpathResultSet *rs
+                     Tcl_HashTable *catch, char **errMsg, xpathResultSet *rs
                      );
 int    xpathMatches (ast steps, domNode * exprContext, domNode *nodeToMatch,
                      xpathCBs *cbs, char **errMsg 

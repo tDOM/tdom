@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dom.h>
+#include <domxpath.h>
 #include <utf8conv.h>
 #include <tclexpat.h>
 
@@ -1054,7 +1055,7 @@ startElement(
 
     if (info->baseURIstack[info->baseURIstackPos].baseURI 
         != XML_GetBase (info->parser)) {
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+        h = Tcl_CreateHashEntry (info->document->baseURIs,
                                  (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
@@ -1209,7 +1210,11 @@ startElement(
     |
     \-------------------------------------------------------------*/
     if ((idatt = XML_GetIdAttributeIndex (info->parser)) != -1) {
-        h = Tcl_CreateHashEntry (&info->document->ids,
+        if (!info->document->ids) {
+            info->document->ids = MALLOC (sizeof (Tcl_HashTable));
+            Tcl_InitHashTable (info->document->ids, TCL_STRING_KEYS);
+        }
+        h = Tcl_CreateHashEntry (info->document->ids,
                                  (char *)atts[idatt+1],
                                  &hnew);
         /* if hnew isn't 1 this is a validation error. Hm, no clear way
@@ -1441,7 +1446,7 @@ DispatchPCDATA (
 
         if (info->baseURIstack[info->baseURIstackPos].baseURI 
             != XML_GetBase (info->parser)) {
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
+            h = Tcl_CreateHashEntry (info->document->baseURIs,
                                      (char*) node,
                                      &hnew);
             Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
@@ -1529,7 +1534,7 @@ commentHandler (
 
     if (info->baseURIstack[info->baseURIstackPos].baseURI 
         != XML_GetBase (info->parser)) {
-        h = Tcl_CreateHashEntry (&info->document->baseURIs,
+        h = Tcl_CreateHashEntry (info->document->baseURIs,
                                  (char*) node,
                                  &hnew);
         Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
@@ -1664,7 +1669,12 @@ entityDeclHandler (
     int                           hnew;
 
     if (notationName) {
-        entryPtr = Tcl_CreateHashEntry (&info->document->unparsedEntities,
+        if (!info->document->unparsedEntities) {
+            info->document->unparsedEntities = MALLOC (sizeof (Tcl_HashTable));
+            Tcl_InitHashTable (info->document->unparsedEntities, 
+                               TCL_STRING_KEYS);
+        }
+        entryPtr = Tcl_CreateHashEntry (info->document->unparsedEntities,
                                         entityName, &hnew);
         if (hnew) {
             Tcl_SetHashValue (entryPtr, tdomstrdup (systemId));
@@ -2227,10 +2237,11 @@ domCreateDoc (
     doc->nsptr          = -1;
     doc->nslen          =  4;
     doc->namespaces     = (domNS**) MALLOC (sizeof (domNS*) * doc->nslen);
-
-    Tcl_InitHashTable (&doc->ids, TCL_STRING_KEYS);
-    Tcl_InitHashTable (&doc->unparsedEntities, TCL_STRING_KEYS);
-    Tcl_InitHashTable (&doc->baseURIs, TCL_ONE_WORD_KEYS);
+    
+    /* We malloc and initialze the baseURIs hash table here to avoid
+       cluttering of the code all over the place with checks. */
+    doc->baseURIs = MALLOC (sizeof (Tcl_HashTable));
+    Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
 
     TDomThreaded(
         domLocksAttach(doc);
@@ -2246,7 +2257,7 @@ domCreateDoc (
     memset(rootNode, 0, sizeof(domNode));
     rootNode->nodeType      = ELEMENT_NODE;
     if (baseURI) {
-        h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode, &hnew);
+        h = Tcl_CreateHashEntry (doc->baseURIs, (char*)rootNode, &hnew);
         Tcl_SetHashValue (h, tdomstrdup (baseURI));
         rootNode->nodeFlags |= HAS_BASEURI;
     } else {
@@ -2420,7 +2431,7 @@ domFreeNode (
             domFree ((void*)atemp);
         }
         if (node->nodeFlags & HAS_BASEURI) {
-            entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
+            entryPtr = Tcl_FindHashEntry (node->ownerDocument->baseURIs,
                                           (char*)node);
             if (entryPtr) {
                 FREE ((char *) Tcl_GetHashValue (entryPtr));
@@ -2608,27 +2619,47 @@ domFreeDocument (
     /*-----------------------------------------------------------
     | delete ID hash table
     \-----------------------------------------------------------*/
-    Tcl_DeleteHashTable (&doc->ids);
+    if (doc->ids) {
+        Tcl_DeleteHashTable (doc->ids);
+        FREE (doc->ids);
+    }
 
     /*-----------------------------------------------------------
     | delete unparsed entities hash table
     \-----------------------------------------------------------*/
-    entryPtr = Tcl_FirstHashEntry (&doc->unparsedEntities, &search);
-    while (entryPtr) {
-        FREE (Tcl_GetHashValue (entryPtr));
-        entryPtr = Tcl_NextHashEntry (&search);
+    if (doc->unparsedEntities) {
+        entryPtr = Tcl_FirstHashEntry (doc->unparsedEntities, &search);
+        while (entryPtr) {
+            FREE (Tcl_GetHashValue (entryPtr));
+            entryPtr = Tcl_NextHashEntry (&search);
+        }
+        Tcl_DeleteHashTable (doc->unparsedEntities);
+        FREE (doc->unparsedEntities);
     }
-    Tcl_DeleteHashTable (&doc->unparsedEntities);
 
     /*-----------------------------------------------------------
     | delete base URIs hash table
     \-----------------------------------------------------------*/
-    entryPtr = Tcl_FirstHashEntry (&doc->baseURIs, &search);
+    entryPtr = Tcl_FirstHashEntry (doc->baseURIs, &search);
     while (entryPtr) {
         FREE (Tcl_GetHashValue (entryPtr));
         entryPtr = Tcl_NextHashEntry (&search);
     }
-    Tcl_DeleteHashTable (&doc->baseURIs);
+    Tcl_DeleteHashTable (doc->baseURIs);
+    FREE (doc->baseURIs);
+    
+    /*-----------------------------------------------------------
+    | delete xpath cache hash table
+    \-----------------------------------------------------------*/
+    if (doc->xpathCache) {
+        entryPtr = Tcl_FirstHashEntry (doc->xpathCache, &search);
+        while (entryPtr) {
+            xpathFreeAst((ast)Tcl_GetHashValue (entryPtr));
+            entryPtr = Tcl_NextHashEntry (&search);
+        }
+        Tcl_DeleteHashTable (doc->xpathCache);
+        FREE (doc->xpathCache);
+    }
 
     if (doc->extResolver) {
         FREE (doc->extResolver);
@@ -2700,10 +2731,10 @@ domSetAttribute (
     }
     if (attr) {
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
-            h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
+            h = Tcl_FindHashEntry (node->ownerDocument->ids, attr->nodeValue);
             if (h) {
                 Tcl_DeleteHashEntry (h);
-                h = Tcl_CreateHashEntry (&node->ownerDocument->ids,
+                h = Tcl_CreateHashEntry (node->ownerDocument->ids,
                                          attributeValue, &hnew);
                 /* XXX what to do, if hnew = 0  ??? */
                 Tcl_SetHashValue (h, node);
@@ -2832,10 +2863,10 @@ domSetAttributeNS (
     if (attr) {
         DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old valure: %s\n", attr->nodeName, attr->nodeValue);)
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
-            h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
+            h = Tcl_FindHashEntry (node->ownerDocument->ids, attr->nodeValue);
             if (h) {
                 Tcl_DeleteHashEntry (h);
-                h = Tcl_CreateHashEntry (&node->ownerDocument->ids,
+                h = Tcl_CreateHashEntry (node->ownerDocument->ids,
                                          attributeValue, &hnew);
                 Tcl_SetHashValue (h, node);
             }
@@ -2959,7 +2990,7 @@ domRemoveAttribute (
         }
 
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
-            h = Tcl_FindHashEntry (&node->ownerDocument->ids, attr->nodeValue);
+            h = Tcl_FindHashEntry (node->ownerDocument->ids, attr->nodeValue);
             if (h) Tcl_DeleteHashEntry (h);
         }
         FREE (attr->nodeValue);
@@ -3005,7 +3036,7 @@ domRemoveAttributeNS (
                 }
 
                 if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
-                    h = Tcl_FindHashEntry (&node->ownerDocument->ids, 
+                    h = Tcl_FindHashEntry (node->ownerDocument->ids, 
                                            attr->nodeValue);
                     if (h) Tcl_DeleteHashEntry (h);
                 }
@@ -3055,7 +3086,7 @@ domSetDocument (
     )
     
     if (node->nodeFlags & HAS_BASEURI) {
-        h = Tcl_FindHashEntry (&node->ownerDocument->baseURIs, (char*)node);
+        h = Tcl_FindHashEntry (node->ownerDocument->baseURIs, (char*)node);
         if (h) {
             FREE ((char *) Tcl_GetHashValue (h));
             Tcl_DeleteHashEntry (h);
@@ -3340,7 +3371,7 @@ domAppendChild (
 
     if ((node->ownerDocument != childToAppend->ownerDocument)
         || node->ownerDocument->nsptr
-        || childToAppend->ownerDocument->baseURIs.numEntries) {
+        || childToAppend->ownerDocument->baseURIs->numEntries) {
         domSetDocument (childToAppend, node->ownerDocument);
     }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
@@ -3520,7 +3551,7 @@ domInsertBefore (
     }
     if (node->ownerDocument != childToInsert->ownerDocument
         || node->ownerDocument->nsptr
-        || childToInsert->ownerDocument->baseURIs.numEntries) {
+        || childToInsert->ownerDocument->baseURIs->numEntries) {
         domSetDocument (childToInsert, node->ownerDocument);
     }
     node->ownerDocument->nodeFlags |= NEEDS_RENUMBERING;
@@ -3675,7 +3706,7 @@ domReplaceChild (
 
     if (node->ownerDocument != newChild->ownerDocument
         || node->ownerDocument->nsptr
-        || newChild->ownerDocument->baseURIs.numEntries) {
+        || newChild->ownerDocument->baseURIs->numEntries) {
         domSetDocument (newChild, node->ownerDocument);
     }
 
