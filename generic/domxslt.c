@@ -72,15 +72,16 @@
 |
 \---------------------------------------------------------------------------*/
 #define DBG(x)            
-#define TRACE(x)          DBG(fprintf(stderr,(x)))
-#define TRACE1(x,a)       DBG(fprintf(stderr,(x),(a)))
-#define TRACE2(x,a,b)     DBG(fprintf(stderr,(x),(a),(b)))
-#define TRACE3(x,a,b,c)   DBG(fprintf(stderr,(x),(a),(b),(c)))
-#define TRACE4(x,a,b,c,d) DBG(fprintf(stderr,(x),(a),(b),(c),(d)))
+#define TRACE(x)            DBG(fprintf(stderr,(x)))
+#define TRACE1(x,a)         DBG(fprintf(stderr,(x),(a)))
+#define TRACE2(x,a,b)       DBG(fprintf(stderr,(x),(a),(b)))
+#define TRACE3(x,a,b,c)     DBG(fprintf(stderr,(x),(a),(b),(c)))
+#define TRACE4(x,a,b,c,d)   DBG(fprintf(stderr,(x),(a),(b),(c),(d)))
+#define TRACE5(x,a,b,c,d,e) DBG(fprintf(stderr,(x),(a),(b),(c),(d),(e)))
 
-#define CHECK_RC          if (rc < 0) return rc
-#define CHECK_RC1(x)      if (rc < 0) {ckfree((char*)(x)); return rc;}       
-#define SET_TAG(t,n,s,v)  if (strcmp(n,s)==0) { t->info = v; return v; }
+#define CHECK_RC            if (rc < 0) return rc
+#define CHECK_RC1(x)        if (rc < 0) {ckfree((char*)(x)); return rc;}       
+#define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
 
 #if defined(_MSC_VER)
 # define STRCASECMP(a,b)  stricmp (a,b)
@@ -138,9 +139,10 @@ typedef struct xsltTemplate {
 
     char    * match;
     char    * name;
-    char    * nameNS;
+    char    * nameURI;
     ast       ast;
     char    * mode;
+    char    * modeURI;
     double    prio;
     domNode * content;
     double    precedence;
@@ -425,11 +427,12 @@ typedef struct {
 int ApplyTemplates ( xsltState *xs, xpathResultSet *context, 
                      domNode *currentNode, int currentPos,
                      domNode *actionNode, xpathResultSet *nodeList, 
-                     char *mode, char **errMsg);
+                     char *mode, char *modeURI, char **errMsg);
 
 int ApplyTemplate (  xsltState *xs, xpathResultSet *context,
                      domNode *currentNode, domNode *exprContext,
-                     int currentPos, char *mode, char **errMsg);
+                     int currentPos, char *mode, char *modeURI, 
+                     char **errMsg);
                      
 static int ExecActions (xsltState *xs, xpathResultSet *context,
                         domNode *currentNode, int currentPos, 
@@ -2307,6 +2310,8 @@ static int xsltAddTemplate (
     
     tpl->match      = getAttr(node,"match", a_match);
     str = getAttr(node, "name", a_name);
+    tpl->name       = NULL;
+    tpl->nameURI    = NULL;
     if (str) {
         domSplitQName (str, prefix, &localName);
         if (prefix[0] != '\0') {
@@ -2315,18 +2320,26 @@ static int xsltAddTemplate (
                 reportError (node, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
                 return -1;
             }
-            tpl->name   = localName;
-            tpl->nameNS = ns->uri;
-        } else {
-            tpl->name   = str;
-            tpl->nameNS = NULL;
+            tpl->nameURI = ns->uri;
         }
-    } else {
-        tpl->name   = NULL;
-        tpl->nameNS = NULL;
+        tpl->name   = localName;
     }
     tpl->ast        = NULL;
-    tpl->mode       = getAttr(node,"mode", a_mode); 
+    tpl->mode       = NULL;
+    tpl->modeURI    = NULL;
+    str = getAttr (node, "mode", a_mode);
+    if (str) {
+        domSplitQName (str, prefix, &localName);
+        if (prefix[0] != '\0') {
+            ns = domLookupPrefix (node, prefix);
+            if (!ns) {
+                reportError (node, "The prefix of the \"mode\" attribute value isn't bound to a namespace.", errMsg);
+                return -1;
+            }
+            tpl->modeURI = ns->uri;
+        }
+        tpl->mode = localName;
+    }
     tpl->prio       = 0.5;
     tpl->content    = node;
     tpl->precedence = precedence;
@@ -2350,8 +2363,8 @@ static int xsltAddTemplate (
             DBG(printAst( 0, tpl->ast);)
         }
     }
-    TRACE4("AddTemplate '%s' '%s' '%s' '%2.2f' \n\n",
-            tpl->match, tpl->name, tpl->mode, tpl->prio);
+    TRACE5("AddTemplate '%s' '%s' '%s' '%s' '%2.2f' \n\n",
+            tpl->match, tpl->name, tpl->mode, tpl->modeURI, tpl->prio);
 
     /* append new template at the end of the template list */
     if (xs->lastTemplate == NULL) {
@@ -3018,7 +3031,7 @@ static int ExecAction (
     Tcl_DString     dStr;
     domProcessingInstructionNode *pi;      
     xpathResultSet  rs, nodeList;
-    char           *str, *str2, *mode, *select, *pc;
+    char           *str, *str2, *mode, *modeURI, *select, *pc;
     char           *nsAT, *nsStr;
     char           *uri, *localName, prefix[MAX_PREFIX_LEN];
     int             rc, b, i, len, disableEsc = 0;
@@ -3051,15 +3064,19 @@ static int ExecAction (
             currentPrio = -100000.0;
             currentPrec = 0.0;
             mode = xs->currentTplRule->mode;
+            modeURI = xs->currentTplRule->modeURI;
             TRACE2("apply-imports: current template precedence='%f' mode='%s'\n", xs->currentTplRule->precedence, xs->currentTplRule->mode);
             for (tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
-                TRACE3("find tpl match='%s' mode='%s' name='%s'\n",
-                       tpl->match, tpl->mode, tpl->name);
+                TRACE4("find tpl match='%s' mode='%s' modeURI='%s' name='%s'\n",
+                       tpl->match, tpl->mode, tpl->modeURI, tpl->name);
                 /* exclude those, which don't match the current mode 
                    and the currentTplRule */
                 if (   ( mode && !tpl->mode)
                        || (!mode &&  tpl->mode)
                        || ( mode &&  tpl->mode && (strcmp(mode,tpl->mode)!=0))
+                       || (!modeURI && tpl->modeURI)
+                       || ( modeURI && !tpl->modeURI)
+                       || ( modeURI && tpl->modeURI && (strcmp(modeURI, tpl->modeURI)!=0))
                        || (tpl == xs->currentTplRule)
                     ) {
                     TRACE("doesn't match mode\n");
@@ -3114,7 +3131,7 @@ static int ExecAction (
                     child = child->nextSibling; 
                 }
                 rc = ApplyTemplates (xs, context, currentNode, currentPos,
-                                actionNode, &rs, mode, errMsg);
+                                actionNode, &rs, mode, modeURI, errMsg);
                 xpathRSFree( &rs );
                 CHECK_RC;
 
@@ -3132,8 +3149,22 @@ static int ExecAction (
             break;
             
         case applyTemplates:
-            mode   = getAttr(actionNode, "mode", a_mode);
-            select = getAttr(actionNode, "select", a_select);
+            mode    = NULL;
+            modeURI = NULL;
+            str     = getAttr (actionNode, "mode", a_mode);
+            if (str) {
+                domSplitQName (str, prefix, &localName);
+                if (prefix[0] != '\0') {
+                    ns = domLookupPrefix (actionNode, prefix);
+                    if (!ns) {
+                        reportError (actionNode, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                        return -1;
+                    }
+                    modeURI = ns->uri;
+                }
+                mode = localName;
+            }
+            select  = getAttr(actionNode, "select", a_select);
             if (!select) { 
                 xpathRSInit (&rs);
                 if (currentNode->nodeType == ELEMENT_NODE) {
@@ -3167,7 +3198,7 @@ static int ExecAction (
             DBG(rsPrint(&rs));
 
             rc = ApplyTemplates(xs, context, currentNode, currentPos,
-                                actionNode, &rs, mode, errMsg); 
+                                actionNode, &rs, mode, modeURI, errMsg); 
             CHECK_RC;
             xpathRSFree( &rs ); 
             break;
@@ -3280,11 +3311,11 @@ static int ExecAction (
             for( tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
                 if (tpl->name && (strcmp(tpl->name,str)==0)) {
                     if (uri) {
-                        if (tpl->nameNS) {
-                            if (strcmp(tpl->nameNS, uri)!=0) continue;
+                        if (tpl->nameURI) {
+                            if (strcmp(tpl->nameURI, uri)!=0) continue;
                         } else continue;
                     } else {
-                        if (tpl->nameNS) continue;
+                        if (tpl->nameURI) continue;
                     }
                     if (tpl->precedence > currentPrec) {
                         tplChoosen = tpl;
@@ -4057,6 +4088,7 @@ int ApplyTemplate (
     domNode        * exprContext,
     int              currentPos,
     char           * mode,
+    char           * modeURI,
     char          ** errMsg
 )
 {
@@ -4088,6 +4120,9 @@ int ApplyTemplate (
         if (   ( mode && !tpl->mode)
             || (!mode &&  tpl->mode)
             || ( mode &&  tpl->mode && (strcmp(mode,tpl->mode)!=0))
+            || (!modeURI && tpl->modeURI)
+            || ( modeURI && !tpl->modeURI)
+            || ( modeURI && tpl->modeURI && (strcmp(modeURI, tpl->modeURI)!=0))
         ) {
             TRACE("doesn't match mode\n");
             continue; /* doesn't match mode */
@@ -4171,7 +4206,7 @@ int ApplyTemplate (
             child = child->nextSibling; 
         }
         rc = ApplyTemplates (xs, context, currentNode, currentPos, exprContext,
-                             &rs, mode, errMsg);
+                             &rs, mode, modeURI, errMsg);
         xpathRSFree( &rs );
         CHECK_RC;
 
@@ -4202,6 +4237,7 @@ int ApplyTemplates (
     domNode        * actionNode,
     xpathResultSet * nodeList,
     char           * mode,
+    char           * modeURI,
     char          ** errMsg
 )
 {
@@ -4218,8 +4254,8 @@ int ApplyTemplates (
                 CHECK_RC;
                 xs->varFrames->polluted = 0;
             }
-            rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode, i, 
-                                mode, errMsg);
+            rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode,
+                                i, mode, modeURI, errMsg);
             CHECK_RC;
             if (xs->varFrames->polluted) {
                 xsltPopVarFrame (xs);
@@ -5470,7 +5506,7 @@ int xsltProcess (
     }
 
     rc = ApplyTemplates (&xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,
-                         errMsg);
+                         NULL, errMsg);
     if (rc != 0) {
         xsltFreeState (&xs);
         return rc;
