@@ -1,4 +1,12 @@
 2003-03-22  Rolf Ade  <rolf@pointsman.de>
+        * README
+        * README.AOL
+        * configure.in
+        * configure
+        * configure-tcl8.0.5: Updated to new version number 0.7.6.
+
+        * generic/tcldom.h: Removed hard coded version number, uses
+          now VERSION define.
 
         * extensions/tnc/tnc.c
         * extensions/tnc/tests/tnc.c: Added code needed to handle
