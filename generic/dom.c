@@ -1556,6 +1556,10 @@ domReadDocument (
         domModuleInitialize();
     }
 
+#ifndef TCL_THREADS
+    domUniqueNodeNr = 0;
+#endif
+    
     doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
     if (extResolver) {
         doc->extResolver = extResolver;
@@ -1575,7 +1579,6 @@ domReadDocument (
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
     info.activeNS             = (domActiveNS*) MALLOC (sizeof(domActiveNS) * info.activeNSsize);
-/*      memset (info.activeNS, 0, sizeof (domActiveNS) * info.activeNSsize); */
     info.baseURI              = NULL;
     info.insideDTD            = 0;
 
@@ -3063,11 +3066,6 @@ domEscapeCData (
     Tcl_DStringInit (escapedData);
     pc = value;
     for (i = 0; i < length; i++) {
-        if (*pc == '"') {
-            Tcl_DStringAppend (escapedData, &value[start], i - start);
-            Tcl_DStringAppend (escapedData, "&quot;", 6);
-            start = i+1;
-        } else
         if (*pc == '&') {
             Tcl_DStringAppend (escapedData, &value[start], i - start);
             Tcl_DStringAppend (escapedData, "&amp;", 5);
@@ -3082,12 +3080,7 @@ domEscapeCData (
             Tcl_DStringAppend (escapedData, &value[start], i - start);
             Tcl_DStringAppend (escapedData, "&gt;", 4);
             start = i+1;
-        } else
-        if (*pc == '\'') {
-            Tcl_DStringAppend (escapedData, &value[start], i - start);
-            Tcl_DStringAppend (escapedData, "&apos;", 6);
-            start = i+1;
-        }
+        } 
         pc++;
     }
     if (start) {
@@ -4055,7 +4048,7 @@ domXPointerAncestor (
 
 
 EXTERN int tcldom_returnDocumentObj (Tcl_Interp *interp, domDocument *document,
-                                 int setVariable, Tcl_Obj *var_name);
+                                int setVariable, Tcl_Obj *var_name, int trace);
 
 void
 tdom_freeProc (
@@ -4257,7 +4250,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         }
         info->document->rootNode = rootNode;
         result = tcldom_returnDocumentObj (interp, info->document, 0,
-                                           newObjName);
+                                           newObjName, 1);
         info->document = NULL;
         return result;
 
