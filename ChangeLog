@@ -1,3 +1,9 @@
+2005-02-02  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc: Updated to provide the new defines
+          PACKAGE_NAME and PACKAGE_VERSION introduced by the update to
+          TEA-3 support.
+
 2005-01-19  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
