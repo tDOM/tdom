@@ -340,35 +340,15 @@ static const unsigned char CharBit[] = {
 
 
 #if TclOnly8Bits == 1
-#  define isNameStart(x) (isalpha(*x) || ((*x)=='_') || ((*x)==':'))
-#  define isNameChar(x) (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.') || ((*x)==':'))
+#  define isNameStart(x)   (isalpha(*x) || ((*x)=='_') || ((*x)==':'))
+#  define isNameChar(x)    (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.') || ((*x)==':'))
 #  define isNCNameStart(x) (isalpha(*x) || ((*x)=='_'))
-#  define isNCNameChar(x) (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.'))
+#  define isNCNameChar(x)  (isalnum(*x)  || ((*x)=='_') || ((*x)=='-') || ((*x)=='.'))
 #else
-static int isNameStart(char *c)
-{
-    int clen;
-    clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NAME_START(c, clen));
-}
-static int isNCNameStart(char *c)
-{
-    int clen;
-    clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NCNAME_START(c, clen));
-}
-static int isNameChar(char *c)
-{
-    int clen;
-    clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NAMING_NMTOKEN(c, clen));
-}
-static int isNCNameChar(char *c)
-{
-    int clen;
-    clen = UTF8_CHAR_LEN (*c);
-    return (UTF8_GET_NAMING_NCNMTOKEN(c, clen));
-}
+#  define isNameStart(x)   UTF8_GET_NAME_START((x),UTF8_CHAR_LEN(*(x)))
+#  define isNCNameStart(x) UTF8_GET_NCNAME_START((x),UTF8_CHAR_LEN(*(x)))
+#  define isNameChar(x)    UTF8_GET_NAMING_NMTOKEN((x),UTF8_CHAR_LEN(*(x)))
+#  define isNCNameChar(x)  UTF8_GET_NAMING_NCNMTOKEN((x),UTF8_CHAR_LEN(*(x)))
 #endif
 
 #define IS_XML_WHITESPACE(c)  ((c)==' ' || (c)=='\n' || (c)=='\r' || (c)=='\t')
@@ -515,6 +495,9 @@ typedef struct domDocument {
     struct domNS    **namespaces;
     int               nsptr;
     int               nslen;
+    char            **prefixNSMappings; /* Stores doc global prefix ns
+                                           mappings for resolving of
+                                           prefixes in seletNodes expr */
 #ifdef TCL_THREADS
     unsigned int      nodeCounter;
 #endif

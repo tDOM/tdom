@@ -2603,6 +2603,18 @@ domFreeDocument (
     FREE ((char *)doc->namespaces);
 
     /*-----------------------------------------------------------
+    | delete global selectNodes prefix namespace mappings
+    \-----------------------------------------------------------*/
+    if (doc->prefixNSMappings) {
+        i = 0;
+        while (doc->prefixNSMappings[i]) {
+            FREE (doc->prefixNSMappings[i]);
+            i++;
+        }
+        FREE (doc->prefixNSMappings);
+    }
+
+    /*-----------------------------------------------------------
     | delete doctype info
     \-----------------------------------------------------------*/
     if (doc->doctype) {

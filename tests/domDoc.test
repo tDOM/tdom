@@ -28,6 +28,7 @@
 #    domDoc-22.*: appendFromScript
 #    domDoc-23.*: getElementsByTagNameNS
 #    domDoc-24.*: cdataSectionElements
+#    domDoc-25.*: selectNodesNamespaces
 #
 # Copyright (c) 2004 Rolf Ade.
 
@@ -1138,6 +1139,113 @@ test domDoc-24.16 {cdataSectionElements} {
     $doc delete
     set result
 } {<child><![CDATA[some text]]></child>}
+
+test domDoc-25.1 {selectNodesNamespaces} {
+    set doc [dom createDocument foo]
+    set result [$doc selectNodesNamespaces]
+    $doc delete
+    set result
+} {}
+
+test domDoc-25.2 {selectNodesNamespaces} {
+    set doc [dom createDocument foo]
+    set result [list [$doc selectNodesNamespaces] \
+                    [$doc selectNodesNamespaces {}] \
+                    [$doc selectNodesNamespaces]]
+    $doc delete
+    set result
+} {{} {} {}}
+
+test domDoc-25.3 {selectNodesNamespaces} {
+    set doc [dom createDocument foo]
+    set result [list [$doc selectNodesNamespaces] \
+                    [$doc selectNodesNamespaces {prefix http://foo.org/uri}] \
+                    [$doc selectNodesNamespaces] \
+                    [$doc selectNodesNamespaces {}]]
+    $doc delete
+    set result
+} {{} {prefix http://foo.org/uri} {prefix http://foo.org/uri} {}}
+
+test domDoc-25.4 {selectNodesNamespaces} {
+    set doc [dom createDocument foo]
+    set result [catch {$doc selectNodesNamespaces wrong} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {The optional argument to the selectNodesNamespaces method must be a 'prefix namespace' pairs list}}
+
+test domDoc-25.5 {selectNodesNamespaces} {
+    set doc [dom parse {<root xmlns="rootdefaultNS">
+        <elem1 xmlns="elem1NS"><elem11/></elem1>
+        <elem2 xmlns="elem2NS"/>
+        </root>}]
+    $doc selectNodesNamespaces {default1 rootdefaultNS}
+    set node [$doc selectNodes default1:root]
+    set result [list [$node prefix] [$node localName]]
+    $doc delete
+    set result
+} {{} root}
+
+test domDoc-25.6 {selectNodesNamespaces} {
+    set doc [dom parse {<root xmlns="rootdefaultNS">
+        <elem1 xmlns="elem1NS"><elem11/></elem1>
+        <elem2 xmlns="elem2NS"/>
+        </root>}]
+    $doc selectNodesNamespaces {default2 elem1NS default1 rootdefaultNS}
+    set node [$doc selectNodes default1:root/default2:elem1]
+    set result [list [$node prefix] [$node localName]]
+    set node [$doc selectNodes default1:root/default2:elem1/default2:elem11]
+    lappend result [$node nodeName] [$node namespaceURI]
+    $doc delete
+    set result
+} {{} elem1 elem11 elem1NS}
+
+test domDoc-25.7 {selectNodesNamespaces} {
+    set doc [dom parse {<root xmlns="rootdefaultNS">
+        <elem1 xmlns="elem1NS"><elem11 xmlns=""/></elem1>
+        <elem2 xmlns="elem2NS"/>
+        </root>}]
+    $doc selectNodesNamespaces {default2 elem1NS default1 rootdefaultNS}
+    set node [$doc selectNodes default1:root/default2:elem1]
+    set result [list [$node prefix] [$node localName]]
+    set node [$doc selectNodes default1:root/default2:elem1/elem11]
+    lappend result [$node nodeName] [$node namespaceURI]
+    $doc delete
+    set result
+} {{} elem1 elem11 {}}
+
+test domDoc-25.8 {selectNodesNamespaces} {
+    set doc [dom parse {<root xmlns="rootdefaultNS">
+        <elem1 xmlns="elem1NS"><elem11 xmlns=""/></elem1>
+        <elem2 xmlns="elem2NS"/>
+        </root>}]
+    $doc selectNodesNamespaces {default2 elem1NS default1 rootdefaultNS}
+    set result [catch {set node [$doc selectNodes \
+                                     -namespaces {
+                                         dflt1 elem1NS 
+                                         dflt2 rootdefaultNS
+                                     } \
+                                     default1:root/dflt1:elem1/elem11]} errMsg]
+    lappend result [$node nodeName] [$]
+    $doc delete
+    set result
+} {{} elem1 elem11 {}}
+
+test domDoc-25.9 {selectNodesNamespaces} {
+    set doc [dom parse {<root xmlns="rootdefaultNS">
+        <elem1 xmlns="elem1NS"><elem11 xmlns=""/></elem1>
+        <elem2 xmlns="elem2NS"/>
+        </root>}]
+    $doc selectNodesNamespaces {default2 elem1NS default1 rootdefaultNS}
+    set node [$doc selectNodes default1:root/default2:elem1]
+    set result [list [$node prefix] [$node localName]]
+    set node [$doc selectNodes \
+                  -namespaces {dflt1 elem1NS dflt2 rootdefaultNS} \
+                  dflt2:root/dflt1:elem1/elem11]
+    lappend result [$node nodeName] [$node namespaceURI]
+    $doc delete
+    set result
+} {{} elem1 elem11 {}}
 
 # cleanup
 ::tcltest::cleanupTests
