@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1253">SEE ALSO</a> · <a href="#SECTnode1262">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1293">SEE ALSO</a> · <a href="#SECTnode1302">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
@@ -111,20 +111,25 @@ usually a result of a XSLT transformation.</dd>
 
       
         <dt>
-<b class="method">asXML</b> <b class="option">?-indent none/1..8?</b>
-<b class="option">?-channel channelId?</b> <b class="option">?-escapeNonASCII?</b>
+<b class="method">asXML</b> <b class="option">?-indent none/1..8?</b> <b class="option">?-channel channelId?</b> <b class="option">?-escapeNonASCII?</b> <b class="option">-doctypeDeclaration &lt;boolean&gt;</b>
 </dt>
         <dd>Returns the DOM tree as an (optional indented) XML string or
 sends the output directly to the given channelId. If the option
 <i class="m">-escapeNonASCII</i> is given, every non 7 bit ASCII character in attribute
 values or element PCDATA content will be escaped as character reference in
-decimal representation.</dd>
+decimal representation. The flag <i class="m">-doctypeDeclaration</i> determines, whether
+there will be a DOCTYPE declaration emitted before the first node of the
+document. The default is, to do not. The DOCTYPE name will always be the
+element name of the document element. An external entity declaration of the
+external subset is only emitted, if the document has a system identifier.
+</dd>
+
       
 
       
         <dt>
 <b class="method">asHTML</b> <b class="option">?-channel
-channelId?</b> <b class="option">?-escapeNonASCII?</b> <b class="option">?-htmlEntities?</b>
+channelId?</b> <b class="option">?-escapeNonASCII?</b> <b class="option">?-htmlEntities?</b> <b class="option">-doctypeDeclaration &lt;boolean&gt;</b>
 </dt> 
         <dd>Returns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
@@ -133,8 +138,38 @@ channelId. If the option <i class="m">-escapeNonASCII</i> is given, every non 7 
 character in attribute values or element PCDATA content will be escaped as
 character reference in decimal representation. If the option
 <i class="m">-htmlEntities</i> is given, a character is outputed using a HTML 4.01
-character entity reference, if one is defined for it.</dd>
+character entity reference, if one is defined for it. The flag
+<i class="m">-doctypeDeclaration</i> determines, whether there will be a DOCTYPE
+declaration emitted before the first node of the document. The default is, to
+do not. The DOCTYPE name will always be the element name of the document
+element without case normalization. An external entity declaration of the
+external subset is only emitted, if the document has a system identifier. The
+doctype declaration will be written from the avaliable informations, without
+check, if this is a known (w3c) HTML version information or if the document
+confirms to the given HTML version.</dd>
       
+
+      
+        <dt>
+<b class="method">publicId</b> <i class="m">?publicId?</i>
+</dt>
+        <dd>Returns the public identifier of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the public identifier of the document is set to this
+value.</dd>
+      
+
+      
+        <dt>
+<b class="method">systemId</b> <i class="m">?systemId?</i>
+</dt>
+        <dd>Returns the system identifier of the doctype declaration of the
+document, if there is one, otherwise the empty string. If there is a value
+given to the method, the system identifier of the document is set to this
+value.</dd>
+      
+
+
 
       
         <dt>
@@ -171,11 +206,11 @@ tried to be executed. This allows quick method additions on Tcl level.</p><p>New
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTnode1253">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode1293">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTnode1262">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTnode1302">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
