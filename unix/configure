@@ -542,7 +542,7 @@ TDOM_SRC_DIR=..
 #--------------------------------------------------------------------
 
 MAJOR_VERSION=0
-MINOR_VERSION=6
+MINOR_VERSION=7
 PATCHLEVEL=0
 VERSION=${MAJOR_VERSION}.${MINOR_VERSION}
 
