@@ -38,6 +38,10 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.6  2002/03/23 00:31:58  rolf
+|   Fix for multiple predicates on pattern steps. Patterns of the form
+|   foo[attr='c'][2] now work correct.
+|
 |   Revision 1.5  2002/03/22 00:14:22  rolf
 |   Removed some overseen debugging code.
 |
@@ -1513,37 +1517,45 @@ Production(StepPattern)
         a = Recurse(NodeTest);
     }
     { 
-        ast b;
-        int firstPredicate = 1;
+        ast b, c;
+        int stepIsOptimizable = 1, isFirst = 1;
         while (LA==LBRACKET) {
-            b = Recurse(Predicate);
-            if (firstPredicate) {
-                if (IsPredOptimizable(b)) {
-                    Append( a, New( FillWithCurrentNode));                 
-                } else {
-                    /* copy the step before the Predicate */
-                    ast aCopy = NEWCONS;
-                    aCopy->type      = a->type;
-                    aCopy->next      = NULL;
-                    aCopy->strvalue  = a->strvalue;
-                    aCopy->intvalue  = a->intvalue;
-                    aCopy->realvalue = a->realvalue;
-                    aCopy->child     = NULL;
-                    if (a->child) {
-                        ast aCopyChild = NEWCONS;
-                        aCopyChild->type      = a->child->type;
-                        aCopyChild->next      = NULL;
-                        aCopyChild->child     = NULL;
-                        aCopyChild->strvalue  = a->child->strvalue;
-                        aCopyChild->intvalue  = a->child->intvalue;
-                        aCopyChild->realvalue = a->child->realvalue;
-                       aCopy->child = aCopyChild;
-                    }                
-                    Append( a, New1( FillNodeList, aCopy));
-                }
-                firstPredicate = 0;
+            b = Recurse (Predicate);
+            if (stepIsOptimizable) {
+                if (!IsPredOptimizable(b)) stepIsOptimizable = 0;
             }
-            Append( a, New1WithEvalSteps( Pred, b));
+            if (isFirst) {
+                c = New1WithEvalSteps( Pred, b);
+                isFirst = 0;
+            } else {
+                Append (c, New1WithEvalSteps( Pred, b));
+            }
+        }
+        if (!isFirst) {
+            if (stepIsOptimizable) {
+                Append (a, New (FillWithCurrentNode));
+            } else {
+                /* copy the step before the Predicate */
+                ast aCopy = NEWCONS;
+                aCopy->type      = a->type;
+                aCopy->next      = NULL;
+                aCopy->strvalue  = a->strvalue;
+                aCopy->intvalue  = a->intvalue;
+                aCopy->realvalue = a->realvalue;
+                aCopy->child     = NULL;
+                if (a->child) {
+                    ast aCopyChild = NEWCONS;
+                    aCopyChild->type      = a->child->type;
+                    aCopyChild->next      = NULL;
+                    aCopyChild->child     = NULL;
+                    aCopyChild->strvalue  = a->child->strvalue;
+                    aCopyChild->intvalue  = a->child->intvalue;
+                    aCopyChild->realvalue = a->child->realvalue;
+                    aCopy->child = aCopyChild;
+                }                
+                Append( a, New1( FillNodeList, aCopy));
+            }
+            Append (a, c);
         }
     }
 
@@ -4226,9 +4238,9 @@ int xpathMatches (
     char             ** errMsg
 )
 {
-    xpathResultSet  rs, stepResult, nodeList;
+    xpathResultSet  rs, stepResult, nodeList, newNodeList;
     ast             childSteps;
-    int             rc, i, currentPos = 0, nodeMatches, docOrder = 1;
+    int             rc, i, j, currentPos = 0, nodeMatches, docOrder = 1;
     char           *localName = NULL, *nodeUri;
     domAttrNode    *attr;
     domNode        *child;
@@ -4518,50 +4530,64 @@ int xpathMatches (
                 } else if (xpathFuncBoolean(&stepResult)) {
                     nodeMatches = 1;
                 }
+                xpathRSFree (&stepResult);
                 
                 /* if nodeMatches == false we don't have to continue to filter */
                 if (!nodeMatches) { 
-                    xpathRSFree (&stepResult);
                     xpathRSFree (&nodeList); return 0;
                 }
-                
-                /*  if next step is not a Predicate, nodeMatches contains the
-                 *  correct answer already 
-                 */
-                if ((!steps->next) || (steps->next->type != Pred)) {
-                    xpathRSFree (&stepResult); 
-                    break; /* return nodeMatches; */
-                }
-                
-                if (stepResult.type != xNodeSetResult) {
-                    xpathRSInit(&stepResult);
-                    rsAddNode  (&stepResult, nodeToMatch);
-                }
-                while (steps->next && (steps->next->type == Pred)) {
-                    xpathRSInit (&rs);
-                    DBG( 
-                      fprintf(stderr, "inner xpathEvalPredicate get\n");
-                      rsPrint(&stepResult);
-                    )
-                    rc = xpathEvalPredicate (steps->next, exprContext, &rs,
-                                             &stepResult, cbs, &docOrder, errMsg);
-                    CHECK_RC;
-                    DBG( 
-                      fprintf(stderr, "inner xpathEvalPredicate returned\n");
-                      rsPrint(&rs);
-                    )
-                    xpathRSFree (&stepResult); 
-                    stepResult = rs;
-                    steps = steps->next;
-                }
-                nodeMatches = 0;
-                for (i=0; i<stepResult.nr_nodes; i++) {
-                    if (stepResult.nodes[i] == nodeToMatch) {
-                        nodeMatches = 1;
+
+                /* if the nr_nodes of nodeList is > 1 (ie. we filter a
+                   FillNodeList step, not only a FillWithCurrentNode
+                   step, build the resulting nodeList context after
+                   this predicate */
+
+                if (nodeList.nr_nodes > 1) {
+                    xpathRSInit (&newNodeList);
+                    currentPos = -1;
+                    j = 0;
+                    for (i = 0; i < nodeList.nr_nodes; i++) {
+                        xpathRSInit (&stepResult);
+                        docOrder = 1;
+                        rc = xpathEvalStep (steps->child, nodeList.nodes[i],
+                                            exprContext, i, &nodeList, cbs,
+                                            &stepResult, &docOrder, errMsg);
+                        if (rc) {
+                            xpathRSFree (&stepResult);
+                            xpathRSFree (&nodeList);
+                            return rc;
+                        }
+                        
+                        nodeMatches = 0;
+                        
+                        if (stepResult.type == RealResult) {
+                            stepResult.type = IntResult;
+                            stepResult.intvalue = xpathRound(stepResult.realvalue);
+                        }
+                        if (stepResult.type == IntResult) {
+                            if (stepResult.intvalue < 0) {
+                                stepResult.intvalue = nodeList.nr_nodes + stepResult.intvalue;
+                            }
+                            if ((stepResult.intvalue > 0 ) &&
+                                (stepResult.intvalue <= nodeList.nr_nodes) &&
+                                (stepResult.intvalue == (currentPos+1)) ) {
+                                nodeMatches = 1;
+                            }
+                        } else if (xpathFuncBoolean(&stepResult)) {
+                            nodeMatches = 1;
+                        }
+                        if (nodeMatches) {
+                            rsAddNode (&newNodeList, nodeList.nodes[i]);
+                            if (nodeList.nodes[i] == nodeToMatch) {
+                                currentPos = j;
+                            }
+                            j++;
+                        }
+                        xpathRSFree (&stepResult);
                     }
+                    xpathRSFree (&nodeList);
+                    nodeList = newNodeList;
                 }
-                xpathRSFree (&stepResult);
-                if (!nodeMatches) { xpathRSFree (&nodeList); return 0; }
                 break;
                 
             case CombinePath:
