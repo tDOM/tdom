@@ -678,7 +678,7 @@ static void xsltPopVarFrame (
             for (i = xs->varFrames->varStartIndex;
                  i < xs->varFrames->varStartIndex + xs->varFrames->nrOfVars;
                  i++) {
-                xpathRSFree (&((&xs->varStack[i])->rs));
+                xpathRSFree (&(&xs->varStack[i])->rs);
             }
         }
         xs->varStackPtr -= xs->varFrames->nrOfVars;
@@ -3171,9 +3171,9 @@ static int ExecAction (
             xs->currentTplRule = tplChoosen;
             rc = ExecActions(xs, context, currentNode, currentPos, 
                              tplChoosen->content->firstChild, errMsg);
+            xsltPopVarFrame (xs);
             CHECK_RC;
             xs->currentTplRule = currentTplRule;
-            xsltPopVarFrame (xs);
             break;
             
         case applyTemplates:
@@ -3362,13 +3362,16 @@ static int ExecAction (
                 DBG(printXML(xs->lastNode, 0, 2);)
                 rc = setParamVars (xs, context, currentNode, currentPos,
                                    actionNode, errMsg);
-                CHECK_RC; 
+                if (rc < 0) {
+                    xsltPopVarFrame (xs);
+                    return rc;
+                }
                 SETSCOPESTART;
                 rc = ExecActions(xs, context, currentNode, currentPos, 
                                  tplChoosen->content->firstChild, errMsg);
                 TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
-                CHECK_RC;    
                 xsltPopVarFrame (xs);
+                CHECK_RC;    
                 DBG(printXML(xs->lastNode, 0, 2);)
             } else {
                 reportError (actionNode, 
@@ -3710,7 +3713,10 @@ static int ExecAction (
                     /* process the children as well */
                     rc = ExecActions(xs, &rs, rs.nodes[i], i,
                                      actionNode->firstChild, errMsg);
-                    CHECK_RC;
+                    if (rc < 0) {
+                        xsltPopVarFrame (xs);
+                        return rc;
+                    }
                     if (xs->varFrames->polluted) {
                         xsltPopVarFrame (xs);
                         xsltPushVarFrame (xs);
@@ -4265,13 +4271,19 @@ int ApplyTemplates (
                 xsltPushVarFrame (xs);
                 rc = setParamVars (xs, context, currentNode, currentPos,
                                    actionNode, errMsg);
-                CHECK_RC;
+                if (rc < 0) {
+                    xsltPopVarFrame (xs);
+                    return rc;
+                }
                 SETSCOPESTART;
                 xs->varFrames->polluted = 0;
             }
             rc = ApplyTemplate (xs, nodeList, nodeList->nodes[i], actionNode,
                                 i, mode, modeURI, errMsg);
-            CHECK_RC;
+            if (rc < 0) {
+                xsltPopVarFrame (xs);
+                return rc;
+            }
             if (xs->varFrames->polluted) {
                 xsltPopVarFrame (xs);
                 needNewVarFrame = 1;
@@ -4683,6 +4695,7 @@ static int processTopLevelVars (
                 Tcl_DStringAppend (&dStr, "\" defined at top level in the stylesheet.", -1);
                 *errMsg = strdup (Tcl_DStringValue (&dStr));
                 Tcl_DStringFree (&dStr);
+                xpathRSFree (&nodeList);
                 return -1;
             }
             topLevelVar = (xsltTopLevelVar *) Tcl_GetHashValue (entryPtr);
@@ -4693,6 +4706,7 @@ static int processTopLevelVars (
                 Tcl_DStringAppend (&dStr, "\" is defined as variable, not as parameter.", -1);
                 *errMsg = strdup (Tcl_DStringValue (&dStr));
                 Tcl_DStringFree (&dStr);
+                xpathRSFree (&nodeList);
                 return -1;
             }
             if (xsltVarExists (xs, parameters[i], NULL)) {
@@ -5234,10 +5248,10 @@ xsltFreeState (
 
     /*--- free sub documents ---*/
     sd = xs->subDocs;
-    while (sd && sd->next && sd->next->next) {
+    while (sd)  {
         sdsave = sd;
         sd = sd->next;
-        free(sdsave->baseURI);
+        if (sdsave->baseURI) free(sdsave->baseURI);
         for (entryPtr = Tcl_FirstHashEntry (&sdsave->keyData, &search);
              entryPtr != (Tcl_HashEntry*) NULL;
              entryPtr = Tcl_NextHashEntry (&search)) {
@@ -5257,12 +5271,16 @@ xsltFreeState (
             Tcl_DeleteHashTable (htable);
             Tcl_Free ((char*)htable);
         }
+        Tcl_DeleteHashTable (&sdsave->keyData);
         excludeNS = sdsave->excludeNS;
         while (excludeNS) {
             if (excludeNS->uri) free (excludeNS->uri);
             excludeNSsave = excludeNS;
             excludeNS = excludeNS->next;
             Tcl_Free ((char *)excludeNSsave);
+        }
+        if (sdsave->next && sdsave->next->next) {
+            domFreeDocument (sdsave->doc, NULL, NULL);
         }
         Tcl_Free((char*)sdsave);
     }
@@ -5440,7 +5458,6 @@ int xsltProcess (
     xs.decimalFormats->patternSeparator  = ';';
     xs.decimalFormats->next              = NULL;
     
-
     xsltPushVarFrame(&xs);
     xpathRSInit( &nodeList );
     rsAddNode( &nodeList, xmlNode); 
@@ -5514,8 +5531,6 @@ int xsltProcess (
                          NULL, errMsg);
     if (rc != 0) goto error;
 
-    xsltPopVarFrame (&xs);
-
     /* Rudimentary xsl:output support */
     if (xs.outputMethod) {
         if (strcmp (xs.outputMethod, "xml")==0) {
@@ -5565,11 +5580,13 @@ int xsltProcess (
     xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
     *resultDoc = xs.resultDoc;
 
+    xsltPopVarFrame (&xs);
     xpathRSFree( &nodeList );
     xsltFreeState (&xs);
     return 0;
 
  error:
+    xsltPopVarFrame (&xs);
     xpathRSFree( &nodeList );
     xsltFreeState (&xs);
     domFreeDocument (xs.resultDoc, NULL, NULL);
