@@ -28,6 +28,9 @@
 |
 |
 |   $Log$
+|   Revision 1.8  2002/07/14 07:00:35  zoran
+|   Added small comment describing what aolstub.cpp does.
+|
 |   Revision 1.7  2002/07/02 19:25:08  zoran
 |   Fixed references to CONS'ified Tcl API (8.4 and later)
 |   Also, fixed (disappeared) NODE_NO references which broke the
@@ -146,6 +149,12 @@ Tdom_SafeInit (interp)
     return Tdom_Init (interp);
 }
 
+/*
+ * Load the AOLserver stub. This allows the library
+ * to be loaded as AOLserver module.
+ */
+
 #ifdef NS_AOLSERVER
 # include "aolserver.cpp"
 #endif
+
