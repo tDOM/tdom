@@ -480,13 +480,12 @@ TclExpatCreateParser(interp, expat)
 {
 
   if (expat->ns_mode) {
-      if (!(expat->parser = 
-            XML_ParserCreate_MM(NULL, MEM_SUITE, &expat->nsSeparator))) {
+      if (!(expat->parser = XML_ParserCreateNS(NULL,expat->nsSeparator))) {
           Tcl_SetResult(interp, "unable to create expat parserNs", NULL);
           return TCL_ERROR;
       }
   } else {
-      if (!(expat->parser = XML_ParserCreate_MM(NULL, MEM_SUITE, NULL))) {
+      if (!(expat->parser = XML_ParserCreate(NULL))) {
           Tcl_SetResult(interp, "unable to create expat parser", NULL);
           return TCL_ERROR;
       }
@@ -573,20 +572,20 @@ TclExpatFreeParser(expat)
 {
   ExpatElemContent *eContent, *eContentSave;
 
-  eContent = expat->eContents;
-  while (eContent) {
-      XML_FreeContentModel (expat->parser, eContent->content);
-      eContentSave = eContent;
-      eContent = eContent->next;
-      FREE((char *) eContentSave);
-  }
-  expat->eContents = NULL;
-
   XML_ParserFree(expat->parser);
   if (expat->cdata != NULL) {
       Tcl_DecrRefCount(expat->cdata);
   }
   expat->parser = NULL;
+
+  eContent = expat->eContents;
+  while (eContent) {
+      free(eContent->content); /* This *must* be done with free() */
+      eContentSave = eContent;
+      eContent = eContent->next;
+      FREE((char *) eContentSave);
+  }
+  expat->eContents = NULL;
 }
 
 /*
@@ -688,6 +687,14 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
        */
       TclExpatFreeParser(expat);
       TclExpatCreateParser(interp, expat);
+      eContent = expat->eContents;
+      while (eContent) {
+          free(eContent->content); /* This *must* be done with free() */
+          eContentSave = eContent;
+          eContent = eContent->next;
+          FREE((char *) eContentSave);
+      }
+      expat->eContents = NULL;
 
       activeCHandlerSet = expat->firstCHandlerSet;
       while (activeCHandlerSet) {
@@ -1761,9 +1768,9 @@ TclGenExpatElementEndHandler(userData, name)
 
           if (!--(activeTclHandlerSet->continueCount)) {
               activeTclHandlerSet->status = TCL_OK;
-              goto nextTcl;
+              break;
           }
-          break;
+          goto nextTcl;
       case TCL_BREAK:
           goto nextTcl;
           break;
@@ -3674,7 +3681,7 @@ TclGenExpatEndDoctypeDeclHandler(userData)
 
   eContent = expat->eContents;
   while (eContent) {
-      XML_FreeContentModel (expat->parser, eContent->content);
+      free(eContent->content); /* This *must* be done with free() */
       eContentSave = eContent;
       eContent = eContent->next;
       FREE((char *) eContentSave);
