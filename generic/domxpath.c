@@ -175,7 +175,7 @@ typedef XPathToken *XPathTokens;
 |
 \---------------------------------------------------------------------------*/
 static char *astType2str[] = {
-    "Int", "Real", "Str", "Mult", "Div", "Mod", "UnaryMinus", "IsNSElement",
+    "Int", "Real", "Mult", "Div", "Mod", "UnaryMinus", "IsNSElement",
     "IsNode", "IsComment", "IsText", "IsPI", "IsSpecificPI", "IsElement",
     "IsFQElement", "GetVar", "GetFQVar", "Literal", "ExecFunction", "Pred", "EvalSteps",
     "SelectRoot", "CombineSets", "Add", "Substract", "Less", "LessOrEq",
@@ -369,25 +369,74 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
         rs->nodes[0]  = node;
 
     } else {
-
-        int i;
+        int i, insertIndex;
         
+#define NODE_NR(i) ((rs->nodes[(i)]->nodeType == ATTRIBUTE_NODE ?  ((domAttrNode*)rs->nodes[(i)])->parentNode->nodeNumber : rs->nodes[(i)]->nodeNumber))
+#define ATTRNODE_NR(n) ((domAttrNode*)(n))->parentNode->nodeNumber
+        insertIndex = rs->nr_nodes;
         /* is node already in result set ? */
-        if (node->nodeType == ATTRIBUTE_NODE
-            || node->nodeNumber <= rs->nodes[rs->nr_nodes - 1]->nodeNumber) {
-            for (i=0; i<rs->nr_nodes; i++) {
-                if (rs->nodes[i] == node) {
-                    return;
+        if (node->nodeType == ATTRIBUTE_NODE) {
+            if (ATTRNODE_NR(node) <= NODE_NR(rs->nr_nodes - 1)) {
+                for (i = rs->nr_nodes - 1; i >= 0; i--) {
+                    if (node == rs->nodes[i]) return;
+                    if (ATTRNODE_NR(node) == NODE_NR(i)) {
+                        /* Either the attribute parent, or another 
+                           attribute of the same node */
+                        /* We should probably ensure a certain order of the
+                           attributes (as done in the CombineSet code). */
+                        insertIndex = i + 1;
+                        i--;
+                        while (i >= 0 && ATTRNODE_NR(node) == NODE_NR(i)) {
+                            if (node == rs->nodes[i]) return;
+                            i--;
+                        }
+                        DBG (
+                            fprintf (stderr, "attr insert, insertIndex %d\n", i+1);
+                            fprintf (stderr, "attr to insert: %s\n",
+                                     ((domAttrNode *)node)->nodeValue);
+                            if (rs->nodes[i]->nodeType == ATTRIBUTE_NODE) {
+                                fprintf (stderr, "previos node is attr: %s\n",
+                                         ((domAttrNode *)rs->nodes[i])->nodeValue);
+                            } else {
+                                fprintf (stderr, "previos node is node: %s\n",
+                                         rs->nodes[i]->nodeNumber);
+                            }
+                        )
+                        break;
+                    } else if (ATTRNODE_NR(node) > NODE_NR(i)) {
+                        insertIndex = i + 1;
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (node->nodeNumber <= NODE_NR(rs->nr_nodes - 1)) {
+                for (i = rs->nr_nodes - 1; i >= 0; i--) {
+                    if (node == rs->nodes[i]) return;
+                    if (node->nodeNumber > NODE_NR(i)) {
+                        insertIndex = i + 1;
+                        break;
+                    }
                 }
             }
         }
+#undef NODE_NR
+#undef ATTRNODE_NR
 
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
                                            2 * rs->allocated * sizeof(domNode*));
             rs->allocated = rs->allocated * 2;
         }
-        rs->nodes[rs->nr_nodes++] = node;
+        if (insertIndex == rs->nr_nodes) {
+            rs->nodes[rs->nr_nodes++] = node;
+        } else {
+            for (i = rs->nr_nodes - 1; i >= insertIndex; i--) {
+                rs->nodes[i+1] = rs->nodes[i];
+            }
+            rs->nodes[insertIndex] = node;
+            rs->nr_nodes++;
+        }
     }
 }
 
@@ -405,39 +454,6 @@ void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
         rs->nodes[0]  = node;
 
     } else {
-        if ((rs->nr_nodes+1) >= rs->allocated) {
-            rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
-                                           2 * rs->allocated * sizeof(domNode*));
-            rs->allocated = rs->allocated * 2;
-        }
-        rs->nodes[rs->nr_nodes++] = node;
-    }
-}
-
-void rsAddNodeSecure ( xpathResultSet *rs, domNode *node) {
-
-    if ((rs->type != EmptyResult) && (rs->type != xNodeSetResult)) {
-        fprintf(stderr, "could not add node to non NodeSetResult xpathResultSet!"); return;
-    }
-    if (rs->type == EmptyResult) {
-
-        rs->type      = xNodeSetResult;
-        rs->nodes     = (domNode**)MALLOC(INITIAL_SIZE * sizeof(domNode*));
-        rs->allocated = INITIAL_SIZE;
-        rs->nr_nodes  = 1;
-        rs->nodes[0]  = node;
-
-    } else {
-
-        int i;
-        
-        /* is node already in result set ? */
-        for (i=0; i<rs->nr_nodes; i++) {
-            if (rs->nodes[i] == node) {
-                return;
-            }
-        }
-
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
                                            2 * rs->allocated * sizeof(domNode*));
@@ -1611,20 +1627,21 @@ EndProduction
 \----------------------------------------------------------------*/
 static int usesPositionInformation ( ast a) {
 
-    if (a->type == ExecFunction) {
-        if (   (strcmp(a->strvalue,"position")==0)
-            || (strcmp(a->strvalue,"last")==0)
-        ) {
+    while (a) {
+        if (a->type == ExecFunction 
+            && (a->intvalue == f_position
+                || a->intvalue == f_last
+                || a->intvalue == f_unknown)) {
             return 1;
         }
-    }
-    a = a->child;
-    while (a) {
-        if (usesPositionInformation(a)) return 1;
+        if (a->child) {
+            if (usesPositionInformation (a->child)) return 1;
+        }
         a = a->next;
     }
     return 0;
 }
+
 static int checkStepPatternPredOptimizability ( ast a ) {
 
     switch (a->type) {
@@ -1642,9 +1659,9 @@ static int checkStepPatternPredOptimizability ( ast a ) {
         case IsPI:
         case IsSpecificPI:
         case IsElement:
-        case GetContextNode:
+        case GetContextNode: 
             break;
-
+            
         case And:
         case Or:
         case Less:
@@ -1653,7 +1670,6 @@ static int checkStepPatternPredOptimizability ( ast a ) {
         case GreaterOrEq:
         case Equal:
         case NotEqual:
-        case ExecFunction:
             a = a->child;
             while (a) {
                 if (usesPositionInformation(a)) return 0;
@@ -1661,25 +1677,28 @@ static int checkStepPatternPredOptimizability ( ast a ) {
             }
             return 1;
 
-        default:
+        default: 
             return 0;
     }
     a = a->child;
     while (a) {
         if (!checkStepPatternPredOptimizability(a)) return 0;
         a = a->next;
-    }
+    } 
     return 1;
 }
+
 static int IsStepPatternPredOptimizable ( ast a ) {
     int f;
     f = checkStepPatternPredOptimizability(a);
-    if (f) {
-       DBG(
-         fprintf(stderr, "\nStepPattern Pred is optimizable:\n");
-         printAst(0,a);
-       )
-    }
+    DBG(
+        if (f) {
+            fprintf(stderr, "\nStepPattern Pred is optimizable:\n");
+        } else {
+            fprintf(stderr, "\nStepPattern Pred is not optimizable:\n");
+        }
+        printAst(0,a);
+    )
     return f;
 }
 
@@ -1742,7 +1761,8 @@ Production(StepPattern)
                 ast aCopy = NEWCONS;
                 aCopy->type      = a->type;
                 aCopy->next      = NULL;
-                aCopy->strvalue  = tdomstrdup(a->strvalue);
+                if (a->strvalue) aCopy->strvalue = tdomstrdup(a->strvalue);
+                else             aCopy->strvalue = NULL;
                 aCopy->intvalue  = a->intvalue;
                 aCopy->realvalue = a->realvalue;
                 aCopy->child     = NULL;
@@ -2724,7 +2744,7 @@ xpathEvalFunction (
                        /* Don't report nodes out of the fragment list */
                        if (node->parentNode != NULL ||
                            (node == node->ownerDocument->documentElement)) {
-                           rsAddNodeSecure (result, node);
+                           rsAddNode (result, node);
                        }
                    }
                    FREE(leftStr);
@@ -2750,7 +2770,7 @@ xpathEvalFunction (
                            /* Don't report nodes out of the fragment list */
                            if (node->parentNode != NULL ||
                                (node == node->ownerDocument->documentElement)) {
-                               rsAddNodeSecure (result, node);
+                               rsAddNode (result, node);
                            }
                        }
                        pwhite = 1;
@@ -2772,7 +2792,7 @@ xpathEvalFunction (
                        /* Don't report nodes out of the fragment list */
                        if (node->parentNode != NULL ||
                            (node == node->ownerDocument->documentElement)) {
-                           rsAddNodeSecure (result, node);
+                           rsAddNode (result, node);
                        }
                    }
                }
@@ -4774,86 +4794,6 @@ int xpathEval (
 
 } /* xpathEval */
 
-
-
-
-/*----------------------------------------------------------------------------
-|   xpathMatchesSlow
-|
-\---------------------------------------------------------------------------*/
-int xpathMatchesSlow (
-    ast                 steps,
-    domNode           * exprContext,
-    domNode           * nodeToMatch,
-    xpathCBs          * cbs,
-    char             ** errMsg
-)
-{
-    xpathResultSet  rs, nodeList;
-    domNode        *currentNode;
-    int             i, found, rc, docOrder = 1;
-
-
-    currentNode = nodeToMatch;
-    while (1) {
-        xpathRSInit( &rs );
-        xpathRSInit( &nodeList );
-        rsAddNodeFast( &nodeList, currentNode );
-
-        rc = xpathEvalSteps( steps, &nodeList, currentNode, exprContext, 1, &docOrder,
-                             cbs, &rs, errMsg);
-
-        if (rc != XPATH_OK) {
-            TRACE1("xpathEvalSteps had errors '%s' \n", *errMsg);
-            xpathRSFree( &rs );
-            xpathRSFree( &nodeList );
-            return rc;
-        }
-        DBG(rsPrint(&rs);)
-
-        if (rs.type == xNodeSetResult) {
-            found = 0;
-            for (i=0; i<rs.nr_nodes; i++) {
-                if (rs.nodes[i] == nodeToMatch) {
-                    found = 1;
-                    break;
-                }
-            }
-            if (found) {
-                xpathRSFree( &rs );
-                xpathRSFree( &nodeList );
-                return 1;
-            }
-        }
-        xpathRSFree( &rs );
-        xpathRSFree( &nodeList );
-        if (currentNode == currentNode->ownerDocument->rootNode) return 0;
-        if (currentNode->parentNode == NULL) {
-            currentNode = currentNode->ownerDocument->rootNode;
-        } else {
-            currentNode = currentNode->parentNode;
-        }
-    }
-    return 0;
-}
-
-
-static void printNodePath ( domNode *node )
-{
-    if (node->parentNode) {
-        printNodePath(node->parentNode);
-    }
-    fprintf(stderr, "/");
-    if (node->nodeType == ELEMENT_NODE) {
-        fprintf(stderr, node->nodeName);
-    } else
-    if (node->nodeType == TEXT_NODE) {
-        fprintf(stderr, "'%s'", ((domTextNode*)node)->nodeValue);
-    }
-}
-
-
-
 /*----------------------------------------------------------------------------
 |   xpathMatches
 |
@@ -5134,7 +5074,10 @@ int xpathMatches (
                             fprintf(stderr, "FillNodeList on %s/%s...\n", nodeToMatch->parentNode->nodeName,nodeToMatch->nodeName);
                         } else {
                             fprintf(stderr, "FillNodeList on (null)/%s...\n", nodeToMatch->nodeName);
-                        })
+                        }
+                        fprintf (stderr, "Current nodeList is:\n");
+                        rsPrint (&nodeList);
+                    )
                     if (nodeToMatch->parentNode == NULL) {
                         child = nodeToMatch->ownerDocument->rootNode->firstChild;
                     } else {
@@ -5202,7 +5145,7 @@ int xpathMatches (
 
                 /* if the nr_nodes of nodeList is > 1 (ie. we filter a
                    FillNodeList step, not only a FillWithCurrentNode
-                   step, build the resulting nodeList context after
+                   step), build the resulting nodeList context after
                    this predicate */
 
                 if (nodeList.nr_nodes > 1) {
@@ -5256,8 +5199,8 @@ int xpathMatches (
             case CombinePath:
                 childSteps = steps->child;
                 while (childSteps) {
-                    rc = xpathMatches (childSteps->child, exprContext, nodeToMatch,
-                                       cbs, errMsg);
+                    rc = xpathMatches (childSteps->child, exprContext,
+                                       nodeToMatch, cbs, errMsg);
                     if (rc == 1) break;
                     childSteps = childSteps->next;
                 }
@@ -5299,26 +5242,6 @@ int xpathMatches (
     xpathRSFree (&nodeList);
     return 1;
 }
-
-/*----------------------------------------------------------------------------
-|   xpathMatches2
-|
-\---------------------------------------------------------------------------*/
-int xpathMatches2 (
-    ast                 steps,
-    domNode           * nodeToMatch,
-    xpathCBs          * cbs,
-    char             ** errMsg
-)
-{
-    int rc;
-
-    printNodePath(nodeToMatch);
-    rc = xpathMatches2(steps,nodeToMatch,cbs,errMsg);
-    fprintf(stderr, " = %d \n", rc);
-    return rc;
-}
-
 
 /*----------------------------------------------------------------------------
 |   xpathGetPrioOld
