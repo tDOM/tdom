@@ -1952,7 +1952,7 @@ double xpathFuncNumber (
         case BoolResult:   return (rs->intvalue? 1.0 : 0.0);
         case IntResult:    return rs->intvalue;
         case RealResult:   {
-            if (isnan(rs->realvalue)) *NaN = 1;
+            if (isnan(rs->realvalue) || (isinf(rs->realvalue)!=0)) *NaN = 1;
             return rs->realvalue;
         }
         case StringResult:
