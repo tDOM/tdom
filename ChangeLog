@@ -1,5 +1,12 @@
 2005-03-11  Rolf Ade  <rolf@pointsman.de>
 
+        * tests/xpath.test: Added two tests about two subtleties of
+          the XPath syntax: white space between the $ and a varname
+          are not allowed, while white space between the braces of
+          node() is allowed.
+
+2005-03-11  Rolf Ade  <rolf@pointsman.de>
+
         * generic/nodecmd.c
         * tests/dom.test: Using of a node creating command outside of
           node context after that node creating command was already
