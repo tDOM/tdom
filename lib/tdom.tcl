@@ -27,31 +27,6 @@
 #   Contributor(s):
 #       Rolf Ade (rolf@pointsman.de):   'fake' nodelists/live childNodes
 #
-#
-#   $Log$
-#   Revision 1.6  2002/08/20 23:41:16  rolf
-#   Editorial/typo fixes.
-#
-#   Revision 1.5  2002/07/28 17:28:23  rolf
-#   Updated the [package provide tdom <version>] to the patch level given
-#   by the configure.
-#
-#   Revision 1.4  2002/05/16 20:34:59  rolf
-#   Added helper proc's, that read xml declaration, detect the encoding of
-#   the XML data and configures the input channel.
-#
-#   Revision 1.3  2002/02/28 00:39:00  rolf
-#   Added tcl coded xpath function element-avaliable. Changed
-#   function-avaliable accordingly.
-#
-#   Revision 1.2  2002/02/26 14:04:16  rolf
-#   Updated the [package provide] to the new version number 0.7
-#
-#   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
-#   tDOM0.7test with Jochens first set of patches
-#
-#
-#
 #   written by Jochen Loewer
 #   April, 1999
 #
@@ -340,26 +315,7 @@ proc ::dom::domNode::simpleTranslate { node output_var trans_specs } {
 
 
 #----------------------------------------------------------------------------
-#   transfromNode (domNode method)
-#
-#       applies an XSL stylesheet to the subtree root at the given
-#       node object
-#
-#
-#   @in  xsl_doc     document object to a XSL style sheet document
-#   @return
-#
-#----------------------------------------------------------------------------
-proc ::dom::domNode::transfromNode { node xsl_doc } {
-
-    error "transfromNode (XSL transformation) is not implemented yet!"
-}
-
-
-#----------------------------------------------------------------------------
 #   a DOM conformant 'live' childNodes
-#
-#       suggested by Rolf Ade (rolf@pointsman.de)
 #
 #   @return   a 'nodelist' object (it is just the normal node)
 #
@@ -373,8 +329,6 @@ proc ::dom::domNode::childNodesLive { node } {
 #----------------------------------------------------------------------------
 #   item method on a 'nodelist' object
 #
-#       suggested by Rolf Ade (rolf@pointsman.de)
-#
 #   @return   a 'nodelist' object (it is just a normal
 #
 #----------------------------------------------------------------------------
@@ -386,8 +340,6 @@ proc ::dom::domNode::item { nodeListNode index } {
 
 #----------------------------------------------------------------------------
 #   length method on a 'nodelist' object
-#
-#       suggested by Rolf Ade (rolf@pointsman.de)
 #
 #   @return   a 'nodelist' object (it is just a normal
 #
@@ -515,7 +467,7 @@ proc ::dom::xpathFuncHelper::coerce2string { type value } {
 }
 
 #----------------------------------------------------------------------------
-#   functions-available
+#   function-available
 #
 #----------------------------------------------------------------------------
 proc ::dom::xpathFunc::function-available { ctxNode pos
@@ -876,3 +828,48 @@ proc tDOM::xmlReadFile {filename {encodingString {}}} {
     close $fd 
     return $data
 }
+
+
+#----------------------------------------------------------------------------
+#   extRefHandler
+#   
+#   A very simple external entity resolver, included for convenience.
+#   Depends on the tcllib package uri and resolves only file URLs. 
+#
+#----------------------------------------------------------------------------
+
+if {![catch {package require uri}]} {
+    proc tDOM::extRefHandler {base systemId publicId} {
+        set absolutURI [uri::resolve $base $systemId]
+        array set uriData [uri::split $absolutURI]
+        switch $uriData(scheme) {
+            file {
+                #set fd [open $uriData(path)]
+                return [list string $absolutURI [xmlReadFile $uriData(path)]]
+            }
+            default {
+                return -code error  -errorinfo "can only handle file URI's"
+            }
+        }
+    }
+}
+
+#----------------------------------------------------------------------------
+#   baseURL
+#   
+#   A simple convenience proc which returns an absolute URL for a given
+#   filename.
+#
+#----------------------------------------------------------------------------
+
+proc tDOM::baseURL {path} {
+    switch [file pathtype $path] {
+        "relative" {
+            return "file://[pwd]/$path"
+        }
+        default {
+            return "file://$path"
+        }
+    }
+}
+
