@@ -1,3 +1,15 @@
+2003-04-12  Rolf Ade  <rolf@pointsman.de>
+
+        * README
+        * README.AOL
+        * configure.in
+        * configure
+        * configure-8.0.5
+        * tests/loadtdom.tcl
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h    
+        * extensions/tnc/tnc.c: Bumped version to 0.8.0 (alpha).
+
 2003-04-09  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c: Fixed a bug in the creation of the error msg
