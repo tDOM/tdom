@@ -1401,13 +1401,9 @@ int tcldom_selectNodes (
     }
     type = Tcl_NewObj();
     Tcl_IncrRefCount(type);
-    DBG(
-      fprintf(stderr, "before tcldom_xpathResultSet \n");
-    )
+    DBG(fprintf(stderr, "before tcldom_xpathResultSet \n");)
     tcldom_xpathResultSet (interp, &rs, type, Tcl_GetObjResult (interp));
-    DBG(
-      fprintf(stderr, "after tcldom_xpathResultSet \n");
-    )
+    DBG(fprintf(stderr, "after tcldom_xpathResultSet \n");)
     if (typeVar) {
         Tcl_SetVar(interp,typeVar, Tcl_GetStringFromObj(type, NULL), 0);
     }
@@ -1931,8 +1927,8 @@ void tcldom_AppendEscaped (
                 if ((unsigned char)*pc > 127) {
                     clen = UTF8_CHAR_LEN(*pc);
                     if (!clen) {
-                        fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");
-                        exit(1);
+                        DBG(fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");)
+                        exit(1); /*FIXME */
                     }
                     if (escapeNonASCII) {
                         Tcl_UtfToUniChar (pc, &uniChar);

@@ -495,8 +495,8 @@ domNS* domNewNamespace (
     if (ns != NULL) return ns;
     doc->nsptr++;
     if (doc->nsptr > 254) {
-        fprintf (stderr, "maximum number of namespaces exceeded!!!\n");
-        exit(1);
+        DBG(fprintf (stderr, "maximum number of namespaces exceeded!!!\n");)
+        exit(1); /* FIXME */
     }
     if (doc->nsptr >= doc->nslen) {
         doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
@@ -661,8 +661,8 @@ startElement(
         ) {
             sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
             if (Tcl_Eval(info->interp, feedbackCmd) != TCL_OK) {
-                fprintf (stderr, "%s\n", Tcl_GetStringResult (info->interp));
-                exit (1);
+                DBG(fprintf(stderr, "%s\n", Tcl_GetStringResult (info->interp));)
+                exit(1); /* FIXME */
             }
             info->lastFeedbackPosition += info->feedbackAfter;
         }
@@ -1877,7 +1877,7 @@ domFreeNode (
     domAttrNode *atemp, *attr, *aprev;
 
     if (node == NULL) {
-        fprintf (stderr, "null ptr in domFreeNode (dom.c) !\n");
+        DBG(fprintf (stderr, "null ptr in domFreeNode (dom.c) !\n");)
         return;
     }
     TDomThreaded (
@@ -2493,7 +2493,7 @@ domRemoveAttributeNS (
 DBG(
 static void __dbgAttr (domAttrNode *node) {
 
-    fprintf(stderr, " %s=%s", node->nodeName, node->nodeValue);
+    DBG(fprintf(stderr, " %s=%s", node->nodeName, node->nodeValue);)
     if (node->nextSibling) __dbgAttr(node->nextSibling);
 }
 )
@@ -2541,7 +2541,7 @@ domSetDocument (
                 node->namespace = ns->index;
             }
         }
-        DBG( fprintf(stderr, "domSetDocument node%s ", node->nodeName);
+        DBG(fprintf(stderr, "domSetDocument node%s ", node->nodeName);
              __dbgAttr(node->firstAttr);
              fprintf(stderr, "\n");
         )
@@ -2566,9 +2566,7 @@ domSetDocument (
         node->ownerDocument = doc;
     }
 
-    DBG(
-        fprintf(stderr, "end domSetDocument node %s\n", node->nodeName);
-    )
+    DBG(fprintf(stderr, "end domSetDocument node %s\n", node->nodeName);)
 }
 
 
@@ -3163,7 +3161,10 @@ domAppendNewElementNode(
     char         *localname, prefix[MAX_PREFIX_LEN];
     Tcl_DString   dStr;
 
-    if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
+    if (parent == NULL) { 
+        DBG(fprintf(stderr, "dom.c: Error parent == NULL!\n");)
+        return NULL;
+    }
 
     h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tagNames), tagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
@@ -3307,7 +3308,10 @@ domAppendLiteralNode(
     domNode       *node;
     int            hnew;
 
-    if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
+    if (parent == NULL) { 
+        DBG(fprintf(stderr, "dom.c: Error parent == NULL!\n");)
+        return NULL;
+    }
 
     h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument, tagNames),
                              literalNode->nodeName, &hnew);

@@ -5020,7 +5020,7 @@ int xpathMatches (
                     if (steps->child->type == IsElement) {
                         steps->child->type = IsAttr;
                     } else {
-                        fprintf(stderr, "strange: AxisAttribute with no IsAttr below!\n");
+                        DBG(fprintf(stderr, "strange: AxisAttribute with no IsAttr below!\n");)
                         xpathRSFree (&nodeList); return 0;
                     }
                 }
@@ -5081,7 +5081,7 @@ int xpathMatches (
                     }
                     break;
                 }
-                fprintf(stderr, "strange: AxisChild with no IsElement, IsFQElement or IsNSElement below!\n");
+                DBG(fprintf(stderr, "strange: AxisChild with no IsElement, IsFQElement or IsNSElement below!\n");)
                 return 0;
 
             case IsElement:
@@ -5426,8 +5426,10 @@ int xpathMatches (
                 break;
 
             default:
+                DBG(
                 fprintf(stderr, "wrong type %d for xpathMatches \n", steps->type);
                 fprintf(stderr, "AST:\n");
+                )
                 printAst (0, steps);
                 xpathRSFree (&nodeList); return 0;
                 break;
