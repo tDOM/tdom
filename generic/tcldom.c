@@ -176,6 +176,7 @@ static char doc_usage[] =
     "    createProcessingInstruction target data ?objVar? \n"
     "    asXML ?-indent <none,0..8>? ?-channel <channelId>? ?-escapeNonASCII?\n" 
     "    asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
+    "    asTexT                                  \n"
     "    getDefaultOutputMethod                  \n"
     "    publicId ?publicId?                     \n"
     "    systemId ?systemId?                     \n"
@@ -183,6 +184,7 @@ static char doc_usage[] =
     "    delete                                  \n"
     "    xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
     "    toXSLTcmd                               \n"
+    "    normalize ?-forXPath?                   \n"
     TDomThreaded(
     "    readlock                                \n"
     "    writelock                               \n"
@@ -242,13 +244,16 @@ static char node_usage[] =
     "    asList                       \n"
     "    asXML ?-indent <none,0..8>? ?-channel <channel>? ?-escapeNonASCII?\n"
     "    asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
+    "    asText                       \n"
     "    appendFromList nestedList    \n"
     "    appendFromScript script      \n"
+    "    insertBeforeFromScript script ref \n"
     "    appendXML xmlString          \n"
     "    selectNodes xpathQuery ?typeVar? \n"
     "    toXPath                      \n"
     "    disableOutputEscaping ?boolean? \n"
     "    precedes node                \n"
+    "    normalize ?-forXPath?        \n"
     "    xslt ?-parameters parameterList? <xsltDocNode>\n"
     TDomThreaded(
     "    readlock                     \n"
@@ -1386,13 +1391,12 @@ int tcldom_selectNodes (
 {
     char          *xpathQuery, *typeVar;
     char          *errMsg = NULL;
-    int            xpathQueryLen;
     int            rc;
     xpathResultSet rs;
     Tcl_Obj       *type;
     xpathCBs       cbs;
 
-    xpathQuery = Tcl_GetStringFromObj(obj, &xpathQueryLen);
+    xpathQuery = Tcl_GetString(obj);
 
     xpathRSInit(&rs);
 
@@ -3419,7 +3423,7 @@ int tcldom_NodeObjCmd (
 
         case m_insertBeforeFromScript:
             CheckArgs(4,4,2, "script refChild");
-            nodeName = Tcl_GetStringFromObj (objv[3], NULL);
+            nodeName = Tcl_GetString (objv[3]);
             if (nodeName[0] == '\0') {
                 refChild = NULL;
             } else {
@@ -3490,7 +3494,7 @@ int tcldom_NodeObjCmd (
                 return TCL_ERROR;
             }
 
-            nodeName = Tcl_GetStringFromObj (objv[3], NULL);
+            nodeName = Tcl_GetString (objv[3]);
             if (nodeName[0] == '\0') {
                 refChild = NULL;
             } else {
