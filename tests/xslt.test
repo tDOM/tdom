@@ -490,6 +490,21 @@ test xslt-3.1 {xslt variable scope} {
     set errMsg
 } {Variable "main" has not been declared.}
 
+test xslt-3.2 {xslt error msg of variable redeclaration in one template} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:template match="/">
+    <xsl:variable name="var" select="'first valule'"/>
+    <xsl:variable name="var" select="'first valule'"/>
+    <xsl:value-of select="$var"/>    
+  </xsl:template>
+        </xsl:stylesheet>}]
+    catch {$xml xslt $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {Variable 'var' is already declared in this template}
+
 test xslt-4.1 {xslt transformation of a source which was modifed after parsing} {
     dom parse -baseurl file:///tmp/abc.xml {<test/>} doc
     $doc documentElement root
