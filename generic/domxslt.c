@@ -36,6 +36,10 @@
 |                               over the place.
 |
 |   $Log$
+|   Revision 1.10  2002/04/05 16:47:13  rolf
+|   Bug fix for attribute value templates. Should now handle cases
+|   like attr="}}" and attr="{{" right.
+|
 |   Revision 1.9  2002/03/31 03:22:19  rolf
 |   Closed a memory leak in xsltFreeStats(). Changed xsl:element handling
 |   (work in progress).
@@ -2437,11 +2441,15 @@ static int evalAttrTemplates (
                             aLen += aLen;
                         }
                     }
+                    if (!*str) break;
                 } else {
                     tplStart = str+1;
                     inTpl = 1;
                 }
             } else {
+                if (*str == '}' && *(str+1) == '}') {
+                    str++;
+                }
                 (*out)[p++] = *str;
                 if (p>=aLen) { /* enlarge output buffer */
                     *out = realloc(*out, 2*aLen);
