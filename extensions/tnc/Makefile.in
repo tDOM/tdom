@@ -302,7 +302,7 @@ VPATH = $(srcdir)/generic:$(srcdir)/expat:$(srcdir)/unix:$(srcdir)/win
 
 pkgIndex.tcl-hand:
 	@(echo 'package ifneeded $(PACKAGE) $(VERSION) \
-        "load [file join $$dir $($(PACKAGE)_LIB_FILE)]"'\
+        "load [list [file join $$dir $($(PACKAGE)_LIB_FILE)]]"'\
 	) > pkgIndex.tcl
 
 #========================================================================
