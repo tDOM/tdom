@@ -1,3 +1,33 @@
+2002-11-15  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/dom.h: added IS_DELETED node flag
+	  Changed domFreeNode to accept one additional parameter.
+	  This parameter is used to signal the function to 
+	  perform node-walk and invoke user-supplied callback w/o
+	  actually freeing the node. This functionality is required
+	  for example when a thread detaches from the shared DOM tree
+	  and wants to detach all eventual node commands from its
+	  interpreter.
+ 	  Added "struct domNode *deletedNodes" in the document structure
+	  This is the head of all nodes spliced out of the tree but not
+	  yet free'd. This is needed in order to avoid memory trashing
+	  when one thread deletes the node and the second thread still
+	  holds the reference to it over the nodecmd command.
+	  Added "struct domNode *nextDeleted" to maintain the list of
+	  deleted nodes, as explained above.
+	
+	* generic/tcldom.c: introduced changes in the way nodes are
+	  deleted from the tree in multi-threading shared-tree situations.
+	  We now do not delete nodes having references from nodecmds from
+	  different threads/interpreters. Instead, we put them on the 
+	  deleted nodes list and tear-down this list when we delete the
+	  document. 
+
+	* generic/tcldom.c: when a thread detaches from the shared dom tree
+	  it will now properly delete all commands attached to nodes.
+	  Also, the dom object command barks when attempting to use already
+	  deleted node (the node put on the deletion list).
+	
 2002-11-15  Rolf Ade  <rolf@pointsman.de>
 
         * tests/dom.test: Added some tests for as yet not covered node
