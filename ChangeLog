@@ -1,5 +1,10 @@
 2003-10-10  Rolf Ade  <rolf@pointsman.de>
 
+        * Makefile.in
+        * extensions/tdomhtml/pkgIndex.tcl.in
+        * extensions/tnc/Makefile.in: Fixed pkgIndex.tcl problem, if
+          the path to the packages contains a space.
+
         * generic/dom.h
         * generic/dom.c
         * generic/tcldom.c
