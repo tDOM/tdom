@@ -2776,7 +2776,7 @@ domSetAttributeNS (
     domNS         *ns;
     char          *localName, prefix[MAX_PREFIX_LEN], *newLocalName;
     Tcl_DString    dStr;
-
+    
     DBG(fprintf (stderr, "domSetAttributeNS: attributeName %s, attributeValue %s, uri %s\n", attributeName, attributeValue, uri);)
     if (!node || node->nodeType != ELEMENT_NODE) {
         return NULL;
@@ -3802,8 +3802,6 @@ domAppendNewTextNode(
         return NULL;
     }
 
-#define TNODE ((domTextNode*)parent->lastChild)
-
     if (parent->lastChild
          && parent->lastChild->nodeType == TEXT_NODE
          && nodeType == TEXT_NODE
@@ -3816,7 +3814,6 @@ domAppendNewTextNode(
         MutationEvent();
         return (domTextNode*)parent->lastChild;
     }
-#undef TNODE
     node = (domTextNode*) domAlloc(sizeof(domTextNode));
     memset(node, 0, sizeof(domTextNode));
     node->nodeType      = nodeType;
@@ -3877,7 +3874,7 @@ domAppendNewElementNode(
     memset(node, 0, sizeof(domNode));
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
-    node->namespace     = parent->namespace;
+    node->namespace     = 0;
     node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->nodeName      = (char *)&(h->key);
