@@ -1,6 +1,19 @@
+2002-12-28  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c
+        * generic/domxslt.h
+        * generic/tcldom.c
+        * doc/domNode.*
+        * doc/domDoc.*
+        * tests/xslt.test: The xslt method now understands also the
+          options -ignoreUndeclaredParameters and -xsltmessagecmd.
+
+        * tests/xpath.test
+        * generic/tcldom.h: Editorial changes.
+
 2002-12-23  Rolf Ade  <rolf@pointsman.de>
 
-        * generic/domxslt.c Reworked the white space stripping for XML
+        * generic/domxslt.c: Reworked the white space stripping for XML
           sources a bit. Better white space handling in token lists.
 
 2002-12-21  Rolf Ade  <rolf@pointsman.de>
