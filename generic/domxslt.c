@@ -138,6 +138,7 @@ typedef struct xsltTemplate {
 
     char    * match;
     char    * name;
+    char    * nameNS;
     ast       ast;
     char    * mode;
     double    prio;
@@ -2278,13 +2279,32 @@ static int xsltAddTemplate (
 )
 {
     xsltTemplate *tpl;
-    char         *prioStr;
+    char         *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
     int           rc;
+    domNS        *ns;
     
     tpl = malloc(sizeof(xsltTemplate));
     
     tpl->match      = getAttr(node,"match", a_match);
-    tpl->name       = getAttr(node,"name", a_name);  
+    str = getAttr(node, "name", a_name);
+    if (str) {
+        domSplitQName (str, prefix, &localName);
+        if (prefix[0] != '\0') {
+            ns = domLookupPrefix (node, prefix);
+            if (!ns) {
+                reportError (node, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                return -1;
+            }
+            tpl->name   = localName;
+            tpl->nameNS = ns->uri;
+        } else {
+            tpl->name   = str;
+            tpl->nameNS = NULL;
+        }
+    } else {
+        tpl->name   = NULL;
+        tpl->nameNS = NULL;
+    }
     tpl->ast        = NULL;
     tpl->mode       = getAttr(node,"mode", a_mode); 
     tpl->prio       = 0.5;
@@ -3191,8 +3211,26 @@ static int ExecAction (
                              errMsg);
                 return -1;
             }
+            domSplitQName (str, prefix, &localName);
+            uri = NULL;
+            if (prefix[0] != '\0') {
+                ns = domLookupPrefix (actionNode, prefix);
+                if (!ns) {
+                    reportError (actionNode, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
+                    return -1;
+                }
+                uri = ns->uri;
+                str = localName;
+            }
             for( tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
                 if (tpl->name && (strcmp(tpl->name,str)==0)) {
+                    if (uri) {
+                        if (tpl->nameNS) {
+                            if (strcmp(tpl->nameNS, uri)!=0) continue;
+                        } else continue;
+                    } else {
+                        if (tpl->nameNS) continue;
+                    }
                     if (tpl->precedence > currentPrec) {
                         tplChoosen = tpl;
                         currentPrec = tpl->precedence;
