@@ -353,9 +353,10 @@ bool, number, string, nodes, attrnodes or mixed). The option
 <m>-namespaces</m> expects a tcl list with prefix /
 namespace pairs as argument. If this option is given, any
 namespace prefix within the xpath expression will be first
-resolved against this list. If this fails, then the
-namespace definitions in scope of the context node will be
-used to resolve the prefix, as usual.
+resolved against this list. If the list bind the same prefix
+to different namespaces, then the first binding will win. 
+If this fails, then the namespace definitions in scope of the
+context node will be used to resolve the prefix, as usual.
 
 <p>Examples:</p>
           <example>set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
