@@ -296,7 +296,7 @@ the given 8 bit encoding at XML/DOM parse time.  Valid values for
 cp1254, cp1255, cp1256, cp437, cp850, en, iso8859-1, iso8859-2, iso8859-3,
 iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.
 .TP
-\&\fB\fBdom\fP \fBcreateNodeCmd\fP \fI(element|comment|text|cdata|pi)Node\fB \fIcommandName\fB
+\&\fB\fBdom\fP \fBcreateNodeCmd\fP \fI?-returnNodeCmd?\fB \fI(element|comment|text|cdata|pi)Node\fB \fIcommandName\fB
 \&\fRThis method creates Tcl commands, which in turn create tDOM nodes.
 Tcl commands created by this command are only avaliable inside a script given to the
 domNode method \fIappendFromScript\fR. If a command created with
@@ -309,7 +309,9 @@ it is created in the specified namespace.
 If such command is invoked inside a script given as argument to
 the domNode method \fIappendFromScript\fR, it creates a new node and
 appends this node at the end of the child list of the invoking element
-node. Each command creates always the same type of node. Which type of
+node. If the option \fI-returnNodeCmd\fR was given, the command returns the
+created node as Tcl command. If this option was omitted, the command returns
+nothing. Each command creates always the same type of node. Which type of
 node is created by the command is determined by the first argument to the
 \&\fIcreateNodeCmd\fR. The syntax of the created command depends on the
 type of the node it creates.
@@ -388,16 +390,16 @@ command is:
 position information for the original XML document after parsing.
 .TP
 \&\fB\fBdom\fP \fBisName\fP \fIname\fB
-\&\fRReturns 1, if the \fIname\fR is a valid XML Name according to
+\&\fRReturns 1, if \fIname\fR is a valid XML Name according to
 production 5 of the XML 1.0 recommendation. Otherwise it returns 0.
 .TP
 \&\fB\fBdom\fP \fBisNCName\fP \fIname\fB
-\&\fRReturns 1, if the \fIname\fR is a valid NCName according
+\&\fRReturns 1, if \fIname\fR is a valid NCName according
 to production 4 of the of the Namespaces in XML recommendation. Otherwise it returns
 0.
 .TP
 \&\fB\fBdom\fP \fBisQName\fP \fIname\fB
-\&\fRReturns 1, if the \fIname\fR is a valid QName according
+\&\fRReturns 1, if \fIname\fR is a valid QName according
 to production 6 of the of the Namespaces in XML recommendation. Otherwise it returns
 0.
 .TP
