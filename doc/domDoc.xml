@@ -117,6 +117,22 @@ and the underlying DOM tree.</p></desc>
           <desc><p> Returns the default output method of the document. This is
 usually a result of a XSLT transformation.</p></desc>
         </commanddef>
+
+      <commanddef>
+        <command><method>asXML</method> <option>-indent none/1..8</option>
+<option>-channel channelId</option></command>
+        <desc>Returns the document as an (optional indented) XML string or
+sends the output directly to the given channelId.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>asHTML</method> <option>-channel channelId</option></command>
+        <desc>Returns the document serialized acording to HTML rules (HTML
+elements are recognized regardless of case, without end tags for emtpy HTML
+elements etc.), as string or sends the output directly to the given
+channelId.</desc>
+      </commanddef>
+
       </commandlist>
 
       <p>Otherwise, if an unknown method name is given, the command with the

@@ -772,16 +772,19 @@ scripts will be called, as there triggering events happens.
 .PP
 Reads the XML data out of the tcl channel \fIchannelID\fR
 (starting at the current access position, without any seek) up to the end of
-file condition and parses that data. The channel is read in "raw" mode, without
-respect to the channel encoding.
+file condition and parses that data. The channel encoding is respected. Use the
+helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
+you want to use this method.
 .RE
 .TP
 \&\fB\fBparser\fP \fBparsefile\fP \fIfilename\fB
 \&\fR
 .RS
 .PP
-Reads the XML data out of the file with the filename
-\&\fIfilename\fR and parses that data.
+Reads the XML data directly out of the file with the
+filename \fIfilename\fR and parses that data. This is done with low level file
+operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
+applicable, this is the fastest way, to parse XML data.
 .RE
 .TP
 \&\fB\fBparser\fP \fBreset\fP

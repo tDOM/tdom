@@ -638,15 +638,18 @@ scripts will be called, as there triggering events happens.</p></desc>
           <command><cmd>parser</cmd> <method>parsechannel</method> <m>channelID</m></command>
           <desc><p>Reads the XML data out of the tcl channel <m>channelID</m>
 (starting at the current access position, without any seek) up to the end of
-file condition and parses that data. The channel is read in "raw" mode, without
-respect to the channel encoding.</p></desc>
+file condition and parses that data. The channel encoding is respected. Use the
+helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
+you want to use this method.</p></desc>
         </commanddef>
 
         <commanddef>
           <command><cmd>parser</cmd> <method>parsefile</method> <m>filename</m></command>
 
-          <desc><p>Reads the XML data out of the file with the filename
-<m>filename</m> and parses that data.</p></desc>
+          <desc><p>Reads the XML data directly out of the file with the
+filename <m>filename</m> and parses that data. This is done with low level file
+operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
+applicable, this is the fastest way, to parse XML data.</p></desc>
         </commanddef>
 
         <commanddef>
