@@ -57,6 +57,9 @@
 #include <dom.h>
 #include <domxpath.h>
 #include <domxslt.h>
+#ifdef _MSC_VER
+#include <win32.h>
+#endif
 
 
 /*----------------------------------------------------------------------------
@@ -222,10 +225,6 @@ static int xpathEvalStep (ast step, domNode *ctxNode, domNode *exprContext,
                           int *docOrder, char **errMsg);
 
 int dbonerow = 0;
-
-#ifndef isnan
-int isnan(double number) { return (!(number == number)); }
-#endif
 
 /*----------------------------------------------------------------------------
 |   xpath result set functions
