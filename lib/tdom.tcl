@@ -29,6 +29,10 @@
 #
 #
 #   $Log$
+#   Revision 1.5  2002/07/28 17:28:23  rolf
+#   Updated the [package provide tdom <version>] to the patch level given
+#   by the configure.
+#
 #   Revision 1.4  2002/05/16 20:34:59  rolf
 #   Added helper proc's, that read xml declaration, detect the encoding of
 #   the XML data and configures the input channel.
@@ -51,7 +55,7 @@
 #----------------------------------------------------------------------------
 
 
-package provide tdom 0.7
+package provide tdom 0.7.5
 
 
 #----------------------------------------------------------------------------
