@@ -52,6 +52,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include <ctype.h>
 #include <dom.h>
 #include <domxpath.h>
@@ -2304,7 +2305,7 @@ static int xpathEvalStep (
     Tcl_UniChar     *ufStr, *upfrom, unichar;
 #endif    
 
-    if (result->nr_nodes == 0) useFastAdd = 1;
+    if (result->type == EmptyResult) useFastAdd = 1;
     else useFastAdd = 0;
 
     switch (step->type) {
@@ -3677,13 +3678,19 @@ static int xpathEvalStep (
                 CHECK_RC;
                 *docOrder = savedDocOrder;
 
-                len = xpathRound(xpathFuncNumber(&rightResult, &NaN));
+                dRight = xpathFuncNumber (&rightResult, &NaN);
+                len = xpathRound(dRight);
                 xpathRSFree (&rightResult);
                 if (NaN) {
-                    free (leftStr);
-                    rsSetString (result, "");
-                    return XPATH_OK;
+                    if (isinf (dRight) == 1) {
+                        len = INT_MAX;
+                    } else {
+                        free (leftStr);
+                        rsSetString (result, "");
+                        return XPATH_OK;
+                    }
                 }
+                xpathRSFree (&rightResult);
                 if (from < 0) {
                     len = len + from;
                     if (len <= 0) {
@@ -3703,7 +3710,7 @@ static int xpathEvalStep (
                 free(leftStr);
                 return XPATH_OK;
             } else {
-                if ( (from + len) > strlen(leftStr) ) {
+                if ( (len == INT_MAX) || ((from + len) > strlen(leftStr)) ) {
                     len =  strlen(leftStr) - from;
                 }
             }
