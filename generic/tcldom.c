@@ -2848,6 +2848,10 @@ static int applyXSLT (
                                               Tcl_GetStringFromObj(objv[0],
                                                                    NULL),
                                              &errMsg);
+        if (xmlDoc == NULL) {
+            SetResult ( errMsg );
+            goto applyXSLTCleanUP;
+        }
         node = (domNode *) xmlDoc;
         xsltDoc = NULL;
     }
