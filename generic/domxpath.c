@@ -2443,7 +2443,7 @@ static int xpathEvalStep (
     case AxisFollowing:
         *docOrder = 1;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
-            node = ((domAttrNode *)ctxNode)->parentNode;
+            node = ((domAttrNode *)ctxNode)->parentNode->firstChild;
         } else {
             node = ctxNode;
         }
