@@ -36,6 +36,10 @@
 |
 |
 |   $Log$
+|   Revision 1.8  2002/04/09 17:20:47  rolf
+|   Actual HEAD does not compile (!! arg). With this (intermediate) state
+|   it should. Some of the changes will be undo and replaced by others.
+|
 |   Revision 1.7  2002/03/21 01:47:22  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -317,6 +321,24 @@ domIsNCNAME (
     return 1;
 }
 
+domNSContext *
+domCurrentNSContext (
+    domNode *node
+    )
+{
+    Tcl_HashEntry *h;
+    
+    while (node && !(node->nodeFlags & HAS_NS_INFO)) node = node->parentNode;
+    if (!node) return NULL;
+    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes, 
+                           (char *) node->nodeNumber);
+    if (!h) {
+        fprintf (stderr, "Invalid internal data in domCurrentNSContext!!!\n");
+        return NULL;
+    }
+    return (domNSContext *) Tcl_GetHashValue (h);
+}
+
 /*---------------------------------------------------------------------------
 |   domLookupNamespace
 |
@@ -455,7 +477,7 @@ domIsNamespaceInScope (
 |
 \--------------------------------------------------------------------------*/
 domNS *
-domLookupURI (
+domLookupURIold (
     domNode *node,
     char        *uri
     )
@@ -471,6 +493,41 @@ domLookupURI (
     }
     return NULL;
 }
+
+/*---------------------------------------------------------------------------
+|   domLookupURI
+|
+\--------------------------------------------------------------------------*/
+domNS *
+domLookupURI (
+    domNode *node,
+    char        *uri
+    )
+{
+    domNS         *ns;
+    Tcl_HashEntry *h;
+    domNSContext  *NSContext;
+    int            i;
+    
+    ns = node->ownerDocument->namespaces;
+    while (node && !(node->nodeFlags & HAS_NS_INFO)) {
+        node = node->parentNode;
+    }
+    if (!node) return NULL;
+    h = Tcl_FindHashEntry (node->ownerDocument->NSscopes,
+                           (char *) node->nodeNumber);
+    if (!h) {
+        fprintf (stderr, "Invalid internal data in domLookupURI!!!\n");
+        return NULL;
+    } else {
+        NSContext = Tcl_GetHashValue (h);
+    }
+    for (i = 0; i < NSContext->nrOfNS; i++) {
+        if (strcmp (uri, NSContext->ns[i]->uri) == 0) return NSContext->ns[i];
+    }
+    return NULL;
+}
+
 
 /*---------------------------------------------------------------------------
 |   domGetNamespaceByIndex
@@ -2189,7 +2246,7 @@ domSetAttribute (
 |
 \--------------------------------------------------------------------------*/
 domAttrNode *
-domSetAttributeNS (
+domSetAttributeNSold (
     domNode *node,
     char    *attributeName,
     char    *attributeValue,
@@ -2253,6 +2310,129 @@ domSetAttributeNS (
                 ns = domNewNamespace(node->ownerDocument, prefix, uri);
             }        
             attr->namespace = ns->index;
+        }
+    }
+    MutationEvent();
+    return attr;
+}
+
+domAttrNode *
+domSetAttributeNS (
+    domNode *node,
+    char    *attributeName,
+    char    *attributeValue,
+    char    *uri
+)
+{
+    domAttrNode   *attr, *lastAttr;
+    domNode       *n;
+    Tcl_HashEntry *h;
+    int            i, j, hnew;
+    domNS         *ns;
+    char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN];
+    Tcl_DString    dStr;
+    domNSContext  *currentNSContext, *newNSContext;
+    GetTDomTSD();
+    
+    if (!node || node->nodeType != ELEMENT_NODE) {
+        return NULL;
+    }
+    
+    domSplitQName (attributeName, prefix, &localName);
+    /*----------------------------------------------------
+    |   try to find an existing attribute
+    \---------------------------------------------------*/
+    attr = node->firstAttr;
+    while (attr) {
+        if (uri) {
+            if (attr->namespace) {
+                ns = domGetNamespaceByIndex (node->ownerDocument, 
+                                             attr->namespace);
+                if (strcmp (uri, ns->uri)==0) {
+                    domSplitQName ((char*)attributeName, lprefix, &lname);
+                    if (strcmp (localName, lname)==0) break;
+                }
+            }
+        } else {
+            if (!attr->namespace) {
+                if (strcmp (attr->nodeName, localName)==0) break;
+            }
+        }
+        attr = attr->nextSibling;
+    }
+    if (attr) {   
+        Tcl_Free (attr->nodeValue);
+        attr->valueLength = strlen(attributeValue);
+        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        strcpy(attr->nodeValue, attributeValue);
+    } else {
+        /*--------------------------------------------------------
+        |   add a complete new attribute node
+        \-------------------------------------------------------*/
+        attr = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+        memset(attr, 0, sizeof(domAttrNode));       
+        if (uri) {
+            Tcl_DStringInit (&dStr);
+            ns = domLookupURI (node, uri);
+            if (ns) {
+                Tcl_DStringAppend (&dStr, ns->prefix, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+                Tcl_DStringAppend (&dStr, localName, -1);
+            } else {
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+                Tcl_DStringAppend (&dStr, localName, -1);
+                
+                ns = domNewNamespace(node->ownerDocument, prefix, uri);
+                currentNSContext = domCurrentNSContext (node);
+                newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
+                newNSContext->newNS = 1;
+                if (!currentNSContext) {
+                    newNSContext->nrOfNS = 1;
+                    newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
+                    newNSContext->ns[0] = ns;
+                } else {
+                    newNSContext->nrOfNS = currentNSContext->nrOfNS + 1;
+                    newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * newNSContext->nrOfNS);
+                    newNSContext->ns[0] = ns;
+                    j = 1;
+                    for (i = 0; i < currentNSContext->nrOfNS; i++) {
+                        if (strcmp (currentNSContext->ns[i]->prefix, prefix)==0) {
+                            newNSContext->nrOfNS--;
+                            continue;
+                        }
+                        newNSContext->ns[j] = currentNSContext->ns[i];
+                        j++;
+                    }
+                }
+                h = Tcl_CreateHashEntry (node->ownerDocument->NSscopes,
+                                         (char *) node->nodeNumber, &hnew);
+                Tcl_SetHashValue (h, newNSContext);
+                node->nodeFlags |= HAS_NS_INFO;
+            }
+            h = Tcl_CreateHashEntry (&TSDPTR(attrNames),
+                                     Tcl_DStringValue (&dStr), &hnew);
+            Tcl_DStringFree (&dStr);
+        } else {
+            h = Tcl_CreateHashEntry( &TSDPTR(attrNames), attributeName, &hnew);
+        }
+        attr->nodeType    = ATTRIBUTE_NODE;     
+        attr->nodeFlags   = 0;
+        if (uri) attr->namespace = ns->index;
+        else attr->namespace   = 0;
+        attr->nodeName    = (char *)&(h->key);     
+        attr->parentNode  = node;        
+        attr->valueLength = strlen(attributeValue);
+        attr->nodeValue   = (char*)Tcl_Alloc(attr->valueLength+1);
+        strcpy(attr->nodeValue, attributeValue);
+
+        if (node->firstAttr) {
+            lastAttr = node->firstAttr;
+            /* move to the end of the attribute list */
+            while (lastAttr->nextSibling) lastAttr = lastAttr->nextSibling;
+            lastAttr->nextSibling = attr;
+        } else {
+            node->firstAttr = attr;
         }
     }
     MutationEvent();
@@ -3000,7 +3180,7 @@ domAppendNewTextNode(
 |
 \--------------------------------------------------------------------------*/
 domNode * 
-domAppendNewElementNode(
+domAppendNewElementNodeOld(
     domNode     *parent,
     char        *tagName,
     char        *uri
@@ -3054,6 +3234,173 @@ domAppendNewElementNode(
     
     return node;
 }
+
+domNode * 
+domAppendNewElementNode(
+    domNode     *parent,
+    char        *tagName,
+    char        *uri
+)
+{
+    Tcl_HashEntry *h;
+    domNode       *node;
+    domNS         *ns;
+    int            i, j, hnew;   
+    char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN];
+    Tcl_DString    dStr;
+    domNSContext  *currentNSContext, *newNSContext;
+    GetTDomTSD();
+
+    if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; }
+        
+    domSplitQName (tagName, prefix, &localName);
+
+    node = (domNode*) domAlloc(sizeof(domNode));
+    memset(node, 0, sizeof(domNode));
+    node->nodeType      = ELEMENT_NODE;
+    node->namespace     = 0;
+    node->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
+    node->ownerDocument = parent->ownerDocument;
+    
+    currentNSContext = domCurrentNSContext (parent);
+    if (uri) {
+        Tcl_DStringInit (&dStr);
+        ns = domLookupURI (node, uri);
+        if (ns) {
+            Tcl_DStringAppend (&dStr, ns->prefix, -1);
+            Tcl_DStringAppend (&dStr, ":", 1);
+            Tcl_DStringAppend (&dStr, localName, -1);
+        } else {
+            if (prefix[0] != '\0') {
+                Tcl_DStringAppend (&dStr, prefix, -1);
+                Tcl_DStringAppend (&dStr, ":", 1);
+            }
+            Tcl_DStringAppend (&dStr, localName, -1);
+            
+            ns = domNewNamespace(node->ownerDocument, prefix, uri);
+            newNSContext = (domNSContext *) Tcl_Alloc (sizeof (domNSContext));
+            newNSContext->newNS = 1;
+            if (!currentNSContext) {
+                newNSContext->nrOfNS = 1;
+                newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*));
+                newNSContext->ns[0] = ns;
+            } else {
+                newNSContext->nrOfNS = currentNSContext->nrOfNS + 1;
+                newNSContext->ns = (domNS **) Tcl_Alloc (sizeof (domNS*) * newNSContext->nrOfNS);
+                newNSContext->ns[0] = ns;
+                j = 1;
+                for (i = 0; i < currentNSContext->nrOfNS; i++) {
+                    if (strcmp (currentNSContext->ns[i]->prefix, prefix)==0
+                        || (prefix[0] == '\0' && currentNSContext->ns[i]->prefix[0]=='\0')) {
+                        newNSContext->nrOfNS--;
+                        continue;
+                    }
+                    newNSContext->ns[j] = currentNSContext->ns[i];
+                    j++;
+                }
+            }
+            h = Tcl_CreateHashEntry (node->ownerDocument->NSscopes,
+                                     (char *) node->nodeNumber, &hnew);
+            Tcl_SetHashValue (h, newNSContext);
+            node->nodeFlags |= HAS_NS_INFO;
+        }
+        h = Tcl_CreateHashEntry( &TSDPTR(tagNames), 
+                                 Tcl_DStringValue (&dStr), &hnew); 
+        Tcl_DStringFree (&dStr);
+    } else {
+        ns = NULL;
+        if (currentNSContext) {
+            for (i = 0; i < currentNSContext->nrOfNS; i++) {
+                if (currentNSContext->ns[i]->prefix == '\0') {
+                    ns = currentNSContext->ns[i];
+                    break;
+                }
+            }
+        }
+        h = Tcl_CreateHashEntry( &TSDPTR(tagNames), localName, &hnew);
+    }
+    if (ns)  node->namespace     = ns->index;
+    node->nodeName      = (char *)&(h->key);
+        
+    if (parent->lastChild) {
+        parent->lastChild->nextSibling = node;
+        node->previousSibling          = parent->lastChild;
+    } else {
+        parent->firstChild    = node;
+        node->previousSibling = NULL;
+    }
+    parent->lastChild = node;
+    node->nextSibling = NULL;
+    node->parentNode  = parent;
+
+    MutationEvent();
+    
+    return node;
+}
+
+/*  domNode *  */
+/*  domAppendNewElementNodeLiteral( */
+/*      domNode     *parent, */
+/*      domNode     *literalNode */
+/*  ) */
+/*  { */
+/*      Tcl_HashEntry *h; */
+/*      domNode       *node; */
+/*      domNS         *ns, *nsp, *nsl; */
+/*      int            i, j, hnew;    */
+/*      char          *lname, *localName, lprefix[MAX_PREFIX_LEN], prefix[MAX_PREFIX_LEN]; */
+/*      Tcl_DString    dStr; */
+/*      domNSContext  *currentNSContext, *newNSContext; */
+/*      domNSContext  *mergedNSContext[256]; */
+/*      GetTDomTSD(); */
+
+/*      if (parent == NULL) { fprintf(stderr, "dom.c: Error parent == NULL!\n"); return NULL; } */
+        
+/*      domSplitQName (literalNode->nodeName, prefix, &localName); */
+
+/*      node = (domNode*) domAlloc(sizeof(domNode)); */
+/*      memset(node, 0, sizeof(domNode)); */
+/*      node->nodeType      = ELEMENT_NODE; */
+/*      if (literalNode->namespace) { */
+/*          nsl = domGetNamespaceByIndex (literalNode->ownerDocument,  */
+/*                                        literalNode->namespace); */
+/*          nsp = domLookupPrefix (parent, nsl->prefix); */
+/*          if (!nsp || (strcmp (nsl->uri, nsp->uri)!=0)) { */
+/*              ns = domNewNamespace (parent->ownerDocument, nsl->prefix, */
+/*                                    nsl->uri); */
+/*          } else { */
+/*              ns = nsp; */
+/*          } */
+/*          node->namespace = ns->index; */
+/*      } else { */
+/*          node->namespace     = 0; */
+/*      } */
+/*      node->nodeName      = literalNode->nodeName; */
+/*      node->nodeNumber    = ++TSDPTR(domUniqueNodeNr); */
+/*      node->ownerDocument = parent->ownerDocument; */
+    
+/*      parentNSContext = domCurrentNSContext (parent); */
+/*      literalNSContext = domCurrentNSContext (literalNode); */
+/*      nrOfNS = 0; */
+/*      newNS = 0; */
+/*      for (i = 0; i < currentNSContext->nrOfNS; i++) { */
+        
+        
+/*      if (parent->lastChild) { */
+/*          parent->lastChild->nextSibling = node; */
+/*          node->previousSibling          = parent->lastChild; */
+/*      } else { */
+/*          parent->firstChild    = node; */
+/*          node->previousSibling = NULL; */
+/*      } */
+/*      parent->lastChild = node; */
+/*      node->nextSibling = NULL; */
+/*      node->parentNode  = parent; */
+
+/*      MutationEvent(); */
+    
+/*      return node; */
+/*  } */
 
 
 /*---------------------------------------------------------------------------
