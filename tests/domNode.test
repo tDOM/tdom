@@ -38,6 +38,8 @@
 #    domNode-33.*: insertBeforeFromScript
 #    domNode-34.*: getBaseURI
 #    domNode-35.*: objCmd traces
+#    domNode-36.*: nodeName
+#    domNode-37.*: baseURI 
 #    domNode-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
@@ -65,6 +67,17 @@ test domNode-1.2 {to less arguments to domNode command} {
 test domNode-1.3 {to less arguments to domNode command} {
     catch {domNode}
 } {1}
+
+test domNode-1.4 {rename of domNodeObj cmd} {knownBug} {
+    set doc [dom createDocument "root"]
+    set root [$doc documentElement]
+    rename $root my_domNode
+    set result [llength [info commands my_domNode]]
+    $doc delete
+    lappend result [llength [info commands my_domNode]]
+    catch {my_domNode nodeName} errMsg
+    lappend result $errMsg
+} {1 0}    
 
 test domNode-3.1 {repetitived documentElement with objVar, then delete} {
     dom createDocument "root" doc 
@@ -2584,7 +2597,7 @@ test domNode-33.3 {insertBeforeFromScript - error in the script} {
     set result
 } {1 <root><child/></root>}
 
-test domNode-33.4 {insertBefore- insert more then one node} {
+test domNode-33.4 {insertBeforeFromScript - insert more then one node} {
     set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
     $doc documentElement root
     namespace eval nodeCmds {
@@ -2601,7 +2614,7 @@ test domNode-33.4 {insertBefore- insert more then one node} {
     set result
 } {<doc><foo/><e1/><e2>new</e2><e1/><bar/><grill/></doc>}
 
-test domNode-33.5 {insertBefore- insert more then one node} {
+test domNode-33.5 {insertBeforeFromScript - insert more then one node} {
     set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
     $doc documentElement root
     namespace eval nodeCmds {
@@ -2621,7 +2634,7 @@ test domNode-33.5 {insertBefore- insert more then one node} {
     set result
 } {foo e1 e2 e1 bar grill }
 
-test domNode-33.6 {insertBefore- insert more then one node} {
+test domNode-33.6 {insertBeforeFromScript - insert more then one node} {
     set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
     $doc documentElement root
     namespace eval nodeCmds {
@@ -2643,7 +2656,7 @@ test domNode-33.6 {insertBefore- insert more then one node} {
     set result
 } {grill bar e1 e2 e1 foo }
 
-test domNode-33.7 {insertBefore - error in script} {
+test domNode-33.7 {insertBeforeFromScript - error in script} {
     set doc [dom parse {<doc><foo/><bar/><grill/></doc>}]
     $doc documentElement root
     catch {namespace eval nodeCmds {
@@ -2660,6 +2673,17 @@ test domNode-33.7 {insertBefore - error in script} {
     $doc delete
     set result
 } {<doc><foo/><bar/><grill/></doc>}
+
+test domNode-33.8 {insertBeforeFromScript - wrong reference node} {
+    set doc [dom parse {<root><child/></root>}]
+    $doc documentElement root
+    set result [catch {$root insertBeforeFromScript {
+        nodeCmds::e1
+    } $root} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 NOT_FOUND_ERR}
 
 test domNode-34.1 {getBaseURI} {need_uri} {
     makeFile <y/> domNode-34.1-e1.xml [file join [file dir [info script]] data]
@@ -2787,6 +2811,214 @@ test domNode-35.3 {objCmd traces} {
     set result [info commands $rootCmdName]
     set result
 } {}
+
+test domNode-36.1 {nodeName} {
+    set doc [dom parse <doc/>]
+    set cdataNode [$doc createCDATASection foo]
+    set result [$cdataNode nodeName]
+    $doc delete
+    set result
+} \#cdata-section
+
+test domNode-36.2 {nodeName} {
+    set doc [dom parse <doc/>]
+    set commentNode [$doc createComment foo]
+    set result [$commentNode nodeName]
+    $doc delete
+    set result
+} \#comment
+
+test domNode-36.3 {nodeName} {
+    set doc [dom parse <doc/>]
+    set piNode [$doc createProcessingInstruction p "p value"]
+    set result [$piNode nodeName]
+    $doc delete
+    set result
+} p
+
+proc 37.1 {base system public} {
+    return [list string file://this/that \
+                "External general parsed entity. <b>Text and elements at\
+                 toplevel mixed</b> <m>and so on</m>"]
+}
+
+test domNode-37.1 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://foo" \
+                 -externalentitycommand 37.1 -keepEmpties {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "dont/matter.xml">
+                                 ]>
+                     <x><child/>&a;<child/></x>}]
+    set root [$doc documentElement]
+    set result [$root baseURI]
+    foreach node [$root childNodes] {
+        lappend result [expr {"file://this/that" == [$node baseURI]}]
+    }
+    $doc delete
+    set result
+} {file://foo 0 1 1 1 1 0}
+
+test domNode-37.2 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://foo" \
+                 -externalentitycommand 37.1 -keepEmpties {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "dont/matter.xml">
+                                 ]>
+                     <x>&a;</x>}]
+    set root [$doc documentElement]
+    $root insertBefore [$root lastChild] [$root firstChild]
+    set result {}
+    foreach node [$root childNodes] {
+        lappend result [$node baseURI]
+    }
+    $doc delete
+    set result
+} {file://foo file://this/that file://this/that file://this/that}
+
+test domNode-37.3 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://foo" \
+                 -externalentitycommand 37.1 -keepEmpties {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "dont/matter.xml">
+                                 ]>
+                     <x>&a;</x>}]
+    set root [$doc documentElement]
+    $root appendChild [$root firstChild]
+    set result {}
+    foreach node [$root childNodes] {
+        lappend result [$node baseURI]
+    }
+    $doc delete
+    set result
+} {file://this/that file://this/that file://this/that file://foo}
+
+proc 37.4 {base systemId publicId} {
+    switch $systemId {
+        "a.xml" {
+            return [list string file://base/2 "<child>&b;<elem/></child>"]
+        }
+        "b.xml" {
+            return [list string file://base/3 "<childchild><e/></childchild>"]
+        }
+        default {
+            error "error in text script"
+        }
+    }
+}
+
+test domNode-37.4 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://base/1" \
+                 -externalentitycommand 37.4 {
+                     <!DOCTYPE x [
+                                  <!ENTITY a SYSTEM "a.xml">
+                                  <!ENTITY b SYSTEM "b.xml">
+                                 ]>
+                     <x>&a;<e/></x>}]
+    set root [$doc documentElement]
+    set result [$root baseURI]
+    set rootchild [$root firstChild]
+    lappend result [$rootchild baseURI]
+    set rootchildchild [$rootchild firstChild]
+    lappend result [$rootchildchild baseURI]
+    lappend result [[$rootchildchild firstChild] baseURI]
+    lappend result [[$rootchildchild nextSibling] baseURI]
+    lappend result [[$rootchild nextSibling] baseURI]
+    $doc delete
+    set result
+} {file://base/1 file://base/2 file://base/3 file://base/3 file://base/2 file://base/1}
+
+proc 37.5 {base systemId publicId} {
+    switch $systemId {
+        "a.xml" {
+            return [list string file://base/2 "<e><e>&b;</e></e>"]
+        }
+        "b.xml" {
+            return [list string file://base/3 "<e><e><e/></e></e>"]
+        }
+        default {
+            error "error in text script"
+        }
+    }
+}
+
+test domNode-37.5 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://base/1" \
+                 -externalentitycommand 37.5 {
+                     <!DOCTYPE e [
+                                  <!ENTITY a SYSTEM "a.xml">
+                                  <!ENTITY b SYSTEM "b.xml">
+                                 ]>
+                     <e><e><e>&a;</e></e></e>}]
+    set result {}
+    set node [$doc documentElement]
+    while {$node != ""} {
+        lappend result [$node baseURI]
+        set node [$node firstChild]
+    }
+    $doc delete
+    set result
+} {file://base/1 file://base/1 file://base/1 file://base/2 file://base/2 file://base/3 file://base/3 file://base/3}
+
+proc 37.6 {base systemId publicId} {
+    switch $systemId {
+        "a.xml" {
+            return [list string file://base/2 "<e><e><e/></e></e><e/>text"]
+        }
+        default {
+            error "error in text script"
+        }
+    }
+}
+
+test domNode-37.6 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://base/1" \
+                 -externalentitycommand 37.6 {
+                     <!DOCTYPE e [
+                                  <!ENTITY a SYSTEM "a.xml">
+                                 ]>
+                     <e>&a;<e/></e>}]
+    set result {}
+    set root [$doc documentElement]
+    foreach child [$root childNodes] {
+        lappend result [$child baseURI]
+    }
+    $doc delete
+    set result
+} {file://base/2 file://base/2 file://base/2 file://base/1}
+
+proc 37.7 {base systemId publicId} {
+    switch $systemId {
+        "a.xml" {
+            return [list string file://base/2 "<e1_base2><e/></e1_base2><e2_base2/>text - base2"]
+        }
+        default {
+            error "error in text script"
+        }
+    }
+}
+
+test domNode-37.7 {baseURI} {
+    set doc [dom parse \
+                 -baseurl "file://base/1" \
+                 -externalentitycommand 37.7 {
+                     <!DOCTYPE e [
+                                  <!ENTITY a SYSTEM "a.xml">
+                                 ]>
+                     <root>&a;<e1_base1/>text - base 1</root>}]
+    set result {}
+    set root [$doc documentElement]
+    foreach child [$root childNodes] {
+        lappend result [$child baseURI]
+    }
+    $doc delete
+    set result
+} {file://base/2 file://base/2 file://base/2 file://base/1 file://base/1}
 
 test domNode-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
