@@ -1,3 +1,4 @@
 expat-1.95.6
-The file internal.h includes a post expat 1.95.6 patch to fix gcc
-warnings on solaris. All other files are unmodified expat 1.95.6.
+The files internal.h and expat.h include changes to fix known problems
+of some compilers with expat 1.95.6. All other files are unmodified
+expat 1.95.6.
