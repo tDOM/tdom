@@ -29,8 +29,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/07/04 15:06:49  zoran
+|   fixed reference to unsigned* to char since Sun compiler barfs at it.
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -60,7 +63,7 @@ typedef struct {
     int             type;
     int             start_code;
     int             len;
-    unsigned char * map;
+    char          * map;
 } TEncodingRule;
 
 typedef struct {
