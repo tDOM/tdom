@@ -1,3 +1,24 @@
+2003-02-09  Rolf Ade  <rolf@pointsman.de>
+
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxslt.c
+        * generic/tcldom.c        
+        * doc/domDoc.*
+        * tests/domCmd.test: Public and system identifier information
+          are now stored (if parsed with the expat parser or generated
+          by the xslt engine, if given), exposed to the script level
+          (even writable, more than DOM 2 allows) and will be, on
+          demand, respected while serializing.
+
+        * generic/dom.c: Bug fix: Hold ID => node mapping consistent
+          even after resetting or removal of known ID attributes.
+
+        * generic/domxslt.c: Bug fix: invalid memory read.
+  
+        * generic/tcldom.c: Bug fix: invalid memory read.
+
 2003-01-30  Rolf Ade  <rolf@pointsman.de>
         
         * generic/dom.c
