@@ -1,5 +1,5 @@
 
-                        Expat, Release 1.95.6
+                        Expat, Release 1.95.7
 
 This is Expat, a C library for parsing XML, written by James Clark.
 Expat is a stream-oriented XML parser.  This means that you register
@@ -91,6 +91,13 @@ properly -- appearantly it does not understand .PHONY directives).  If
 you're using ksh or bash, use this command to build:
 
         PATH=/usr/ccs/bin:$PATH make
+
+The unit and regression tests for Expat require the "check" library on
+Unix; more information is available at http://check.sourceforge.net/,
+and downloadable packages are available from the library's project
+page on SourceForge: http://sourceforge.net/projects/check/.  You do
+not need to install the check library to build and use Expat, only to
+build and run Expat's test suite.
 
 When using Expat with a project using autoconf for configuration, you
 can use the probing macro in conftools/expat.m4 to determine how to
