@@ -106,6 +106,7 @@
 # define DOC_NO(doc)        ++domUniqueDocNr
 # define NODE_CMD(s,node)   sprintf((s), "domNode%d", (node)->nodeNumber)
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
+# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd%d", (doc)->documentNumber)
 #else
 # define TDomNotThreaded(x)
 # define TDomThreaded(x)    x
@@ -114,9 +115,11 @@
 # define DOC_NO(doc)        (unsigned int)(doc)
 # define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc0x%x", (doc)->documentNumber)
+# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd0x%x", (doc)->documentNumber)
 #endif /* TCL_THREADS */
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
+#define XMLNS_NAMESPACE "http://www.w3.org/2000/xmlns"
 
 #if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0) || TCL_MAJOR_VERSION < 8
 #define TclOnly8Bits 1
@@ -406,6 +409,7 @@ typedef int domDocFlags;
 #define OUTPUT_DEFAULT_UNKNOWN    8
 #define USE_8_BIT_ENCODING       16
 #define NEEDS_RENUMBERING        32
+#define DONT_FREE                64
 
 /*--------------------------------------------------------------------------
 |   a index to the namespace records
@@ -657,12 +661,12 @@ domTextNode *  domNewTextNode (domDocument *doc,
 
 domNode *      domNewElementNode (domDocument *doc,
                                   char        *tagName,
-				                  domNodeType nodeType);
-				
+		                  domNodeType  nodeType);
+		
 domNode *      domNewElementNodeNS (domDocument *doc,
                                     char        *tagName,
                                     char        *uri,
-				                    domNodeType nodeType);
+		                    domNodeType  nodeType);
 
 domProcessingInstructionNode * domNewProcessingInstructionNode (
                                   domDocument *doc,
@@ -678,7 +682,8 @@ domAttrNode *  domSetAttributeNS (domNode *node, char *attributeName,
                                                  char *attributeValue,
                                                  char *uri,
                                                  int   createNSIfNeeded);
-
+domAttrNode *  domGetAttributeNodeNS (domNode *node, char *uri, 
+                                                     char *localname);
 
 int            domRemoveAttribute (domNode *node, char *attributeName);
 int            domRemoveAttributeNS (domNode *node, char *uri, char *localName);
