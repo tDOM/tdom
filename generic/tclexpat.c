@@ -80,9 +80,10 @@
 #define CheckDefaultTclHandlerSet \
                       if (!activeTclHandlerSet) { \
                          activeTclHandlerSet = CreateTclHandlerSet("default");\
+                         tmpTclHandlerSet = expat->firstTclHandlerSet; \
                          expat->firstTclHandlerSet = activeTclHandlerSet; \
+                         activeTclHandlerSet->nextHandlerSet = tmpTclHandlerSet; \
                       }
-
 
 /*----------------------------------------------------------------------------
 |   typedefs
@@ -993,6 +994,10 @@ TclExpatConfigure (interp, expat, objc, objv)
   char *handlerSetName = NULL;
   TclHandlerSet *tmpTclHandlerSet, *activeTclHandlerSet = NULL;
 
+  if (expat->firstTclHandlerSet 
+      && (strcmp ("default", expat->firstTclHandlerSet->name)==0)) {
+      activeTclHandlerSet = expat->firstTclHandlerSet;
+  }
   while (objc > 1) {
     if (Tcl_GetIndexFromObj(interp, objPtr[0], switches,
 			    "switch", 0, &optionIndex) != TCL_OK) {
@@ -1329,7 +1334,7 @@ TclExpatConfigure (interp, expat, objc, objv)
 	  break;
 
     case EXPAT_HANDLERSET:
-        if ((handlerSetName = Tcl_GetStringFromObj (objv[1], NULL)) == NULL) {
+        if ((handlerSetName = Tcl_GetStringFromObj (objPtr[1], NULL)) == NULL) {
             return TCL_ERROR;
         }
         activeTclHandlerSet = expat->firstTclHandlerSet;
@@ -1725,6 +1730,9 @@ TclGenExpatElementEndHandler(userData, name)
 
       if (ename == NULL) {
           ename = Tcl_NewStringObj ((char *)name, -1);
+          Tcl_IncrRefCount (ename);
+      } else {
+          Tcl_SetStringObj (ename, (char *)name, -1);
       }
       vector[0] = activeTclHandlerSet->elementendcommand;
       vector[1] = ename;
@@ -1734,6 +1742,9 @@ TclGenExpatElementEndHandler(userData, name)
       TclExpatHandlerResult(expat, activeTclHandlerSet, result);
   nextTcl:
       activeTclHandlerSet = activeTclHandlerSet->nextHandlerSet;
+  }
+  if (ename) {
+      Tcl_DecrRefCount (ename);
   }
 
   activeCHandlerSet = expat->firstCHandlerSet;
