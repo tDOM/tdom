@@ -19,6 +19,11 @@
 # ../configure
 #
 #
+# For 64-bit Unix you've to use --disable-tdomalloc
+# -------------------------------------------------
+# ../configure --disable-tdomalloc
+#
+#
 # AOLserver 3.X. It delivers its own patched Tcl lib.
 # Also, this one builds tdom as AOLserver module.
 # Please do not use "make install" after doing "make".

@@ -992,11 +992,7 @@ domNode * tcldom_getNodeFromName (
         *errMsg = "parameter not a domNode!";
         return NULL;
     }
-    if (    (nodeName[7]!='0')
-         || (nodeName[8]!='x')
-         || (sscanf(&nodeName[9], "%x", (unsigned int*)&node) != 1)
-       )
-    {
+    if (sscanf(&nodeName[7], "%p", &node) != 1) {
         if (!Tcl_GetCommandInfo(interp, nodeName, &cmdInfo)) {
            *errMsg = "parameter not a domNode!";
            return NULL;
@@ -1030,11 +1026,7 @@ domDocument * tcldom_getDocumentFromName (
         *errMsg = "parameter not a domDoc!";
         return NULL;
     }
-    if (    (docName[6]!='0')
-         || (docName[7]!='x')
-         || (sscanf(&docName[8], "%x", (unsigned int*)&doc) != 1)
-       )
-    {
+    if (sscanf(&docName[6], "%p", &doc) != 1) {
         if (!Tcl_GetCommandInfo(interp, docName, &cmdInfo)) {
             *errMsg = "parameter not a domDoc!";
             return NULL;
