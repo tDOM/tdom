@@ -3281,7 +3281,9 @@ int tcldom_NodeObjCmd (
 
         case m_toXPath:
             CheckArgs(2,2,2,"");
-            SetResult( xpathNodeToXPath(node));
+            str = xpathNodeToXPath(node);
+            SetResult (str);
+            FREE (str);
             return TCL_OK;
 
         case m_xslt:
