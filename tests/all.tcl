@@ -83,6 +83,7 @@ if {$tcl_version < 8.2} {
 # cleanup
 puts stdout "\nTests ended at [eval $timeCmd]"
 ::tcltest::cleanupTests 1
-exit
-#return
+
+# See http://mini.net/tcl/3248 for an explanation.
+proc exit args {}
 
