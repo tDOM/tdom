@@ -2200,12 +2200,12 @@ int tcldom_NodeObjCmd (
                 parameters =  (char **)Tcl_Alloc(sizeof (char **)*(length+1));
                 for (i = 0; i < length; i ++) {
                     Tcl_ListObjIndex (interp, localListPtr, i, &objPtr);
-                    parameters[i] = Tcl_GetString (objPtr);
+                    parameters[i] = Tcl_GetStringFromObj (objPtr, NULL);
                 }
                 parameters[length] = NULL;
                 objc -= 2;
                 objv += 2;
-                str = Tcl_GetString (objv[2]);
+                str = Tcl_GetStringFromObj (objv[2], NULL);
             } else {
                 parameters = NULL;
             }
