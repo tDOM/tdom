@@ -255,9 +255,9 @@ a text node. The syntax of the created command is:</p>
 escaping of the ampersand character (&amp;) and the left angle bracket (&lt;)
 inside the data is disabled. You should use this flag carefully.</p>
 
-<p>If the first argument of the method is <m>textNode</m>, or <m>cdataNode</m>,
-the command will create an comment node or CDATA section node. The syntax of 
-the created command is:</p>
+<p>If the first argument of the method is <m>commentNode</m>, or 
+<m>cdataNode</m>, the command will create an comment node or CDATA section 
+node. The syntax of the created command is:</p>
 
 <syntax>
 <cmd>nodeCmd</cmd> <m>data</m>
@@ -275,15 +275,49 @@ command is:</p>
         </commanddef>
 
         <commanddef>
-          <command><cmd>dom</cmd> <method>setStoreLineColumn</method> <m>?boolean</m></command>
+          <command><cmd>dom</cmd> <method>setStoreLineColumn</method> <m>?boolean</m>?</command>
           <desc>If switched on, the DOM nodes will contain line and column
-position information for the original XML document after parsing.</desc>
+position information for the original XML document after parsing. The default
+is, not to store line and column position information.</desc>
         </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>setNameCheck</method> <m>?boolean</m>?</command>
+          <desc>If NameCheck is true, every method which expects an XML Name,
+a full qualified name or a processing instructing target will check, if the
+given string is valid according to his production rule. For commands created
+with the <m>createNodeCmd</m> method to be used in the context of
+<m>appendFromScript</m> the status of the flag at creation time
+decides. If NameCheck is true at creation time, the command will
+check his arguments, otherwise not. The <m>setNameCheck</m>
+set this flag. It returns the current NameCheck flag state. The
+default state for NameCheck is true. </desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>setTextCheck</method> <m>?boolean</m>?</command>
+          <desc>If TextCheck is true, every command which expects XML Chars,
+a comment, a CDATA section value or a processing instructing value will check,
+if the given string is valid according to his production rule. For commands
+created with the <m>createNodeCmd</m> method to be used in the
+context of <m>appendFromScript</m> the status of the flag at
+creation time decides. If TextCheck is true at creation time, the
+command will check his arguments, otherwise not.The
+<m>setTextCheck</m> method set this flag. It returns the current
+TextCheck flag state. The default state for TextCheck is true.</desc>
+</commanddef>
 
         <commanddef>
           <command><cmd>dom</cmd> <method>isName</method> <m>name</m></command>
           <desc>Returns 1, if <m>name</m> is a valid XML Name according to
 production 5 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref> recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isPIName</method> <m>name</m></command>
+          <desc>Returns 1, if <m>name</m> is a valid XML processing instruction
+          target according to
+production 17 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref> recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
         <commanddef>
@@ -306,6 +340,31 @@ to production 6 of the of the <ref href="http://www.w3.org/TR/1999/REC-xml-names
           <desc>Returns 1, if every character in <m>string</m> is
 a valid XML Char according to production 2 of the <ref
 href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isComment</method>
+<m>string</m></command>
+          <desc>Returns 1, if <m>string</m> is
+a valid comment according to production 15 of the <ref
+href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isCDATA</method>
+<m>string</m></command>
+          <desc>Returns 1, if <m>string</m> is
+valid according to production 20 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
+recommendation. Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
+          <command><cmd>dom</cmd> <method>isPIValue</method>
+<m>string</m></command>
+          <desc>Returns 1, if <m>string</m> is
+valid according to production 16 of the <ref href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</ref>
 recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
