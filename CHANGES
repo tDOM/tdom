@@ -1,6 +1,6 @@
 2004-09-21  Rolf Ade  <rolf@pointsman.de>
 
-        Added the '-namespaces' option to the selectNdoes
+        Added the '-namespaces' option to the selectNodes
         method. Not resolved namespace prefixes within the xpath
         expression now raises an error.
         *** POTENTIAL INCOMPATIBILITY ***

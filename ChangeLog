@@ -18,7 +18,7 @@
         * generic/domxslt.c
 
         * generic/tcldom.c: Added the '-namespaces' option to the
-          selectNdoes method. Not resolved namespace prefixes within
+          selectNodes method. Not resolved namespace prefixes within
           the xpath expression now raises an error.
           *** POTENTIAL INCOMPATIBILITY *** 
 
