@@ -27,136 +27,65 @@
 #   Contributor(s):            
 #
 #
-#   $Log$
-#   Revision 1.4  2002/06/06 11:27:07  rolf
-#   Fixed a bug (typo)
-#
-#   Revision 1.3  2002/05/17 14:24:37  rolf
-#   With space is significant, in source documents.
-#
-#   Revision 1.2  2002/02/26 14:05:02  rolf
-#   Updated the [load ...] to the new version number 0.7
-#
-#   Revision 1.1.1.1  2002/02/22 01:05:34  rolf
-#   tDOM0.7test with Jochens first set of patches
-#
-#
 #
 #   written by Rolf Ade
 #   August, 2001
 #
 #----------------------------------------------------------------------------
 
-if {[catch {package require tdom} errMsg]} {
-    if {[catch {
-        load   [file dirname [info script]]/../unix/tdom0.7.so
-        source [file dirname [info script]]/../lib/tdom.tcl
-    }]} {
-        puts $errMsg
-    }
+package require tdom 0.7.5
+if {[lsearch [namespace children] ::tdom] == -1} {
+    # tcldomsh without the script library. Source the lib.
+    source [file join [file dir [info script]] ../lib tdom.tcl]
 }
 
 
-#----------------------------------------------------------------------------
-#    externalEntityRefHandler
-#
-#----------------------------------------------------------------------------
-proc externalEntityRefHandler { base systemId publicId } {
-
-    if {[regexp {^[a-zA-Z]+:/} $systemId]}  {
-        # Seems to be not relative to the base
-        if {[regexp { *file://(.*)} $systemId dummy path]} {
-            set fd [open $path]
-            fconfigure $fd -translation binary
-            return [list channel $systemId $fd]
-        } else {
-            return -code error  -errorinfo "externalEntityRefHandler: can only handle file URL's"
-        }
-    } else {
-        if {$base == ""} {
-            return -code error -errorinfo "externalEntityRefHandler: can't resolve relative URI - no base URI given!"
-        }
-        if {[regexp { *file://(.*)} $base dummy basepath]} {
-            set basedir [file dirname $basepath]
-            set entitypath "${basedir}/${systemId}"
-            set fd [open $entitypath]
-            fconfigure $fd -translation binary
-            return [list channel "file://${basedir}/${systemId}" $fd]
-        } else {
-            return -code error  -errorinfo "externalEntityRefHandler: can only handle file URL's"
-        }
-    }
+if {[llength $argv] != 2 && [llength $argv] != 3} {
+    puts stderr "usage: $argv0 <xml-file> <xslt-file> \
+                        ?output_method (asHTML|asXML|asText)?"
+    exit 1
 }
 
+foreach { xmlFile xsltFile outputOpt } $argv break
 
-#----------------------------------------------------------------------------
-#    begin of main part
-#----------------------------------------------------------------------------
+set xmldoc [dom parse -baseurl [tDOM::baseURL $xmlFile] \
+                      -externalentitycommand tDOM::extRefHandler \
+                      -keepEmpties \
+                      [tDOM::xmlReadFile $xmlFile] ]
 
-    if {[llength $argv] != 2 && [llength $argv] != 3} {
-        puts stderr "usage: $argv0 <xml-file> <xslt-file> ?output_method (asHTML|asXML)?"
+dom setStoreLineColumn 1
+set xsltdoc [dom parse -baseurl [tDOM::baseURL $xsltFile] \
+                       -externalentitycommand tDOM::extRefHandler \
+                       -keepEmpties \
+                       [tDOM::xmlReadFile $xsltFile] ]
+dom setStoreLineColumn 0
+
+set xmlroot [$xmldoc documentElement]
+
+$xmlroot xslt $xsltdoc resultDoc
+
+
+if {$outputOpt == ""} {
+    set outputOpt [$resultDoc getDefaultOutputMethod]
+}
+
+switch $outputOpt {
+    asXML -
+    xml  {
+        puts [$resultDoc asXML]
+    }
+    asHTML -
+    html {
+        puts [$resultDoc asHTML]
+    }
+    asText -
+    text {
+        set resultRoot [$resultDoc documentElement]
+        puts [$node nodeValue]
+    }
+    default {
+        puts stderr "Unknown output method '$outputOpt'!"
         exit 1
     }
-
-    foreach { xmlFile xsltFile outputOpt } $argv break
-
-    set xmlfd  [open $xmlFile  r]
-    set xsltfd [open $xsltFile r]
-
-    switch [file pathtype $xmlFile] {
-        "relative" {
-            set xmlbaseurl "file://[pwd]/$xmlFile"
-        }
-        default {
-            set xmlbaseurl "file://$xmlFile"
-        }
-    }
-
-    switch [file pathtype $xsltFile] {
-        "relative" {
-            set xsltbaseurl "file://[pwd]/$xsltFile"
-        }
-        default {
-            set xsltbaseurl "file://$xsltFile"
-        }
-    }
-
-
-    set xmldoc [dom parse -baseurl $xmlbaseurl \
-                          -externalentitycommand externalEntityRefHandler \
-                          -keepEmpties \
-                          [read $xmlfd [file size $xmlFile] ] ]
-
-    set xsltdoc [dom parse -baseurl $xsltbaseurl \
-                           -externalentitycommand externalEntityRefHandler \
-                           -keepEmpties \
-                           [read $xsltfd [file size $xsltFile] ] ]
-
-     close $xmlfd
-     close $xsltfd
-
-     set xmlroot [$xmldoc documentElement]
-
-     $xmlroot xslt $xsltdoc resultDoc
-
-     set resultRoot [$resultDoc documentElement]
-     if { $outputOpt != "" } {
-         puts -nonewline [$resultRoot $outputOpt]
-     } else {
-         puts -nonewline [$resultRoot asHTML]
-     }
-     set nextRoot [$resultRoot nextSibling]
-     while {$nextRoot != ""} {
-         if { $outputOpt != "" } {
-             puts -nonewline [$nextRoot $outputOpt]
-         } else {
-             puts -nonewline [$nextRoot asHTML]
-         }
-         set nextRoot [$nextRoot nextSibling]
-     }
-     puts ""
-
-#----------------------------------------------------------------------------
-#    end of main part
-#----------------------------------------------------------------------------
+}
 
