@@ -1485,27 +1485,14 @@ HTML_SimpleParseDocument (
     int    *pos,
     char  **errStr
 ) {
-    Tcl_HashEntry *h;
-    domNode       *rootNode;
-    int            hnew;
-    domDocument   *doc = domCreateEmptyDoc();
+    domDocument   *doc = domCreateDoc(NULL, 0);
 
     *pos = 0;
     HTML_SimpleParse (html, pos, doc, NULL, ignoreWhiteSpaces, errStr);
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "(rootNode)", &hnew);
-    rootNode = (domNode*) domAlloc(sizeof(domNode));
-
-    memset(rootNode, 0, sizeof(domNode));
-    rootNode->nodeType      = ELEMENT_NODE;
-    rootNode->nodeFlags     = 0;
-    rootNode->namespace     = 0;
-    rootNode->nodeName      = (char *)&(h->key);
-    rootNode->ownerDocument = doc;
-    rootNode->nodeNumber    = NODE_NO(doc);
-    rootNode->parentNode    = NULL;
-    rootNode->firstChild = rootNode->lastChild = doc->documentElement;
-    doc->rootNode = rootNode;
+    doc->rootNode->firstChild 
+        = doc->rootNode->lastChild
+        = doc->documentElement;
     return doc;
 
 } /* HTML_SimpleParseDocument */

@@ -6,7 +6,7 @@ struct TclGenExpatInfo;
 typedef void (*CHandlerSet_userDataReset)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_userDataFree)(Tcl_Interp *interp, void *userData);
 typedef void (*CHandlerSet_parserReset)(XML_Parser parser, void *userData);
-typedef void (*CHandlerSet_initParse)(const struct TclGenExpatInfo *expat,
+typedef void (*CHandlerSet_initParse)(struct TclGenExpatInfo *expat,
                                       void *userData);
 
 typedef struct CHandlerSet {

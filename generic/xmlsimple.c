@@ -1077,37 +1077,12 @@ XML_SimpleParseDocument (
     int     *pos,
     char   **errStr
 ) {
-    int            hnew;
-    Tcl_HashEntry *h;
-    domNode       *rootNode;
-    domDocument   *doc = domCreateEmptyDoc();
+    domDocument   *doc = domCreateDoc(baseURI, 0);
 
     if (extResolver) {
         doc->extResolver = extResolver;
         Tcl_IncrRefCount(extResolver);
     }
-    
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
-    rootNode = (domNode*) domAlloc(sizeof(domNode));
-    memset(rootNode, 0, sizeof(domNode));
-    rootNode->nodeType      = ELEMENT_NODE;
-    rootNode->nodeFlags     = 0;
-    rootNode->namespace     = 0;
-    rootNode->nodeName      = (char *)&(h->key);
-    rootNode->ownerDocument = doc;
-    rootNode->nodeNumber    = NODE_NO(doc);
-    rootNode->parentNode    = NULL;
-#ifdef TDOM_NS
-    rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
-#endif    
-    if (baseURI) {
-        h = Tcl_CreateHashEntry (&doc->baseURIs, 
-                                 (char*)rootNode->nodeNumber,
-                                 &hnew);
-        Tcl_SetHashValue (h, tdomstrdup (baseURI));
-                    rootNode->nodeFlags |= HAS_BASEURI;
-    }
-    doc->rootNode = rootNode;
     
     *pos = 0;
     XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, baseURI, errStr);
