@@ -378,17 +378,18 @@ XML_SimpleParse (
     domDocument *doc,
     domNode     *parent_nodeOld,
     int          ignoreWhiteSpaces,
+    char        *baseURI,
     char       **errStr
 ) {
     register int   c;          /* Next character of the input file */
     register char *pn;
     register char *x, *start, *piSep;
-    int            saved;
+    int            saved, rootNodeNr;
     int            hasContent;
     domNode       *node, *toplevel, *rootNode;
     domNode       *parent_node = NULL;
     domTextNode   *tnode;
-    domAttrNode   *attrnode, *lastAttr;
+    domAttrNode   *attrnode, *lastAttr, *attrList;
     int            ampersandSeen = 0;
     int            only_whites   = 0;
     int            hnew;
@@ -405,10 +406,10 @@ XML_SimpleParse (
     domNS         *ns;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];
-    
+    domAttrNode   *lastNSAttr, *NSattrList;
 #endif
 
-
+    rootNodeNr = NODE_NO(doc);
     x = &(xml[*pos]);
 
     while ( (c=*x)!=0 ) {
@@ -502,9 +503,15 @@ XML_SimpleParse (
                 rootNode->namespace     = 0;
                 rootNode->nodeName      = (char *)&(h->key);
                 rootNode->ownerDocument = doc;
-                rootNode->nodeNumber    = NODE_NO(doc);
+                rootNode->nodeNumber    = rootNodeNr;
                 rootNode->parentNode    = NULL;
-
+                if (baseURI) {
+                    h = Tcl_CreateHashEntry (&doc->baseURIs, 
+                                             (char*)rootNode->nodeNumber,
+                                             &hnew);
+                    Tcl_SetHashValue (h, strdup (baseURI));
+                    rootNode->nodeFlags |= HAS_BASEURI;
+                }
                 rootNode->firstChild = doc->documentElement;
                 while (rootNode->firstChild->previousSibling) {
                     rootNode->firstChild = rootNode->firstChild->previousSibling;
@@ -783,6 +790,11 @@ XML_SimpleParse (
             |   read attribute name-value pairs
             \----------------------------------------------------------*/
             lastAttr = NULL;
+            attrList = NULL;
+#ifdef TDOM_NS
+            lastNSAttr = NULL;
+            NSattrList = NULL;
+#endif            
             while ( (c=*x) && (c!='/') && (c!='>') ) {
                 char *ArgName = x;
                 int nArgName;
@@ -855,7 +867,6 @@ XML_SimpleParse (
                     attrnode->nodeName    = (char *)&(h->key);
                     attrnode->nodeType    = ATTRIBUTE_NODE;
                     attrnode->nodeFlags   = IS_NS_NODE;
-                    attrnode->namespace   = ns->index;
                     attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
                     attrnode->valueLength = nArgVal;
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
@@ -876,6 +887,7 @@ XML_SimpleParse (
                     } else {
                         ns = domNewNamespace(doc, "", (char*)attrnode->nodeValue);
                     }
+                    attrnode->namespace   = ns->index;
                     if (newNS) {
                         /* push active namespace */
                         activeNSpos++;
@@ -889,40 +901,13 @@ XML_SimpleParse (
                         activeNS[activeNSpos].namespace = ns;
                     }
     
-                    if (node->firstAttr) {
-                        lastAttr->nextSibling = attrnode;
+                    if (NSattrList) {
+                        lastNSAttr->nextSibling = attrnode;
                     } else {
-                        node->firstAttr = attrnode;
+                        NSattrList = attrnode;
                     }
-                    lastAttr = attrnode;
+                    lastNSAttr = attrnode;
                     
-                    /*----------------------------------------------------------
-                    |   look for namespace of element
-                    \---------------------------------------------------------*/
-                    domSplitQName ((char*)ArgName, tagPrefix, &localname);
-                    for (nspos = activeNSpos; nspos >= 0; nspos--) {
-                        if (  ((tagPrefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
-                           || ((tagPrefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
-                               && (strcmp(tagPrefix, activeNS[nspos].namespace->prefix) == 0))
-                        ) {
-                            if (activeNS[nspos].namespace->prefix[0] == '\0'
-                                && activeNS[nspos].namespace->uri[0] == '\0'
-                                && tagPrefix[0] == '\0') 
-                            {
-                                /* xml-names rec. 5.2: "The default namespace can be
-                                   set to the empty string. This has the same effect,
-                                   within the scope of the declaration, of there being
-                                   no default namespace." */
-                                 break;
-                            }
-                            node->namespace = activeNS[nspos].namespace->index;
-                            DBG(fprintf(stderr, "tag='%s' uri='%s' \n",
-                                        node->nodeName,
-                                        activeNS[nspos].namespace->uri);
-                            )
-                            break;
-                        }
-                    }
 
                 } else {
 #endif
@@ -944,41 +929,83 @@ XML_SimpleParse (
                     if (ampersandSeen) {
                         TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
                     }
-                    if (node->firstAttr) {
+                    if (attrList) {
                         lastAttr->nextSibling = attrnode;
                     } else {
-                        node->firstAttr = attrnode;
+                        attrList = attrnode;
                     }
                     lastAttr = attrnode;
 #ifdef TDOM_NS
-                    /*----------------------------------------------------------
-                    |   look for attribute namespace
-                    \---------------------------------------------------------*/
-                    domSplitQName ((char*)attrnode->nodeName, prefix, &localname);
-                    if (prefix[0] != '\0') {
-                        for (nspos = activeNSpos; nspos >= 0; nspos--) {
-                            if (  ((prefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
-                               || ((prefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
-                                    && (strcmp(prefix, activeNS[nspos].namespace->prefix) == 0))
-                            ) {
-                                attrnode->namespace = activeNS[nspos].namespace->index;
-                                DBG(fprintf(stderr, "attr='%s' uri='%s' \n",
-                                    attrnode->nodeName,
-                                    activeNS[nspos].namespace->uri);
-                                )
-                                break;
-                            }
-                        }
-                    }
                 }
-                depth++;
-#endif
- 
+#endif 
                 *(ArgName + nArgName) = saved;
                 while (SPACE(*x)) {
                     x++;
                 }
             }
+
+#ifdef TDOM_NS
+            /*----------------------------------------------------------
+            |   look for namespace of element
+            \---------------------------------------------------------*/
+            domSplitQName ((char*)node->nodeName, tagPrefix,
+                           &localname);
+            for (nspos = activeNSpos; nspos >= 0; nspos--) {
+                if (  ((tagPrefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
+                      || ((tagPrefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
+                          && (strcmp(tagPrefix, activeNS[nspos].namespace->prefix) == 0))
+                    ) {
+                    if (activeNS[nspos].namespace->prefix[0] == '\0'
+                        && activeNS[nspos].namespace->uri[0] == '\0'
+                        && tagPrefix[0] == '\0') 
+                    {
+                        /* xml-names rec. 5.2: "The default namespace can be
+                           set to the empty string. This has the same effect,
+                           within the scope of the declaration, of there being
+                           no default namespace." */
+                        break;
+                    }
+                    node->namespace = activeNS[nspos].namespace->index;
+                    DBG(fprintf(stderr, "tag='%s' uri='%s' \n",node->nodeName,
+                                activeNS[nspos].namespace->uri);
+                               )
+                    break;
+                }
+            }
+
+            /*----------------------------------------------------------
+            |   look for attribute namespace
+            \---------------------------------------------------------*/
+            attrnode = attrList;
+            while (attrnode) {
+                domSplitQName ((char*)attrnode->nodeName, prefix, &localname);
+                if (prefix[0] != '\0') {
+                    for (nspos = activeNSpos; nspos >= 0; nspos--) {
+                        if (  ((prefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))
+                              || ((prefix[0] != '\0') && (activeNS[nspos].namespace->prefix[0] != '\0')
+                                  && (strcmp(prefix, activeNS[nspos].namespace->prefix) == 0))
+                            ) {
+                            attrnode->namespace = activeNS[nspos].namespace->index;
+                            DBG(fprintf(stderr, "attr='%s' uri='%s' \n",
+                                        attrnode->nodeName,
+                                        activeNS[nspos].namespace->uri);
+                                )
+                            break;
+                        }
+                    }
+                }
+                attrnode = attrnode->nextSibling;
+            }
+            if (lastNSAttr) {
+                node->firstAttr = NSattrList;
+                lastNSAttr->nextSibling = attrList;
+            } else {
+                node->firstAttr = attrList;
+            }
+#else
+            node->firstAttr = attrList;
+
+#endif
             if (*x=='/') {
                 hasContent = 0;
                 x++;
@@ -990,6 +1017,7 @@ XML_SimpleParse (
                 x++;
             }
             if (hasContent) {
+                depth++;
                 /*------------------------------------------------------------
                 |   recurs to read child tags/texts
                 \-----------------------------------------------------------*/
@@ -1012,15 +1040,22 @@ XML_SimpleParse (
 \---------------------------------------------------------------------------*/
 domDocument *
 XML_SimpleParseDocument (
-    char   *xml,              /* Complete text of the file being parsed  */
-    int     ignoreWhiteSpaces,
-    int    *pos,
-    char  **errStr
+    char    *xml,              /* Complete text of the file being parsed  */
+    int      ignoreWhiteSpaces,
+    char    *baseURI,
+    Tcl_Obj *extResolver,
+    int     *pos,
+    char   **errStr
 ) {
     domDocument *doc = domCreateEmptyDoc();
 
+    if (extResolver) {
+        doc->extResolver = extResolver;
+        Tcl_IncrRefCount(extResolver);
+    }
+
     *pos = 0;
-    XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, errStr);
+    XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, baseURI, errStr);
 
     return doc;
 
