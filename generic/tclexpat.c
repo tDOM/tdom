@@ -778,7 +778,7 @@ TclExpatParse (interp, expat, data, len, type)
   activeCHandlerSet = expat->firstCHandlerSet;
   while (activeCHandlerSet) {
       if (activeCHandlerSet->initParseProc) {
-          activeCHandlerSet->initParseProc ((const TclGenExpatInfo *) expat,
+          activeCHandlerSet->initParseProc ((TclGenExpatInfo *) expat,
                                             activeCHandlerSet->userData);
       }
       activeCHandlerSet = activeCHandlerSet->nextHandlerSet;

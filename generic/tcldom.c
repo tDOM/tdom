@@ -4303,7 +4303,7 @@ int tcldom_createDocumentNode (
         newObjName = objv[1];
         setVariable = 1;
     }
-    doc = domCreateDoc ();
+    doc = domCreateDoc (NULL, 0);
     return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
 }
 

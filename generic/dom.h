@@ -665,7 +665,7 @@ typedef void (*domFreeCallback) (domNode * node, void * clientData);
 char *         domException2String (domException expection);
 
 void           domModuleInitialize (void);
-domDocument *  domCreateDoc ();
+domDocument *  domCreateDoc (char *baseURI, int storeLineColumn);
 domDocument *  domCreateDocument (Tcl_Interp *interp,
                                   char *documentElementTagName,
                                   char *uri);
@@ -786,8 +786,6 @@ void           domLocksAttach(domDocument *doc);
 void           domLocksDetach(domDocument *doc);
 void           domLocksFinalize(ClientData dummy);
 #endif
-
-domDocument *  domCreateEmptyDoc(void);
 
 /*---------------------------------------------------------------------------
 |   coercion routines for calling from C++

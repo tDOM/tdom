@@ -1747,10 +1747,8 @@ domReadDocument (
     Tcl_Interp *interp
 )
 {
-    Tcl_HashEntry *h;
-    domLineColumn *lc;
     domNode       *rootNode;
-    int            hnew, done, len;
+    int            done, len;
     domReadInfo    info;
     char           buf[8192];
 #if !TclOnly8Bits
@@ -1759,7 +1757,7 @@ domReadDocument (
     int            useBinary;
     char          *str;
 #endif
-    domDocument   *doc = domCreateEmptyDoc();
+    domDocument   *doc = domCreateDoc(baseurl, storeLineColumn);
 
     doc->nodeFlags |= USE_8_BIT_ENCODING && encoding_8bit;
     if (extResolver) {
@@ -1798,42 +1796,6 @@ domReadDocument (
                              (enum XML_ParamEntityParsing) paramEntityParsing);
     XML_SetDoctypeDeclHandler (parser, startDoctypeDeclHandler,
                                endDoctypeDeclHandler);
-
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
-    if (storeLineColumn) {
-        rootNode = (domNode*) domAlloc(sizeof(domNode)
-                                        + sizeof(domLineColumn));
-    } else {
-        rootNode = (domNode*) domAlloc(sizeof(domNode));
-    }
-    memset(rootNode, 0, sizeof(domNode));
-    rootNode->nodeType      = ELEMENT_NODE;
-    rootNode->nodeFlags     = 0;
-    if (baseurl) {
-        rootNode->nodeFlags |= HAS_BASEURI;
-    }
-    rootNode->namespace     = 0;
-    rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(doc);
-    rootNode->ownerDocument = doc;
-    rootNode->parentNode    = NULL;
-#ifdef TDOM_NS
-    rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
-#endif
-    if (storeLineColumn) {
-        lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
-        rootNode->nodeFlags |= HAS_LINE_COLUMN;
-        lc->line         = -1;
-        lc->column       = -1;
-    }
-    if (XML_GetBase (info.parser) != NULL) {
-        h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode,
-                                 &hnew);
-        Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info.parser)));
-        rootNode->nodeFlags |= HAS_BASEURI;
-    }
-    doc->rootNode = rootNode;
-
 
     if (channel == NULL) {
         if (!XML_Parse(parser, xml, length, 1)) {
@@ -1892,6 +1854,7 @@ domReadDocument (
     }
     FREE ( (char*) info.activeNS );
 
+    rootNode = doc->rootNode;
     rootNode->firstChild = doc->documentElement;
     while (rootNode->firstChild->previousSibling) {
         rootNode->firstChild = rootNode->firstChild->previousSibling;
@@ -1995,15 +1958,38 @@ domCreateXMLNamespaceNode (
 }
 #endif /* TDOM_NS */
 
-/*---------------------------------------------------------------------------
-|   domCreateEmptyDoc
-|
-\--------------------------------------------------------------------------*/
-domDocument *
-domCreateEmptyDoc(void)
-{
-    domDocument *doc = (domDocument *) MALLOC (sizeof (domDocument));
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domCreateDoc --
+ *
+ *      This procedure allocates a new domDocument, initialize it and
+ *      creates its rootNode (with initialization).
+ *
+ * Results:
+ *	The domDocument node:
+ *
+ * Side effects:
+ *	Allocates memory for the returned domDocument and its
+ *	rootNode.
+ *
+ *----------------------------------------------------------------------
+ */
 
+domDocument *
+domCreateDoc (
+    char * baseURI,
+    int    storeLineColumn
+    )
+{
+    Tcl_HashEntry *h;
+    int            hnew;
+    domNode       *rootNode;
+    domDocument   *doc;
+    domLineColumn *lc;
+
+    doc = (domDocument *) MALLOC (sizeof (domDocument));
     memset(doc, 0, sizeof(domDocument));
     doc->nodeType       = DOCUMENT_NODE;
     doc->documentNumber = DOC_NO(doc);
@@ -2020,27 +2006,23 @@ domCreateEmptyDoc(void)
         Tcl_InitHashTable(&doc->tagNames, TCL_STRING_KEYS);
         Tcl_InitHashTable(&doc->attrNames, TCL_STRING_KEYS);
     )
-    return doc;
-}
 
-/*---------------------------------------------------------------------------
-|   domCreateDoc
-|
-\--------------------------------------------------------------------------*/
-domDocument *
-domCreateDoc ( )
-{
-    Tcl_HashEntry *h;
-    int            hnew;
-    domNode       *rootNode;
-    domDocument   *doc = domCreateEmptyDoc();
-
-    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
-    rootNode = (domNode*) domAlloc(sizeof(domNode));
+    if (storeLineColumn) {
+        rootNode = (domNode*) domAlloc(sizeof(domNode)+sizeof(domLineColumn));
+    } else {
+        rootNode = (domNode*) domAlloc(sizeof(domNode));
+    }
     memset(rootNode, 0, sizeof(domNode));
     rootNode->nodeType      = ELEMENT_NODE;
-    rootNode->nodeFlags     = 0;
+    if (baseURI) {
+        h = Tcl_CreateHashEntry (&doc->baseURIs, (char*)rootNode, &hnew);
+        Tcl_SetHashValue (h, tdomstrdup (baseURI));
+        rootNode->nodeFlags |= HAS_BASEURI;
+    } else {
+        rootNode->nodeFlags = 0;
+    }
     rootNode->namespace     = 0;
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tagNames), "", &hnew);
     rootNode->nodeName      = (char *)&(h->key);
     rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->ownerDocument = doc;
@@ -2049,6 +2031,12 @@ domCreateDoc ( )
 #ifdef TDOM_NS
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
 #endif
+    if (storeLineColumn) {
+        lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
+        rootNode->nodeFlags |= HAS_LINE_COLUMN;
+        lc->line            = 0;
+        lc->column          = 0;
+    }
     doc->rootNode = rootNode;
 
     return doc;
@@ -2102,7 +2090,7 @@ domCreateDocument (
             return NULL;
         }
     }
-    doc = domCreateDoc ();
+    doc = domCreateDoc (NULL, 0);
 
     h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), documentElementTagName, &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
@@ -3483,7 +3471,6 @@ domAppendNewTextNode(
 )
 {
     domTextNode   *node;
-    Tcl_DString    escData;
 
     if (!length) {
         return NULL;
@@ -3731,7 +3718,6 @@ domNormalize (
     )
 {
     domNode     *child, *nextChild;
-    domTextNode *cdataNode;
     int          merge = 0;
     
     if (node->nodeType != ELEMENT_NODE) return;
@@ -4590,15 +4576,12 @@ tdom_resetProc (
 )
 {
     domReadInfo *info = (domReadInfo *) userData;
-    domDocument *doc;
 
     if (info->document) {
         domFreeDocument (info->document, NULL, NULL);
     }
 
-    doc = domCreateEmptyDoc();
-
-    info->document          = doc;
+    info->document          = NULL;
     info->currentNode       = NULL;
     info->depth             = 0;
     info->ignoreWhiteSpaces = 1;
@@ -4621,6 +4604,20 @@ tdom_parserResetProc (
     info->parser = parser;
 }
 
+void
+tdom_initParseProc (
+    TclGenExpatInfo *expat,
+    void            *userData
+    )
+{
+    domReadInfo *info = (domReadInfo *) userData;
+    domDocument *doc;
+
+    doc = domCreateDoc((char *)XML_GetBase (info->parser), 
+                       info->storeLineColumn);
+    info->document = doc;
+}
+
 int
 TclTdomObjCmd (dummy, interp, objc, objv)
      ClientData dummy;
@@ -4630,12 +4627,9 @@ TclTdomObjCmd (dummy, interp, objc, objv)
 {
     char            *method, *encodingName;
     CHandlerSet     *handlerSet;
-    int              methodIndex, result, bool, hnew;
-    domDocument     *doc;
+    int              methodIndex, result, bool;
     domNode         *rootNode;
     domReadInfo     *info;
-    domLineColumn   *lc;
-    Tcl_HashEntry   *h;
     TclGenExpatInfo *expat;
     Tcl_Obj         *newObjName = NULL;
     TEncoding       *encoding;
@@ -4683,6 +4677,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->resetProc               = tdom_resetProc;
         handlerSet->freeProc                = tdom_freeProc;
         handlerSet->parserResetProc         = tdom_parserResetProc;
+        handlerSet->initParseProc           = tdom_initParseProc;
         handlerSet->elementstartcommand     = startElement;
         handlerSet->elementendcommand       = endElement;
         handlerSet->datacommand             = characterDataHandler;
@@ -4692,10 +4687,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->startDoctypeDeclCommand = startDoctypeDeclHandler;
         handlerSet->endDoctypeDeclCommand   = endDoctypeDeclHandler;
 
-        doc = domCreateEmptyDoc();
-
         info = (domReadInfo *) MALLOC (sizeof (domReadInfo));
-        info->document          = doc;
+        info->document          = NULL;
         info->currentNode       = NULL;
         info->depth             = 0;
         info->ignoreWhiteSpaces = 1;
@@ -4725,30 +4718,10 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             return TCL_ERROR;
         }
         if (!info->document) {
-            Tcl_SetResult (interp, "DOM tree is already transformed to a tcl command.", NULL);
+            Tcl_SetResult (interp, "No DOM tree avaliable.", NULL);
             return TCL_ERROR;
         }
-        h = Tcl_CreateHashEntry (&HASHTAB(info->document,tagNames), "", &hnew);
-        if (info->storeLineColumn) {
-            rootNode = (domNode*) domAlloc(sizeof(domNode)
-                                            + sizeof(domLineColumn));
-        } else {
-            rootNode = (domNode*) domAlloc(sizeof(domNode));
-        }
-        memset(rootNode, 0, sizeof(domNode));
-        rootNode->nodeType      = ELEMENT_NODE;
-        rootNode->nodeFlags     = 0;
-        rootNode->namespace     = 0;
-        rootNode->nodeName      = (char *)&(h->key);
-        rootNode->nodeNumber    = NODE_NO(info->document);
-        rootNode->ownerDocument = info->document;
-        rootNode->parentNode    = NULL;
-        if (info->storeLineColumn) {
-            lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
-            rootNode->nodeFlags |= HAS_LINE_COLUMN;
-            lc->line         = -1;
-            lc->column       = -1;
-        }
+        rootNode = info->document->rootNode;
         rootNode->firstChild = info->document->documentElement;
         while (rootNode->firstChild->previousSibling) {
             rootNode->firstChild = rootNode->firstChild->previousSibling;
@@ -4757,14 +4730,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         while (rootNode->lastChild->nextSibling) {
             rootNode->lastChild = rootNode->lastChild->nextSibling;
         }
-        if (XML_GetBase (info->parser) != NULL) {
-            h = Tcl_CreateHashEntry (&info->document->baseURIs,
-                                     (char*)rootNode,
-                                     &hnew);
-            Tcl_SetHashValue (h, tdomstrdup (XML_GetBase (info->parser)));
-            rootNode->nodeFlags |= HAS_BASEURI;
-        }
-        info->document->rootNode = rootNode;
         result = tcldom_returnDocumentObj (interp, info->document, 0,
                                            newObjName, 1);
         info->document = NULL;
