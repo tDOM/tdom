@@ -3908,9 +3908,11 @@ static int xpathEvalStep (
             if (startingNode->parentNode) {
                 node = (startingNode->parentNode)->firstChild;
             } else {
-                return XPATH_OK;
+                if (ctxNode == ctxNode->ownerDocument->rootNode)
+                    return XPATH_OK;
+                node = startingNode->ownerDocument->rootNode->firstChild;
             }
-            while (node != startingNode) {
+            while (node && (node != startingNode)) {
                 if (xpathNodeTest(node, exprContext, step)) {
                     checkRsAddNode(result, node);
                 } 

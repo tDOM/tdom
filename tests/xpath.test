@@ -10,6 +10,8 @@
 #               XPath functions
 #    xpath-5.*: erroneous XPath exprs
 #    xpath-6.*: Doc order after modifying tree
+#    xpath-7.*: Asorted XPath expressions, which are not occur in the xslt 
+#               tests outside this tcltest based test suite
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -411,6 +413,29 @@ test xpath-6.1 {document order in modified DOM tree} {
     }
     set result
 } {asub1 asub2 asub3 asub4 bsub1 bsub2 }
+
+$doc delete
+
+
+set doc [dom parse {
+<!-- comment 1 -->
+<!-- comment 2 -->
+<?api pi data?>
+<!-- still not the document element -->
+<root/>
+<!-- comment 1 -->
+<!-- comment 2 -->
+<?api pi data?>
+<!-- still not the end of the document -->}]
+set root [$doc documentElement]
+
+test xpath-7.1 {preceding-sibling axis with documentElement als current node} {
+    $root selectNodes {count(preceding-sibling::node())}
+} {4}
+
+test xpath-7.2 {following-sibling axis with documentElement als current node} {
+    $root selectNodes {count(following-sibling::node())}
+} {4}
 
 $doc delete
 
