@@ -1616,9 +1616,9 @@ void tcldom_AppendEscaped (
 #define AP(c)  *b++ = c;
 #define AE(s)  pc1 = s; while(*pc1) *b++ = *pc1++;
     char  buf[APESC_BUF_SIZE+80], *b, *bLimit,  *pc, *pc1, *pEnd, charRef[10];
-    int   charDone;
+    int   charDone, i;
 #if !TclOnly8Bits
-    int i, clen = 0;
+    int   clen = 0;
     Tcl_UniChar uniChar;
 #endif
 
@@ -1916,10 +1916,12 @@ void tcldom_AppendEscaped (
 #if TclOnly8Bits
             if (!charDone) {
                 if (escapeNonASCII && ((unsigned char)*pc > 127)) {
-                    sprintf (charRef, "%d", uniChar);
-                    for (i = 0; i < 2; i++) {
+                    AP('&') AP('#')
+                    sprintf (charRef, "%d", (unsigned char)*pc);
+                    for (i = 0; i < 3; i++) {
                         AP(charRef[i]);
                     }
+                    AP(';')
                 } else {
                     AP(*pc);
                 }
