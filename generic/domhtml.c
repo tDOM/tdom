@@ -487,7 +487,8 @@ HTML_SimpleParse (
                 tnode->nodeType    = TEXT_NODE;
                 tnode->nodeFlags   = 0;
                 tnode->namespace   = 0;
-                tnode->nodeNumber  = NODE_NO(tnode);
+                tnode->ownerDocument = doc;
+                tnode->nodeNumber  = NODE_NO(doc);
                 tnode->valueLength = (x - start);
                 tnode->nodeValue   = (char*)Tcl_Alloc((x - start)+1);
                 memmove(tnode->nodeValue, start, (x - start));
@@ -495,7 +496,6 @@ HTML_SimpleParse (
                 if (ampersandSeen) {
                     TranslateEntityRefs(tnode->nodeValue, &(tnode->valueLength) );
                 }
-                tnode->ownerDocument = doc;
                 tnode->parentNode = parent_node;
                 if (parent_node->firstChild)  {
                     parent_node->lastChild->nextSibling = (domNode*)tnode;
@@ -654,8 +654,8 @@ HTML_SimpleParse (
                         tnode->nodeType      = COMMENT_NODE;
                         tnode->nodeFlags     = 0;
                         tnode->namespace     = 0;
-                        tnode->nodeNumber    = NODE_NO(tnode);
                         tnode->ownerDocument = doc;
+                        tnode->nodeNumber    = NODE_NO(doc);
                         tnode->parentNode    = parent_node;
                         tnode->valueLength   = x - start - 4;
                         tnode->nodeValue     = (char*)Tcl_Alloc(tnode->valueLength+1);
@@ -735,8 +735,8 @@ HTML_SimpleParse (
                             tnode->nodeType      = TEXT_NODE;
                             tnode->nodeFlags     = 0;
                             tnode->namespace     = 0;
-                            tnode->nodeNumber    = NODE_NO(tnode);
                             tnode->ownerDocument = doc;
+                            tnode->nodeNumber    = NODE_NO(doc);
                             tnode->parentNode    = parent_node;
                             tnode->valueLength   = (x - start);
                             tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
@@ -779,8 +779,8 @@ HTML_SimpleParse (
                     pinode->nodeType      = PROCESSING_INSTRUCTION_NODE;
                     pinode->nodeFlags     = 0;
                     pinode->namespace     = 0;
-                    pinode->nodeNumber    = NODE_NO(pinode);
                     pinode->ownerDocument = doc;
+                    pinode->nodeNumber    = NODE_NO(doc);
                     pinode->parentNode    = parent_node;
 
                     /*-------------------------------------------------
@@ -886,8 +886,8 @@ HTML_SimpleParse (
             node->nodeFlags     = 0;
             node->namespace     = 0;
             node->nodeName      = (char *)&(h->key);
-            node->nodeNumber    = NODE_NO(node);
             node->ownerDocument = doc;
+            node->nodeNumber    = NODE_NO(doc);
 
             if (parent_node == NULL) {
                 if (doc->documentElement) {
@@ -1060,8 +1060,8 @@ HTML_SimpleParse (
                     tnode->nodeType      = TEXT_NODE;
                     tnode->nodeFlags     = 0;
                     tnode->namespace     = 0;
-                    tnode->nodeNumber    = NODE_NO(tnode);
                     tnode->ownerDocument = doc;
+                    tnode->nodeNumber    = NODE_NO(doc);
                     tnode->parentNode    = node;
                     tnode->valueLength   = (x - start);
                     tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
@@ -1155,8 +1155,8 @@ HTML_SimpleParseDocument (
     rootNode->nodeFlags     = 0;
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
+    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
     rootNode->firstChild = rootNode->lastChild = doc->documentElement;
     doc->rootNode = rootNode;

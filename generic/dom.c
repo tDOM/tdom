@@ -642,8 +642,8 @@ startElement(
     node->nodeFlags     = 0;
     node->namespace     = 0;
     node->nodeName      = (char *)&(h->key);
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = info->document;
+    node->nodeNumber    = NODE_NO(info->document);
 
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
@@ -955,7 +955,8 @@ characterDataHandler (
         node->nodeType    = TEXT_NODE;
         node->nodeFlags   = 0;
         node->namespace   = 0;
-        node->nodeNumber  = NODE_NO(node);
+        node->ownerDocument = info->document;
+        node->nodeNumber  = NODE_NO(info->document);
         if (info->baseURI != XML_GetBase (info->parser)) {
             info->baseURI  = XML_GetBase (info->parser);
             h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -968,7 +969,6 @@ characterDataHandler (
         node->nodeValue   = (char*)Tcl_Alloc(len);
         memmove(node->nodeValue, s, len);
 
-        node->ownerDocument = info->document;
         node->parentNode = parentNode;
         if (parentNode->nodeType == ELEMENT_NODE) {
             if (parentNode->firstChild)  {
@@ -1027,7 +1027,8 @@ commentHandler (
     node->nodeType    = COMMENT_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->nodeNumber  = NODE_NO(node);
+    node->ownerDocument = info->document;
+    node->nodeNumber  = NODE_NO(info->document);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1041,7 +1042,6 @@ commentHandler (
     node->nodeValue   = (char*)Tcl_Alloc(len);
     memmove(node->nodeValue, s, len);
 
-    node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
         if (info->document->documentElement) {
@@ -1104,7 +1104,8 @@ processingInstructionHandler(
     node->nodeType    = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags   = 0;
     node->namespace   = 0;
-    node->nodeNumber  = NODE_NO(node);
+    node->ownerDocument = info->document;
+    node->nodeNumber  = NODE_NO(info->document);
     if (info->baseURI != XML_GetBase (info->parser)) {
         info->baseURI  = XML_GetBase (info->parser);
         h = Tcl_CreateHashEntry (&info->document->baseURIs,
@@ -1130,7 +1131,6 @@ processingInstructionHandler(
     node->dataValue  = (char*)Tcl_Alloc(len);
     memmove(node->dataValue, data, len);
 
-    node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
         if (info->document->documentElement) {
@@ -1463,8 +1463,8 @@ domReadDocument (
     }
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
+    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
     if (storeLineColumn) {
@@ -1686,8 +1686,8 @@ domCreateDoc ( )
     rootNode->nodeFlags     = 0;
     rootNode->namespace     = 0;
     rootNode->nodeName      = (char *)&(h->key);
-    rootNode->nodeNumber    = NODE_NO(rootNode);
     rootNode->ownerDocument = doc;
+    rootNode->nodeNumber    = NODE_NO(doc);
     rootNode->parentNode    = NULL;
     rootNode->firstChild    = rootNode->lastChild = NULL;
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
@@ -1752,8 +1752,8 @@ domCreateDocument (
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;
     node->nodeFlags       = 0;
-    node->nodeNumber      = NODE_NO(node);
     node->ownerDocument   = doc;
+    node->nodeNumber      = NODE_NO(doc);
     node->nodeName        = (char *)&(h->key);
     doc->documentElement  = node;
     if (uri) {
@@ -2788,8 +2788,8 @@ domNewTextNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
+    node->nodeNumber    = NODE_NO(doc);
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
     memmove(node->nodeValue, value, length);
@@ -2943,8 +2943,8 @@ domAppendNewTextNode(
         node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
     }
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->valueLength   = length;
     node->nodeValue     = (char*)Tcl_Alloc(length);
     memmove(node->nodeValue, value, length);
@@ -2991,8 +2991,8 @@ domAppendNewElementNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = parent->namespace;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->nodeName      = (char *)&(h->key);
 
     if (parent->lastChild) {
@@ -3125,8 +3125,8 @@ domAppendLiteralNode(
     node->nodeType      = ELEMENT_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = parent->ownerDocument;
+    node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->nodeName      = (char *)&(h->key);
 
     if (parent->lastChild) {
@@ -3165,8 +3165,8 @@ domNewProcessingInstructionNode(
     node->nodeType      = PROCESSING_INSTRUCTION_NODE;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
+    node->nodeNumber    = NODE_NO(doc);
     node->targetLength  = targetLength;
     node->targetValue   = (char*)Tcl_Alloc(targetLength);
     memmove(node->targetValue, targetValue, targetLength);
@@ -3209,8 +3209,8 @@ domNewElementNode(
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
+    node->nodeNumber    = NODE_NO(doc);
     node->nodeName      = (char *)&(h->key);
 
     if (doc->fragments) {
@@ -3249,8 +3249,8 @@ domNewElementNodeNS (
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
     node->namespace     = 0;
-    node->nodeNumber    = NODE_NO(node);
     node->ownerDocument = doc;
+    node->nodeNumber    = NODE_NO(doc);
     node->nodeName      = (char *)&(h->key);
 
     domSplitQName (tagName, prefix, &localname);
@@ -3960,8 +3960,8 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         rootNode->nodeFlags     = 0;
         rootNode->namespace     = 0;
         rootNode->nodeName      = (char *)&(h->key);
-        rootNode->nodeNumber    = NODE_NO(rootNode);
         rootNode->ownerDocument = info->document;
+        rootNode->nodeNumber    = NODE_NO(info->document);
         rootNode->parentNode    = NULL;
         if (info->storeLineColumn) {
             lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
