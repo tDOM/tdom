@@ -1,3 +1,9 @@
+2002-11-27  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c: FQ names with a localname equal to a
+          XPath 'keywork' (for example ns1:div) are now recognized as
+          node test (they raised error up to now).
+
 2002-11-24  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Changed the order of the include dirs, to avoid
