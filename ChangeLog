@@ -1,5 +1,11 @@
 2002-10-31  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/tcldom.c
+        * test/dom.test: Fixed argument check of domObj method
+          documentElement. Fixed domNode method appendFromList (wrong
+          list format could result in seg fault). Thanks to Oleg
+          Oleinick, for reporting both problems.
+
         * generic/domxslt.c
         * generic/domxpath.c
         * generic/dom.c: Fixed mem leaks/possible invalid read
