@@ -1182,7 +1182,10 @@ int tcldom_xpathFuncCallBack (
     DBG(fprintf(stderr, "testing %s\n", tclxpathFuncName);)
     rc = Tcl_GetCommandInfo (interp, tclxpathFuncName, &cmdInfo);
     if (!rc) {
-        *errMsg = (char*)tdomstrdup("Tcl unknown function!");
+        *errMsg = (char*)MALLOC (80 + strlen (functionName));
+        strcpy (*errMsg, "Unknown XPath function: \"");
+        strcat (*errMsg, functionName);
+        strcat (*errMsg, "\"!");
         return XPATH_EVAL_ERR;
     }
     if (!cmdInfo.isNativeObjectProc) {
