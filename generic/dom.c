@@ -2613,7 +2613,11 @@ domFreeDocument (
         DOCINFO_FREE(encoding);
         DOCINFO_FREE(mediaType);
         DOCINFO_FREE(method);
-        
+        if (doc->doctype->cdataSectionElements) {
+            Tcl_DeleteHashTable (doc->doctype->cdataSectionElements);
+            FREE (doc->doctype->cdataSectionElements);
+        }
+
         FREE((char*) doc->doctype);
     }
 

@@ -27,6 +27,7 @@
 #    domDoc-21.*: baseURI
 #    domDoc-22.*: appendFromScript
 #    domDoc-23.*: getElementsByTagNameNS
+#    domDoc-24.*: cdataSectionElements
 #
 # Copyright (c) 2004 Rolf Ade.
 
@@ -376,6 +377,29 @@ test domDoc-3.10 {toXSLTcmd} {
     $xsltCmd delete
     set result
 } {param1Default param2Default param3Default }
+
+set xslt3 {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
+    version="1.0">
+    <xsl:output cdata-section-elements="foo
+    doc b   bar"/>
+    <xsl:template match="/">
+        <doc>mixed element <b>this is</b> more text</doc>
+    </xsl:template>
+</xsl:stylesheet>}
+
+test domDoc-3.11 {toXSLTcmd} {
+    set xslt [dom parse -keepEmpties $xslt3]
+    set xsltCmd [$xslt toXSLTcmd]
+    set result [list]
+    for {set x 0} {$x < 2} {incr x} {
+        $xsltCmd $doc resultDoc
+        lappend result [lsort [$resultDoc cdataSectionElements *]]
+        lappend result [$resultDoc asXML -indent none]
+        $resultDoc delete
+    }
+    $xsltCmd delete
+    set result
+} {{b bar doc foo} {<doc><![CDATA[mixed element ]]><b><![CDATA[this is]]></b><![CDATA[ more text]]></doc>} {b bar doc foo} {<doc><![CDATA[mixed element ]]><b><![CDATA[this is]]></b><![CDATA[ more text]]></doc>}}
 
 $doc delete
 
@@ -979,6 +1003,141 @@ test domDoc-23.1 {getElementsByTagNameNS} {
     $doc delete
     set result
 } {1}
+
+test domDoc-24.1 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [catch {$doc cdataSectionElements} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {wrong # args: should be "<domDoc> cdataSectionElements ?URI:?localname ?boolean?"}}
+
+test domDoc-24.2 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [catch {$doc cdataSectionElements foo bar grill} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {wrong # args: should be "<domDoc> cdataSectionElements ?URI:?localname ?boolean?"}}
+
+test domDoc-24.3 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [catch {$doc cdataSectionElements root foo} errMsg]
+    lappend result $errMsg
+    $doc delete
+    set result
+} {1 {expected boolean value but got "foo"}}
+    
+test domDoc-24.4 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [$doc cdataSectionElements root]
+    $doc delete
+    set result
+} {0}
+
+test domDoc-24.5 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [$doc cdataSectionElements root 0]
+    lappend result [$doc cdataSectionElements root 1]
+    lappend result [$doc cdataSectionElements root 0]
+    $doc delete
+    set result
+} {0 1 0}
+
+test domDoc-24.6 {cdataSectionElements} {
+    set doc [dom parse {<root>Some Text</root>}]
+    set result [$doc cdataSectionElements root 1]
+    lappend result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {1 {<root><![CDATA[Some Text]]></root>}}
+
+test domDoc-24.7 {cdataSectionElements} {
+    set doc [dom parse {<root>&lt;foo></root>}]
+    foreach element {foo root bar grill} {
+        $doc cdataSectionElements $element 1
+    }
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><![CDATA[<foo>]]></root>}
+
+test domDoc-24.8 {cdataSectionElements} {
+    set doc [dom parse {<root>text ]</root>}]
+    $doc cdataSectionElements root 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><![CDATA[text ]]]></root>}
+
+test domDoc-24.9 {cdataSectionElements} {
+    set doc [dom parse {<root>text ]]</root>}]
+    $doc cdataSectionElements root 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><![CDATA[text ]]]]></root>}
+
+test domDoc-24.10 {cdataSectionElements} {
+    set doc [dom parse {<root>text ]]&gt;</root>}]
+    $doc cdataSectionElements root 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><![CDATA[text ]]]]><![CDATA[>]]></root>}
+
+test domDoc-24.11 {cdataSectionElements} {
+    set doc [dom parse {<root>text ]]&gt; text]]&gt;text</root>}]
+    $doc cdataSectionElements root 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root><![CDATA[text ]]]]><![CDATA[> text]]]]><![CDATA[>text]]></root>}
+
+test domDoc-24.12 {cdataSectionElements} {
+    set doc [dom parse {<root xmlns="http://foo.bar">text</root>}]
+    $doc cdataSectionElements http://foo.bar:root 1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root xmlns="http://foo.bar"><![CDATA[text]]></root>}
+
+test domDoc-24.13 {cdataSectionElements} {
+    set doc [dom parse {<root>text</root>}]
+    set result [$doc cdataSectionElements ""]
+    $doc delete
+    set result
+} {0}
+
+test domDoc-24.14 {cdataSectionElements} {
+    set doc [dom parse {<root>text</root>}]
+    set result [$doc cdataSectionElements *]
+    $doc delete
+    set result
+} {}
+
+test domDoc-24.15 {cdataSectionElements} {
+    set doc [dom parse {<root>text</root>}]
+    foreach elem {foo bar grill root http://www.foo.org:baz} {
+        $doc cdataSectionElements $elem 1
+    }
+    foreach elem {foo grill} {
+        $doc cdataSectionElements $elem 0
+    }
+    set result [lsort [$doc cdataSectionElements *]]
+    $doc delete
+    set result
+} {bar http://www.foo.org:baz root}
+
+test domDoc-24.16 {cdataSectionElements} {
+    set doc [dom parse {<doc><child>some text</child></doc>}]
+    $doc documentElement root
+    set node [$root firstChild]
+    $doc cdataSectionElements child 1
+    set result [$node asXML -indent none]
+    $doc delete
+    set result
+} {<child><![CDATA[some text]]></child>}
 
 # cleanup
 ::tcltest::cleanupTests
