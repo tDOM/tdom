@@ -723,7 +723,7 @@ TclExpatParse (interp, expat, data, len, type)
   int result, mode, bytesread, done;
   char s[255], buf[8*1024];
   int fd;
-  XML_Parser *parser;
+  XML_Parser  parser;
   Tcl_Channel channel = NULL;
   CHandlerSet *activeCHandlerSet;
 #if !TclOnly8Bits
