@@ -213,6 +213,9 @@ AC_SUBST(SHARED_BUILD)
 #--------------------------------------------------------------------
 
 # libdir must be a fully qualified path and (not ${exec_prefix}/lib)
+if test "x${exec_prefix}" = "xNONE" ; then
+    exec_prefix="${prefix}"
+fi 
 eval libdir="$libdir"
 
 tdom_SRC_DIR=`cd ${srcdir}; pwd`

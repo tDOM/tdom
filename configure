@@ -4430,6 +4430,9 @@ fi
 #--------------------------------------------------------------------
 
 # libdir must be a fully qualified path and (not ${exec_prefix}/lib)
+if test "x${exec_prefix}" = "xNONE" ; then
+    exec_prefix="${prefix}"
+fi 
 eval libdir="$libdir"
 
 tdom_SRC_DIR=`cd ${srcdir}; pwd`
@@ -4546,7 +4549,7 @@ LIBS="${LIBS} -lm"
 
 
     echo $ac_n "checking for tclsh""... $ac_c" 1>&6
-echo "configure:4550: checking for tclsh" >&5
+echo "configure:4553: checking for tclsh" >&5
 
     if eval "test \"`echo '$''{'ac_cv_path_tclsh'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -4591,7 +4594,7 @@ TDOM_INCLUDES="-I${srcdir}/generic -I${srcdir}/expat"
 
 
     echo $ac_n "checking for AOLserver configuration""... $ac_c" 1>&6
-echo "configure:4595: checking for AOLserver configuration" >&5
+echo "configure:4598: checking for AOLserver configuration" >&5
     # Check whether --with-aol or --without-aol was given.
 if test "${with_aol+set}" = set; then
   withval="$with_aol"
@@ -4643,7 +4646,7 @@ fi
 
 
     echo $ac_n "checking wether to enable dtd support""... $ac_c" 1>&6
-echo "configure:4647: checking wether to enable dtd support" >&5
+echo "configure:4650: checking wether to enable dtd support" >&5
     # Check whether --enable-dtd or --disable-dtd was given.
 if test "${enable_dtd+set}" = set; then
   enableval="$enable_dtd"
@@ -4672,7 +4675,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable namespace support""... $ac_c" 1>&6
-echo "configure:4676: checking wether to enable namespace support" >&5
+echo "configure:4679: checking wether to enable namespace support" >&5
     # Check whether --enable-ns or --disable-ns was given.
 if test "${enable_ns+set}" = set; then
   enableval="$enable_ns"
@@ -4701,7 +4704,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable built-in unknown command""... $ac_c" 1>&6
-echo "configure:4705: checking wether to enable built-in unknown command" >&5
+echo "configure:4708: checking wether to enable built-in unknown command" >&5
     # Check whether --enable-ucmd or --disable-ucmd was given.
 if test "${enable_ucmd+set}" = set; then
   enableval="$enable_ucmd"
@@ -4730,7 +4733,7 @@ EOF
 
 
     echo $ac_n "checking wether to enable tDOMs block allocator""... $ac_c" 1>&6
-echo "configure:4734: checking wether to enable tDOMs block allocator" >&5
+echo "configure:4737: checking wether to enable tDOMs block allocator" >&5
     # Check whether --enable-tdomalloc or --disable-tdomalloc was given.
 if test "${enable_tdomalloc+set}" = set; then
   enableval="$enable_tdomalloc"
@@ -4758,14 +4761,14 @@ EOF
     fi
 
 echo $ac_n "checking whether byte ordering is bigendian""... $ac_c" 1>&6
-echo "configure:4762: checking whether byte ordering is bigendian" >&5
+echo "configure:4765: checking whether byte ordering is bigendian" >&5
 if eval "test \"`echo '$''{'ac_cv_c_bigendian'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_cv_c_bigendian=unknown
 # See if sys/param.h defines the BYTE_ORDER macro.
 cat > conftest.$ac_ext <<EOF
-#line 4769 "configure"
+#line 4772 "configure"
 #include "confdefs.h"
 #include <sys/types.h>
 #include <sys/param.h>
@@ -4776,11 +4779,11 @@ int main() {
 #endif
 ; return 0; }
 EOF
-if { (eval echo configure:4780: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:4783: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   # It does; now see whether it defined to BIG_ENDIAN or not.
 cat > conftest.$ac_ext <<EOF
-#line 4784 "configure"
+#line 4787 "configure"
 #include "confdefs.h"
 #include <sys/types.h>
 #include <sys/param.h>
@@ -4791,7 +4794,7 @@ int main() {
 #endif
 ; return 0; }
 EOF
-if { (eval echo configure:4795: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:4798: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   ac_cv_c_bigendian=yes
 else
@@ -4811,7 +4814,7 @@ if test "$cross_compiling" = yes; then
    echo $ac_n "cross-compiling... " 2>&6 
 else
   cat > conftest.$ac_ext <<EOF
-#line 4815 "configure"
+#line 4818 "configure"
 #include "confdefs.h"
 main () {
   /* Are we little or big endian?  From Harbison&Steele.  */
@@ -4824,7 +4827,7 @@ main () {
   exit (u.c[sizeof (long) - 1] == 1);
 }
 EOF
-if { (eval echo configure:4828: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:4831: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   ac_cv_c_bigendian=no
 else
@@ -4842,7 +4845,7 @@ fi
 echo "$ac_t""$ac_cv_c_bigendian" 1>&6
 if test $ac_cv_c_bigendian = unknown; then
 echo $ac_n "checking to probe for byte ordering""... $ac_c" 1>&6
-echo "configure:4846: checking to probe for byte ordering" >&5
+echo "configure:4849: checking to probe for byte ordering" >&5
 
 cat >conftest.c <<EOF
 short ascii_mm[] = { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
