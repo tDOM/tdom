@@ -459,6 +459,12 @@ install-lib-binaries:
 	    $(INSTALL_DATA) $(srcdir)/lib/$$p $(DESTDIR)$(pkglibdir)/$$p; \
 	  fi; \
 	done
+	@list='tdomConfig.sh'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo " $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p"; \
+	    $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p; \
+	  fi; \
+	done
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)
