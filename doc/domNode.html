@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid1993">SEE ALSO</a> · <a href="#SECTid2002">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid905"> DESCRIPTION </a> · <a href="#SECTid2021">SEE ALSO</a> · <a href="#SECTid2030">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
@@ -251,8 +251,8 @@ node. <i class="m">newChild</i> must be in the document fragment list.</dd>
         <dt>
 <b class="method">insertBefore</b> <i class="m">newChild</i>  <i class="m">refChild</i>
 </dt>
-        <dd>Insert <i class="m">newChild</i> before the <i class="m">refChild</i> in list of
-children of that node. If <i class="m">refChild</i> is the empty string, insert
+        <dd>Insert <i class="m">newChild</i> before the <i class="m">refChild</i> into the list of
+children of node. If <i class="m">refChild</i> is the empty string, insert
 <i class="m">newChild</i> at the end of the child nodes list of that node.</dd>
       
 
@@ -485,6 +485,16 @@ given node.</dd>
 
       
         <dt>
+<b class="method">insertBeforeFromScript</b> <i class="m">tclScript</i> <i class="m">refChild</i>
+</dt>
+        <dd>Inserts the nodes created in the <i class="m">tclScript</i> by
+Tcl functions, which have been built using <i class="m">dom createNodeCmd</i>, before the
+<i class="m">refChild</i> into to the list of children of node. If <i class="m">refChild</i> is
+the empty string, the new nodes will be appended.</dd>
+      
+
+      
+        <dt>
 <b class="method">appendXML</b> <i class="m">XMLstring</i>
 </dt>
         <dd>Parses <i class="m">XMLstring</i>, creates an according DOM subtree and
@@ -582,11 +592,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid1993">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTid2021">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTid2002">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid2030">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   

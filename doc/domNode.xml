@@ -225,8 +225,8 @@ node. <m>newChild</m> must be in the document fragment list.</desc>
 
       <commanddef>
         <command><method>insertBefore</method> <m>newChild</m>  <m>refChild</m></command>
-        <desc>Insert <m>newChild</m> before the <m>refChild</m> in list of
-children of that node. If <m>refChild</m> is the empty string, insert
+        <desc>Insert <m>newChild</m> before the <m>refChild</m> into the list of
+children of node. If <m>refChild</m> is the empty string, insert
 <m>newChild</m> at the end of the child nodes list of that node.</desc>
       </commanddef>
 
@@ -422,6 +422,14 @@ appends this subtree to the current node.</desc>
         <desc>Appends the nodes created in the <m>tclScript</m> by
 Tcl functions, which have been built using <m>dom createNodeCmd</m>, to the
 given node.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>insertBeforeFromScript</method> <m>tclScript</m> <m>refChild</m></command>
+        <desc>Inserts the nodes created in the <m>tclScript</m> by
+Tcl functions, which have been built using <m>dom createNodeCmd</m>, before the
+<m>refChild</m> into to the list of children of node. If <m>refChild</m> is
+the empty string, the new nodes will be appended.</desc>
       </commanddef>
 
       <commanddef>
