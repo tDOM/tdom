@@ -2723,13 +2723,13 @@ xpathEvalFunction (
             if      (NaN == 2)  rsSetNaN (result);
             else if (NaN == 1)  rsSetInf (result);
             else                rsSetNInf (result);
-            return XPATH_OK; 
+        } else {
+            if      (step->intvalue == f_floor)   leftReal = floor(leftReal);
+            else if (step->intvalue == f_ceiling) leftReal = ceil(leftReal);
+            else                                  leftReal = 
+                                                      xpathRound(leftReal);
+            rsSetReal (result, leftReal);
         }
-        if      (step->intvalue == f_floor)   leftReal = floor(leftReal);
-        else if (step->intvalue == f_ceiling) leftReal = ceil(leftReal);
-        else                                  leftReal = xpathRound(leftReal);
-
-        rsSetReal (result, leftReal);
         xpathRSFree( &leftResult );
         break;
 
