@@ -2072,7 +2072,7 @@ int xpathParsePostProcess (
     char *uri;
     
     DBG(
-        fprintf(stderr, "xpathParsePostProcess starrt:\n");
+        fprintf(stderr, "xpathParsePostProcess start:\n");
         printAst (0, t);
         )
     while (t) {
@@ -3162,8 +3162,8 @@ xpathEvalFunction (
         xpathRSInit (&rightResult);
 
         savedDocOrder = *docOrder;
-        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                            cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
         CHECK_RC;
         *docOrder = savedDocOrder;
 
@@ -3283,8 +3283,8 @@ xpathEvalFunction (
             xpathRSInit (&rightResult);
             savedDocOrder = *docOrder;
             rc = xpathEvalStep( step->child->next->next, ctxNode, exprContext,
-                                position, nodeList, cbs, &rightResult, docOrder,
-                                errMsg);
+                                position, nodeList, cbs, &rightResult,
+                                docOrder, errMsg);
             CHECK_RC;
             *docOrder = savedDocOrder;
 
@@ -3337,8 +3337,8 @@ xpathEvalFunction (
         XPATH_ARITYCHECK(step,3,errMsg);
         xpathRSInit (&leftResult);
         savedDocOrder = *docOrder;
-        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                            cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, 
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
         CHECK_RC;
         *docOrder = savedDocOrder;
         xpathRSInit (&rightResult);
@@ -4667,15 +4667,15 @@ static int xpathEvalStep (
         xpathRSInit (&rightResult);
 
         savedDocOrder = *docOrder;
-        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                               cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
         CHECK_RC;
         *docOrder = savedDocOrder;
 
         DBG( fprintf(stderr,"left:\n");
              rsPrint(&leftResult);
         )
-        rc = xpathEvalStep( step->child->next, ctxNode, exprContext,  position,
+        rc = xpathEvalStep( step->child->next, ctxNode, exprContext, position,
                             nodeList, cbs, &rightResult, docOrder, errMsg);
         CHECK_RC;
         *docOrder = savedDocOrder;
@@ -4829,8 +4829,8 @@ static int xpathEvalStep (
         break;
 
     case EvalSteps:
-        rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, position,
-                             docOrder,cbs, &leftResult, errMsg);
+        rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext,
+                             position, docOrder,cbs, &leftResult, errMsg);
         CHECK_RC;
         if ((result->type != EmptyResult) && (leftResult.type != result->type)) {
             DBG( fprintf (stderr, "EvalSteps:\nresult:\n");
@@ -5126,7 +5126,7 @@ int xpathEval (
     xpathRSInit( &nodeList);
     rsAddNodeFast( &nodeList, node);
 
-    rc = xpathEvalSteps( t, &nodeList, node, exprContext, 1, &docOrder, cbs,
+    rc = xpathEvalSteps( t, &nodeList, node, exprContext, 0, &docOrder, cbs,
                          result, errMsg);
     if (!cache) {
         freeAst(t);
