@@ -1723,11 +1723,6 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
         default: 
             return 0;
     }
-    a = a->child;
-    while (a) {
-        if (!checkStepPatternPredOptimizability(a, max)) return 0;
-        a = a->next;
-    } 
     return 1;
 }
 
