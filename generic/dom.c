@@ -2571,11 +2571,20 @@ domSetAttributeNS (
     if (hasUri && (prefix[0] == '\0')) return NULL;
     if ((prefix[0] == '\0' && strcmp (localName, "xmlns")==0)
         || (strcmp (prefix, "xmlns")==0)) {
+        isNSAttr = 1;
+        createNSIfNeeded = 0;
+        if (prefix[0] == '\0') {
+            isDftNS = 1;
+            ns = domLookupPrefix (node, "");
+        } else {
+            ns = domLookupPrefix (node, prefix);
+        }
+        if (ns && (strcmp (ns->uri, attributeValue)==0)) return NULL;
         if (!hasUri) {
             uri = attributeValue;
             isNSAttr = 1;
             hasUri = 1;
-            if (strcmp (localName, "xmlns")==0) isDftNS = 0;
+            if (strcmp (localName, "xmlns")==0) isDftNS = 1;
         } else {
             return NULL;
         }
@@ -2626,7 +2635,6 @@ domSetAttributeNS (
                 Tcl_DeleteHashEntry (h);
                 h = Tcl_CreateHashEntry (&node->ownerDocument->ids,
                                          attributeValue, &hnew);
-                /* XXX what to do, if hnew = 0  ??? */
                 Tcl_SetHashValue (h, node);
             }
         }
@@ -2855,12 +2863,12 @@ domSetDocument (
             } else if (attr->namespace) {
                 ns = domAddNSToNode (node, 
                                      origDoc->namespaces[attr->namespace-1]);
-                attr->namespace = ns->index;
+                if (ns) attr->namespace = ns->index;
             }
         }
         if (node->namespace) {
             ns = domAddNSToNode (node, origDoc->namespaces[node->namespace-1]);
-            node->namespace = ns->index;
+            if (ns) node->namespace = ns->index;
         } else {
             ns = domAddNSToNode (node, NULL);
             if (ns) {
@@ -3827,13 +3835,14 @@ domAddNSToNode (
     int            hnew;
     Tcl_DString    dStr;
 
-    DBG(fprintf (stderr, "domAddNSToNode: prefix: %s, uri: %s\n", nsToAdd->prefix, nsToAdd->uri);)
     if (!nsToAdd) {
         noNS.uri    = "";
         noNS.prefix = "";
         noNS.index  = 0;
         nsToAdd = &noNS;
     }
+    DBG(fprintf (stderr, "domAddNSToNode to node '%s': prefix: %s, uri: %s\n", node->nodeName, nsToAdd->prefix, nsToAdd->uri);)
+
     ns = domLookupPrefix (node, nsToAdd->prefix);
     if (ns) {
         if (strcmp (ns->uri, nsToAdd->uri)==0) {
@@ -4172,9 +4181,7 @@ domCopyTo (
         return;
     }
 
-    n = domNewElementNode(parent->ownerDocument, node->nodeName, node->nodeType);
-    domAppendChild (parent, n);
-
+    n = domAppendLiteralNode (parent, node);
     if (copyNS) {
         n1 = node;
         while (n1) {

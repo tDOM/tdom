@@ -3798,6 +3798,8 @@ static int xpathEvalStep (
                 }
             } else {
                 attr = ctxNode->firstAttr;
+                while (attr && (attr->nodeFlags & IS_NS_NODE))
+                    attr = attr->nextSibling;
                 while (attr) {
                     if (xpathNodeTest( (domNode*)attr, exprContext, step)) {
                         rsAddNodeFast (result, (domNode *)attr);

@@ -3845,6 +3845,7 @@ copyNS (
     }
 }
 
+
 /*----------------------------------------------------------------------------
 |   ExecAction
 |
@@ -4501,10 +4502,9 @@ static int ExecAction (
                     if (rs.nodes[i]->nodeType == ATTRIBUTE_NODE) {
                         attr = (domAttrNode*)rs.nodes[i];
                         if (attr ->nodeFlags & IS_NS_NODE) {
-                            fprintf (stderr, "copyOF: copy NS-attr\n");
                             /* If someone selects explicitely namespace nodes
                                to copy-of with e.g namespace::* (remember: @*
-                               doesn't select namespace nodes), wie must this
+                               doesn't select namespace nodes), we must this
                                handle seperately.*/
                             /* The xmlns:xml namespace node will always
                                be in scope, but never needed to be copied,
@@ -5042,8 +5042,7 @@ static int ExecAction (
                follow saxon and xalan, which both add the namespace of
                the literal result element always to the result tree,
                to ensure, that the result tree is conform to the XML
-               namespace recommendation. See the more detailed
-               discussion in the file discretionary-behavior */
+               namespace recommendation. */
             if (actionNode->namespace) {
                 ns = actionNode->ownerDocument->namespaces[actionNode->namespace-1];
                 uri = ns->uri;
@@ -5118,7 +5117,6 @@ static int ExecAction (
     }
     return 0;
 }
-
 
 /*----------------------------------------------------------------------------
 |   ExecActions
