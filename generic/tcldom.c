@@ -87,11 +87,12 @@
 #define SetDoubleResult(d) Tcl_ResetResult(interp); \
                      Tcl_SetDoubleObj(Tcl_GetObjResult(interp), (d))
 
-#define AppendResult(str) \
-                     if (!Tcl_IsShared(Tcl_GetObjResult(interp))) \
-                         Tcl_AppendToObj(Tcl_GetObjResult(interp),(str),-1); \
-                     else \
-                         Tcl_SetObjResult(interp, Tcl_NewStringObj((str),-1));
+#define AppendResult(str) {Tcl_Obj *o = Tcl_GetObjResult(interp); \
+                     if (Tcl_IsShared(o)) { \
+                          o = Tcl_DuplicateObj(o); \
+                          Tcl_SetObjResult(interp, o); \
+                     } \
+                     Tcl_AppendToObj(o, (str), -1);}
 
 #define CheckArgs(min,max,n,msg) \
                      if ((objc < min) || (objc >max)) { \
