@@ -3498,55 +3498,8 @@ domAppendNewTextNode(
         /*------------------------------------------------------------------
         |    append to already existing text node
         \-----------------------------------------------------------------*/
-        if (TNODE->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
-           if (disableOutputEscaping) {
-                TNODE->nodeValue = REALLOC (TNODE->nodeValue,
-                                            TNODE->valueLength + length);
-                memmove (TNODE->nodeValue + TNODE->valueLength, value, length);
-                TNODE->valueLength += length;
-           } else {
-                domEscapeCData (value, length, &escData);
-                if (Tcl_DStringLength (&escData)) {
-                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
-                                                TNODE->valueLength +
-                                                Tcl_DStringLength (&escData));
-                    memmove (TNODE->nodeValue + TNODE->valueLength,
-                             Tcl_DStringValue (&escData),
-                             Tcl_DStringLength (&escData));
-                    TNODE->valueLength += Tcl_DStringLength (&escData);
-                } else {
-                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
-                                                TNODE->valueLength+length);
-                    memmove (TNODE->nodeValue + TNODE->valueLength,
-                             value, length);
-                    TNODE->valueLength += length;
-                }
-                Tcl_DStringFree (&escData);
-            }
-        } else {
-            if (disableOutputEscaping) {
-                TNODE->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
-                domEscapeCData (TNODE->nodeValue, TNODE->valueLength,
-                                &escData);
-                if (Tcl_DStringLength (&escData)) {
-                    FREE (TNODE->nodeValue);
-                    TNODE->nodeValue =
-                        MALLOC (Tcl_DStringLength (&escData) + length);
-                    memmove (TNODE->nodeValue, Tcl_DStringValue (&escData),
-                             Tcl_DStringLength (&escData));
-                    TNODE->valueLength = Tcl_DStringLength (&escData);
-                } else {
-                    TNODE->nodeValue = REALLOC (TNODE->nodeValue,
-                                                TNODE->valueLength+length);
-                }
-                Tcl_DStringFree (&escData);
-            } else {
-                TNODE->nodeValue = REALLOC (TNODE->nodeValue,
-                                            TNODE->valueLength + length);
-            }
-            memmove (TNODE->nodeValue + TNODE->valueLength, value, length);
-            TNODE->valueLength += length;
-        }
+        domAppendData ((domTextNode *) (parent->lastChild), value, length,
+                       disableOutputEscaping);
         MutationEvent();
         return (domTextNode*)parent->lastChild;
     }
@@ -3604,7 +3557,8 @@ domAppendNewElementNode(
         return NULL;
     }
 
-    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tagNames), tagName, &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(parent->ownerDocument,tagNames), tagName,
+                            &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = ELEMENT_NODE;
@@ -3655,6 +3609,188 @@ domAppendNewElementNode(
     }
     MutationEvent();
     return node;
+}
+
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domAppendData --
+ *
+ *      This procedure implements the dom method appendData. It is
+ *      also used by domNormalize and domAppendNewTextNode.
+ *
+ * Results:
+ *	A domException; currently always OK.
+ *
+ * Side effects:
+ *	Appends the data to node.
+ *
+ *----------------------------------------------------------------------
+ */
+
+domException
+domAppendData (
+    domTextNode *node,          /* The node, to append value to. Must be
+                                   a TEXT_NODE, COMMENT_NODE or 
+                                   CDATA_SECTION_NODE*/
+    char        *value,         /* The data to append */ 
+    int          length,        /* The length of value in byte */
+    int          disableOutputEscaping   /* If true, disable output 
+                                            escaping on the node */
+    )
+{
+    Tcl_DString    escData;
+
+    if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
+        if (disableOutputEscaping) {
+            node->nodeValue = REALLOC (node->nodeValue,
+                                        node->valueLength + length);
+            memmove (node->nodeValue + node->valueLength, value, length);
+            node->valueLength += length;
+        } else {
+            domEscapeCData (value, length, &escData);
+            if (Tcl_DStringLength (&escData)) {
+                node->nodeValue = REALLOC (node->nodeValue,
+                                            node->valueLength +
+                                            Tcl_DStringLength (&escData));
+                memmove (node->nodeValue + node->valueLength,
+                         Tcl_DStringValue (&escData),
+                         Tcl_DStringLength (&escData));
+                node->valueLength += Tcl_DStringLength (&escData);
+            } else {
+                node->nodeValue = REALLOC (node->nodeValue,
+                                            node->valueLength+length);
+                memmove (node->nodeValue + node->valueLength,
+                         value, length);
+                node->valueLength += length;
+            }
+            Tcl_DStringFree (&escData);
+        }
+    } else {
+        if (disableOutputEscaping) {
+            node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
+            domEscapeCData (node->nodeValue, node->valueLength,
+                            &escData);
+            if (Tcl_DStringLength (&escData)) {
+                FREE (node->nodeValue);
+                node->nodeValue =
+                    MALLOC (Tcl_DStringLength (&escData) + length);
+                memmove (node->nodeValue, Tcl_DStringValue (&escData),
+                         Tcl_DStringLength (&escData));
+                node->valueLength = Tcl_DStringLength (&escData);
+            } else {
+                node->nodeValue = REALLOC (node->nodeValue,
+                                            node->valueLength+length);
+            }
+            Tcl_DStringFree (&escData);
+        } else {
+            node->nodeValue = REALLOC (node->nodeValue,
+                                        node->valueLength + length);
+        }
+        memmove (node->nodeValue + node->valueLength, value, length);
+        node->valueLength += length;
+    }
+
+    return OK;
+}
+
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domNormalize --
+ *
+ *      This procedure implements the dom method normalize. Puts all
+ *      Text nodes in the full depth of the sub-tree underneath node,
+ *      including attribute nodes, into a "normal" form where only
+ *      structure (e.g., elements, comments, processing instructions,
+ *      CDATA sections, and entity references) separates Text nodes,
+ *      i.e., there are neither adjacent Text nodes nor empty Text
+ *      nodes. If the flag forXPath is true, then CDATASection nodes
+ *      are treated as if they are text nodes (and merged with
+ *      circumjacent text nodes). Node must be an ELEMENT_NODE.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	May alter the tree.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+domNormalize (
+    domNode         *node,      /* root of the sub-tree to normalize */
+    int              forXPath,  /* if true, treat CDATA_SECTION_NODEs as if
+                                   they where TEXT_NODEs */
+    domFreeCallback  freeCB,    /* Function to call, if a node must be freed */
+    void            *clientData /* ClientData, to provide to the freeCB */
+    
+    )
+{
+    domNode     *child, *nextChild;
+    domTextNode *cdataNode;
+    int          merge = 0;
+    
+    if (node->nodeType != ELEMENT_NODE) return;
+    
+    child = node->firstChild;
+    while (child) {
+        merge = 0;
+        switch (child->nodeType) {
+        case ELEMENT_NODE:
+            domNormalize (child, forXPath, freeCB, clientData);
+            break;
+        case TEXT_NODE:
+            fprintf (stderr, "TEXT_NODE\n");
+            if (child->previousSibling 
+                && child->previousSibling->nodeType == TEXT_NODE) {
+                merge = 1;
+            } else {
+                if (((domTextNode *)child)->valueLength == 0) {
+                    nextChild = child->nextSibling;
+                    domDeleteNode (child, freeCB, clientData);
+                    child = nextChild;
+                    continue;
+                }
+            }
+            break;
+        case CDATA_SECTION_NODE:
+            fprintf (stderr, "CDATA_SECTION_NODE\n");
+            if (forXPath) {
+                fprintf (stderr, "with forXPath\n");
+                if (child->previousSibling
+                    && child->previousSibling->nodeType == TEXT_NODE) {
+                    merge = 1;
+                } else {
+                    if (((domTextNode *)child)->valueLength == 0) {
+                        nextChild = child->nextSibling;
+                        domDeleteNode (child, freeCB, clientData);
+                        child = nextChild;
+                        continue;
+                    }
+                    child->nodeType = TEXT_NODE;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        fprintf (stderr, "merge: %d\n", merge);
+        if (merge) {
+            domAppendData ( (domTextNode *)(child->previousSibling),
+                            ((domTextNode *)child)->nodeValue,
+                            ((domTextNode *)child)->valueLength,
+                            (child->nodeFlags & DISABLE_OUTPUT_ESCAPING) );
+            nextChild = child->nextSibling;
+            domDeleteNode (child, freeCB, clientData);
+            child = nextChild;
+        } else {
+            child = child->nextSibling;
+        }
+    }
 }
 
 /*---------------------------------------------------------------------------

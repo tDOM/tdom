@@ -183,6 +183,7 @@ static char domObj_usage[] =
                 "          delete                                  \n"
                 "          xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
                 "          toXSLTcmd                               \n"
+                "          normalize ?-forXPath?                   \n"
                 TDomThreaded(
                 "          readlock                                \n"
                 "          writelock                               \n"
@@ -251,6 +252,7 @@ static char node_usage[] =
                 "    toXPath                     \n"
                 "    disableOutputEscaping ?boolean? \n"
                 "    precedes node               \n"
+                "    normalize ?-forXPath?       \n"
                 "    xslt ?-parameters parameterList? <xsltDocNode>\n"
                 TDomThreaded(
                 "    readlock                    \n"
@@ -2971,7 +2973,7 @@ int tcldom_NodeObjCmd (
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
         "disableOutputEscaping",             "precedes",         "asText",
-        "insertBeforeFromScript",
+        "insertBeforeFromScript",            "normalize",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -2993,7 +2995,7 @@ int tcldom_NodeObjCmd (
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
         m_disableOutputEscaping,             m_precedes,        m_asText,
-        m_insertBeforeFromScript
+        m_insertBeforeFromScript,            m_normalize
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3877,7 +3879,21 @@ int tcldom_NodeObjCmd (
             Tcl_SetStringObj (Tcl_GetObjResult (interp), str, length);
             FREE (str);
             return TCL_OK;
-            
+
+        case m_normalize:
+            CheckArgs (2,3,2, "?-forXPath?");
+            bool = 0;
+            if (objc == 3) {
+                if (strcmp (Tcl_GetString (objv[2]), "-forXPath") == 0) {
+                    bool = 1;
+                } else {
+                    SetResult ( "unknown option! Options: ?-forXPath? ");
+                    return TCL_ERROR;
+                }
+            }
+            domNormalize (node, bool, tcldom_docDeleteNode, interp);
+            return TCL_OK;
+                
         TDomThreaded(
         case m_writelock:
             CheckArgs(3,3,2,"script");
@@ -3910,7 +3926,7 @@ int tcldom_DocObjCmd (
     char                * method, *tag, *data, *target, *uri, tmp[100];
     char                  objCmdName[40], *str;
     int                   methodIndex, result, data_length, target_length, i;
-    int                   nsIndex;
+    int                   nsIndex, forXPath;
     domNode             * n;
     Tcl_CmdInfo           cmdInfo;
     Tcl_Obj             * mobjv[MAX_REWRITE_ARGS];
@@ -3923,7 +3939,7 @@ int tcldom_DocObjCmd (
         "createElementNS", "getDefaultOutputMethod",     "asXML",
         "asHTML",          "getElementsByTagNameNS",     "xslt", 
         "publicId",        "systemId",                   "internalSubset",
-        "toXSLTcmd",       "asText",
+        "toXSLTcmd",       "asText",                     "normalize",
 #ifdef TCL_THREADS
         "readlock",        "writelock",                  "renumber",
 #endif
@@ -3936,7 +3952,7 @@ int tcldom_DocObjCmd (
         m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
         m_asHTML,           m_getElementsByTagNameNS,     m_xslt,
         m_publicId,         m_systemId,                   m_internalSubset,
-        m_toXSLTcmd,        m_asText
+        m_toXSLTcmd,        m_asText,                     m_normalize
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock,                  m_renumber
 #endif
@@ -3975,6 +3991,7 @@ int tcldom_DocObjCmd (
     }
 
     CheckArgs (2,10,1,domObj_usage);
+    Tcl_ResetResult (interp);
 
     /*----------------------------------------------------------------------
     |   dispatch the doc object method
@@ -4027,7 +4044,6 @@ int tcldom_DocObjCmd (
                 /* There isn't such a namespace declared in this document.
                    Since getElementsByTagNameNS doesn't raise an execption
                    short cut: return empty result */
-                Tcl_ResetResult (interp);
                 return TCL_OK;
             }
             return tcldom_getElementsByTagName (interp, str, 
@@ -4106,14 +4122,12 @@ int tcldom_DocObjCmd (
             return TCL_OK;
 
         case m_asXML:
-            Tcl_ResetResult (interp);
             if (serializeAsXML ((domNode*)doc, interp, objc, objv) != TCL_OK) {
                 return TCL_ERROR;
             }
             return TCL_OK;
 
         case m_asHTML:
-            Tcl_ResetResult (interp);
             if (serializeAsHTML ((domNode*)doc, interp, objc, objv)
                 != TCL_OK) {
                 return TCL_ERROR;
@@ -4197,6 +4211,21 @@ int tcldom_DocObjCmd (
             data = xpathGetStringValue (doc->rootNode, &data_length);
             Tcl_SetStringObj (Tcl_GetObjResult (interp), data, data_length);
             FREE (data);
+            return TCL_OK;
+
+        case m_normalize:
+            CheckArgs (2,3,2, "?-forXPath?");
+            forXPath = 0;
+            if (objc == 3) {
+                if (strcmp (Tcl_GetString (objv[2]), "-forXPath") == 0) {
+                    forXPath = 1;
+                } else {
+                    SetResult ( "unknown option! Options: ?-forXPath? ");
+                    return TCL_ERROR;
+                }
+            }
+            domNormalize (doc->rootNode, forXPath, tcldom_docDeleteNode, 
+                          interp);
             return TCL_OK;
             
         TDomThreaded(

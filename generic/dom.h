@@ -774,6 +774,10 @@ void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 void           domRenumberTree (domNode *node);
 int            domPrecedes (domNode *node, domNode *other);
+void           domNormalize (domNode *node, int forXPath, 
+                             domFreeCallback freeCB, void *clientData);
+domException   domAppendData (domTextNode *node, char *value, int length, 
+                              int disableOutputEscaping);
 
 #ifdef TCL_THREADS
 void           domLocksLock(domlock *dl, int how);
