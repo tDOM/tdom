@@ -2548,7 +2548,6 @@ static int fastMergeSort (
 }
 
 static int sortNodeSetFastMerge(
-    xsltState * xs,
     int         txt,
     int         asc,
     int         upperFirst,
@@ -2619,7 +2618,7 @@ static int xsltSetVar (
             xpathRSInit (&rs);
             rsSetString (&rs, "");
         } else {
-            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
+            fragmentNode = domNewElementNode(xs->resultDoc, "",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -3440,10 +3439,9 @@ static int doSortActions (
                     }
                     xpathRSFree (&rs);
                 }
-                rc = sortNodeSetFastMerge (xs, typeText, ascending,
-                                           upperFirst, nodelist->nodes,
-                                           nodelist->nr_nodes, vs, vd,
-                                           pos, errMsg);
+                rc = sortNodeSetFastMerge (typeText, ascending, upperFirst,
+                                           nodelist->nodes, nodelist->nr_nodes,
+                                           vs, vd, pos, errMsg);
                 if (typeText) {
                     for (i = 0; i < nodelist->nr_nodes; i++) {
                         FREE(vs[i]);
@@ -3516,7 +3514,7 @@ static int xsltNumber (
                 /* This covers both cases: non integer value after evaluation
                    and wrong (<= 0) integer value. */
                 reportError (actionNode, 
-                             "The value of \"grouping-size\" must evalute to a positiv integer.",
+                             "The value of \"grouping-size\" must evaluate to a positiv integer.",
                              errMsg);
             }
         }
@@ -4282,7 +4280,7 @@ static int ExecAction (
             break;
 
         case comment:
-            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
+            fragmentNode = domNewElementNode(xs->resultDoc, "",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -4441,9 +4439,9 @@ static int ExecAction (
                         domSetAttributeNS(xs->lastNode, attr->nodeName,
                                           attr->nodeValue, uri, 1);
                     } else {
-                        if (*(rs.nodes[i]->nodeName) == '(' &&
-                            ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
-                             || (strcmp(rs.nodes[i]->nodeName,"(rootNode)")==0))) {
+                        if (*(rs.nodes[i]->nodeName) == '\0') {
+                            /* The rootNode of the Document or the rootNode
+                               of a result tree fragment */
                             child = rs.nodes[i]->firstChild;
                             while (child) {
                                 domCopyTo(child, xs->lastNode, 1);
@@ -4649,7 +4647,7 @@ static int ExecAction (
                              errMsg);
                 return -1;
             }
-            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
+            fragmentNode = domNewElementNode(xs->resultDoc, "",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
