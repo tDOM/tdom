@@ -21,9 +21,6 @@
 |   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
 |   Jochen Loewer. All Rights Reserved.
 |
-|   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
-|   Jochen Loewer. All Rights Reserved.
-|
 |   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
 |   Zoran Vasiljevic. All Rights Reserved.
 |
@@ -45,6 +42,17 @@
 #include <nodecmd.h>
 
 #define PARSER_NODE 9999 /* Hack so that we can invoke XML parser */
+/* More hacked domNodeTypes - used to signal, that we want to check
+   name/data of the node to create. */
+#define ELEMENT_NODE_ANAME_CHK 10000
+#define ELEMENT_NODE_AVALUE_CHK 10001
+#define ELEMENT_NODE_CHK 10002
+#define TEXT_NODE_CHK 10003
+#define COMMENT_NODE_CHK 10004
+#define CDATA_SECTION_NODE_CHK 10005
+#define PROCESSING_INSTRUCTION_NODE_NAME_CHK 10006
+#define PROCESSING_INSTRUCTION_NODE_VALUE_CHK 10007
+#define PROCESSING_INSTRUCTION_NODE_CHK 10008
 
 /*----------------------------------------------------------------------------
 |   Types
@@ -189,6 +197,45 @@ StackFinalize (clientData)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * namespaceTail --
+ *
+ *      Returns the trailing name at the end of a string with "::"
+ *      namespace qualifiers. These qualifiers are namespace names
+ *      separated by "::"s. For example, for "::foo::p" this function
+ *      returns a pointer to the "p" in that obj string rep, and for
+ *      "::" it returns a pointer to "".
+ *
+ * Results:
+ *	Returns a pointer to the start of the tail name.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+static char*
+namespaceTail (nameObj) 
+    Tcl_Obj *nameObj;
+{
+    char *name,*p;
+    int   len;
+    
+    name = Tcl_GetStringFromObj(nameObj, &len);
+    p = name + len;
+    /* Isolate just the tail name, i.e. skip it's parent namespace */
+    while (--p > name) {
+        if ((*p == ':') && (*(p-1) == ':')) {
+            p++; /* just after the last "::" */
+            name = p;
+            break;
+        }
+    }
+    return name;
+}
+
 /*----------------------------------------------------------------------------
 |   NodeObjCmd
 |
@@ -200,7 +247,8 @@ NodeObjCmd (arg, interp, objc, objv)
     int             objc;               /* Number of arguments. */
     Tcl_Obj *CONST  objv[];             /* Argument objects. */
 {
-    int type, len, dlen, i, ret, disableOutputEscaping = 0, index = 1;
+    int type, createType, len, dlen, i, ret, disableOutputEscaping = 0, 
+        index = 1;
     char *tag, *p, *tval, *aval;
     domNode *parent, *newNode = NULL;
     domDocument *doc;
@@ -230,11 +278,14 @@ NodeObjCmd (arg, interp, objc, objv)
     type = (int)(arg);
 
     switch (abs(type)) {
-    case CDATA_SECTION_NODE: /* FALL-THRU */
-    case COMMENT_NODE:       /* FALL-THRU */
-    case TEXT_NODE:
+    case CDATA_SECTION_NODE:     
+    case CDATA_SECTION_NODE_CHK: 
+    case COMMENT_NODE:           
+    case COMMENT_NODE_CHK:       
+    case TEXT_NODE:              
+    case TEXT_NODE_CHK:
         if (objc != 2) {
-            if ((int)arg == TEXT_NODE) {
+            if (abs(type) == TEXT_NODE || abs(type) == TEXT_NODE_CHK) {
                 if (objc != 3 ||
                     strcmp ("-disableOutputEscaping",
                             Tcl_GetStringFromObj (objv[1], &len))!=0) {
@@ -251,20 +302,48 @@ NodeObjCmd (arg, interp, objc, objv)
             }
         }
         tval = Tcl_GetStringFromObj(objv[index], &len);
-        newNode = (domNode*)domNewTextNode(doc, tval, len, (int)arg);
+        switch (abs(type)) {
+        case TEXT_NODE_CHK:
+            if (!tcldom_textCheck (interp, tval, "text")) return TCL_ERROR;
+            createType = TEXT_NODE;
+            break;
+        case COMMENT_NODE_CHK:
+            if (!tcldom_commentCheck (interp, tval)) return TCL_ERROR;
+            createType = COMMENT_NODE;
+            break;
+        case CDATA_SECTION_NODE_CHK:
+            if (!tcldom_CDATACheck (interp, tval)) return TCL_ERROR;
+            createType = CDATA_SECTION_NODE;
+            break;
+        default:
+            createType = (int)arg;
+            break;
+        }
+        newNode = (domNode*)domNewTextNode(doc, tval, len, createType);
         if (disableOutputEscaping) {
             newNode->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
         }
         domAppendChild(parent, newNode);
         break;
 
+    case PROCESSING_INSTRUCTION_NODE_NAME_CHK:
+    case PROCESSING_INSTRUCTION_NODE_VALUE_CHK:
+    case PROCESSING_INSTRUCTION_NODE_CHK:
     case PROCESSING_INSTRUCTION_NODE:
         if (objc != 3) {
             Tcl_WrongNumArgs(interp, 1, objv, "target data");
             return TCL_ERROR;
         } 
         tval = Tcl_GetStringFromObj(objv[1], &len);
+        if (abs(type) == PROCESSING_INSTRUCTION_NODE_NAME_CHK
+            || abs(type) == PROCESSING_INSTRUCTION_NODE_CHK) {
+            if (!tcldom_PINameCheck (interp, tval)) return TCL_ERROR;
+        }
         aval = Tcl_GetStringFromObj(objv[2], &dlen);
+        if (abs(type) == PROCESSING_INSTRUCTION_NODE_VALUE_CHK
+            || abs(type) == PROCESSING_INSTRUCTION_NODE_CHK) {
+            if (!tcldom_PIValueCheck (interp, aval)) return TCL_ERROR;
+        }
         newNode = (domNode *)
             domNewProcessingInstructionNode(doc, tval, len, aval, dlen);
         domAppendChild(parent, newNode);
@@ -278,6 +357,9 @@ NodeObjCmd (arg, interp, objc, objv)
         ret = tcldom_appendXML(interp, parent, objv[1]);
         break;
 
+    case ELEMENT_NODE_ANAME_CHK:
+    case ELEMENT_NODE_AVALUE_CHK:
+    case ELEMENT_NODE_CHK:
     case ELEMENT_NODE:
         tag = Tcl_GetStringFromObj(objv[0], &len);
         p = tag + len;
@@ -324,7 +406,19 @@ NodeObjCmd (arg, interp, objc, objv)
             if (*tval == '-') {
                 tval++;
             }
+            if (abs(type) == ELEMENT_NODE_ANAME_CHK
+                || abs(type) == ELEMENT_NODE_CHK) {
+                if (!tcldom_nameCheck (interp, tval, "attribute", 0)) {
+                    return TCL_ERROR;
+                }
+            }
             aval = Tcl_GetString(opts[i+1]);
+            if (abs(type) == ELEMENT_NODE_AVALUE_CHK
+                || abs(type) == ELEMENT_NODE_CHK) {
+                if (!tcldom_textCheck (interp, aval, "attribute", 0)) {
+                    return TCL_ERROR;
+                }
+            }
             domSetAttribute(newNode, tval, aval);
         }
         if (cmdObj) {
@@ -351,9 +445,9 @@ NodeObjCmd (arg, interp, objc, objv)
 |   generate tDOM nodes. These new commands can only be called within
 |   the context of the domNode command, however.
 |
-|   Syntax: dom createNodeCmd ?-returnNodeCmd? <elementType> cmdName
+|   Syntax: dom createNodeCmd ?-returnNodeCmd? <nodeType> cmdName
 |
-|           where <elementType> can be one of:
+|           where <nodeType> can be one of:
 |              elementNode, commentNode, textNode, cdataNode or piNode
 |
 |   The optional "-returnNodeCmd" parameter, if given, instructs the
@@ -379,11 +473,12 @@ NodeObjCmd (arg, interp, objc, objv)
 |
 \---------------------------------------------------------------------------*/
 int
-nodecmd_createNodeCmd (dummy, interp, objc, objv)
-    ClientData      dummy;              /* Not used. */
+nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
     Tcl_Interp    * interp;             /* Current interpreter. */
     int             objc;               /* Number of arguments. */
     Tcl_Obj *CONST  objv[];             /* Argument objects. */
+    int             checkName;          /* Flag: Name checks? */
+    int             checkCharData;      /* Flag: Data checks? */
 {
     int ix, index, ret, type, nodecmd = 0;
     char *nsName, buf[64];
@@ -392,7 +487,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     /*
      * Syntax:  
      *
-     *     dom createNodeCmd ?-returnNodeCmd? elementType commandName
+     *     dom createNodeCmd ?-returnNodeCmd? nodeType commandName
      */
 
     enum {
@@ -439,15 +534,59 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
     }
     Tcl_DStringAppend(&cmdName, Tcl_GetString(objv[ix+1]), -1);
 
+    Tcl_ResetResult (interp);
     switch (index) {
-    case PRS_NODE: type = PARSER_NODE;                 break;
-    case ELM_NODE: type = ELEMENT_NODE;                break;
-    case TXT_NODE: type = TEXT_NODE;                   break;
-    case CDS_NODE: type = CDATA_SECTION_NODE;          break;
-    case CMT_NODE: type = COMMENT_NODE;                break;
-    case PIC_NODE: type = PROCESSING_INSTRUCTION_NODE; break;
+    case ELM_NODE: 
+        if (!tcldom_nameCheck(interp, namespaceTail(objv[ix+1]), "tag", 0)) {
+            return TCL_ERROR;
+        }
+        if (checkName && checkCharData) {
+            type = ELEMENT_NODE_CHK;
+        } else if (checkName) {
+            type = ELEMENT_NODE_ANAME_CHK;
+        } else if (checkCharData) {
+            type = ELEMENT_NODE_AVALUE_CHK;
+        } else {
+            type = ELEMENT_NODE;
+        }
+        break;
+    case PRS_NODE: 
+        type = PARSER_NODE;
+        break;
+    case TXT_NODE: 
+        if (checkCharData) {
+            type = TEXT_NODE_CHK;
+        } else {
+            type = TEXT_NODE;
+        }
+        break;
+    case CDS_NODE: 
+        if (checkCharData) {
+            type = CDATA_SECTION_NODE_CHK;
+        } else {
+            type = CDATA_SECTION_NODE;
+        }
+        break;
+    case CMT_NODE:
+        if (checkCharData) {
+            type = COMMENT_NODE_CHK;
+        } else {
+            type = COMMENT_NODE;
+        }
+        break;
+    case PIC_NODE: 
+        if (checkName && checkCharData) {
+            type = PROCESSING_INSTRUCTION_NODE_CHK;
+        } else if (checkName) {
+            type = PROCESSING_INSTRUCTION_NODE_NAME_CHK;
+        } else if (checkCharData) {
+            type = PROCESSING_INSTRUCTION_NODE_VALUE_CHK;
+        } else {
+            type = PROCESSING_INSTRUCTION_NODE;
+        }
+        break;
     }
-
+    
     if (nodecmd) {
         type *= -1; /* Signal this fact */
     }
@@ -460,7 +599,7 @@ nodecmd_createNodeCmd (dummy, interp, objc, objv)
 
  usage:
     Tcl_AppendResult(interp, 
-                     "dom createNodeCmd ?-returnNodeCmd? elementType cmdName",
+                     "dom createNodeCmd ?-returnNodeCmd? nodeType cmdName",
                      NULL);
     return TCL_ERROR;
 }
@@ -497,7 +636,7 @@ nodecmd_appendFromScript (interp, node, cmdObj)
         return TCL_ERROR;
     }
     
-    oldLastChild = node->firstChild;
+    oldLastChild = node->lastChild;
 
     StackPush((void *)node);
     Tcl_AllowExceptions(interp);
