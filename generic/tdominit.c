@@ -112,10 +112,10 @@ Tdom_Init (interp)
 #endif
     
 #ifdef USE_TCL_STUBS
-    Tcl_PkgProvideEx(interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION), 
+    Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, 
                      (ClientData) &tdomStubs);
 #else
-    Tcl_PkgProvide(interp, "tdom", STR_TDOM_VERSION(TDOM_VERSION));
+    Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION);
 #endif
 
     return TCL_OK;
