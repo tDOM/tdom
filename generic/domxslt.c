@@ -373,6 +373,7 @@ typedef struct {
     Tcl_HashTable       isElementTpls;
     xsltWSInfo          wsInfo;
     domNode           * xmlRootNode;
+    domDoctype          doctype;
     domDocument       * resultDoc;
     domNode           * lastNode;
     xsltVarFrame      * varFramesStack;
@@ -6123,7 +6124,19 @@ static int processTopLevel (
                     xs->outputMediaType = tdomstrdup(str); 
                 }
                 str = getAttr(node, "doctype-public", a_doctypePublic);
+                if (str) {
+                    if (xs->doctype.publicId) {
+                        FREE ((char*) xs->doctype.publicId);
+                    }
+                    xs->doctype.publicId = tdomstrdup(str);
+                }
                 str = getAttr(node, "doctype-system", a_doctypeSystem);
+                if (str) {
+                    if (xs->doctype.systemId) {
+                        FREE ((char*) xs->doctype.systemId);
+                    }
+                    xs->doctype.systemId = tdomstrdup(str);
+                }
                 break;
 
             case preserveSpace:
@@ -6260,6 +6273,10 @@ xsltFreeState (
     Tcl_HashTable     *htable;
     double            *f;
 
+
+    if (xs->doctype.systemId) FREE(xs->doctype.systemId);
+    if (xs->doctype.publicId) FREE(xs->doctype.publicId);
+    if (xs->doctype.internalSubset) FREE(xs->doctype.internalSubset);
     for (entryPtr = Tcl_FirstHashEntry (&xs->namedTemplates, &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
@@ -6620,6 +6637,7 @@ xsltCompileStylesheet (
     xs->decimalFormats->infinity          = "Infinity";
     xs->decimalFormats->NaN               = "NaN";
     xs->decimalFormats->next              = NULL;
+    memset (&xs->doctype, 0, sizeof (domDoctype));
     
     node = xsltDoc->documentElement;
 
@@ -6752,6 +6770,19 @@ int xsltProcess (
     }
 
     xs->resultDoc           = domCreateDoc();
+    if (xs->doctype.systemId) {
+        xs->resultDoc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
+        memset (xs->resultDoc->doctype, 0, (sizeof (domDoctype)));
+        xs->resultDoc->doctype->systemId = tdomstrdup (xs->doctype.systemId);
+    }
+    if (xs->doctype.publicId) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDoctype)));
+        }
+        xs->resultDoc->doctype->publicId = tdomstrdup (xs->doctype.publicId);
+    }
+    
     xs->xmlRootNode         = xmlNode;
     xs->lastNode            = xs->resultDoc->rootNode;
     xs->xsltMsgCB           = xsltMsgCB;
@@ -6869,12 +6900,12 @@ int xsltProcess (
  error:
     xsltPopVarFrame (xs);
     xpathRSFree( &nodeList );
+    domFreeDocument (xs->resultDoc, NULL, NULL);
     if (xsltCmdData) {
         xsltResetState (xs);
     } else {
         xsltFreeState (xs);
     }
-    domFreeDocument (xs->resultDoc, NULL, NULL);
     return -1;
 
 } /* xsltProcess */
