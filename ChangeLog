@@ -1,3 +1,13 @@
+2004-10-25  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domNode.*: Added documentation for the '-namespaces'
+          option of the selectNodes method.
+
+        * doc/dom.*: Added a note to the -externalentitycommand option
+          of the parse method, that the programmer is responsible for
+          closing the channel, if the resolver script returns a
+          channel.      
+
 2004-09-29  Rolf Ade  <rolf@pointsman.de>
 
         * win/pkgIndex.tcl: First [load] the lib, which has 
