@@ -293,7 +293,9 @@ NodeObjCmd (arg, interp, objc, objv)
         /*
          * Allow for following syntax:
          *   cmd ?-option value ...? ?script?
+         *   cmd ?opton value ...? ?script?
          *   cmd key_value_list script
+         *       where list contains "-key value ..." or "key value ..."
          */
 
         if ((objc % 2) == 0) {
@@ -316,11 +318,9 @@ NodeObjCmd (arg, interp, objc, objv)
         }
         for (i = 0; i < len; i += 2) {
             tval = Tcl_GetStringFromObj(opts[i], NULL);
-            if (*tval != '-') {
-                Tcl_AppendResult(interp, "bad option: ", tval, NULL);
-                return TCL_ERROR;
+            if (*tval == '-') {
+                tval++;
             }
-            tval++;
             aval = Tcl_GetStringFromObj(opts[i+1], NULL);
             domSetAttribute(newNode, tval, aval);
         }
