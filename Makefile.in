@@ -74,7 +74,7 @@ tdomstub_LIB_FILE	= @tdomstub_LIB_FILE@
 # this package that need to be installed, if any.
 #========================================================================
 
-RUNTIME_SOURCES = tdom.tcl
+RUNTIME_SOURCES = tdom.tcl tdomhtml.tcl
 
 #========================================================================
 # This is a list of header files to be installed
@@ -287,9 +287,13 @@ install-doc: doc
 #========================================================================
 
 test: binaries libraries
-	@cp $(srcdir)/lib/tdom.tcl $(top_builddir)/tdom.tcl
+        @for i in $(RUNTIME_SOURCES); do \
+	  cp $(srcdir)/lib/$$i $(top_builddir)/ \
+        done
 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
-	@rm -rf tdom.tcl
+        @for i in $(RUNTIME_SOURCES); do \
+	  rm -rf $(top_builddir)/$$ii \
+	done
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
@@ -351,9 +355,10 @@ pkgIndex.tcl:
 	@(echo pkg_mkIndex . $($(PACKAGE)_LIB_FILE) \; exit; ) | $(TCLSH)
 
 pkgIndex.tcl-hand:
-	@(echo 'package ifneeded $(PACKAGE) $(VERSION) \
-        "source [file join $$dir tdom.tcl];\
-	   load [file join $$dir $($(PACKAGE)_LIB_FILE)]"'\
+	@(echo 'package ifneeded $(PACKAGE) $(VERSION)\
+	"load [file join $$dir $($(PACKAGE)_LIB_FILE)];\
+         source [file join $$dir tdom.tcl];\
+         source [file join $$dir tdomhtml.tcl]"'\
 	) > pkgIndex.tcl
 
 #========================================================================
