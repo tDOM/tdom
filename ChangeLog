@@ -1,3 +1,34 @@
+2003-01-29  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/tcldom.c
+        * tests/xslt.test: Changed escaping of serialized XML. The
+          previous behavior wasn't 'wrong', but now we do it along the
+          lines of almost all other (important) tools and it seems
+          there's al least some xslt code out there, which banks on
+          this 'common' way of serializing. Though, there is a small
+          risk, that this is an incompatible change for a few users.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/xmlsimple.c
+        * tests/dom.test: Fixed the problem of 'changing node
+          references' under some circumstances (reported by Wilhelm
+          Klink). This also decrease the possibility of a potential
+          problem for extremely long running single threaded tDOM
+          applications.
+
+        * generic/dom.c
+        * generic/tcldom.c
+        * tests/dom.test: Fix for the problem with ownerDocument
+          reported by Oleg Oleinick (see test dom-29.1).
+
+        * generic/tcldom.c
+        * tests/dom.test: Fixed bug with COMMENT_NODEs while using the
+          asList method (problem reported by Ramon Ribó). While at it,
+          also added code for handling processing instructions, which
+          was also missing, up to now.
+
 2003-01-11  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
