@@ -2,7 +2,8 @@
 
         * generic/domxslt.c
         * tests/xslt.test: Fix, to ensure namespace integrity of the
-          result doc.
+          result doc. Fixed parentNode of documentElement and siblings
+          of the result tree.
 
 2003-11-24  Rolf Ade  <rolf@pointsman.de>
 
