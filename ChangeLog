@@ -1,3 +1,13 @@
+2005-01-19  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domhtml.c
+        * generic/xmlsimple.c: Renamed exported symbols attrNames and
+          tagNames to tdom_attrNames and tdom_tagNames, to avoid name
+          clash. startDoctypeDeclHandler() and
+          endDoctypeDeclHandler(): added missing static.
+
 2005-01-16  Zoran Vasiljevic  <zv@archiware.com>
 
 	* Makefile.in:                 Bumped version to 0.8.1.
