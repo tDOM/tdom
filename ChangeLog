@@ -1,3 +1,7 @@
+2003-06-11  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/domlock.c: fixed double mutex unlock.
+
 2003-05-19  Rolf Ade  <rolf@pointsman.de>
 
         * doc/dom.*: Corrected the documentation of the
