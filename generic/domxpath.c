@@ -2007,6 +2007,7 @@ int xpathFreeTokens (
 |   checkPatternConstraints
 |
 \---------------------------------------------------------------------------*/
+static
 int checkPatternConstraints (
     ast           t,
     xpathExprType type,
@@ -2015,7 +2016,8 @@ int checkPatternConstraints (
 {
     while (t) {
         if (type != XPATH_KEY_USE_EXPR) {
-            /* 12.4: "It is an error to use the current function in a pattern." */
+            /* 12.4: "It is an error to use the current function in a
+               pattern." */
             if (t->type == ExecFunction 
                 && t->intvalue == f_unknown
                 && (strcmp (t->strvalue, "current")==0)) {
