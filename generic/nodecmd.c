@@ -25,6 +25,12 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
+|   Revision 1.4  2002/06/21 10:38:24  zoran
+|   Fixed node numbering to use document-private node-counter when compiled
+|   with -DTCL_THREADS. Node Tcl-command names are still defined in the
+|   usual fashion, by using the (unsigned int)(domNode*) in order to get
+|   unique command names within the process and accross thread/interp combi.
+|
 |   Revision 1.3  2002/06/20 13:15:09  loewerj
 |
 |   fixed compile warnings
@@ -180,7 +186,7 @@ StackTop ()
 }
 
 
-#ifdef TDOM_THREADS
+#ifdef TCL_THREADS
 /*----------------------------------------------------------------------------
 |   StackFinalize - reclaims stack memory (slots only, not elements)
 |

@@ -29,6 +29,12 @@
 |
 |
 |   $Log$
+|   Revision 1.12  2002/06/21 10:38:24  zoran
+|   Fixed node numbering to use document-private node-counter when compiled
+|   with -DTCL_THREADS. Node Tcl-command names are still defined in the
+|   usual fashion, by using the (unsigned int)(domNode*) in order to get
+|   unique command names within the process and accross thread/interp combi.
+|
 |   Revision 1.11  2002/06/02 06:36:23  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -138,7 +144,7 @@
 # define TDomNotThreaded(x) x
 # define TDomThreaded(x)
 # define HASHTAB(doc,tab)   tab
-# define NODE_NO(node)      ++domUniqueNodeNr
+# define NODE_NO(doc)       ++domUniqueNodeNr
 # define DOC_NO(doc)        ++domUniqueDocNr
 # define NODE_CMD(s,node)   sprintf((s), "domNode%d", (node)->nodeNumber)
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
@@ -148,9 +154,9 @@
 # define TDomNotThreaded(x)
 # define TDomThreaded(x)    x
 # define HASHTAB(doc,tab)   (doc)->tab
-# define NODE_NO(node)      (unsigned int)(node)
+# define NODE_NO(doc)       ((doc)->nodeCounter)++
 # define DOC_NO(doc)        (unsigned int)(doc)
-# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (node)->nodeNumber)
+# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc0x%x", (doc)->documentNumber)
 
 #endif /* TCL_THREADS */
@@ -449,6 +455,9 @@ typedef struct domDocument {
     struct domNS    **namespaces;
     int               nsptr;
     int               nslen;
+#ifdef TCL_THREADS
+    unsigned int      nodeCounter;
+#endif
     struct domNode   *rootNode;
     Tcl_HashTable     ids;
     Tcl_HashTable     unparsedEntities;
