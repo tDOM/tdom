@@ -724,10 +724,10 @@ test dom-11.6 {disableOutputEscaping} {
     set root [$doc documentElement]
     set textnode [$doc createTextNode "&"]
     $root appendChild $textnode
-    set result [$root asXML]
     set textnode [$doc createTextNode "<p>some <b>important</b> text</p>"]
     $textnode disableOutputEscaping 1
     $root appendChild $textnode
+    set result [$root asXML]
     $doc delete
     set result
 } {<root>&amp;<p>some <b>important</b> text</p></root>
