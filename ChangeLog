@@ -1,3 +1,19 @@
+2003-01-11  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxslt.c
+        * generic/domxslt.h
+        * generic/tcldom.c: Added conversion of XSLT stylesheet DOM
+          trees to 'cached' xslt cmds (new domDoc method
+          toXSLTcmd). Works for non threaded tcl; needs additional
+          work for multi-threaded tcl and documentation.
+
+        * generic/domxslt.c: Fixed a bug introduced during rework of
+          the white space stripping for XML sources.
+
+        * generic/tclexpat.c: Editorial change (Typo in comment)
+  
 2002-12-28  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c
