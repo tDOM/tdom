@@ -12,6 +12,7 @@
 #    domCmd-7.*:  external entities
 #    domCmd-8.*:  toXSLTcmd
 #    domCmd-9.*:  asText
+#    domCmd-10.*: normalize
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -1076,6 +1077,89 @@ test domCmd-9.5 {asText} {
     set result
 } {encoded chars: > < & " '}
 # emacs: "
+
+test domCmd-10.1 {normalize} {
+    set doc [dom parse <root><child>text</child></root>]
+    $doc documentElement root
+    set cdataNode [$doc createCDATASection "cdata section text"]
+    set child [$root firstChild]
+    $child appendChild $cdataNode
+    $doc normalize
+    set result [llength [$child childNodes]]
+    lappend result [[$child firstChild] data]
+    $doc delete
+    set result
+} {2 text}
+
+test domCmd-10.2 {normalize} {
+    set doc [dom parse <root><child>text</child></root>]
+    $doc documentElement root
+    set cdataNode [$doc createCDATASection "cdata section text"]
+    set child [$root firstChild]
+    $child appendChild $cdataNode
+    $doc normalize -forXPath
+    set result [llength [$child childNodes]]
+    lappend result [[$child firstChild] data]
+    $doc delete
+    set result
+} {1 {textcdata section text}}
+
+test domCmd-10.3 {normalize} {
+    set doc [dom parse <root><child/></root>]
+    $doc documentElement root
+    set cdataNode [$doc createCDATASection "cdata section text"]
+    set textNode [$doc createTextNode text]
+    set child [$root firstChild]
+    $child appendChild $cdataNode
+    $child appendChild $textNode
+    set result [llength [$child childNodes]]
+    $doc normalize -forXPath
+    lappend result [llength [$child childNodes]]
+    lappend result [[$child firstChild] data]
+    $doc delete
+    set result
+} {2 1 {cdata section texttext}}
+
+test domCmd-10.4 {normalize} {
+    set doc [dom parse <root><child/></root>]
+    $doc documentElement root
+    set cdataNode [$doc createCDATASection "cdata section text"]
+    set child [$root firstChild]
+    $child appendChild $cdataNode
+    $doc normalize
+    set result [$cdataNode nodeType]
+    $doc normalize -forXPath
+    lappend result [$cdataNode nodeType]
+    $doc delete
+    set result
+} {CDATA_SECTION_NODE TEXT_NODE}
+
+test domCmd-10.5 {normalize} {
+    set doc [dom parse <root><child/></root>]
+    $doc documentElement root
+    set textNode [$doc createTextNode ""]
+    set child [$root firstChild]
+    $child appendChild $textNode
+    set result [llength [$child childNodes]]
+    $doc normalize
+    lappend result [llength [$child childNodes]]
+    $doc delete
+    set result
+} {1 0}
+
+test domCmd-10.6 {normalize} {
+    set doc [dom parse <root><child/></root>]
+    $doc documentElement root
+    set cdataNode [$doc createCDATASection ""]
+    set child [$root firstChild]
+    $child appendChild $cdataNode
+    $doc normalize
+    set result [llength [$child childNodes]]
+    $doc normalize -forXPath
+    lappend result [llength [$child childNodes]]
+    $doc delete
+    set result
+} {1 0}
 
 # cleanup
 ::tcltest::cleanupTests
