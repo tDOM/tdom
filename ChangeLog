@@ -1,5 +1,23 @@
 2002-10-31  Zoran Vasiljevic  <zoran@archiware.com>
 
+	* lib/tdom.tcl: does now "package require tdom" only,
+	  instead of "package provide tdom 0.7.5".
+	  The "package provide" with a correct version is
+ 	  done by the C-module now (which is better).
+	  Some cosmetic changes as well (keep 80-columns wide!).
+
+  	* lib/tdomhtml.tcl: renamed version of domhtml.tcl
+	  Also did some simplification in html2tcl, renamed some
+	  internal private functions and added namespace-wide 
+	  definitions of html command names. The _2tcl procedure
+	  now creates the missing elementNode commands as it
+	  parses the html code, on the fly.
+
+	* Makefile.in: changed order of loads in the pkgIndex.tcl.
+	  First the C-module is loaded, followed by the tdom.tcl 
+	  library file, followed by the tdomhtml.tcl library file.
+ 	  Thus, the tdomhtml.tcl has become the first class citizen.
+
 	* CHANGES: added this file
 
 2002-10-31  Rolf Ade  <rolf@pointsman.de>
