@@ -496,7 +496,7 @@ domNS* domNewNamespace (
     doc->nsptr++;
     if (doc->nsptr > 254) {
         DBG(fprintf (stderr, "maximum number of namespaces exceeded!!!\n");)
-        exit(1); /* FIXME */
+        domPanic("domNewNamespace: maximum number of namespaces exceeded!");
     }
     if (doc->nsptr >= doc->nslen) {
         doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
@@ -721,7 +721,11 @@ startElement(
             sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
             if (Tcl_Eval(info->interp, feedbackCmd) != TCL_OK) {
                 DBG(fprintf(stderr, "%s\n", Tcl_GetStringResult (info->interp));)
-                exit(1); /* FIXME */
+                /* FIXME: We simply ignore script errors in the
+                   feedbackCmd, for now. One fine day, expat may provide
+                   a way to cancle a already started parse run from
+                   inside a handler. Then we should revisit this. */
+                /* exit(1) */    
             }
             info->lastFeedbackPosition += info->feedbackAfter;
         }
@@ -1328,6 +1332,9 @@ externalEntityRefHandler (
 
 
     if (info->document->extResolver == NULL) {
+        Tcl_AppendResult (info->interp, "Can't read external entity \"",
+                          systemId, "\": No -externalentitycommand given",
+                          (char *) NULL);
         return 0;
     }
 
@@ -1339,24 +1346,43 @@ externalEntityRefHandler (
 
     if (base) {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj((char *)base, strlen(base)));
+                                 Tcl_NewStringObj((char *)base,
+                                                  strlen(base)));
     } else {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj("", 0));
+                                 Tcl_NewObj());
     }
 
-    Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                             Tcl_NewStringObj((char *)systemId, strlen(systemId)));
+    /* For a document with doctype declaration, the systemId is always
+       != NULL. But if the document doesn't have a doctype declaration
+       and the user uses -useForeignDTD 1, the externalEntityRefHandler
+       will be called with a systemId (and publicId and openEntityNames)
+       == NULL. */
+    if (systemId) {
+        Tcl_ListObjAppendElement(info->interp, cmdPtr,
+                                 Tcl_NewStringObj((char *)systemId,
+                                                  strlen(systemId)));
+    } else {
+        Tcl_ListObjAppendElement(info->interp, cmdPtr,
+                                 Tcl_NewObj());
+    }
 
     if (publicId) {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj((char *)publicId, strlen(publicId)));
+                                 Tcl_NewStringObj((char *)publicId,
+                                                  strlen(publicId)));
     } else {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj("", 0));
+                                 Tcl_NewObj());
     }
 
+ 
+#if TclOnly8Bits
     result = Tcl_GlobalEvalObj(info->interp, cmdPtr);
+#else
+    result = Tcl_EvalObjEx (info->interp, cmdPtr, 
+                            TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL);
+#endif
 
     Tcl_DecrRefCount(cmdPtr);
 
@@ -1472,6 +1498,7 @@ externalEntityRefHandler (
     XML_ParserFree (extparser);
     info->parser = oldparser;
 
+    Tcl_DecrRefCount (resultObj);
     Tcl_ResetResult (info->interp);
     return 1;
 
@@ -1545,6 +1572,7 @@ domReadDocument (
     Tcl_Channel channel,
     char       *baseurl,
     Tcl_Obj    *extResolver,
+    int         useForeignDTD,
     Tcl_Interp *interp
 )
 {
@@ -1590,6 +1618,7 @@ domReadDocument (
 
     XML_SetUserData(parser, &info);
     XML_SetBase (parser, baseurl);
+    XML_UseForeignDTD (parser, useForeignDTD);
     XML_SetElementHandler(parser, startElement, endElement);
     XML_SetCharacterDataHandler(parser, characterDataHandler);
     XML_SetCommentHandler(parser, commentHandler);
