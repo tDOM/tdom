@@ -450,7 +450,7 @@ proc ::dom::xpathFuncHelper::coerce2number { type value } {
 #----------------------------------------------------------------------------
 proc ::dom::xpathFuncHelper::coerce2string { type value } {
     switch $type {
-        empty      { return 0 }
+        empty      { return "" }
         number -
         string     { return $value }
         attrvalues { return [lindex $value 0] }
@@ -602,10 +602,10 @@ proc ::dom::xpathFunc::system-property { ctxNode pos
             return [list number 1.0]
         }
         xsl:vendor {
-            return [list string "Jochen Loewer et. al. (loewerj@hotmail.com)"]
+            return [list string "Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."]
         }
         xsl:vendor-url {
-            return [list string "http://sdf.lonestar.org/~loewerj/tdom.cgi"]
+            return [list string "http://www.tdom.org"]
         }
         default {
             return [list string ""]
@@ -713,7 +713,7 @@ proc tDOM::IANAEncoding2TclEncoding {IANAName} {
         default {
             # There are much more encoding names out there
             # It's only laziness, that let me stop here.
-            error "Unrecognized encoding name $IANAName"
+            error "Unrecognized encoding name '$IANAName'"
         }
     }
 }
@@ -754,7 +754,8 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
         }
     }
 
-    # If the entity has a XML Declaration, the first four characters are "<?xm".
+    # If the entity has a XML Declaration, the first four characters
+    # must be "<?xm".
     switch $firstBytes {
         "3c3f786d" {
             # UTF-8, ISO 646, ASCII, some part of ISO 8859, Shift-JIS,
@@ -778,7 +779,8 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
             seek $fd 0 start
             set xmlDeclaration [read $fd [expr {$closeIndex + 5}]]
             # extract the encoding information
-            set pattern {encoding=[\x20\x9\xd\xa]*["']([^ ]*)['"]}
+            set pattern {encoding=[\x20\x9\xd\xa]*["']([^ "']+)['"]}
+            # emacs: "
             if {![regexp $pattern $head - encStr]} {
                 # Probably something like <?xml version="1.0"?>. 
                 # Without encoding declaration this must be UTF-8
