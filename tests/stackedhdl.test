@@ -159,6 +159,19 @@ test stackedhdl-2.1 {tcl handler and C coded parser extension} {
     set result
 } {3 2}
 
+test stackedhdl-2.2 {tcl handler and C coded parser extension} {
+    catch {unset ::count}
+    set p [expat -elementstartcommand Count]
+    tdom $p enable
+    $p parse {<root><a/><a>boo</a></root>}
+    set doc [tdom $p getdoc]
+    $p free
+    set root [$doc documentElement]
+    set result [list $::count [llength [$root childNodes]]]
+    $doc delete
+    set result
+} {3 2}
+
 test stackedhdl-3.1 {don't request the DOM tree from a tdom enabled parser} {
     set p [expat]
     tdom $p enable
