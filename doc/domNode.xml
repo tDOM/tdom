@@ -46,8 +46,10 @@ PROCESSING_INSTRUCTION_NODE.</desc>
       <commanddef>
         <command><method>nodeName</method></command>
         <desc>Returns the node name of that node object. This is the element
-(tag) name for element nodes (type ELEMENT_NODE), &quot;#text&quot; for text
-node or &quot;#cdata&quot; for cdata section nodes.</desc>
+(tag) name for element nodes (type ELEMENT_NODE), the processing-instruction
+target for processing-instructions, &quot;#text&quot; for text node,
+&quot;#comment&quot; for comment nodes or &quot;#cdata&quot; for cdata section
+nodes.</desc>
       </commanddef>
 
       <commanddef>
@@ -126,7 +128,7 @@ matching (glob style) <m>localname</m> and having the given namespace
       <commanddef>
         <command><method>getElementById</method> <m>id</m></command>
         <desc>Returns the node having a id attribute with value
-<m>id</m>.</desc>
+<m>id</m> or the emtpy string, if no node has an id attribute with that value.</desc>
       </commanddef>
 
       <commanddef>
@@ -220,7 +222,7 @@ list.</desc>
       <commanddef>
         <command><method>appendChild</method> <m>newChild</m></command>
         <desc>Append <m>newChild</m> to the end of the child list of the
-node. <m>newChild</m> must be in the document fragment list.</desc>
+node.</desc>
       </commanddef>
 
       <commanddef>
@@ -233,8 +235,7 @@ children of node. If <m>refChild</m> is the empty string, insert
       <commanddef>
         <command><method>replaceChild</method> <m>newChild</m>  <m>oldChild</m></command>
         <desc>Replace <m>newChild</m> with <m>oldChild</m> in list of children
-of that node.  <m>newChild</m> must be in the document fragment list.
-<m>oldChild</m> will be part of the document fragment list after this
+of that node. <m>oldChild</m> will be part of the document fragment list after this
 operation.</desc>
       </commanddef>
 

@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80aaec0">NAME</a> · <a href="#SECTid80aaf38">SYNOPSIS</a> · <a href="#SECTid80aafd8"> DESCRIPTION </a> · <a href="#SECTid80c9d58">SEE ALSO</a> · <a href="#SECTid80c9dd0">KEYWORDS</a>
+<a href="#SECTid80ab4d0">NAME</a> · <a href="#SECTid80ab548">SYNOPSIS</a> · <a href="#SECTid80ab5e8"> DESCRIPTION </a> · <a href="#SECTid80ca370">SEE ALSO</a> · <a href="#SECTid80ca3e8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid80aaec0">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80ab4d0">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTid80aaf38">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTid80ab548">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTid80aafd8"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTid80ab5e8"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -32,8 +32,10 @@ PROCESSING_INSTRUCTION_NODE.</dd>
       
         <dt><b class="method">nodeName</b></dt>
         <dd>Returns the node name of that node object. This is the element
-(tag) name for element nodes (type ELEMENT_NODE), "#text" for text
-node or "#cdata" for cdata section nodes.</dd>
+(tag) name for element nodes (type ELEMENT_NODE), the processing-instruction
+target for processing-instructions, "#text" for text node,
+"#comment" for comment nodes or "#cdata" for cdata section
+nodes.</dd>
       
 
       
@@ -130,7 +132,7 @@ matching (glob style) <i class="m">localname</i> and having the given namespace
 <b class="method">getElementById</b> <i class="m">id</i>
 </dt>
         <dd>Returns the node having a id attribute with value
-<i class="m">id</i>.</dd>
+<i class="m">id</i> or the emtpy string, if no node has an id attribute with that value.</dd>
       
 
       
@@ -244,7 +246,7 @@ list.</dd>
 <b class="method">appendChild</b> <i class="m">newChild</i>
 </dt>
         <dd>Append <i class="m">newChild</i> to the end of the child list of the
-node. <i class="m">newChild</i> must be in the document fragment list.</dd>
+node.</dd>
       
 
       
@@ -261,8 +263,7 @@ children of node. If <i class="m">refChild</i> is the empty string, insert
 <b class="method">replaceChild</b> <i class="m">newChild</i>  <i class="m">oldChild</i>
 </dt>
         <dd>Replace <i class="m">newChild</i> with <i class="m">oldChild</i> in list of children
-of that node.  <i class="m">newChild</i> must be in the document fragment list.
-<i class="m">oldChild</i> will be part of the document fragment list after this
+of that node. <i class="m">oldChild</i> will be part of the document fragment list after this
 operation.</dd>
       
 
@@ -616,11 +617,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid80c9d58">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTid80ca370">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTid80c9dd0">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid80ca3e8">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
