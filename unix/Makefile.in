@@ -81,8 +81,7 @@ TCL_LIB_DIR =	@TCL_LIB_DIR@
 # Library flags for Tcl library
 TCL_LIB_FLAG =	@TCL_LIB_FLAG@
 
-# Tcl libraries built with optimization switches have this additional extension
-DBGX =		@TCL_DBGX@
+TCL_DBGX     =  @TCL_DBGX@
 
 # Additional libraries to use when linking.  The "LIBS" part will be
 # replaced (or has already been replaced) with relevant libraries as
@@ -195,21 +194,27 @@ SOURCES = $(GENERIC_DIR)/xmlsimple.c    \
           $(GENERIC_DIR)/domhtml.c      \
           $(GENERIC_DIR)/domxpath.c     \
           $(GENERIC_DIR)/domxslt.c      \
-	  $(GENERIC_DIR)/tcldom.c       \
-	  $(GENERIC_DIR)/nodecmd.c      \
-	  $(GENERIC_DIR)/tdominit.c     \
-	  $(GENERIC_DIR)/tclAppInit.c   \
+          $(GENERIC_DIR)/domlock.c      \
+          $(GENERIC_DIR)/tcldom.c       \
+          $(GENERIC_DIR)/nodecmd.c      \
+          $(GENERIC_DIR)/tdominit.c     \
+          $(GENERIC_DIR)/tclAppInit.c   \
           $(SOURCES_EXPAT)
 
 
 OBJECTS_EXPAT =  xmltok.$(OBJEXT) xmlrole.$(OBJEXT) xmlparse.$(OBJEXT) \
                  tclexpat.$(OBJEXT) 	
 
-OBJECTS_TDOM =  xmlsimple.$(OBJEXT) utf8conv.$(OBJEXT) \
-                dom.$(OBJEXT) domalloc.$(OBJEXT)       \
-                domhtml.$(OBJEXT) domxpath.$(OBJEXT)   \
-                domxslt.$(OBJEXT) tcldom.$(OBJEXT)     \
-                nodecmd.$(OBJEXT)                      \
+OBJECTS_TDOM =  xmlsimple.$(OBJEXT) \
+                utf8conv.$(OBJEXT)  \
+                dom.$(OBJEXT)       \
+                domalloc.$(OBJEXT)  \
+                domhtml.$(OBJEXT)   \
+                domxpath.$(OBJEXT)  \
+                domxslt.$(OBJEXT)   \
+                domlock.$(OBJEXT)   \
+                tcldom.$(OBJEXT)    \
+                nodecmd.$(OBJEXT)   \
                 tdominit.$(OBJEXT) 
 
 OBJECTS =  $(OBJECTS_EXPAT) $(OBJECTS_TDOM)
@@ -220,13 +225,10 @@ OBJECTS =  $(OBJECTS_EXPAT) $(OBJECTS_TDOM)
 #------------------------------------------------------------------
 # OBJECTS =  $(OBJECTS_TDOM)
 
-
 $(TDOM_LIB_FILE)_OBJECTS = $(OBJECTS)
 
-
 all: $(TDOM_SHLIB_FILE) tcldomsh
-
-
+lib: $(TDOM_LIB_FILE) $(TDOM_SHLIB_FILE)
 
 $(TDOM_SHLIB_FILE):  $(OBJECTS)
 	${SHLIB_LD} $(OBJECTS) -o $(TDOM_SHLIB_FILE) @SHLIB_LD_LIBS@
@@ -282,7 +284,7 @@ clean:
 	rm -f *.a *.$(OBJEXT) core errs *~ \#* TAGS *.E a.out errors \
 	#rm -f gennmtab nametab.h tcldomsh* $(TDOM_LIB_FILE) $(TDOM_SHLIB_FILE)
 	rm -f tcldomsh* $(TDOM_LIB_FILE) $(TDOM_SHLIB_FILE)
-	rm -f *pure* *% ../tests/core
+	rm -f *_pure_* *% ../tests/core
 
 distclean: clean
 	rm -f Makefile config.status config.cache config.log
@@ -351,6 +353,9 @@ domxpath.$(OBJEXT): $(GENERIC_DIR)/domxpath.c $(GENERIC_DIR)/dom.h $(GENERIC_DIR
 
 domxslt.$(OBJEXT): $(GENERIC_DIR)/domxslt.c $(GENERIC_DIR)/dom.h $(GENERIC_DIR)/domxpath.h $(GENERIC_DIR)/domxslt.h
 	$(CC) -c $(CC_SWITCHES) $(GENERIC_DIR)/domxslt.c
+
+domlock.$(OBJEXT): $(GENERIC_DIR)/domlock.c $(GENERIC_DIR)/dom.h
+	$(CC) -c $(CC_SWITCHES) $(GENERIC_DIR)/domlock.c
 
 tclexpat.$(OBJEXT): $(GENERIC_DIR)/tclexpat.c
 	$(CC) -c $(CC_SWITCHES) $(GENERIC_DIR)/tclexpat.c
