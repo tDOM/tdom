@@ -2211,6 +2211,7 @@ static int xsltXPathFuncs (
         if (argc == 2) {
             if (argv[1]->type != xNodeSetResult) {
                 *errMsg = tdomstrdup("second arg of document() has to be a nodeset!");
+                return 1;
             }
             if (argv[1]->nodes[0]->nodeType == ATTRIBUTE_NODE) {
                 baseURI = findBaseURI (((domAttrNode*)argv[1]->nodes[0])->parentNode);
@@ -4176,11 +4177,11 @@ static int ExecAction (
             } else
             if (currentNode->nodeType == ELEMENT_NODE) {
                 DBG(fprintf(stderr, "node is ELEMENT_NODE \n");)
+                savedLastNode = xs->lastNode;
                 if (currentNode != currentNode->ownerDocument->rootNode) {
                     n = domAppendNewElementNode(xs->lastNode,
                                                 currentNode->nodeName,
                                                 domNamespaceURI(currentNode) );
-                    savedLastNode = xs->lastNode;
                     xs->lastNode = n;
                     str = getAttr(actionNode, "use-attribute-sets",
                               a_useAttributeSets);
@@ -4643,9 +4644,8 @@ static int ExecAction (
                 }
             }
             savedLastNode = xs->lastNode;
-            DBG(fprintf(stderr,
-                        "append new tag '%s' uri='%s' \n", actionNode->nodeName,
-                        domNamespaceURI(actionNode) ););
+            DBG(fprintf(stderr, "append new tag '%s' uri='%s' \n",
+                        actionNode->nodeName, domNamespaceURI(actionNode) ););
             xs->lastNode = domAppendLiteralNode (xs->lastNode, actionNode);
             n = actionNode;
 
@@ -4654,12 +4654,12 @@ static int ExecAction (
                 while (attr && (attr->nodeFlags & IS_NS_NODE)) {
                     /* xslt namespace isn't copied */
                     /* Well, xslt implementors doesn't seem to agree
-                       at which point this rule out of second paragraph of
-                       7.1.1 must be applied: before or after applying
+                       at which point this rule out of the second paragraph
+                       of 7.1.1 must be applied: before or after applying
                        the namespace aliases (or, in other words: is this
                        rule (of not copying the XSLT namespace for lre)
                        considered, at the time, the lre is found in the
-                       styhlesheet or at the time, the lre is written to the
+                       stylesheet or at the time, the lre is written to the
                        result doc). In deed the rec doesn't clarify this
                        explicitly. */
                     if (strcmp (attr->nodeValue, XSLT_NAMESPACE)==0){
@@ -4823,7 +4823,8 @@ static int ExecActions (
 
     while (actionNode) {
         xs->current = currentNode;
-        rc = ExecAction (xs, context, currentNode, currentPos, actionNode, errMsg);
+        rc = ExecAction (xs, context, currentNode, currentPos, actionNode,
+                         errMsg);
         CHECK_RC;
         actionNode = actionNode->nextSibling;
     }
@@ -5252,6 +5253,7 @@ parseList (
             save = *pc;
             *pc = '\0';
             eNS = (xsltExclExtNS *)MALLOC(sizeof (xsltExclExtNS));
+            eNS->uri = NULL;
             if (extensionNS) {
                 eNS->next = docData->extensionNS;
                 docData->extensionNS = eNS;
@@ -5266,7 +5268,6 @@ parseList (
                                  errMsg);
                     return -1;
                 }
-                eNS->uri = NULL;
             } else {
                 ns = domLookupPrefix (xsltRoot, start);
                 if (!ns) {
@@ -6788,7 +6789,6 @@ int xsltProcess (
     xs->xsltMsgCB           = xsltMsgCB;
     xs->xsltMsgClientData   = xsltMsgClientData;
 
-        
 
     xsltPushVarFrame(xs);
     xpathRSInit( &nodeList );
