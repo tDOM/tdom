@@ -1,5 +1,9 @@
 2004-12-21  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/domxslt.c: xsl:key with match expressions, which
+          matches attributes, did not work. Prevent, that a stylesheet
+          import/include itself. Editorial changes.
+
         * generic/dom.c: domAppendNewElementNode(): Set the namespace
           of a per xslt transformation generated node wrong under
           certain circumstances. This fixes
