@@ -2978,7 +2978,6 @@ domAppendNewElementNode(
     |   re-use existing namespace or create a new one
     \-------------------------------------------------------*/
     if (uri) {
-        
         domSplitQName (tagName, prefix, &localname);
         DBG(fprintf(stderr, "tag '%s' has prefix='%s' \n", tagName, prefix);)
         ns = domLookupPrefix (node, prefix);
@@ -2995,6 +2994,13 @@ domAppendNewElementNode(
             }
         }
         node->namespace = ns->index;
+    } else {
+        ns = domLookupPrefix (node, "");
+        if (ns) {
+            if (strcmp (ns->uri, "")!=0) {
+                domSetAttributeNS (node, "xmlns", "", NULL, 0);
+            }
+        }
     }
     MutationEvent();
     
