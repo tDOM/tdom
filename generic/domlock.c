@@ -30,7 +30,6 @@
 #ifdef TCL_THREADS
 
 #include <dom.h>
-#include <domalloc.h>
 
 
 /*----------------------------------------------------------------------------
@@ -114,7 +113,7 @@ domLocksAttach(domDocument *doc)
         tmp = dl;
     }
     if (dl == NULL) {
-        dl = (domlock*)domAlloc(sizeof(domlock));
+        dl = (domlock*)MALLOC(sizeof(domlock));
         memset(dl, 0, sizeof(domlock));
         if (domLocks == NULL) {
             domLocks = dl;
@@ -167,7 +166,7 @@ domLocksFinalize(ClientData dummy)
         Tcl_ConditionFinalize(&dl->wcond);
         tmp = dl;
         dl  = dl->next;
-        domFree((char*)tmp);
+        FREE((char*)tmp);
     }
     domLocks = NULL;
 

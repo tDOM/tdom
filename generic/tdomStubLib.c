@@ -55,23 +55,23 @@ TdomStubs *tdomStubsPtr;
  *----------------------------------------------------------------------
  */
 
-char *
+CONST char *
 Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact)
 {
-  char *actualVersion;
+    CONST char *actualVersion;
   
-  actualVersion = Tcl_PkgRequireEx(interp, "tdom", version, exact,
-				   (ClientData *) &tdomStubsPtr);
-  if (!actualVersion) {
-    return NULL;
-  }
+    actualVersion = Tcl_PkgRequireEx(interp, "tdom", version, exact,
+                                     (ClientData *) &tdomStubsPtr);
+    if (!actualVersion) {
+        return NULL;
+    }
   
-  if (!tdomStubsPtr) {
-    Tcl_SetResult(interp,
-		  "This implementation of Tdom does not support stubs",
-		  TCL_STATIC);
-    return NULL;
-  }
+    if (!tdomStubsPtr) {
+        Tcl_SetResult(interp,
+                      "This implementation of Tdom does not support stubs",
+                      TCL_STATIC);
+        return NULL;
+    }
   
-  return actualVersion;
+    return actualVersion;
 }

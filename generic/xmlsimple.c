@@ -64,11 +64,9 @@
 |
 \---------------------------------------------------------------------------*/
 #include <tcl.h>
-#include <ctype.h>
 #include <string.h>
-#include <domalloc.h>
+#include <ctype.h>
 #include <dom.h>
-
 
 /*----------------------------------------------------------------------------
 |   Defines
@@ -77,11 +75,11 @@
 #define DBG(x)          
 #define TDOM_NS
 #ifdef TDOM_NS
-#   define RetError(m,p)   *errStr = m; *pos = p; Tcl_Free ((char *) activeNS); return TCL_ERROR;
+# define RetError(m,p) *errStr=m; *pos=p; FREE((char*)activeNS); return TCL_ERROR;
 #else 
-#   define RetError(m,p)   *errStr = m; *pos = p; return TCL_ERROR;
+# define RetError(m,p) *errStr=m; *pos=p; return TCL_ERROR;
 #endif
-#define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
+#define SPACE(c)       ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 
 /*---------------------------------------------------------------------------
 |   type domActiveNS
@@ -423,7 +421,7 @@ XML_SimpleParse (
     int            depth = 0;
     int            activeNSpos  = -1;
     int            activeNSsize = 8;
-    domActiveNS   *activeNS     = (domActiveNS*) Tcl_Alloc (sizeof(domActiveNS) * activeNSsize);
+    domActiveNS   *activeNS     = (domActiveNS*) MALLOC (sizeof(domActiveNS) * activeNSsize);
     char          *xmlns, *localname;
     domNS         *ns;
     char           tagPrefix[MAX_PREFIX_LEN];
@@ -466,7 +464,7 @@ XML_SimpleParse (
                 tnode->ownerDocument = doc;
                 tnode->nodeNumber  = NODE_NO(doc);
                 tnode->valueLength = (x - start);
-                tnode->nodeValue   = (char*)Tcl_Alloc((x - start)+1);
+                tnode->nodeValue   = (char*)MALLOC((x - start)+1);
                 memmove(tnode->nodeValue, start, (x - start));
                 *(tnode->nodeValue + (x - start)) = 0;
                 if (ampersandSeen) {
@@ -528,7 +526,7 @@ XML_SimpleParse (
                 doc->rootNode = rootNode;
 
 #ifdef TDOM_NS
-                Tcl_Free ((char *) activeNS);
+                FREE ((char *) activeNS);
 #endif                
                 return TCL_OK;
             }
@@ -560,7 +558,7 @@ XML_SimpleParse (
                         tnode->nodeNumber    = NODE_NO(doc);
                         tnode->parentNode    = parent_node;
                         tnode->valueLength   = x - start - 4;
-                        tnode->nodeValue     = (char*)Tcl_Alloc(tnode->valueLength+1);
+                        tnode->nodeValue     = (char*)MALLOC(tnode->valueLength+1);
                         memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
@@ -641,7 +639,7 @@ XML_SimpleParse (
                             tnode->nodeNumber    = NODE_NO(doc);
                             tnode->parentNode    = parent_node;
                             tnode->valueLength   = (x - start);
-                            tnode->nodeValue     = (char*)Tcl_Alloc((x - start)+1);
+                            tnode->nodeValue     = (char*)MALLOC((x - start)+1);
                             memmove(tnode->nodeValue, start, (x - start));
                             *(tnode->nodeValue + (x - start)) = 0;
                             if (parent_node->firstChild)  {
@@ -696,7 +694,7 @@ XML_SimpleParse (
                     *piSep = '\0'; /* temporarily terminate the string */
 
                     pinode->targetLength = strlen(start);
-                    pinode->targetValue  = (char*)Tcl_Alloc(pinode->targetLength);
+                    pinode->targetValue  = (char*)MALLOC(pinode->targetLength);
                     memmove(pinode->targetValue, start, pinode->targetLength);
 
                     *piSep = c;  /* remove temporarily termination */
@@ -708,7 +706,7 @@ XML_SimpleParse (
                         piSep++;
                     }
                     pinode->dataLength = x - piSep;
-                    pinode->dataValue  = (char*)Tcl_Alloc(pinode->dataLength);
+                    pinode->dataValue  = (char*)MALLOC(pinode->dataLength);
                     memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
@@ -875,7 +873,7 @@ XML_SimpleParse (
                     attrnode->nodeName    = (char *)&(h->key);
                     attrnode->nodeType    = ATTRIBUTE_NODE;
                     attrnode->nodeFlags   = IS_NS_NODE;
-                    attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
+                    attrnode->nodeValue   = (char*)MALLOC(nArgVal+1);
                     attrnode->valueLength = nArgVal;
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
                     *(attrnode->nodeValue + nArgVal) = 0;
@@ -900,7 +898,7 @@ XML_SimpleParse (
                         /* push active namespace */
                         activeNSpos++;
                         if (activeNSpos >= activeNSsize) {
-                            activeNS = (domActiveNS*) Tcl_Realloc(
+                            activeNS = (domActiveNS*) REALLOC(
                                            (char*)activeNS,
                                            sizeof(domActiveNS) * 2 * activeNSsize);
                             activeNSsize = 2 * activeNSsize;
@@ -930,7 +928,7 @@ XML_SimpleParse (
                     attrnode->nodeName    = (char *)&(h->key);
                     attrnode->nodeType    = ATTRIBUTE_NODE;
                     attrnode->nodeFlags   = 0;
-                    attrnode->nodeValue   = (char*)Tcl_Alloc(nArgVal+1);
+                    attrnode->nodeValue   = (char*)MALLOC(nArgVal+1);
                     attrnode->valueLength = nArgVal;
                     memmove(attrnode->nodeValue, ArgVal, nArgVal);
                     *(attrnode->nodeValue + nArgVal) = 0;
@@ -1035,7 +1033,7 @@ XML_SimpleParse (
                 doc->rootNode = rootNode;
 
 #ifdef TDOM_NS
-                Tcl_Free ((char *) activeNS);
+                FREE ((char *) activeNS);
 #endif                
                 return TCL_OK;
             }
@@ -1043,7 +1041,9 @@ XML_SimpleParse (
                 x++;
             }
             if (hasContent) {
+#ifdef TDOM_NS
                 depth++;
+#endif
                 /*------------------------------------------------------------
                 |   recurs to read child tags/texts
                 \-----------------------------------------------------------*/
@@ -1097,7 +1097,7 @@ XML_SimpleParseDocument (
         h = Tcl_CreateHashEntry (&doc->baseURIs, 
                                  (char*)rootNode->nodeNumber,
                                  &hnew);
-        Tcl_SetHashValue (h, strdup (baseURI));
+        Tcl_SetHashValue (h, tdomstrdup (baseURI));
                     rootNode->nodeFlags |= HAS_BASEURI;
     }
     doc->rootNode = rootNode;

@@ -349,7 +349,7 @@ void tcldom_docCmdDeleteProc  (
         Tcl_UntraceVar (dinfo->interp, dinfo->traceVarName,
                                 TCL_TRACE_WRITES |  TCL_TRACE_UNSETS,
                                 tcldom_docTrace, clientData);
-        free(dinfo->traceVarName);
+        FREE(dinfo->traceVarName);
         dinfo->traceVarName = NULL;
     }
 
@@ -371,7 +371,7 @@ void tcldom_docCmdDeleteProc  (
 
     /* delete DOM tree */
     domFreeDocument (dinfo->document, tcldom_docDeleteNode, dinfo->interp );
-    Tcl_Free ((void*)dinfo);
+    FREE((void*)dinfo);
 }
 
 
@@ -532,7 +532,8 @@ int tcldom_returnNodeObj (
             Tcl_SetVar   (interp, objVar, objCmdName, 0);
             Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES |
                                           TCL_TRACE_UNSETS,
-                                          tcldom_nodeTrace, (ClientData) node);
+                                          (Tcl_VarTraceProc*)tcldom_nodeTrace,
+                                          (ClientData) node);
         }
     }
     SetResult ( objCmdName);
@@ -570,7 +571,7 @@ int tcldom_returnDocumentObj (
 
     if (!Tcl_GetCommandInfo(interp, objCmdName, &cmd_info)) {
 
-        dinfo = (TcldomDocDeleteInfo*) Tcl_Alloc (sizeof(TcldomDocDeleteInfo));
+        dinfo = (TcldomDocDeleteInfo*)MALLOC(sizeof(TcldomDocDeleteInfo));
         dinfo->interp       = interp;
         dinfo->document     = document;
         dinfo->traceVarName = NULL;
@@ -603,12 +604,13 @@ int tcldom_returnDocumentObj (
     }
     if (setVariable) {
         objVar = Tcl_GetStringFromObj (var_name, NULL);
-        dinfo->traceVarName = strdup(objVar);
+        dinfo->traceVarName = tdomstrdup(objVar);
         Tcl_UnsetVar (interp, objVar, 0);
         Tcl_SetVar   (interp, objVar, objCmdName, 0);
         Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES |
                                       TCL_TRACE_UNSETS,
-                                      tcldom_docTrace, (ClientData) dinfo);
+                                      (Tcl_VarTraceProc*)tcldom_docTrace,
+                                      (ClientData) dinfo);
     }
     SetResult ( objCmdName);
     return TCL_OK;
@@ -1019,7 +1021,7 @@ int tcldom_appendXML (
     XML_ParserFree(parser);
 
     domAppendChild (node, doc->documentElement);
-    Tcl_Free ((void*)doc);
+    FREE((void*)doc);
 
     return tcldom_returnNodeObj (interp, node, 0, NULL);
 #endif
@@ -1159,15 +1161,15 @@ int tcldom_xpathFuncCallBack (
     DBG(fprintf(stderr, "testing %s\n", tclxpathFuncName);)
     rc = Tcl_GetCommandInfo (interp, tclxpathFuncName, &cmdInfo);
     if (!rc) {
-        *errMsg = (char*)strdup("Tcl unknown function!");
+        *errMsg = (char*)tdomstrdup("Tcl unknown function!");
         return XPATH_EVAL_ERR;
     }
     if (!cmdInfo.isNativeObjectProc) {
-        *errMsg = (char*)strdup("can't access Tcl level method!");
+        *errMsg = (char*)tdomstrdup("can't access Tcl level method!");
         return XPATH_EVAL_ERR;
     }
     if ( (5+(2*argc)) >= MAX_REWRITE_ARGS) {
-        *errMsg = (char*)strdup("too many args to call Tcl level method!");
+        *errMsg = (char*)tdomstrdup("too many args to call Tcl level method!");
         return XPATH_EVAL_ERR;
     }
     objc = 0;
@@ -1201,7 +1203,7 @@ int tcldom_xpathFuncCallBack (
                 return XPATH_OK;
             }
             if (listLen != 2) {
-                *errMsg = (char*)strdup("wrong return tuple! Must be {type value} !");
+                *errMsg = (char*)tdomstrdup("wrong return tuple! Must be {type value} !");
                 return XPATH_EVAL_ERR;
             }
             rc = Tcl_ListObjIndex (interp, resultPtr, 0, &type);
@@ -1226,7 +1228,7 @@ int tcldom_xpathFuncCallBack (
             if (strcmp(typeStr, "nodes")==0) {
                 rc = Tcl_ListObjLength (interp, value, &listLen);
                 if (rc != TCL_OK) {
-                    *errMsg = strdup("value not a node list!");
+                    *errMsg = tdomstrdup("value not a node list!");
                     return XPATH_EVAL_ERR;
                 }
                 for (i=0; i < listLen; i++) {
@@ -1234,14 +1236,14 @@ int tcldom_xpathFuncCallBack (
                     nodeName = Tcl_GetStringFromObj (nodeObj, NULL);
                     node = tcldom_getNodeFromName (interp, nodeName, &errStr);
                     if (node == NULL) {
-                        *errMsg = strdup(errStr);
+                        *errMsg = tdomstrdup(errStr);
                         return XPATH_EVAL_ERR;
                     }
                     rsAddNode (result, node);
                 }
             } else
             if (strcmp(typeStr, "attrnodes")==0) {
-                *errMsg = strdup("attrnodes not implemented yet!");
+                *errMsg = tdomstrdup("attrnodes not implemented yet!");
                 return XPATH_EVAL_ERR;
             } else
             if (strcmp(typeStr, "attrvalues")==0) {
@@ -1254,7 +1256,7 @@ int tcldom_xpathFuncCallBack (
         return XPATH_OK;
     }
     errStr = Tcl_GetStringFromObj( Tcl_GetObjResult(interp), &errStrLen);
-    *errMsg = (char*)malloc(120+strlen(functionName) + errStrLen);
+    *errMsg = (char*)MALLOC(120+strlen(functionName) + errStrLen);
     strcpy(*errMsg, "Tcl error while executing XPATH extension function '");
     strcat(*errMsg, functionName );
     strcat(*errMsg, "':\n" );
@@ -1302,10 +1304,10 @@ int tcldom_selectNodes (
         xpathRSFree( &rs );
         SetResult ( errMsg);
         DBG( fprintf(stderr, "errMsg = %s \n", errMsg); )
-        if (errMsg) free(errMsg);
+        if (errMsg) FREE(errMsg);
         return TCL_ERROR;
     }
-    if (errMsg) free(errMsg);
+    if (errMsg) FREE(errMsg);
     typeVar = NULL;
     if (typeObj != NULL) {
         typeVar = Tcl_GetStringFromObj (typeObj, NULL);
@@ -2230,7 +2232,7 @@ int tcldom_NodeObjCmd (
                 }
                 localListPtr = Tcl_DuplicateObj (objv[3]);
                 Tcl_IncrRefCount (localListPtr);
-                parameters =  (char **)Tcl_Alloc(sizeof (char **)*(length+1));
+                parameters =  (char **)MALLOC(sizeof (char **)*(length+1));
                 for (i = 0; i < length; i ++) {
                     Tcl_ListObjIndex (interp, localListPtr, i, &objPtr);
                     parameters[i] = Tcl_GetStringFromObj (objPtr, NULL);
@@ -2248,7 +2250,7 @@ int tcldom_NodeObjCmd (
                 SetResult ( errMsg );
                 if (parameters) {
                     Tcl_DecrRefCount (localListPtr);
-                    Tcl_Free ((char *) parameters);
+                    FREE((char *) parameters);
                 }
                 return TCL_ERROR;
             }
@@ -2257,11 +2259,11 @@ int tcldom_NodeObjCmd (
                                  &errMsg, &resultDoc);
             if (parameters) {
                 Tcl_DecrRefCount (localListPtr);
-                Tcl_Free ((char *) parameters);
+                FREE((char *) parameters);
             }
             if (result < 0) {
                 SetResult ( errMsg );
-                free (errMsg);
+                FREE(errMsg);
                 return TCL_ERROR;
             }
             return tcldom_returnDocumentObj (interp, resultDoc, (objc == 4),
@@ -3468,7 +3470,7 @@ int tcldom_parse (
                 Tcl_AppendResult(interp, "\"",NULL);
             }
             if (takeHTMLParser) {
-                free(errStr);
+                FREE(errStr);
             }
             return TCL_ERROR;
         }
@@ -3862,7 +3864,7 @@ int tcldom_unknownCmd (
         rc = Tcl_GetCommandInfo (interp, object, &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
 
-            objvCall = (Tcl_Obj**)Tcl_Alloc (sizeof (Tcl_Obj*) * (objc+args));
+            objvCall = (Tcl_Obj**)MALLOC(sizeof (Tcl_Obj*) * (objc+args));
 
             objvCall[0] = Tcl_NewStringObj (object, -1);
             objvCall[1] = Tcl_NewStringObj (method, -1);
@@ -3876,7 +3878,7 @@ int tcldom_unknownCmd (
             for(i=objc+args-1; i >= 0; i--) {
                 Tcl_DecrRefCount (objvCall[i]);
             }
-            Tcl_Free ( (void*)objvCall);
+            FREE((void*)objvCall);
 
         } else {
             Tcl_DStringInit (&callString);

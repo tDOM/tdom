@@ -25,6 +25,9 @@
 |       July00  Zoran Vasiljevic  Added this file.
 |
 |   $Log$
+|   Revision 1.7  2002/07/28 08:27:51  zoran
+|   Moved to new memory allocation macros.
+|
 |   Revision 1.6  2002/07/10 03:19:21  zoran
 |   Reset interp result in nodecmd_appendFromScript to leave the clean object
 |   rep because tcldom.c SetResult and friends macros fail to check the
@@ -143,7 +146,7 @@ StackPush (element)
     |   Allocate new stack slot
     |
     \------------------------------------------------------------------*/
-    newElement = (StackSlot *)Tcl_Alloc(sizeof(StackSlot));
+    newElement = (StackSlot *)MALLOC(sizeof(StackSlot));
     memset(newElement, 0, sizeof(StackSlot));
 
     if (tsdPtr->elementStack == NULL) {
@@ -209,7 +212,7 @@ StackFinalize (clientData)
 
     while (stack) {
         tmp = stack->nextPtr;
-        Tcl_Free((char*)stack);
+        FREE((char*)stack);
         stack = tmp;
     }
 }
