@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80acad0">NAME</a> · <a href="#SECTid80acb48">SYNOPSIS</a> · <a href="#SECTid80acbe8"> DESCRIPTION </a> · <a href="#SECTid80cbe90">SEE ALSO</a> · <a href="#SECTid80cbf08">KEYWORDS</a>
+<a href="#SECTid80b15b8">NAME</a> · <a href="#SECTid80b1630">SYNOPSIS</a> · <a href="#SECTid80b16d0"> DESCRIPTION </a> · <a href="#SECTid80d0850">SEE ALSO</a> · <a href="#SECTid80d08c8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid80acad0">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80b15b8">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTid80acb48">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTid80b1630">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTid80acbe8"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTid80b16d0"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -403,9 +403,10 @@ bool, number, string, nodes, attrnodes or mixed). The option
 <i class="m">-namespaces</i> expects a tcl list with prefix /
 namespace pairs as argument. If this option is given, any
 namespace prefix within the xpath expression will be first
-resolved against this list. If this fails, then the
-namespace definitions in scope of the context node will be
-used to resolve the prefix, as usual.
+resolved against this list. If the list bind the same prefix
+to different namespaces, then the first binding will win. 
+If this fails, then the namespace definitions in scope of the
+context node will be used to resolve the prefix, as usual.
 
 <p>Examples:</p>
           <pre class="example">set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
@@ -625,14 +626,21 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid80cbe90">SEE ALSO</a></h2><p class="seealso">dom, domDoc</p>
+  <h2><a name="SECTid80d0850">SEE ALSO</a></h2><p class="seealso">
+<a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
+</p>
   
-  <h2><a name="SECTid80cbf08">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid80d08c8">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
-</div><hr class="navsep"><div class="navbar" align="center">
-<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
+</div><div class="footer">
+<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
+        <a class="navaid" href="index.html">tDOM Overview</a>
+ ·	<a class="navaid" href="doc-index.html">Table of Contents</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
+</div>
 </div>
 </body>
 </html>
