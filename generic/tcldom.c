@@ -142,7 +142,7 @@ static char dom_usage[] =
                 "Usage dom <subCommand> <args>, where subCommand can be:    \n"
                 "          parse ?-keepEmpties? ?-channel <channel> ?-baseurl <baseurl>?  \n"
                 "                ?-feedbackAfter <#Bytes>? ?-externalentitycommand <cmd>? \n"
-                "                ?-simple? ?-html? ?-ns? ?<xml>? ?<objVar>? \n"
+                "                ?-simple? ?-html? ?<xml>? ?<objVar>? \n"
                 "          createDocument docElemName ?objVar?              \n"
                 TDomThreaded(
                 "          attachDocument docObjCommand ?objVar?            \n"
@@ -641,48 +641,50 @@ tcldom_getElementsByTagName (
                          with the namespace uri of every node
        nsIndex == -3 ==> NS wildcard '*' */
 
-    if (node->nodeType != ELEMENT_NODE) return TCL_OK;
-    if ( (nsIndex == -1) 
-         || (nsIndex == node->namespace)
-         || (nsIndex == -3)
-         || (nsIndex == -2 
-             && node->namespace 
-             && strcmp (uri, domNamespaceURI (node))==0) )
-    {
-        char prefix[MAX_PREFIX_LEN], *localName;
-        if (nsIndex == -1) {
-            localName = node->nodeName;
-        } else {
-            domSplitQName (node->nodeName, prefix, &localName);
+    while (node) {
+        if (node->nodeType != ELEMENT_NODE) {
+            node = node->nextSibling;
+            continue;
         }
-        if (Tcl_StringMatch (localName, namePattern)) {
-            Tcl_Obj *namePtr;
-            Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-            char    objCmdName[40];
+        if ( (nsIndex == -1 && !node->namespace) 
+             || (nsIndex == node->namespace)
+             || (nsIndex == -3)
+             || (nsIndex == -2 
+                 && node->namespace 
+                 && strcmp (uri, domNamespaceURI (node))==0) )
+        {
+            char prefix[MAX_PREFIX_LEN], *localName;
+            if (nsIndex == -1) {
+                localName = node->nodeName;
+            } else {
+                domSplitQName (node->nodeName, prefix, &localName);
+            }
+            if (Tcl_StringMatch (localName, namePattern)) {
+                Tcl_Obj *namePtr;
+                Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
+                char    objCmdName[40];
             
-            tcldom_createNodeObj (interp, node, objCmdName);
-            namePtr = Tcl_NewStringObj (objCmdName, -1);
-            result = Tcl_ListObjAppendElement(interp, resultPtr,
-                                              namePtr);
-            if (result != TCL_OK) {
-                Tcl_DecrRefCount (namePtr);
-                return result;
+                tcldom_createNodeObj (interp, node, objCmdName);
+                namePtr = Tcl_NewStringObj (objCmdName, -1);
+                result = Tcl_ListObjAppendElement(interp, resultPtr,
+                                                  namePtr);
+                if (result != TCL_OK) {
+                    Tcl_DecrRefCount (namePtr);
+                    return result;
+                }
             }
         }
-    }
 
-    /* recurs to the child nodes */
-    child = node->firstChild;
-    while (child) {
-        temp = child->nextSibling;
+        /* recurs to the child nodes */
+        child = node->firstChild;
         result = tcldom_getElementsByTagName (interp, namePattern, child,
-                                              nsIndex, uri);
+                                                  nsIndex, uri);
         if (result != TCL_OK) {
             return result;
         }
-        child = temp;
+        node = node->nextSibling;
     }
-
+    
     return TCL_OK;
 }
 
@@ -1269,7 +1271,7 @@ int tcldom_xpathFuncCallBack (
                 rsSetString(result, Tcl_GetStringFromObj(value,NULL) );
             }
         } else {
-            fprintf(stderr, "ListObjLength != TCL_OK --> returning XPATH_EVAL_ERR \n");
+            DBG(fprintf(stderr, "ListObjLength != TCL_OK --> returning XPATH_EVAL_ERR \n");)
             return XPATH_EVAL_ERR;
         }
         return XPATH_OK;
@@ -1866,165 +1868,6 @@ void tcldom_treeAsXML (
 }
 
 /*----------------------------------------------------------------------------
-|   tcldom_treeAsXML
-|
-\---------------------------------------------------------------------------*/
-/*  static */
-/*  void tcldom_treeAsXML ( */
-/*      Tcl_Obj    *xmlString, */
-/*      domNode    *node, */
-/*      int         indent, */
-/*      int         level, */
-/*      int         doIndent, */
-/*      Tcl_Channel chan */
-/*  ) */
-/*  { */
-/*      domAttrNode   *attrs; */
-/*      domNode       *child; */
-/*      domNS         *ns, *ans; */
-/*      int            first, hasElements, i, newNs; */
-/*      Tcl_HashEntry *h; */
-/*      domNSContext  *NSContext; */
-
-/*      if (node->nodeType == TEXT_NODE) { */
-/*          if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) { */
-/*              writeChars (xmlString, chan, ((domTextNode*)node)->nodeValue,  */
-/*                          ((domTextNode*)node)->valueLength); */
-/*          } else { */
-/*              tcldom_AppendEscaped (xmlString, chan, */
-/*                                    ((domTextNode*)node)->nodeValue,  */
-/*                                    ((domTextNode*)node)->valueLength, 0); */
-/*          } */
-/*          return; */
-/*      } */
-
-/*      if (node->nodeType == CDATA_SECTION_NODE) { */
-/*          writeChars (xmlString, chan, "<![CDATA[", 9);        */
-/*          writeChars (xmlString, chan, ((domTextNode*)node)->nodeValue,  */
-/*                                       ((domTextNode*)node)->valueLength); */
-/*          writeChars (xmlString, chan, "]]>", 3);  */
-/*          return; */
-/*      } */
-
-/*      if (node->nodeType == COMMENT_NODE) { */
-/*          writeChars (xmlString, chan, "<!--", 4); */
-/*          writeChars (xmlString, chan, ((domTextNode*)node)->nodeValue, */
-/*     		                     ((domTextNode*)node)->valueLength); */
-/*          writeChars (xmlString, chan, "-->", 3); */
-/*          return; */
-
-/*      } */
-
-/*      if ((indent != -1) && doIndent) { */
-/*          for(i=0; i<level; i++) { */
-/*              writeChars (xmlString, chan, "        ", indent); */
-/*          } */
-/*      } */
-
-/*      if (node->nodeType == PROCESSING_INSTRUCTION_NODE) { */
-/*          writeChars (xmlString, chan, "<?", 2); */
-/*          writeChars (xmlString, chan, ((domProcessingInstructionNode*)node)->targetValue, */
-/*                                       ((domProcessingInstructionNode*)node)->targetLength); */
-/*          writeChars (xmlString, chan, " ", 1); */
-/*          writeChars (xmlString, chan, ((domProcessingInstructionNode*)node)->dataValue, */
-/*                                      ((domProcessingInstructionNode*)node)->dataLength); */
-/*          writeChars (xmlString, chan, "?>", 2); */
-/*          if (indent != -1) writeChars (xmlString, chan, "\n", 1);  */
-/*          return; */
-/*      } */
-
-/*      writeChars (xmlString, chan, "<", 1); */
-/*      writeChars (xmlString, chan, node->nodeName, -1); */
-
-
-/*      if (node->nodeFlags & HAS_NS_INFO) { */
-/*          h = Tcl_FindHashEntry (node->ownerDocument->NSscopes, */
-/*                                 (char *) node->nodeNumber); */
-/*          if (!h) { */
-/*              fprintf (stderr, "tcldom_treeAsXML: node has HAS_NS_INFO flag, but isn't found in NSscopes hash table!!!\n"); */
-/*          } else { */
-/*              NSContext = Tcl_GetHashValue (h); */
-/*              for (i = 0; i < NSContext->newNS; i++) { */
-/*                  ns = NSContext->ns[i]; */
-/*                  writeChars (xmlString, chan, " ", 1); */
-/*                  if (ns->prefix && (ns->prefix[0] !='\0')) { */
-/*                      writeChars (xmlString, chan, "xmlns:", 6); */
-/*                      writeChars (xmlString, chan, ns->prefix, -1); */
-/*                  } else { */
-/*                      writeChars (xmlString, chan, "xmlns", 5); */
-/*                  } */
-/*                  writeChars (xmlString, chan, "=\"", 2); */
-/*                  writeChars (xmlString, chan, ns->uri, -1); */
-/*                  writeChars (xmlString, chan, "\"", 1); */
-/*              } */
-/*          } */
-/*      } */
-
-/*      attrs = node->firstAttr; */
-/*      while (attrs) { */
-/*          writeChars (xmlString, chan, " ", 1); */
-/*          writeChars (xmlString, chan, attrs->nodeName, -1); */
-/*          writeChars (xmlString, chan, "=\"", 2); */
-/*          tcldom_AppendEscaped (xmlString, chan, attrs->nodeValue, -1, 1); */
-/*          writeChars (xmlString, chan, "\"", 1); */
-/*          attrs = attrs->nextSibling; */
-/*      } */
-
-/*      hasElements = 0; */
-/*      first       = 1;  */
-/*      doIndent    = 1; */
-
-/*      if (node->nodeType == ELEMENT_NODE) { */
-/*          child = node->firstChild; */
-/*          while (child != NULL) { */
-
-/*              if ( (child->nodeType == ELEMENT_NODE) */
-/*                 ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )  */
-/*              { */
-/*                  hasElements = 1; */
-/*              }  */
-/*              if (first) { */
-/*                  writeChars (xmlString, chan, ">", 1); */
-/*                  if ((indent != -1) && hasElements) { */
-/*                      writeChars (xmlString, chan, "\n", 1); */
-/*                  } */
-/*              } */
-/*              first = 0; */
-/*              tcldom_treeAsXML (xmlString, child, indent, level+1, doIndent, chan); */
-/*              doIndent = 0; */
-/*              if ( (child->nodeType == ELEMENT_NODE)  */
-/*                 ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )  */
-/*              { */
-/*                 doIndent = 1; */
-/*              } */
-/*              child = child->nextSibling; */
-/*          } */
-/*      } */
-
-/*      if (first) { */
-/*          if (indent != -1) { */
-/*              writeChars (xmlString, chan, "/>\n", 3); */
-/*          } else { */
-/*              writeChars (xmlString, chan, "/>",   2); */
-/*          } */
-/*      } else { */
-/*          if ((indent != -1) && hasElements) { */
-/*              for(i=0; i<level; i++) { */
-/*                  writeChars (xmlString, chan, "        ", indent); */
-/*              } */
-/*          }  */
-/*          writeChars (xmlString, chan, "</", 2); */
-/*          writeChars (xmlString, chan, node->nodeName, -1); */
-/*          if (indent != -1) { */
-/*              writeChars (xmlString, chan, ">\n", 2); */
-/*          } else { */
-/*              writeChars (xmlString, chan, ">",   1); */
-/*          }     */
-/*      } */
-/*  } */
-
-
-/*----------------------------------------------------------------------------
 |   findBaseURI
 |
 \---------------------------------------------------------------------------*/
@@ -2264,7 +2107,6 @@ int tcldom_NodeObjCmd (
             } else {
                 parameters = NULL;
             }
-
             xsltDoc = tcldom_getDocumentFromName (interp, str, &errMsg);
             if (xsltDoc == NULL) {
                 SetResult ( errMsg );
@@ -2849,17 +2691,34 @@ int tcldom_NodeObjCmd (
 
         case m_getElementsByTagName:
             CheckArgs (3,3,2,"elementName");
-            return tcldom_getElementsByTagName (
-                interp, Tcl_GetStringFromObj (objv[2], NULL), node, -1, NULL
-                );
+            if (node->nodeType != ELEMENT_NODE) {
+                SetResult ("Node must be an element node.");
+                return TCL_ERROR;
+            }
+            Tcl_ResetResult (interp);
+            return tcldom_getElementsByTagName (interp,
+                                                Tcl_GetStringFromObj (objv[2],
+                                                                      NULL),
+                                                node->firstChild, -1, NULL);
 
         case m_getElementsByTagNameNS:
             CheckArgs(4,4,2,"uri localname");
+            if (node->nodeType != ELEMENT_NODE) {
+                SetResult ("Node must be an element node.");
+                return TCL_ERROR;
+            }
+            Tcl_ResetResult (interp);
             uri = Tcl_GetStringFromObj (objv[2], NULL);
             str = Tcl_GetStringFromObj (objv[3], NULL);
             nsIndex = -1;
             if (uri[0] == '*' && uri[1] == '\0') {
                 nsIndex = -3;
+            } else if (uri[0] == '\0') {
+                /* all elements not in a namespace i.e. 
+                   getElementsByTagName */
+                return tcldom_getElementsByTagName (interp, str, 
+                                                    node->firstChild, -1, 
+                                                    NULL);
             } else {
                 for (i = 0; i <= node->ownerDocument->nsptr; i++) {
                     if (strcmp (node->ownerDocument->namespaces[i]->uri,
@@ -2879,8 +2738,8 @@ int tcldom_NodeObjCmd (
                 SetResult ("There isn't such a namespace declared in this document");
                 return TCL_ERROR;
             }
-            return tcldom_getElementsByTagName (interp, str, node, nsIndex,
-                                                uri);
+            return tcldom_getElementsByTagName (interp, str, node->firstChild,
+                                                nsIndex, uri);
             
         case m_getElementById:
             CheckArgs(3,3,2,"id");
@@ -3154,7 +3013,8 @@ int tcldom_DocObjCmd (
         case m_getElementsByTagName:
             CheckArgs (3,3,2,"elementName");
             return tcldom_getElementsByTagName (interp,
-                                                Tcl_GetStringFromObj (objv[2], NULL),
+                                                Tcl_GetStringFromObj (objv[2],
+                                                                      NULL),
                                                 doc->documentElement, -1,
                                                 NULL);
 
@@ -3165,6 +3025,12 @@ int tcldom_DocObjCmd (
             nsIndex = -1;
             if (uri[0] == '*' && uri[1] == '\0') {
                 nsIndex = -3;
+            } else if (uri[0] == '\0') {
+                /* all elements not in a namespace i.e. 
+                   getElementsByTagName */
+                return tcldom_getElementsByTagName (interp, str,
+                                                    doc->documentElement, -1,
+                                                    NULL);
             } else {
                 for (i = 0; i <= doc->nsptr; i++) {
                     if (strcmp (doc->namespaces[i]->uri, uri)==0) {
@@ -3642,7 +3508,6 @@ int tcldom_domCmd (
         ,m_attachDocument
 #endif
     };
-
 
 
     if (objc < 2) {
