@@ -198,5 +198,6 @@ AC_DEFUN(TDOM_PATH_AOLSERVER, [
         AOL_DIR=${ac_cv_c_aolserver}
         AC_MSG_RESULT([found AOLserver in $AOL_DIR])
         AC_DEFINE(NS_AOLSERVER)
+        AC_DEFINE(USE_NORMAL_ALLOCATOR)
     fi
 ])
