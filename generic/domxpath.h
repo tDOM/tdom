@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.5  2002/05/04 01:30:10  rolf
+|   Inlined xpathRSInit (for speed).
+|
 |   Revision 1.4  2002/05/01 00:55:41  rolf
 |   Introduced AxisDescendantLit and AxisDescendantOrSelfLit (a bit of a,
 |   aehm, let't call it workaround). With that, wie can distinguish
@@ -180,8 +183,8 @@ int xpathEvalSteps (ast steps, xpathResultSet *nodeList,
                     xpathCBs *cbs,
                     xpathResultSet *result, char **errMsg);
                     
-                    
-void   xpathRSInit (xpathResultSet *rs );
+#define xpathRSInit(x) (x)->type = EmptyResult; (x)->nr_nodes = 0;
+/*  void   xpathRSInit (xpathResultSet *rs ); */
 void   xpathRSFree (xpathResultSet *rs );
 
 int    xpathFuncBoolean  (xpathResultSet *rs);
