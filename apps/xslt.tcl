@@ -28,6 +28,9 @@
 #
 #
 #   $Log$
+#   Revision 1.3  2002/05/17 14:24:37  rolf
+#   With space is significant, in source documents.
+#
 #   Revision 1.2  2002/02/26 14:05:02  rolf
 #   Updated the [load ...] to the new version number 0.7
 #
@@ -118,6 +121,7 @@ proc externalEntityRefHandler { base systemId publicId } {
 
     set xmldoc [dom parse -baseurl $xmlbaseurl \
                           -externalentitycommand externalEntityRefHandler \
+                          -keepEmpties \
                           [read $xmlfd [file size $xmlFile] ] ]
 
     set xsltdoc [dom parse -baseurl $xsltbaseurl \
