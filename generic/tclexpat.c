@@ -1642,23 +1642,29 @@ TclGenExpatElementStartHandler(userData, name, atts)
 
       if (atList == NULL) {
           atList = Tcl_NewListObj(0, NULL);
+          Tcl_IncrRefCount (atList);
           for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
               Tcl_ListObjAppendElement(expat->interp, atList, Tcl_NewStringObj((char *)atPtr[0], strlen(atPtr[0])));
               Tcl_ListObjAppendElement(expat->interp, atList, Tcl_NewStringObj((char *)atPtr[1], strlen(atPtr[1])));
           }
+          vector[2] = atList;
       }
 
       vector[0] = activeTclHandlerSet->elementstartcommand;
+      Tcl_IncrRefCount (vector[0]);
       vector[1] = Tcl_NewStringObj((char *)name, -1);
-      vector[2] = atList;
-      Tcl_Preserve((ClientData) expat->interp);
+      Tcl_IncrRefCount (vector[1]);
       result = activeTclHandlerSet->elementstartObjProc(activeTclHandlerSet->elementstartclientData, expat->interp, 3, vector);
-      Tcl_Release((ClientData) expat->interp);
       TclExpatHandlerResult(expat, activeTclHandlerSet, result);
+      Tcl_DecrRefCount (vector[0]);
+      Tcl_DecrRefCount (vector[1]);
   nextTcl:
       activeTclHandlerSet = activeTclHandlerSet->nextHandlerSet;
   }
-
+  if (atList) {
+      Tcl_DecrRefCount (atList);
+  }
+  
   activeCHandlerSet = expat->firstCHandlerSet;
   while (activeCHandlerSet) {
       if (activeCHandlerSet->elementstartcommand) {

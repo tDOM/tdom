@@ -3822,9 +3822,9 @@ tdom_freeProc (
 
     if (info->document) {
         domFreeDocument (info->document, NULL, NULL);
-        if (info->activeNS) {
-            FREE ( (char *) info->activeNS);
-        }
+    }
+    if (info->activeNS) {
+        FREE ( (char *) info->activeNS);
     }
     FREE ( (char *) info);
 }
