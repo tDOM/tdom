@@ -1,3 +1,9 @@
+2002-11-12  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc
+        * extensions/tnc/makefile.vc: Updated to the new version nr
+          and the lib name convention of the new TEA 2 build system.
+
 2002-11-09  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: HTML serializer: No content escaping for
