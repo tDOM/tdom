@@ -1,8 +1,18 @@
 
 
-test dom-1.1 {try to create Document with root node name not a NCNAME} {
+test dom-1.1 {knownBug} {Don't create Document with root node name not a NCNAME} {
     catch {dom createDocument "root node"}
 } {1}
+
+test dom-1.1 {knownBug} {Don't quash white space at start or end of non white space content} {
+    set doc [dom parse -keepEmpties {<root>
+    some content
+    </root>}]
+    set root [$doc documentElement]
+    $root text
+} {
+    some content
+    }
 
 
 # cleanup
