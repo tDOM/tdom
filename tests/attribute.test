@@ -141,7 +141,11 @@ test attrList-2.3 {right angle bracket in attribute value} {
 <Test attr1="value1" attr2="value2>"></Test>
 }
 
-    array get result
+    set r ""
+    foreach key [lsort [array names result]] {
+        lappend r $key $result($key)
+    }
+    set r
 } {Test,attr1 value1 Test,attr2 value2>}
 
 test attrList-2.4 {right angle bracket in attribute value} {
@@ -156,7 +160,11 @@ test attrList-2.4 {right angle bracket in attribute value} {
 <Test attr2="value2>" attr1="value1"></Test>
 }
 
-    array get result
+    set r ""
+    foreach key [lsort [array names result]] {
+        lappend r $key $result($key)
+    }
+    set r
 } {Test,attr1 value1 Test,attr2 value2>}
 
 test attrList-2.5 {right angle brackets in attribute values} {
@@ -171,7 +179,11 @@ test attrList-2.5 {right angle brackets in attribute values} {
 <Test attr1="value>1" attr2="value>2"></Test>
 }
 
-    array get result
+    set r ""
+    foreach key [lsort [array names result]] {
+        lappend r $key $result($key)
+    }
+    set r
 } {Test,attr1 value>1 Test,attr2 value>2}
 
 test attrList-2.6 {right angle brackets in attribute values} {
