@@ -26,6 +26,8 @@
 #    dom-25.*: hasAttribute, hasAttributeNS
 #    dom-26.*: appendXML
 #    dom-27.*: target, data
+#    dom-28.*: getAttributeNS
+#    dom-29.*: ownerDocument 
 #    dom-999.* Misc Tests 
 #
 # Copyright (c) 2002 Rolf Ade.
@@ -45,6 +47,30 @@ test dom-3.1 {repetitived documentElement with objVar, then delete} {knownBug} {
     $doc delete
     set result
 } "\u00c4\u00d4\u00dc"
+
+#  test dom-3.2 {repetitived documentElement, then delete} {
+#      set doc [dom createDocument "root"] 
+#      $doc documentElement root
+#      $doc delete
+    
+#      set doc [dom createDocument "\u00c4\u00d4\u00dc"]
+#      $doc documentElement root
+#      set result [$root nodeName]
+#      $doc delete
+#      set result
+#  } "\u00c4\u00d4\u00dc"
+
+#  test dom-3.3 {repetitived documentElement, then delete} {
+#      set doc [dom createDocument "root"] 
+#      set root [$doc documentElement]
+#      $doc delete
+    
+#      set doc [dom createDocument "\u00c4\u00d4\u00dc"]
+#      set root [$doc documentElement]
+#      set result [$root nodeName]
+#      $doc delete
+#      set result
+#  } "\u00c4\u00d4\u00dc"
 
 test dom-4.1 {create nodes with same prefix, different uri's} {
     dom createDocumentNS "uri1" "p:a" doc
@@ -536,7 +562,7 @@ test dom-9.1 {nodeValue - TEXT_NODE} {
 
 test dom-9.2 {nodeValue - COMMENT_NODE} {
     $root firstChild firstChild
-    $firstChild nextSibling commentNode
+    set commentNode [$firstChild nextSibling]
     $commentNode nodeValue
 } {comment node}
 
@@ -928,6 +954,64 @@ test dom-14.5 {appendFromList} {
     $doc delete
     set result
 } {<root><elm><foobar/>text<barfoo/><foobaz><a/>text<b/><a/><c/></foobaz></elm></root>} 
+
+set doc [dom parse {<elem><!-- comment -->text<child a="v"><!--comment--></child></elem>}]
+set docElem [$doc documentElement]
+
+test dom-14.6 {asList of tree with comment nodes} {
+    $docElem asList
+} {elem {} {{#comment { comment }} {#text text} {child {a v} {{#comment comment}}}}}
+
+test dom-14.7 {asList on a comment} {
+    set commentNode [$docElem firstChild]
+    $commentNode asList
+} {#comment { comment }}
+
+test dom-14.8 {asList on a comment} {
+    set commentNode [$docElem selectNodes {(//comment())[2]}]
+    $commentNode asList
+} {#comment comment}
+
+test dom-14.9 {appendFromList with comment nodes in the list} {
+    set list [$docElem asList]
+    set newDoc [dom createDocument newDoc]
+    set newDocRoot [$newDoc documentElement]
+    $newDocRoot appendFromList $list
+    set result [$newDoc asXML -indent none]
+    $newDoc delete
+    set result
+} {<newDoc><elem><!-- comment -->text<child a="v"><!--comment--></child></elem></newDoc>}
+
+$doc delete
+
+set doc [dom parse {<elem><?myPI value?>text<child a="v"><?myPI1 the value?></child></elem>}]
+set docElem [$doc documentElement]
+
+test dom->14.10 {asList of tree with PI nodes} {
+    $docElem asList
+} {elem {} {{#pi myPI value} {#text text} {child {a v} {{#pi myPI1 {the value}}}}}}
+
+test dom->14.11 {asList on a PI} {
+    set piNode [$docElem firstChild]
+    $piNode asList
+} {#pi myPI value}
+
+test dom->14.12 {asList on a PI} {
+    set piNode [$docElem selectNodes {(//processing-instruction())[2]}]
+    $piNode asList
+} {#pi myPI1 {the value}}
+
+test dom-14.13 {appendFromList with comment node in the list} {
+    set list [$docElem asList]
+    set newDoc [dom createDocument newDoc]
+    set newDocRoot [$newDoc documentElement]
+    $newDocRoot appendFromList $list
+    set result [$newDoc asXML -indent none]
+    $newDoc delete
+    set result
+} {<newDoc><elem><?myPI value?>text<child a="v"><?myPI1 the value?></child></elem></newDoc>}
+
+$doc delete
 
 set xml {
 <root>
@@ -1332,6 +1416,34 @@ test dom-27.2 {target, data} {
 
 $doc delete
 
+test dom-28.1 {getAttributeNS} {
+    set doc [dom parse {
+<root attr1="attr1Value"
+      attr2="attr2Value"
+      p:attr1="p:attr1Value"
+      xmlns:p="ns1"/>}]
+    set root [$doc documentElement]
+    set result [$root getAttributeNS "ns1" attr1]
+    $doc delete
+    set result
+} {p:attr1Value}
+
+proc domAppendChild {parent name} {
+    $parent ownerDocument doc
+    $doc createElement $name node
+    $parent appendChild $node
+}
+
+test dom-29.1 {ownerDocument} {
+    dom createDocument document doc
+    set root [$doc documentElement]
+    domAppendChild $root foo1
+    domAppendChild $root foo2
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<document><foo1/><foo2/></document>}
+
 test dom-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
     set doc2 [dom parse {<root><e>text</e></root>}]
@@ -1345,7 +1457,26 @@ test dom-999.1 {move nodes from one doc to another} {
     set result
 } {1}
 
+test dom-999.2 {node references should not change even after renumbering} {
+    dom parse {<test><child name="a"/><child name="b"/></test>} doc
+    set root [$doc documentElement]
+    set oldNode [lindex [$root childNodes] 1]
+    dom parse {<NewChild/>} tempDoc 
+    set tempNode [$tempDoc documentElement]
+    $oldNode appendChild $tempNode
+    set childList1 [$root childNodes]
+    $root selectNodes {//child[@name='a']}
+    set childList2 [$root childNodes]
+    if {$childList1 == $childList2} {
+        set result 1
+    } else {
+        set result 0
+    }
+    $doc delete
+    $tempDoc delete
+    set result
+} {1}
+
 # cleanup
 ::tcltest::cleanupTests
 return
-
