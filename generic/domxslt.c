@@ -5664,7 +5664,7 @@ static int processTopLevel (
 {
     domNode           *node;
     domDocument       *extStyleSheet;
-    int                rc, hnew, clen, newdf = 0;
+    int                rc, hnew, clen, newdf = 0, nonImportElemSeen = 0;
     double             childPrecedence, childLowBound;
     char              *str, *name, *match, *use, *baseURI, *href;
     char              *localName, prefix[MAX_PREFIX_LEN];
@@ -5686,6 +5686,9 @@ static int processTopLevel (
     node = xsltDocumentElement->firstChild;
     while (node) {
         tag = getTag (node);
+        if (!nonImportElemSeen && tag != unknown && tag != import) {
+            nonImportElemSeen = 1;
+        }
         switch ( tag ) {
 
             case attributeSet:
@@ -5940,8 +5943,13 @@ static int processTopLevel (
                 break;
 
             case import:
+                if (nonImportElemSeen) {
+                    reportError (node, "xsl:import elements must come first",
+                                 errMsg);
+                    return -1;
+                }
                 if (node->firstChild) {
-                    reportError (node, "xsl:import has to empty!", errMsg);
+                    reportError (node, "xsl:import has to be empty!", errMsg);
                     return -1;
                 }
                 if (!node->ownerDocument->extResolver) {
