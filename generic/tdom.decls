@@ -53,7 +53,7 @@ declare 11 generic {
      int XML_GetCurrentByteCount(XML_Parser parser)
 }
 declare 12 generic {
-     int XML_SetBase(XML_Parser parser, const XML_Char *base)
+     enum XML_Status XML_SetBase(XML_Parser parser, const XML_Char *base)
 }
 declare 13 generic {
      const XML_Char * XML_GetBase(XML_Parser parser)

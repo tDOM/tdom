@@ -50,7 +50,7 @@ EXTERN long		XML_GetCurrentByteIndex _ANSI_ARGS_((
 EXTERN int		XML_GetCurrentByteCount _ANSI_ARGS_((
 				XML_Parser parser));
 /* 12 */
-EXTERN int		XML_SetBase _ANSI_ARGS_((XML_Parser parser, 
+EXTERN enum XML_Status		XML_SetBase _ANSI_ARGS_((XML_Parser parser, 
 				const XML_Char * base));
 /* 13 */
 EXTERN const XML_Char *	 XML_GetBase _ANSI_ARGS_((XML_Parser parser));

@@ -38,9 +38,9 @@
 |   Includes
 |
 \---------------------------------------------------------------------------*/
-#include <tdom.h>
 #include <tcl.h>
 #include <dom.h>
+#include <tdom.h>
 #include <tcldom.h>
 
 extern TdomStubs tdomStubs;

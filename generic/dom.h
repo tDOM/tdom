@@ -75,9 +75,9 @@
 #endif /* USE_NORMAL_ALLOCATOR */
 
 #if defined(TCL_MEM_DEBUG) || defined(NS_AOLSERVER) 
-   static void* my_malloc(size_t size){Tcl_Alloc(size);}
+   static void* my_malloc(size_t size){return Tcl_Alloc(size);}
    static void  my_free(void *ptr){Tcl_Free((char*)ptr);}
-   static void* my_realloc(void *ptr, size_t size){Tcl_Realloc(ptr, size);} 
+   static void* my_realloc(void *ptr,size_t size){return Tcl_Realloc(ptr,size);}
    static XML_Memory_Handling_Suite memsuite = {
        my_malloc, my_realloc, my_free
    };
