@@ -77,12 +77,16 @@ COMPILING/USING tDOM
     Note for Tcl 8.0.5 users:
     -------------------------
 
-    This release of tDOM links against Tcl stubs library. In order to
-    compile on Tcl8.0.5 please edit the "configure.in" file in this 
-    directory, comment-out the AC_DEFINE(USE_TCL_STUBS) directive
-    and run autoconf to recreate the "configure" script. Please be 
-    sure to use autoconf with version 2.13, since TEA build is still
-    not fixed to run with the newest autoconf versions.
+    Per default, this release of tDOM links against Tcl stubs
+    library. To build it against Tcl8.0.5, use the configure-tcl8.0.5
+    script to generate the Makefile.
+
+    If you want to recreate the configure script for building against
+    Tcl8.0.5 please edit the "configure.in" file in this directory,
+    comment-out the AC_DEFINE(USE_TCL_STUBS) directive and run
+    autoconf. Please be sure to use autoconf with version 2.13, since
+    TEA build is still not fixed to run with the newest autoconf
+    versions.
 
 
 PLATFORMS
