@@ -1135,10 +1135,10 @@ int tcldom_xpathResultSet (
              if (mixedNodeSet) {
                  Tcl_SetStringObj (type, "mixed", 5);
              } else {
-                 if (startType == ELEMENT_NODE)
-                     Tcl_SetStringObj (type, "nodes", 5);
-                 else
+                 if (startType == ATTRIBUTE_NODE)
                      Tcl_SetStringObj (type, "attrnodes",-1);
+                 else
+                     Tcl_SetStringObj (type, "nodes", 5);
              }
              break;
 
@@ -1269,11 +1269,21 @@ int tcldom_xpathFuncCallBack (
             } else
             if (strcmp(typeStr, "attrvalues")==0) {
                 rsSetString(result, Tcl_GetStringFromObj(value,NULL) );
+            } else {
+                *errMsg = (char*)MALLOC (80 + strlen (typeStr)
+                                         + strlen (functionName));
+                strcpy (*errMsg, "Unkown type of return value \"");
+                strcat (*errMsg, typeStr);
+                strcat (*errMsg, "\" from tcl coded XPath function \"");
+                strcat (*errMsg, functionName);
+                strcat (*errMsg, "\"!");
+                return XPATH_EVAL_ERR;
             }
         } else {
             DBG(fprintf(stderr, "ListObjLength != TCL_OK --> returning XPATH_EVAL_ERR \n");)
             return XPATH_EVAL_ERR;
         }
+        Tcl_ResetResult (interp);
         return XPATH_OK;
     }
     errStr = Tcl_GetStringFromObj( Tcl_GetObjResult(interp), &errStrLen);
