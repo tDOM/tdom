@@ -1,3 +1,11 @@
+2003-12-17  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domNode.
+        * generic/tcldom.c: Added baseURI method, which returns the
+          current base URI and has an optional argument to set the
+          base URI. This enables XMLBase support on script level. (The
+          getBaseURI is deprecated.)
+
 2003-12-15  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
