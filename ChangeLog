@@ -3,6 +3,8 @@
         * generic/tclexpat.c: Fixed bug in the subtree skipping
           feature of event handlers. Should be merged with HEAD.
 
+        * lib/tdom.tcl: Fixed error reporting in tDOM::extRefHandler.   
+
         --- Backported fixes from HEAD ---
 
         * generic/domxslt.c: Fixed a bug in xsl:number. If there is no
