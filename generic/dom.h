@@ -104,7 +104,6 @@
 # define HASHTAB(doc,tab)   tab
 # define NODE_NO(doc)       ++domUniqueNodeNr
 # define DOC_NO(doc)        ++domUniqueDocNr
-# define NODE_CMD(s,node)   sprintf((s), "domNode%d", (node)->nodeNumber)
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc%d", (doc)->documentNumber)
 # define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd%d", (doc)->documentNumber)
 #else
@@ -113,10 +112,12 @@
 # define HASHTAB(doc,tab)   (doc)->tab
 # define NODE_NO(doc)       ((doc)->nodeCounter)++
 # define DOC_NO(doc)        (unsigned int)(doc)
-# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
 # define DOC_CMD(s,doc)     sprintf((s), "domDoc0x%x", (doc)->documentNumber)
 # define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd0x%x", (doc)->documentNumber)
 #endif /* TCL_THREADS */
+
+# define NODE_CMD(s,node)   sprintf((s), "domNode0x%x", (unsigned int)(node))
+
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
 #define XMLNS_NAMESPACE "http://www.w3.org/2000/xmlns"
