@@ -1,3 +1,12 @@
+2003-10-09  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/domCmd.test    
+        * generic/tcldom.c: Made code robust against renaming of
+          domDoc cmds (well, unlikely, not to say very unlikely, but
+          at least it also simplified code and reduced obj size by a
+          few bytes). Changed sharedDocs hash table (only MT build)
+          from TCL_STRING_KEYS to TCL_ONE_WORD_KEYS.
+
 2003-10-08  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Fixed the preliminary (and MT only) method
