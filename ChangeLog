@@ -1,3 +1,10 @@
+2003-04-20  Rolf Ade  <rolf@pointsman.de>
+
+        * extensions/tdomhtml/tdomhtml.tcl: Proc newdoc: New optional
+          argument (list of names of local variables) allows the use
+          of local variables (in the scope of the caller of newdoc) in
+          the script argument of newdoc. Contributed by Chuck Ferril.
+
 2003-04-16  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Optimization: Improved caching of
@@ -246,7 +253,7 @@
 	* unix/CONFIG: new file. Adds some examples how to build
 	  the extension on some common Unix platforms.
 
-	* mac: added Bernard CodeWarrior files for Mac builds.
+	* mac: added Bernards CodeWarrior files for Mac builds.
 	* macosx: added directory where we will supply the ProjectBuilder
 	  files (hopefully :)
 
