@@ -182,7 +182,8 @@ static char *astType2str[] = {
     "AxisDescendant", "AxisDescendantOrSelf", "AxisFollowing",
     "AxisFollowingSibling", "AxisNamespace", "AxisParent",
     "AxisPreceding", "AxisPrecedingSilbing", "AxisSelf",
-    "GetContextNode", "GetParentNode",
+    "GetContextNode", "GetParentNode", "AxisDescendantOrSelfLit",
+    "AxisDescendantLit",
     
     "CombinePath", "IsRoot", "ToParent", "ToAncestors", "FillNodeList",
     "FillWithCurrentNode",
@@ -1299,8 +1300,8 @@ Production(Basis)
         astType t;
         Consume(AXISNAME);
         if        (IS_STR('c',"child"))              { t = AxisChild;
-        } else if (IS_STR('d',"descendant"))         { t = AxisDescendant;
-        } else if (IS_STR('d',"descendant-or-self")) { t = AxisDescendantOrSelf;
+        } else if (IS_STR('d',"descendant"))         { t = AxisDescendantLit;
+        } else if (IS_STR('d',"descendant-or-self")) { t = AxisDescendantOrSelfLit;
         } else if (IS_STR('s',"self"))               { t = AxisSelf;
         } else if (IS_STR('a',"attribute"))          { t = AxisAttribute;
         } else if (IS_STR('a',"ancestor"))           { t = AxisAncestor;
@@ -1448,7 +1449,9 @@ static int checkPredOptimizability ( ast a ) {
         case AxisChild:
         case AxisAttribute:
         case AxisDescendant:
+        case AxisDescendantLit:
         case AxisDescendantOrSelf:
+        case AxisDescendantOrSelfLit:
         case AxisSelf:
         case IsNode:
         case IsComment:
@@ -2326,17 +2329,22 @@ static int xpathEvalStep (
         break;
 
     case AxisDescendant:
+    case AxisDescendantLit:
     case AxisDescendantOrSelf:
+    case AxisDescendantOrSelfLit:
         *docOrder = 1;
 
         if (ctxNode->nodeType == ATTRIBUTE_NODE
-            && step->type == AxisDescendantOrSelf) {
+            && (
+                step->type == AxisDescendantOrSelf
+                || step->type == AxisDescendantOrSelfLit)) {
             if (xpathNodeTest(ctxNode, exprContext, step)) 
                 rsAddNode( result, ctxNode);
             break;
         }
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
-        if (step->type == AxisDescendantOrSelf) {
+        if (step->type == AxisDescendantOrSelf
+            || step->type == AxisDescendantOrSelfLit) {
             if (xpathNodeTest(ctxNode, exprContext, step)) 
                 rsAddNode( result, ctxNode);
         }
@@ -4060,9 +4068,9 @@ static int xpathEvalPredicate (
         xpathRSInit (&tmpResult);
         for (i=0; i<stepResult->nr_nodes; i++) {
             xpathRSInit (&predResult);
-            rc = xpathEvalStep( steps->child, stepResult->nodes[i], exprContext, 
-                                i, stepResult, cbs, &predResult, docOrder,
-                                errMsg);
+            rc = xpathEvalStep( steps->child, stepResult->nodes[i], 
+                                exprContext, i, stepResult, cbs, &predResult,
+                                docOrder, errMsg);
             CHECK_RC;
             *docOrder = savedDocOrder;
             DBG( fprintf(stderr, "after eval for Predicate: \n"); )
@@ -4136,38 +4144,37 @@ static int xpathEvalStepAndPredicates (
            more trickier things in the xpath recommendation. 3.3 says:
            "The Predicate filters the node-set with respect to the
            child axis" */
-/*          if (steps->type == AxisDescendantOrSelf) { */
-/*              for (i = 0; i < stepResult.nr_nodes; i++) { */
-/*                  xpathRSInit (&tmpResult); */
-/*                  if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) { */
-/*                      parent = ((domAttrNode *)stepResult.nodes[i])->parentNode; */
-/*                  } else { */
-/*                      parent = stepResult.nodes[i]->parentNode; */
-/*                  } */
-/*                  for (j = 0; j < stepResult.nr_nodes; j++) {                     */
-/*                      if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) { */
-/*                          if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) { */
-/*                              rsAddNode (&tmpResult, stepResult.nodes[j]); */
-/*                          } */
-/*                      } else { */
-/*                          if (stepResult.nodes[j]->parentNode == parent) { */
-/*                              rsAddNode (&tmpResult, stepResult.nodes[j]); */
-/*                          } */
-/*                      } */
-/*                  } */
-/*                  rc = xpathEvalPredicate (steps->next, exprContext, result, &tmpResult, */
-/*                                           cbs, docOrder, errMsg); */
-/*                  CHECK_RC; */
-/*                  xpathRSFree (&tmpResult); */
-/*              } */
-/*          } else { */
-/*              rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult, */
-/*                                       cbs, docOrder, errMsg); */
-/*              CHECK_RC; */
-        rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
-                                 cbs, docOrder, errMsg);
-        CHECK_RC;
+        if (steps->type == AxisDescendantOrSelf || steps->type == AxisDescendant) {
+            for (i = 0; i < stepResult.nr_nodes; i++) {
+                xpathRSInit (&tmpResult);
+                if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) {
+                    parent = ((domAttrNode *)stepResult.nodes[i])->parentNode;
+                } else {
+                    parent = stepResult.nodes[i]->parentNode;
+                }
+                for (j = 0; j < stepResult.nr_nodes; j++) {                    
+                    if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
+                        if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) {
+                            rsAddNode (&tmpResult, stepResult.nodes[j]);
+                        }
+                    } else {
+                        if (stepResult.nodes[j]->parentNode == parent) {
+                            rsAddNode (&tmpResult, stepResult.nodes[j]);
+                        }
+                    }
+                }
+                rc = xpathEvalPredicate (steps->next, exprContext, result, &tmpResult,
+                                         cbs, docOrder, errMsg);
+                CHECK_RC;
+                xpathRSFree (&tmpResult);
+            }
+        } else {
+            rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
+                                     cbs, docOrder, errMsg);
+            CHECK_RC;
+        }
         xpathRSFree (&stepResult);
+        sortByDocOrder (result);
         
     } else {
         /* for steps not followed by a predicate immediately add to
