@@ -440,7 +440,7 @@ command will check his arguments, otherwise not.The
 \&\fIsetTextCheck\fR method set this flag. It returns the current
 TextCheck flag state. The default state for TextCheck is true.
 .TP
-\&\fB\fBdom\fP \fBsetObjectCommands\fP ?\fI(automatic|token|command=\fB?
+\&\fB\fBdom\fP \fBsetObjectCommands\fP ?\fI(automatic|token|command)\fB?
 \&\fRControls, if documents and nodes are created as tcl commands or
 as token to be
 used with the domNode and domDoc commands. If the mode is

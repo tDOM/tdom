@@ -317,7 +317,7 @@ TextCheck flag state. The default state for TextCheck is true.</desc>
       </commanddef>
 
         <commanddef>
-          <command><cmd>dom</cmd> <method>setObjectCommands</method> ?<m>(automatic|token|command=</m>?</command>
+          <command><cmd>dom</cmd> <method>setObjectCommands</method> ?<m>(automatic|token|command)</m>?</command>
           <desc>Controls, if documents and nodes are created as tcl commands or
 as token to be
 used with the domNode and domDoc commands. If the mode is
