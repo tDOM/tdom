@@ -1,3 +1,8 @@
+2002-11-17  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Report error, if xsl:import elements not
+          come first.
+
 2002-11-16  Rolf Ade  <rolf@pointsman.de>
 
         * win/makefile.vc
