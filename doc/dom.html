@@ -1,19 +1,19 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode6451">NAME</a> · <a href="#SECTnode6462">SYNOPSIS</a> · <a href="#SECTnode6476">DESCRIPTION </a> · <a href="#SECTnode6981">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid908">DESCRIPTION </a> · <a href="#SECTid1425">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode6451">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTnode6462">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTnode6476">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid908">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -46,7 +46,7 @@ has to be explicitly deleted by:</p>
       <pre class="example">
 $document delete
 </pre>or<pre class="example">
-rename $document &quot;&quot;</pre>
+rename $document ""</pre>
 
 <p>The valid options are:</p>
 <dl class="optlist">
@@ -126,13 +126,27 @@ by three arguments: the base uri, the system identifier of the entity and the
 public identifier of the entity. The base uri and the public identifier may be
 the empty list. The script has to return a tcl list consisting of three
 elements. The first element of this list signals, how the external entity is
-returned to the processor. At the moment, the two allowed types are &quot;string&quot;
-and &quot;channel&quot;. The second element of the list has to be the (absolute) base URI
+returned to the processor. At the moment, the two allowed types are "string"
+and "channel". The second element of the list has to be the (absolute) base URI
 of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
-of type &quot;string&quot;, or the name of a tcl channel, in the case of type
-&quot;channel&quot;.</dd>
+of type "string", or the name of a tcl channel, in the case of type
+"channel".</dd>
               
+
+              
+                <dt>
+<b>-useForeignDTD</b> <i>&lt;boolen&gt;</i>
+</dt>
+                
+                <dd>If &lt;boolen&gt; is true and the document does not have
+an external subset, the parser will call the -externalentitycommand script with
+empty values for the systemId and publicID arguments. Pleace notice, that, if
+the document also doesn't have an internal subset, the
+-startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
+called.</dd>
+              
+
             </dl>
 <p></p>
 </dd>
@@ -206,7 +220,7 @@ created command is:</p>
 
 <p>The command syntax allows three different ways to specify the attributes of
 the resulting element. These could be specified with <i class="m">attributeName
-attributeValue</i> argument pairs, in an &quot;option style&quot; way with
+attributeValue</i> argument pairs, in an "option style" way with
 <i class="m">-attriubteName attributeValue</i> argument pairs (the '-' character is only
 syntactical sugar and will be stripped off) or as a Tcl list with elements
 interpreted as attribute name and the corresponding attribute value.
@@ -294,15 +308,11 @@ recommendation. Otherwise it returns 0.</dd>
 
       </dl>
 
-  <h2><a name="SECTnode6981">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid1425">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
-</div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-	<a class="navaid" href="index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+</div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

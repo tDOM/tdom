@@ -964,6 +964,7 @@ TclExpatConfigure (interp, expat, objc, objv)
     "-startnamespacedeclcommand",
     "-endnamespacedeclcommand",
     "-ignorewhitecdata",
+    "-useForeignDTD",
 
     "-commentcommand",
     "-notstandalonecommand",
@@ -991,6 +992,7 @@ TclExpatConfigure (interp, expat, objc, objv)
     EXPAT_STARTNAMESPACEDECLCMD,
     EXPAT_ENDNAMESPACEDECLCMD,
     EXPAT_IGNOREWHITECDATA,
+    EXPAT_USEFOREIGNDTD,
 
     EXPAT_COMMENTCMD, EXPAT_NOTSTANDALONECMD,
     EXPAT_STARTCDATASECTIONCMD, EXPAT_ENDCDATASECTIONCMD,
@@ -1195,7 +1197,7 @@ TclExpatConfigure (interp, expat, objc, objv)
       case EXPAT_UNKNOWNENCODINGCMD:		/* -unknownencodingcommand */
 
 	/* Not implemented */
-	/*  break; */
+	break;
 
         CheckDefaultTclHandlerSet;
 	if (activeTclHandlerSet->unknownencodingcommand != NULL) {
@@ -1211,13 +1213,27 @@ TclExpatConfigure (interp, expat, objc, objv)
       case EXPAT_IGNOREWHITECDATA:		/* -ignorewhitecdata */
 
         CheckDefaultTclHandlerSet;
-        if (Tcl_GetBooleanFromObj (interp, objPtr[1], &activeTclHandlerSet->ignoreWhiteCDATAs) != TCL_OK) {
+        if (Tcl_GetBooleanFromObj (interp, objPtr[1],
+                                   &activeTclHandlerSet->ignoreWhiteCDATAs)
+            != TCL_OK) {
             return TCL_ERROR;
         }
         if (activeTclHandlerSet->ignoreWhiteCDATAs) {
             expat->needWSCheck = 1;
         }
 	break;
+
+      case EXPAT_USEFOREIGNDTD:                /* -useForeignDTD */
+        
+        if (Tcl_GetBooleanFromObj (interp, objPtr[1], &bool) != TCL_OK) {
+            Tcl_SetResult (interp,
+                           "-useForeignDTD needs a boolean argument", NULL);
+            return TCL_ERROR;
+        }
+        /* Cannot be changed after parsing as started (which is kind of
+           understandable). We silently ignore return code. */
+        XML_UseForeignDTD (expat->parser, bool);
+        break;
 
       case EXPAT_COMMENTCMD:      /* -commentcommand */
 	/* ericm@scriptics.com */
@@ -2698,8 +2714,13 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
 	      Tcl_NewStringObj("", 0));
       }
 
-      Tcl_ListObjAppendElement(expat->interp, cmdPtr,
-	      Tcl_NewStringObj((char *)systemId, strlen(systemId)));
+      if (systemId) {
+          Tcl_ListObjAppendElement(expat->interp, cmdPtr,
+              Tcl_NewStringObj((char *)systemId, strlen(systemId)));
+      } else {
+          Tcl_ListObjAppendElement(expat->interp, cmdPtr,
+              Tcl_NewStringObj("", 0));
+      }
 
       if (publicId) {
           Tcl_ListObjAppendElement(expat->interp, cmdPtr,

@@ -34,7 +34,7 @@ script.</p>
 
 <p>The parsers do not validate the XML document. They do parse the internal DTD
 and, at request, external DTD and external entities, if you resolve the
-identifier of the external entities with the -externalentitycommand (see
+identifier of the external entities with the -externalentitycommand script (see
 there).</p>
 
 <p>Additionly, the Tcl extension code that implements this command provides an
@@ -548,6 +548,22 @@ parser all internal entities are silent lost for the handler sets without a
 default handler.</p>
             </desc>
         </optdef>
+
+        <optdef>
+          <optname>-useForeignDTD</optname>
+          <optarg>&lt;boolen&gt;</optarg>
+          <desc>If &lt;boolen&gt; is true and the document does not have an
+external subset, the parser will call the -externalentitycommand script with
+empty values for the systemId and publicID arguments. This option must be set,
+before the first piece of data is parsed. Setting this option, after the
+parsing has started has no effect. The default is not to use a foreign DTD. The
+default is restored, after reseting the parser. Pleace notice, that a
+-paramentityparsing value of "never" (which is the default) suppresses any call
+to the -externalentitycommand script. Pleace notice, that, if the document also
+doesn't have an internal subset, the -startdoctypedeclcommand and
+enddoctypedeclcommand scripts, if set, are not called.</desc>
+        </optdef>
+
       </optlist>
     </section>
     <section>
