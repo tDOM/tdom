@@ -4,11 +4,11 @@
 
 		Jochen Loewer	 (loewerj@hotmail.com)
         
-                      with the little help of:
+                      with major contributions by:
 
                 Rolf Ade         (rolf@pointsman.de)
                 Zoran Vasiljevic (zoran@archiware.com)
-
+                
 
 This directory contains a freely distributable (under the Mozilla Public 
 License) thread-safe extension to Tcl/Tk called tDOM.
@@ -21,21 +21,26 @@ tDOM contains:
 
     *  a modified version of Steve Ball's Tclexpat, the Tcl interface to 
        expat, for event-like (SAX-like) XML parsing. The modifications
-       are for performance improvements and to make the newest Expat
-       features (XML namespace) available.
+       are for performance improvements, to make the newest Expat
+       features (XML namespace) available and for additional features.
 
-    *  a (partial) DOM implementation in C for maximum performance and
-       minimum memory need following the W3C DOM Core Level 1 
-       recommendation using a OO-like syntax.
+    *  a (partial) DOM I and II implementation in C for maximum
+       performance and minimum memory need following the W3C DOM Core
+       Level 1 recommendation using a OO-like syntax.
 
-    *  a XPath implementation in C following the November 99 W3C
-       recommendation.
+    *  a very complete, compliant and fast XPath implementation in C
+       following the November 99 W3C recommendation.
 
+    *  a fast XSLT implementation in C following the W3C Recommendation
+       16 November 1999.
+    
     *  a (partial) implementation in C of the XPointer (97) navigational 
        functions.
 
     *  UTF-8 to 8 bit encoding back conversion functionality to support
        Tcl version < 8.1x
+
+    *  optional DTD validation   
 
     *  additional convinience methods
  
@@ -62,7 +67,9 @@ PLATFORMS
     HP-UX-9.x
     Linux 2.2.5                  (egcs 2.91.66, Suse 6.1)
     Solaris 2.5.1+               (both gcc and SunWorks compilers)
+    w2k                          (VC++ 6.0)
 
     Other machines and OS's are not tested but should work too. 
 
 -EOF
+
