@@ -224,7 +224,11 @@ eval libdir="$libdir"
 tdom_SRC_DIR=`cd ${srcdir}; pwd`
 
 tdomstub_LIB_FLAG="-ltdomstub${VERSION}${DBGX}"
-tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR} ${tdomstub_LIB_FLAG}"
+if test "${TEA_PLATFORM}" = "windows" ; then
+    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/win ${tdomstub_LIB_FLAG}"
+else 
+    tdomstub_BUILD_SPEC="-L${tdom_SRC_DIR}/${TEA_PLATFORM} ${tdomstub_LIB_FLAG}"
+fi
 tdomstub_FILE_SPEC="-L${libdir}/${PACKAGE}${VERSION} ${tdomstub_LIB_FLAG}"
 
 AC_SUBST(tdomstub_BUILD_SPEC)
