@@ -192,6 +192,11 @@ Returns a list of all elements in the document matching
 (glob style) \fIname\fR.
 .RE
 .TP
+\&\fB\fBgetElementsByTagNameNS\fP \fIuri\fB \fIlocalname\fB
+\&\fR Returns a list of all elements in the subtree
+matching (glob style) \fIlocalname\fR and having the given namespace
+\&\fIuri\fR.
+.TP
 \&\fB\fBcreateElement\fP \fItagName\fB ?\fIobjVar\fB?
 \&\fR
 .RS

@@ -42,6 +42,13 @@ element).</p></desc>
 (glob style) <m>name</m>.</p></desc>
         </commanddef>
 
+      <commanddef>
+        <command><method>getElementsByTagNameNS</method> <m>uri</m> <m>localname</m></command>
+        <desc> Returns a list of all elements in the subtree
+matching (glob style) <m>localname</m> and having the given namespace
+<m>uri</m>.</desc>
+      </commanddef>
+
         <commanddef>
           <command><method>createElement</method> <m>tagName</m> ?<m>objVar</m>?</command>
 
