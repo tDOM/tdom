@@ -137,7 +137,7 @@
 |
 \---------------------------------------------------------------------------*/
 typedef enum {
-    LPAR, RPAR, LBRACKET, RBRACKET, DOT, DOTDOT, ATTRIBUTE,
+    LPAR, RPAR, LBRACKET, RBRACKET, DOT, DOTDOT, ATTRIBUTEPREFIX, ATTRIBUTE,
     COMMA,  COLONCOLON, LITERAL, NSPREFIX, NSWC, INTNUMBER, REALNUMBER,
     SLASH, SLASHSLASH,
     PIPE, PLUS, MINUS, EQUAL, NOTEQ, LT, LTE, GT, GTE,
@@ -146,7 +146,7 @@ typedef enum {
 } Token;
 
 static char *token2str[] = {
-    "LPAR", "RPAR", "LBRACKET", "RBRACKET", "DOT", "DOTDOT", "ATTRIBUTE",
+    "LPAR", "RPAR", "LBRACKET", "RBRACKET", "DOT", "DOTDOT", "ATTRIBUTEPREFIX", "ATTRIBUTE",
     "COMMA", "COLONCOLON", "LITERAL", "NSPREFIX", "NSWC", "INTNUMBER", "REALNUMBER",
     "SLASH", "SLASHSLASH",
     "PIPE", "PLUS", "MINUS", "EQUAL", "NOTEQ", "LT", "LTE", "GT", "GTE",
@@ -177,7 +177,7 @@ static char *astType2str[] = {
     "IsNode", "IsComment", "IsText", "IsPI", "IsSpecificPI", "IsElement",
     "IsFQElement", "GetVar", "Literal", "ExecFunction", "Pred", "EvalSteps",
     "SelectRoot", "CombineSets", "Add", "Substract", "Less", "LessOrEq",
-    "Greater", "GreaterOrEq", "Equal", "NotEqual", "And", "Or", "IsAttr",
+    "Greater", "GreaterOrEq", "Equal", "NotEqual", "And", "Or", "IsNSAttr", "IsAttr",
     "AxisAncestor", "AxisAncestorOrSelf", "AxisAttribute", "AxisChild",
     "AxisDescendant", "AxisDescendantOrSelf", "AxisFollowing",
     "AxisFollowingSibling", "AxisNamespace", "AxisParent",
@@ -305,6 +305,9 @@ void rsPrint ( xpathResultSet *rs ) {
                              ((domAttrNode*)rs->nodes[i])->nodeValue);
                  }
              }
+             break;
+         default:
+             fprintf (stderr, "unknown result type: '%d'!!!\n", rs->type);
              break;
 
     }
@@ -567,6 +570,7 @@ void printAst (int depth, ast t)
             case Int :        fprintf(stderr, "%d", t->intvalue);   break;
             case Real:        fprintf(stderr, "%f", t->realvalue);  break;
             case IsElement:
+            case IsNSAttr:
             case IsAttr:
             case ExecFunction:
             case Literal:
@@ -638,27 +642,48 @@ static XPathTokens xpathLexer (
             case ']':  token = RBRACKET; break;
 
             case '@':  i++;
-                       if ( (isalpha(xpath[i])) || (xpath[i]== '_') ) {
-                           ps = &(xpath[i++]);
-                           while (xpath[i] &&
-                                  (isalnum(xpath[i]) ||
-                                   (xpath[i]== '_')  ||
-                                   (xpath[i]== '-')  ||
-                                   (xpath[i]== '.')  ||
-                                   ((xpath[i]== ':')&&(xpath[i+1]!= ':'))
-                                  )
-                                 ) i++;
-
+                       if ( isNCNameStart (&xpath[i]) ) {
+                           ps = &(xpath[i]);
+                           i += UTF8_CHAR_LEN (xpath[i]);
+                           while (xpath[i] && isNCNameChar (&xpath[i]))
+                               i += UTF8_CHAR_LEN (xpath[i]);
                            save = xpath[i];
                            xpath[i] = '\0';
                            tokens[l].strvalue = (char*)strdup(ps);
-                           xpath[i--] = save;
-                           token = ATTRIBUTE;
+                           xpath[i] = save;
+                           if (save == ':' && xpath[i+1] != ':') {
+                               token = ATTRIBUTEPREFIX;
+                               ADD_TOKEN (token);
+                               if (xpath[i+1] == '*') {
+                                   token = ATTRIBUTE;
+                                   tokens[l].strvalue = strdup("*");
+                                   i++;
+                               } else {
+                                   ps = &(xpath[++i]);
+                                   if (!(isNCNameStart (&xpath[i]))) {
+                                       *errMsg = strdup ("Illegal attribute name");
+                                       return NULL;
+                                   }
+                                   i += UTF8_CHAR_LEN (xpath[i]);
+                                   while (xpath[i] && isNCNameChar)
+                                       i += UTF8_CHAR_LEN (xpath[i]);
+                                   save = xpath[i];
+                                   xpath[i] = '\0';
+                                   token = ATTRIBUTE;
+                                   tokens[l].strvalue = (char*)strdup(ps);
+                                   xpath[i--] = save;
+                               }
+                           } else {
+                               save = xpath[i];
+                               xpath[i] = '\0';
+                               tokens[l].strvalue = (char*)strdup(ps);
+                               xpath[i--] = save;
+                               token = ATTRIBUTE;
+                           }
                        } else if (xpath[i]=='*') {
                            tokens[l].strvalue = (char*)strdup("*");
                            token = ATTRIBUTE;
                        } else {
-                           free(tokens);
                            *errMsg = (char*)strdup("Expected attribute name");
                            return NULL;
                        }; break;
@@ -677,7 +702,6 @@ static XPathTokens xpathLexer (
             case '\'': delim = xpath[i]; start = ++i;
                        while (xpath[i] && (xpath[i] != delim)) i++;
                        if (!xpath[i]) {
-                           free(tokens);
                            *errMsg = (char*)strdup("Undetermined string");
                            return NULL;
                        }
@@ -748,7 +772,6 @@ static XPathTokens xpathLexer (
                            xpath[i--] = save;
                            token = VARIABLE;
                        } else {
-                           free(tokens);
                            *errMsg = (char*)strdup("Expected variable name");
                            return NULL;
                        }; break;
@@ -791,7 +814,6 @@ static XPathTokens xpathLexer (
                                        (xpath[k] == '\n') ||
                                        (xpath[k] == '\r') ||
                                        (xpath[k] == '\t')) {
-                                       free(tokens);
                                        *errMsg = strdup("whitespace after namespace prefix");
                                        return NULL;
                                    }
@@ -982,7 +1004,18 @@ Production(AbbreviatedBasis)
     if (LA==ATTRIBUTE) {
         Consume(ATTRIBUTE);
         a = New1( AxisAttribute, NewStr(IsAttr, STRVAL) );
-    } else {
+    } else 
+    if (LA==ATTRIBUTEPREFIX) {
+        ast b, c;
+        Consume(ATTRIBUTEPREFIX);
+        a = New (AxisAttribute);
+        b = NewStr (IsNSAttr, STRVAL);
+        AddChild (a, b);
+        Consume(ATTRIBUTE);
+        c = NewStr (IsAttr, STRVAL);
+        AddChild (b, c);
+    }
+    else {
         a = New1( AxisChild, Recurse(NodeTest));
     }
 EndProduction
@@ -1360,6 +1393,7 @@ Production(AbsoluteLocationPath)
            ||(LA==DOT)
            ||(LA==DOTDOT)
            ||(LA==ATTRIBUTE)
+           ||(LA==ATTRIBUTEPREFIX)  
         ) {
             b =  Recurse(RelativeLocationPath);
             Append(a, b);
@@ -1484,6 +1518,16 @@ Production(StepPattern)
     if (LA==ATTRIBUTE) {
         Consume(ATTRIBUTE);
         a = New1( AxisAttribute, NewStr(IsAttr, STRVAL) );
+    } else 
+    if (LA==ATTRIBUTEPREFIX) {
+        ast b, c;
+        Consume(ATTRIBUTEPREFIX);
+        a = New ( AxisAttribute);
+        b = NewStr (IsNSAttr, STRVAL);
+        AddChild (a, b);
+        Consume(ATTRIBUTE);
+        c = NewStr (IsAttr, STRVAL);
+        AddChild (b, c);
     } else {
         a = Recurse(NodeTest);
     }
@@ -1705,6 +1749,7 @@ int xpathParse (
     DDBG(fprintf(stderr, "\nLex output following tokens for '%s':\n", xpath);)
     tokens = xpathLexer(xpath, errMsg);
     if (tokens == NULL) {
+        xpathFreeTokens (tokens);
         return XPATH_LEX_ERR;
     }
     DDBG(
@@ -1815,22 +1860,13 @@ int xpathNodeTest (
         return 0;
     } else
     if (step->child->type == IsFQElement) {
-        if (node->nodeType != ELEMENT_NODE && node->nodeType != ATTRIBUTE_NODE) 
-            return 0;
+        if (node->nodeType != ELEMENT_NODE || node->namespace == 0) return 0;
         contextNS = domLookupPrefix (exprContext, step->child->strvalue);
         if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
         nodeUri = domNamespaceURI (node);
         if (!nodeUri) return 0;
         if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
-        if (node->nodeType == ELEMENT_NODE) {
-            localName = domGetLocalName (node->nodeName);
-        } else 
-        if (node->nodeType == ATTRIBUTE_NODE) {
-            localName = domGetLocalName (((domAttrNode*)node)->nodeName);
-        } else {
-            localName = NULL;
-        }
-        if (!localName) return 0;
+        localName = domGetLocalName (node->nodeName);
         if (strcmp (step->child->child->strvalue, localName)==0) return 1;
         return 0;
     } else
@@ -1838,18 +1874,26 @@ int xpathNodeTest (
         contextNS = domLookupPrefix (exprContext, step->child->strvalue);
         if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
         nodeUri = domNamespaceURI (node);
+        if (!nodeUri) return 0;
         if (nodeUri && (strcmp (contextNS->uri, nodeUri)==0)) return 1;
+        return 0;
+    } else
+    if (step->child->type == IsNSAttr) {
+        if (node->nodeType != ATTRIBUTE_NODE 
+            || node->nodeFlags & IS_NS_NODE) return 0;
+        contextNS = domLookupPrefix (exprContext, step->child->strvalue);
+        if (!contextNS) return 0;
+        nodeUri = domNamespaceURI (node);
+        if (!nodeUri) return 0;
+        if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
+        if (strcmp (step->child->child->strvalue, "*")==0) return 1;
+        localName = domGetLocalName (((domAttrNode *) node)->nodeName);
+        if (strcmp (step->child->child->strvalue, localName)==0) return 1;
         return 0;
     } else
     if (step->child->type == IsNode) {
         DBG(fprintf(stderr, "nodeTest: nodeType=%d \n", node->nodeType);)
-        return ((node->nodeType == ELEMENT_NODE)       || 
-                (node->nodeType == ATTRIBUTE_NODE)     ||
-                (node->nodeType == TEXT_NODE)          ||
-                (node->nodeType == CDATA_SECTION_NODE) ||
-                (node->nodeType == COMMENT_NODE)       ||
-                (node->nodeType == PROCESSING_INSTRUCTION_NODE)
-               );
+        return 1;
     } else
     if (step->child->type == IsText) {
         DBG(fprintf(stderr, "nodeTest: nodeType=%d == %d?? \n", node->nodeType, TEXT_NODE);)
@@ -2358,6 +2402,16 @@ static int xpathEvalStep (
                     attr = attr->nextSibling;
                 }
             }
+        } else 
+        if (step->child->type == IsNSAttr) {
+            attr = ctxNode->firstAttr;
+            while (attr && (attr->nodeFlags & IS_NS_NODE))
+                attr = attr->nextSibling;
+            while (attr) {
+                if (xpathNodeTest ( (domNode*)attr, exprContext, step))
+                    checkRsAddNode (result, (domNode *)attr);
+                attr = attr->nextSibling;
+            }
         }
         break;
 
@@ -2455,16 +2509,16 @@ static int xpathEvalStep (
             node = ((domAttrNode *)ctxNode)->parentNode->firstChild;
         } else {
             node = ctxNode;
-        }
-        if (node->nextSibling) {
-            node = node->nextSibling;
-        } else {
-            while (node->parentNode) {
-                node = node->parentNode;
-                if (node->nextSibling) break;
+            if (node->nextSibling) {
+                node = node->nextSibling;
+            } else {
+                while (node->parentNode) {
+                    node = node->parentNode;
+                    if (node->nextSibling) break;
+                }
+                if (!node->nextSibling) return XPATH_OK;
+                else node = node->nextSibling;
             }
-            if (!node->nextSibling) return XPATH_OK;
-            else node = node->nextSibling;
         }
         while (1) {
             if (xpathNodeTest (node, exprContext, step)) checkRsAddNode (result, node);
@@ -2634,8 +2688,8 @@ static int xpathEvalStep (
         xpathRSInit (&rightResult);
 
         savedDocOrder = *docOrder;
-        rc = xpathEvalStep( step->child, ctxNode, exprContext, position, nodeList,
-                               cbs, &leftResult, docOrder, errMsg);
+        rc = xpathEvalStep( step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
         CHECK_RC;
         DBG( fprintf(stderr,"left:\n");
              rsPrint(&leftResult);
@@ -3094,11 +3148,24 @@ static int xpathEvalStep (
         rsAddNode(result, ctxNode->ownerDocument->rootNode);
         break;
 
+    case UnaryMinus:
+        xpathRSInit (&leftResult);
+        rc = xpathEvalStep (step->child, ctxNode, exprContext, position,
+                            nodeList, cbs, &leftResult, docOrder, errMsg);
+        CHECK_RC;
+        rsSetReal (result , -1 * xpathFuncNumber (&leftResult, &NaN));
+        xpathRSFree (&leftResult);
+        break;
+        
     case EvalSteps:
         rc = xpathEvalSteps (step->child, nodeList, ctxNode, exprContext, position,
                              docOrder,cbs, &leftResult, errMsg);
         CHECK_RC;
         if ((result->type != EmptyResult) && (leftResult.type != result->type)) {
+            DBG( fprintf (stderr, "EvalSteps:\nresult:\n");
+            rsPrint (result);
+            fprintf (stderr, "leftResult:\n");
+            rsPrint (&leftResult); )
             *errMsg = (char*)strdup("can not merge different result types!");
             return XPATH_EVAL_ERR;
         }
@@ -4312,7 +4379,7 @@ int xpathMatches (
         switch (steps->type) {        
 
             case AxisAttribute:
-                if (steps->child->type != IsAttr) {
+                if (steps->child->type != IsAttr && steps->child->type != IsNSAttr) {
                     if (steps->child->type == IsElement) {
                         steps->child->type = IsAttr;
                     } else {
@@ -4436,7 +4503,27 @@ int xpathMatches (
                     }
                 }
                 break;
-            
+                
+            case IsNSAttr:
+                if ((nodeToMatch->nodeType != ATTRIBUTE_NODE)
+                    || (nodeToMatch->nodeFlags & IS_NS_NODE)) {
+                    xpathRSFree (&nodeList); return 0;
+                }
+                contextNS = domLookupPrefix (exprContext, steps->strvalue);
+                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
+                nodeUri = domNamespaceURI (nodeToMatch);
+                if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
+                if (strcmp (contextNS->uri, nodeUri) != 0) {
+                    xpathRSFree (&nodeList); return 0;
+                }
+                if (strcmp (steps->child->strvalue, "*")==0) break;
+                localName = domGetLocalName (((domAttrNode *)nodeToMatch)->nodeName);
+                if (!localName) { xpathRSFree (&nodeList); return 0; }
+                if (strcmp (steps->child->strvalue, localName)!=0)  {
+                    xpathRSFree (&nodeList); return 0;
+                }
+                break;
+                
             case IsNode:
                 DBG(fprintf(stderr, "IsNode: nodeTpye=%d \n", nodeToMatch->nodeType);)
                 if (nodeToMatch->nodeType == ATTRIBUTE_NODE) {
@@ -4766,6 +4853,13 @@ double xpathGetPrioOld (
             } else {
                 return 0.0;
             }
+        } else
+        if (steps->child->type == IsNSAttr) {
+            if (strcmp(steps->child->child->strvalue, "*")==0) {
+                return -0.25;
+            } else {
+                return 0.0;
+            }
         }
     }
 
@@ -4806,13 +4900,24 @@ double xpathGetPrio (
                 return 0.0;
             }
         } else 
-        if (steps->type == AxisAttribute) {
-            if (steps->child->type == IsAttr) {
-                if (strcmp(steps->child->strvalue, "*")==0) {
-                    return -0.25;
-                } else {
-                    return 0.0;
-                }
+        if (steps->type == IsFQElement) {
+            return 0.0;
+        } else 
+        if (steps->type == IsNSElement) {
+            return -0.25;
+        } else 
+        if (steps->type == IsAttr) {
+            if (strcmp(steps->strvalue, "*")==0) {
+                return -0.5;
+            } else {
+                return 0.0;
+            }
+        } else
+        if (steps->type == IsNSAttr) {
+            if (strcmp(steps->child->strvalue, "*")==0) {
+                return -0.25;
+            } else {
+                return 0.0;
             }
         } else 
         if ( (steps->type == IsNode)
@@ -4824,7 +4929,9 @@ double xpathGetPrio (
             return -0.5;
         }
     }
-    if (steps->type == AxisChild || steps->type == EvalSteps) {
+    if (steps->type == AxisChild 
+        || steps->type == AxisAttribute
+        || steps->type == EvalSteps) {
         return (xpathGetPrio (steps->child));
     }
     if (steps->type == CombinePath) {

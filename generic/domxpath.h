@@ -32,6 +32,11 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/04/28 22:20:30  rolf
+|   Added full qualified and namespace wildcard attribute queries. Fixed
+|   a Bug with following axis expression starting from an attribute. Added
+|   handling of UnaryExpr to xpathEvalStep(). Improved xpathGetPrio().
+|
 |   Revision 1.2  2002/03/21 01:47:22  rolf
 |   Collected the various nodeSet Result types into "nodeSetResult" (there
 |   still exists a seperate emptyResult type). Reworked
@@ -76,7 +81,7 @@ typedef enum {
     IsNode, IsComment, IsText, IsPI, IsSpecificPI, IsElement,
     IsFQElement, GetVar, Literal, ExecFunction, Pred, EvalSteps,
     SelectRoot, CombineSets, Add, Substract, Less, LessOrEq,
-    Greater, GreaterOrEq, Equal,  NotEqual, And, Or, IsAttr,
+    Greater, GreaterOrEq, Equal,  NotEqual, And, Or, IsNSAttr, IsAttr,
     AxisAncestor, AxisAncestorOrSelf, AxisAttribute, AxisChild,
     AxisDescendant, AxisDescendantOrSelf, AxisFollowing,
     AxisFollowingSibling, AxisNamespace, AxisParent,
