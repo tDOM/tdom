@@ -403,7 +403,7 @@ typedef enum {
 |   flags   -  indicating some internal features about nodes
 |
 \-------------------------------------------------------------------------*/
-typedef int domNodeFlags;
+typedef unsigned int domNodeFlags;
 
 #define HAS_LINE_COLUMN           1
 #define VISIBLE_IN_TCL            2
@@ -411,12 +411,12 @@ typedef int domNodeFlags;
 #define HAS_BASEURI               8
 #define DISABLE_OUTPUT_ESCAPING  16
 
-typedef int domAttrFlags;
+typedef unsigned int domAttrFlags;
 
 #define IS_ID_ATTRIBUTE           1
 #define IS_NS_NODE                2
 
-typedef int domDocFlags;
+typedef unsigned int domDocFlags;
 
 #define OUTPUT_DEFAULT_XML        1
 #define OUTPUT_DEFAULT_HTML       2
@@ -430,7 +430,7 @@ typedef int domDocFlags;
 |   a index to the namespace records
 |
 \-------------------------------------------------------------------------*/
-typedef int domNameSpaceIndex;
+typedef unsigned int domNameSpaceIndex;
 
 
 
@@ -568,7 +568,7 @@ typedef struct domNode {
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
-    int                 info      : 8;
+    unsigned int        info      : 8;
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -596,7 +596,7 @@ typedef struct domTextNode {
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
-    int                 info      : 8;
+    unsigned int        info      : 8;
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -618,7 +618,7 @@ typedef struct domProcessingInstructionNode {
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
-    int                 info      : 8;
+    unsigned int        info      : 8;
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -642,7 +642,7 @@ typedef struct domAttrNode {
     domNodeType         nodeType  : 8;
     domAttrFlags        nodeFlags : 8;
     domNameSpaceIndex   namespace : 8;
-    int                 info      : 8;
+    unsigned int        info      : 8;
     domString           nodeName;
     domString           nodeValue;
     int                 valueLength;
