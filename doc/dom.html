@@ -1,30 +1,21 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode6">NAME</a> Â· <a href="#SECTnode17">SYNOPSIS</a> Â· <a href="#SECTnode31">DESCRIPTION </a> Â· <a href="#SECTnode276">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1204">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode6">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTnode17">SYNOPSIS</a></h2>
-    <pre class="syntax">
+  <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
-  
 
-  
-    <h2><a name="SECTnode31">DESCRIPTION </a></h2>    
-
-    <p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTnode908">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
-into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p>
-
-    <p>The valid methods are:</p>
-
-      <dl class="commandlist">
+into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
           <dt>
 <b class="cmd">dom</b> <b class="method">parse</b> ?<i class="m">options</i>? ?<i class="m">data</i>?</dt>
@@ -71,8 +62,8 @@ handle namespaces.</dd>
 
               
                 <dt><b>-html</b></dt>
-                <dd>If <i class="m">-html</i> is specified, a fast HTML parser is used, which tries
-to even parse badly formed HTML into a DOM tree.</dd>
+                <dd>If <i class="m">-html</i> is specified, a fast HTML parser is 
+used, which tries to even parse badly formed HTML into a DOM tree.</dd>
               
        
               
@@ -90,9 +81,10 @@ text nodes are removed at parsing time.</dd>
                 
 
                 <dd>If <i class="m">-channel &lt;channel-ID&gt;</i> is specified, the
-input to be parsed is read from the specified channel. The input is read from
-the channel in &quot;raw&quot; (binary) mode from the channel, ignoring any encoding
-setting via -fconfigure of the channel.</dd>
+input to be parsed is read from the specified channel. The encoding setting of
+the channel (via fconfigure -encoding) is respected, ie the data read from the
+channel are converted to UTF-8 according to the encoding settings, befor the
+data is parsed.</dd>
               
 
               
@@ -160,6 +152,19 @@ memory handling as explained above.</p>
 
         
           <dt>
+<b class="cmd">dom</b> <b class="method">createDocumentNS</b>
+<i class="m">docElemName</i> <i class="m">uri</i> ?<i class="m">objVar</i>?</dt>
+
+          <dd>
+<p>Creates a new DOM document object with one element node with
+node name <tt class="samp">docElemName</tt>. <tt class="samp">Uri</tt> gives the namespace of the
+document element to create. The <tt class="samp">objVar</tt> controlls the
+memory handling as explained above.</p>
+</dd>
+        
+
+        
+          <dt>
 <b class="cmd">dom</b> <b class="method">setResultEncoding</b> ?<i class="m">encodingName</i>?</dt>
 
           <dd>
@@ -181,17 +186,27 @@ iso8859-4, iso8859-5, iso8859-6, iso8859-7, iso8859-8, iso8859-9, koi8-r.</p>
 </dt>
           <dd><p>...todo...</p></dd>
         
-      </dl>
-  
 
-  <h2><a name="SECTnode276">KEYWORDS</a></h2><p class="keywords">
+        
+          <dt>
+<b class="cmd">dom</b> <b class="method">setStoreLineColumn</b> <i class="m">?boolean</i>
+</dt>
+
+          <dd><p>If switched on, the DOM nodes will contain line and column
+position information for the original XML document after parsing.</p></dd>
+        
+
+
+      </dl>
+
+  <h2><a name="SECTnode1204">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
 	<a class="navaid" href="index.html">Table of Contents</a>
- Â·	<a class="navaid" href="category-index.html">Index</a>
- Â·	<a class="navaid" href="keyword-index.html">Keywords</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </div>
 </body>
