@@ -9,6 +9,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+/*
+ * Beginning with 8.4, Tcl API is CONST'ified
+ */
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
+# define CONST84
+#endif
+
 /* The inital stack sizes must be at least 1 */
 #define TNC_INITCONTENTSTACKSIZE 512
 
@@ -2285,7 +2292,7 @@ TclTncObjCmd(dummy, interp, objc, objv)
     TNC_Data       *tncdata;
 
 
-    static char *tncMethods[] = {
+    static CONST84 char *tncMethods[] = {
         "enable",  "remove",
         NULL
     };
