@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode2805">NAME</a> · <a href="#SECTnode2816">SYNOPSIS</a> · <a href="#SECTnode2827"> DESCRIPTION </a> · <a href="#SECTnode3847">SEE ALSO</a> · <a href="#SECTnode3856">KEYWORDS</a>
+<a href="#SECTnode2824">NAME</a> · <a href="#SECTnode2835">SYNOPSIS</a> · <a href="#SECTnode2846"> DESCRIPTION </a> · <a href="#SECTnode3872">SEE ALSO</a> · <a href="#SECTnode3881">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode2805">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode2824">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTnode2816">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTnode2835">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTnode2827"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTnode2846"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -439,7 +439,8 @@ representation.</dd>
 
       
         <dt>
-<b class="method">asHTML</b> <b class="option">?-channel channelId?</b> <b class="option">?-escapeNonASCII?</b>
+<b class="method">asHTML</b> <b class="option">?-channel channelId?</b>
+<b class="option">?-escapeNonASCII?</b>  <b class="option">?-htmlEntities?</b>
 </dt>
         <dd>Returns the DOM substree starting from the current node as the
 root node of the result serialized acording to HTML rules (HTML elements are
@@ -447,7 +448,9 @@ recognized regardless of case, without end tags for emtpy HTML elements etc.),
 as string or sends the output directly to the given channelId. If the option
 <i class="m">-escapeNonASCII</i> is given, every non 7 bit ASCII character in attribute
 values or element PCDATA content will be escaped as character reference in
-decimal representation.</dd>
+decimal representation. If the option <i class="m">-htmlEntities</i> is given, a
+character is outputed using a HTML 4.01 character entity reference, if one is
+defined for it.</dd>
       
 
       
@@ -539,11 +542,11 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTnode3847">SEE ALSO</a></h2><p class="seealso">
+  <h2><a name="SECTnode3872">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domDoc.html">domDoc</a>
 </p>
   
-  <h2><a name="SECTnode3856">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTnode3881">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   
