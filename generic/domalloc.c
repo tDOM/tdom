@@ -31,8 +31,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/03/08 23:49:25  rolf
+|   Fixed small, obvious bug in DBG code.
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
@@ -212,7 +215,7 @@ domAlloc (
     unsigned int  * usedBitmap;
     
     
-    DBG(fprintf(stderr, "\ndomAlloc %d ... %d \n", size, ++invokes);)
+    DBG(fprintf(stderr, "\ndomAlloc %d \n", size);)
 
     if (size >= MAX_BINS) {
         fprintf(stderr, "\nSize too large as used for bin!\n");
