@@ -1673,8 +1673,7 @@ void tcldom_treeAsHTML (
     domAttrNode *attrs;
     char         tag[80], attrName[80];
 
-    if (node->nodeType == CDATA_SECTION_NODE ||
-        node->nodeType == PROCESSING_INSTRUCTION_NODE) return;
+    if (node->nodeType == PROCESSING_INSTRUCTION_NODE) return;
 
     if (node->nodeType == TEXT_NODE) {
         if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
@@ -1686,6 +1685,12 @@ void tcldom_treeAsHTML (
                                   ((domTextNode*)node)->valueLength, 0);
         }
         return;
+    }
+
+    if (node->nodeType == CDATA_SECTION_NODE) {
+            tcldom_AppendEscaped (htmlString, chan,
+                                  ((domTextNode*)node)->nodeValue,
+                                  ((domTextNode*)node)->valueLength, 0);
     }
 
     if (node->nodeType == COMMENT_NODE) {
