@@ -1,3 +1,11 @@
+2004-12-21  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c: domAppendNewElementNode(): Set the namespace
+          of a per xslt transformation generated node wrong under
+          certain circumstances. This fixes
+          http://groups.yahoo.com/group/tdom/message/1008. Removed
+          leftover (former local used) define TNODE.
+
 2004-12-12  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
