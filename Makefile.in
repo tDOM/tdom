@@ -364,8 +364,8 @@ pkgIndex.tcl:
 
 pkgIndex.tcl-hand:
 	@(echo 'package ifneeded $(PACKAGE) $(VERSION)\
-	"load [list [file join $$dir $($(PACKAGE)_LIB_FILE)]];\
-         source [list [file join $$dir tdom.tcl]]"'\
+	"[list load [list [file join $$dir $($(PACKAGE)_LIB_FILE)]]];\
+         [list source [list [file join $$dir tdom.tcl]]]"'\
 	) > pkgIndex.tcl
 
 #========================================================================

@@ -2,4 +2,4 @@
 
 package ifneeded tnc @VERSION@        \
     "package require tdom; \
-     load [file join $dir tnc@VERSION@[info sharedlibextension] ] tnc"
+     [list load [file join $dir tnc@VERSION@[info sharedlibextension] ] tnc]"

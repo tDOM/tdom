@@ -2,4 +2,4 @@
 
 package ifneeded example @VERSION@        \
     "package require expat; \
-     load [file join $dir example@VERSION@[info sharedlibextension] ] example"
+     [list load [file join $dir example@VERSION@[info sharedlibextension] ] example]"
