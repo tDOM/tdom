@@ -2,7 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +-----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |   The contents of this file are subject to the Mozilla Public License
 |   Version 1.1 (the "License"); you may not use this file except in

@@ -2,7 +2,7 @@
 |   Copyright (C) 1999-2000  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   A special memory allocator, which uses pre-allocated / bit masked

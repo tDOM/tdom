@@ -2,7 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   Functions, which (try) to convert UTF-8 encoded Unicode strings back 
@@ -29,8 +29,11 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2004/08/14 14:42:27  rolf
+|   Use 'Id' cvs keyword (instead of 'Header') in the file heads.
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |
 |
