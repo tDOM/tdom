@@ -331,8 +331,8 @@ list.
 node. \fInewChild\fR must be in the document fragment list.
 .TP
 \&\fB\fBinsertBefore\fP \fInewChild\fB  \fIrefChild\fB
-\&\fRInsert \fInewChild\fR before the \fIrefChild\fR in list of
-children of that node. If \fIrefChild\fR is the empty string, insert
+\&\fRInsert \fInewChild\fR before the \fIrefChild\fR into the list of
+children of node. If \fIrefChild\fR is the empty string, insert
 \&\fInewChild\fR at the end of the child nodes list of that node.
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
@@ -471,6 +471,12 @@ appends this subtree to the current node.
 \&\fRAppends the nodes created in the \fItclScript\fR by
 Tcl functions, which have been built using \fIdom createNodeCmd\fR, to the
 given node.
+.TP
+\&\fB\fBinsertBeforeFromScript\fP \fItclScript\fB \fIrefChild\fB
+\&\fRInserts the nodes created in the \fItclScript\fR by
+Tcl functions, which have been built using \fIdom createNodeCmd\fR, before the
+\&\fIrefChild\fR into to the list of children of node. If \fIrefChild\fR is
+the empty string, the new nodes will be appended.
 .TP
 \&\fB\fBappendXML\fP \fIXMLstring\fB
 \&\fRParses \fIXMLstring\fR, creates an according DOM subtree and
