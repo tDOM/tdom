@@ -406,7 +406,6 @@ XML_SimpleParse (
     domDocument *doc,
     domNode     *parent_nodeOld,
     int          ignoreWhiteSpaces,
-    char        *baseURI,
     char       **errStr
 ) {
     register int   c;          /* Next character of the input file */
@@ -1104,7 +1103,7 @@ XML_SimpleParseDocument (
     }
     
     *pos = 0;
-    XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, baseURI, errStr);
+    XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, errStr);
 
     return doc;
 
