@@ -907,19 +907,25 @@ static XPathTokens xpathLexer (
                                    break;
                                }
                                if (xpath[i+1] != ':') {
-                                   k++;
-                                   if ((xpath[k] ==  ' ') ||
-                                       (xpath[k] == '\n') ||
-                                       (xpath[k] == '\r') ||
-                                       (xpath[k] == '\t')) {
-                                       *errMsg = tdomstrdup("whitespace after namespace prefix");
-                                       return tokens;
-                                   }
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
                                    token = NSPREFIX;
                                    tokens[l].strvalue = tdomstrdup (ps);
                                    xpath[i] = save;
+                                   ADD_TOKEN (token);
+                                   ps = &(xpath[++i]);
+                                   if (!(isNCNameStart (&xpath[i]))) {
+                                       *errMsg = tdomstrdup ("Illegal node name");
+                                       return tokens;
+                                   }
+                                   i += UTF8_CHAR_LEN (xpath[i]);
+                                   while (xpath[i] && isNCNameChar (&xpath[i]))
+                                       i += UTF8_CHAR_LEN (xpath[i]);
+                                   save = xpath[i];
+                                   xpath[i] = '\0';
+                                   token = WCARDNAME;
+                                   tokens[l].strvalue = (char*)tdomstrdup(ps);
+                                   xpath[i--] = save;
                                    break;
                                }
                            }
@@ -3332,9 +3338,9 @@ xpathEvalFunction (
                        attr = attr->nextSibling;
                        i++;
                    }
-                   sprintf(tmp,"node%d-%d", node->nodeNumber, i);
+                   sprintf(tmp,"id%d-%d", node->nodeNumber, i);
                } else {
-                   sprintf(tmp,"node%d", leftResult.nodes[0]->nodeNumber);
+                   sprintf(tmp,"id%d", leftResult.nodes[0]->nodeNumber);
                }
                rsSetString (result, tmp);
            } else
