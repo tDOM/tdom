@@ -115,7 +115,6 @@
                               (*l)++;                         \
                           } else {                            \
                               ErrExpected(#tk);               \
-                              return NULL;                    \
                           }
 #define STRVAL            tokens[(*l)-1].strvalue
 #define INTVAL            tokens[(*l)-1].intvalue
