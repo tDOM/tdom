@@ -2262,8 +2262,10 @@ domFreeNode (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry (&node->ownerDocument->baseURIs,
                                           (char*)node);
-            FREE ((char *) Tcl_GetHashValue (entryPtr));
-            Tcl_DeleteHashEntry (entryPtr);
+            if (entryPtr) {
+                FREE ((char *) Tcl_GetHashValue (entryPtr));
+                Tcl_DeleteHashEntry (entryPtr);
+            }
         }
         domFree ((void*)node);
 
@@ -2432,12 +2434,14 @@ domFreeDocument (
     | delete doctype info
     \-----------------------------------------------------------*/
     if (doc->doctype) {
-        if (doc->doctype->systemId) FREE(doc->doctype->systemId);
-        if (doc->doctype->publicId) FREE(doc->doctype->publicId);
-        if (doc->doctype->internalSubset) FREE(doc->doctype->internalSubset);
-        if (doc->doctype->encoding) FREE(doc->doctype->encoding);
-        if (doc->doctype->mediaType) FREE(doc->doctype->mediaType);
-        if (doc->doctype->method) FREE(doc->doctype->method);
+#define DOCINFO_FREE(item) if (doc->doctype->item) FREE(doc->doctype->item)
+        DOCINFO_FREE(systemId);
+        DOCINFO_FREE(publicId);
+        DOCINFO_FREE(internalSubset);
+        DOCINFO_FREE(encoding);
+        DOCINFO_FREE(mediaType);
+        DOCINFO_FREE(method);
+        
         FREE((char*) doc->doctype);
     }
 
