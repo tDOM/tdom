@@ -599,9 +599,6 @@ void tcldom_createNodeObj (
     NODE_CMD(objCmdName, node);
 
     if (TSD(dontCreateObjCommands) == 0) {
-        if (node->nodeFlags & VISIBLE_IN_TCL) {
-            return;
-        }
         DBG(fprintf(stderr,"--> creating node %s\n", objCmdName));
         
         Tcl_CreateObjCommand(interp, objCmdName,
