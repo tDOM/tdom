@@ -5,6 +5,7 @@
 # command interface ([$nodeObj method ...]).
 #
 #    domNode-1.*:  domNode command syntax
+#    domNode-2.*:  selectNodes
 #    domNode-3.*:  documentElement
 #    domNode-4.*:  setAttributeNS
 #    domNode-5.*:  removeChild
@@ -41,6 +42,7 @@
 #    domNode-36.*: nodeName
 #    domNode-37.*: baseURI
 #    domNode-38.*: toXPath
+#    domNode-39.*: text
 #    domNode-999.* Misc Tests 
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
@@ -79,6 +81,65 @@ test domNode-1.4 {rename of domNodeObj cmd} {knownBug} {
     catch {my_domNode nodeName} errMsg
     lappend result $errMsg
 } {1 0}    
+
+set doc [dom parse {<root xmlns="rootdefaultNS">
+    <elem1 xmlns="elem1NS"><elem11/></elem1>
+    <elem2 xmlns="elem2NS"/>
+    </root>}]
+set root [$doc documentElement]
+
+test domNode-2.1 {selectNodes - -namespace option: syntax} {
+    set result [catch {$root selectNodes -namespaces elem1ns:elem1} errMsg]
+    lappend result $errMsg
+} {1 {The "-namespaces" option requires a 'prefix namespace' pairs list as argument}}
+
+test domNode-2.2 {selectNodes - -namespace option} {
+    set result [$root selectNodes -namespaces {} elem1]
+} {}
+
+test domNode-2.3 {selectNodes - -namespaces option} {
+    set node [$root selectNodes -namespaces {my elem1NS} my:elem1]
+    set result [list]
+    lappend result [$node localName] [$node namespaceURI]
+} {elem1 elem1NS}
+
+test domNode-2.4 {selectNodes - -namespaces option} {
+    set node [$root selectNodes -namespaces {my elem1NS my elem2NS} my:*]
+    set result [list]
+    lappend result [$node localName] [$node namespaceURI]
+} {elem1 elem1NS}
+
+test domNode-2.5 {selectNodes - -namespaces option} {
+    set nsDef [list this elem2NS same elem2NS]
+    set node [$root selectNodes -namespaces $nsDef {this:*|same:*}]
+    set result [llength $node]
+    lappend result [$node localName] [$node namespaceURI]
+} {1 elem2 elem2NS}    
+    
+test domNode-2.6 {selectNodes - -namespaces option} {
+    set nsDef1 [list foo elem2NS bar elem2NS]
+    set nsDef2 [list this elem2NS same elem2NS]
+    set node [$root selectNodes -namespaces $nsDef1 \
+                  -namespaces $nsDef2 {this:*|same:*}]
+    set result [llength $node]
+    lappend result [$node localName] [$node namespaceURI]
+} {1 elem2 elem2NS}    
+
+test domNode-2.7 {selectNodes - -namespaces option} {
+    set result [catch {$root selectNodes -namespaces elem1ns:elem1 typevar} errMsg]
+    lappend result $errMsg
+} {1 {The "-namespaces" option requires a 'prefix namespace' pairs list as argument}}
+
+test domNode-2.8 {selectNodes - -namespaces option} {
+    set nsDef1 [list foo elem2NS bar elem2NS]
+    set nsDef2 [list this elem2NS same elem2NS]
+    set node [$root selectNodes -namespaces $nsDef1 \
+                  -namespaces $nsDef2 {this:*|same:*} typevar]
+    set result [llength $node]
+    lappend result [$node localName] [$node namespaceURI] $typevar
+} {1 elem2 elem2NS nodes}    
+    
+$doc delete
 
 test domNode-3.1 {repetitived documentElement with objVar, then delete} {
     dom createDocument "root" doc 
@@ -3043,6 +3104,14 @@ test domNode-38.2 {toXPath - top level comment} {
     $doc delete
     set result
 } [list {/comment()[1]} {/comment()[2]} {/comment()[3]}]
+
+test domNode-39.1 {text} {
+     set doc [dom parse {<root>text <b>bold</b> more text</root>}]
+     $doc documentElement root
+     set result [$root text]
+     $doc delete
+     set result
+} {text  more text}
 
 test domNode-999.1 {move nodes from one doc to another} {
     set doc1 [dom parse {<root/>}]
