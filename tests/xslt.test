@@ -12,6 +12,7 @@
 #    xslt-4.*: xslt transformations on modified/created from the scratch docs
 #    xslt-5.*: xslt document()
 #    xslt-6.*: xsl:output
+#    xslt-7.*: tests related to the created result doc
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -640,6 +641,130 @@ test xslt-6.1 {xsl:output} {
     $xmldoc delete
     set result
 } {1 0 ISO-8859-1 text/foo 1 text}
+
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      xmlns:my="http://my.uri">
+      
+    <xsl:template match="/">
+      <out>
+        <my:element/>
+      </out>
+    </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-7.1 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set nodes [$resultDoc getElementsByTagNameNS "http://my.uri" element]
+    set result ""
+    foreach node $nodes {
+        lappend result [$node nodeName]
+    }
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {my:element}
+
+test xslt-7.2 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {<out xmlns:my="http://my.uri"><my:element/></out>}
+
+test xslt-7.3 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    $resultDoc documentElement root
+    set my:element [$root firstChild]
+    set result [${my:element} namespaceURI]
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {http://my.uri}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      xmlns:my="http://my.uri">
+      
+    <xsl:template match="/">
+      <out xmlns="out.ns">
+        <element xmlns=""/>
+      </out>
+    </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-7.4 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set nodes [$resultDoc getElementsByTagNameNS "" element]
+    set result ""
+    foreach node $nodes {
+        lappend result [$node nodeName]
+    }
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {element}
+
+test xslt-7.5 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set nodes [$resultDoc getElementsByTagName element]
+    set result ""
+    foreach node $nodes {
+        lappend result [$node nodeName]
+    }
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {element}
+
+set xslt {
+    <xsl:stylesheet
+      version="1.0" 
+      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+      xmlns:my="http://my.uri">
+      
+    <xsl:template match="/">
+      <out>
+        <xsl:element name="element" namespace="element.uri"/>
+      </out>
+    </xsl:template>
+    </xsl:stylesheet>}
+
+test xslt-7.6 {namespaces in the result doc} {
+    dom parse <dontMatter/> xmldoc
+    dom parse $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set nodes [$resultDoc getElementsByTagNameNS "element.uri" *]
+    set result ""
+    foreach node $nodes {
+        lappend result [$node nodeName]
+    }
+    $resultDoc delete
+    $xmldoc delete
+    $xsltdoc delete
+    set result
+} {element}
 
 # cleanup
 ::tcltest::cleanupTests
