@@ -1058,9 +1058,10 @@ TclExpatConfigure (interp, expat, objc, objv)
 
       case EXPAT_BASE:			/* -base */
 
-	if (XML_SetBase(expat->parser, Tcl_GetStringFromObj(objPtr[1],NULL)) == 0) {
-	  Tcl_SetResult(interp, "unable to set base URL", NULL);
-          return TCL_ERROR;
+	if (XML_SetBase(expat->parser, Tcl_GetStringFromObj(objPtr[1],NULL))
+            == 0) {
+            Tcl_SetResult(interp, "unable to set base URL", NULL);
+            return TCL_ERROR;
 	}
 	break;
 
@@ -1073,11 +1074,14 @@ TclExpatConfigure (interp, expat, objc, objv)
 
 	activeTclHandlerSet->elementstartcommand = objPtr[1];
 	Tcl_IncrRefCount(activeTclHandlerSet->elementstartcommand);
-        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL), &cmdInfo);
+        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL),
+                                 &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
-            DBG(fprintf(stderr, "cmdInfo.objProc=%x \n",  (unsigned int)cmdInfo.objProc);)
+            DBG(fprintf(stderr, "cmdInfo.objProc=%x \n", 
+                        (unsigned int)cmdInfo.objProc);)
             activeTclHandlerSet->elementstartObjProc = cmdInfo.objProc;
-            activeTclHandlerSet->elementstartclientData = cmdInfo.objClientData;
+            activeTclHandlerSet->elementstartclientData 
+                = cmdInfo.objClientData;
         } else {
             Tcl_SetResult(interp, "couldn't set byte compiled callback", NULL);
             return TCL_ERROR;
@@ -1093,7 +1097,8 @@ TclExpatConfigure (interp, expat, objc, objv)
 
 	activeTclHandlerSet->elementendcommand = objPtr[1];
 	Tcl_IncrRefCount(activeTclHandlerSet->elementendcommand);
-        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL), &cmdInfo);
+        rc = Tcl_GetCommandInfo (interp, Tcl_GetStringFromObj(objPtr[1],NULL),
+                                 &cmdInfo);
         if (rc && cmdInfo.isNativeObjectProc) {
             activeTclHandlerSet->elementendObjProc = cmdInfo.objProc;
             activeTclHandlerSet->elementendclientData = cmdInfo.objClientData;
@@ -2623,7 +2628,7 @@ TclGenExpatUnknownEncodingHandler(encodingHandlerData, name, info)
   TclExpatDispatchPCDATA(expat);
 
   if (expat->status != TCL_OK) {
-      return 0;
+      return 1;
   }
 
   if (expat->firstTclHandlerSet) {
@@ -2926,9 +2931,9 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
   activeCHandlerSet = expat->firstCHandlerSet;
   while (activeCHandlerSet) {
       if (activeCHandlerSet->externalentitycommand) {
-          if (activeCHandlerSet->externalentitycommand (activeCHandlerSet->userData,
-                                                    openEntityNames, base,
-                                                    systemId, publicId)) {
+          if (activeCHandlerSet->externalentitycommand (
+              activeCHandlerSet->userData, openEntityNames, base, systemId,
+              publicId)) {
               return 1;
           }
       }
@@ -3059,7 +3064,7 @@ TclGenExpatNotStandaloneHandler(userData)
   TclExpatDispatchPCDATA(expat);
 
   if (expat->status != TCL_OK) {
-      return 0;
+      return 1;
   }
 
   activeTclHandlerSet = expat->firstTclHandlerSet;
