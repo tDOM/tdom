@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80ab580">NAME</a> · <a href="#SECTid80ab5f8">SYNOPSIS</a> · <a href="#SECTid80ab6c0">DESCRIPTION </a> · <a href="#SECTid80adda8">KEYWORDS</a>
+<a href="#SECTid80aca88">NAME</a> · <a href="#SECTid80acb00">SYNOPSIS</a> · <a href="#SECTid80acbc8">DESCRIPTION </a> · <a href="#SECTid80af2d8">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid80ab580">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid80aca88">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid80ab5f8">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid80acb00">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid80ab6c0">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid80acbc8">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -132,7 +132,9 @@ and "channel". The second element of the list has to be the (absolute) base URI
 of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
-"channel".</dd>
+"channel". Note that if the script returns a tcl channel, it will not be closed
+by the processor.  It must be closed separately if it is no longer
+required.</dd>
               
 
               
@@ -344,7 +346,9 @@ returns the current mode. This method is an experimental interface.</dd>
 <b class="cmd">dom</b> <b class="method">isName</b> <i class="m">name</i>
 </dt>
           <dd>Returns 1, if <i class="m">name</i> is a valid XML Name according to
-production 5 of the <a href="http://www.w3.org/TR/2000/REC-xml-20001006.html">XML 1.0</a> recommendation. Otherwise it returns 0.</dd>
+production 5 of the <a href="http://www.w3.org/TR/2004/REC-xml-20040204/#NT-NameChar">XML
+            1.0</a> recommendation. This means, that <i class="m">name</i> is a valid
+          XML element or attribute name. Otherwise it returns 0.</dd>
         
 
         
@@ -416,11 +420,11 @@ recommendation. Otherwise it returns 0.</dd>
 
       </dl>
 
-  <h2><a name="SECTid80adda8">KEYWORDS</a></h2><p class="keywords">
-<a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-Document">Document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
+  <h2><a name="SECTid80af2d8">KEYWORDS</a></h2><p class="keywords">
+<a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">
-<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
+<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

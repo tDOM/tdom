@@ -273,7 +273,9 @@ and "channel". The second element of the list has to be the (absolute) base URI
 of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
-"channel".
+"channel". Note that if the script returns a tcl channel, it will not be closed
+by the processor.  It must be closed separately if it is no longer
+required.
 .IP "\fB-useForeignDTD  \fI<boolean>\fP\fR"
 If <boolean> is true and the document does not have
 an external subset, the parser will call the -externalentitycommand script with
@@ -450,7 +452,9 @@ returns the current mode. This method is an experimental interface.
 .TP
 \&\fB\fBdom\fP \fBisName\fP \fIname\fB
 \&\fRReturns 1, if \fIname\fR is a valid XML Name according to
-production 5 of the XML 1.0 recommendation. Otherwise it returns 0.
+production 5 of the XML
+1.0 recommendation. This means, that \fIname\fR is a valid
+XML element or attribute name. Otherwise it returns 0.
 .TP
 \&\fB\fBdom\fP \fBisPIName\fP \fIname\fB
 \&\fRReturns 1, if \fIname\fR is a valid XML processing instruction
@@ -487,4 +491,4 @@ recommendation. Otherwise it returns 0.
 valid according to production 16 of the XML 1.0
 recommendation. Otherwise it returns 0.
 .SH KEYWORDS
-XML, DOM, Document, node, parsing
+XML, DOM, document, node, parsing
