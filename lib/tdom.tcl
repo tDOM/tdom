@@ -477,9 +477,10 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
         count -
         current -
         document -
-        element-avaliable -
+        element-available -
         false -
         floor -
+        format-number -
         generate-id -
         id -
         key -
@@ -505,9 +506,6 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
         unparsed-entity-uri {
             return [list bool true]
         }
-        format-number {
-            return [list bool false]
-        }
         default {
             set TclXpathFuncs [info procs ::dom::xpathFunc::*]
             if {[lsearch -exact $TclXpathFuncs $str] != -1} {
@@ -520,55 +518,60 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
 }
 
 #----------------------------------------------------------------------------
-#   element-avaliable
+#   element-available
 #
+#   This is not strictly correct. The XSLT namespace may be bound
+#   to another prefix (and the prefix 'xsl' may be bound to another
+#   namespace). Since the expression context isn't available at the
+#   moment at tcl coded XPath functions, this couldn't be done better
+#   than this "works in the 'normal' cases" version.
 #----------------------------------------------------------------------------
-proc ::dom::xpathFunc::element-avaliable { ctxNode pos
+proc ::dom::xpathFunc::element-available { ctxNode pos
                                             nodeListType nodeList args} {
 
     if {[llength $args] != 2} {
-        error "element-avaliable(): wrong # of args!"
+        error "element-available(): wrong # of args!"
     }
     foreach { arg1Typ arg1Value } $args break
     set str [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value ]
     switch $str {
-        stylesheet -
-        transform -
-        include -
-        import -
-        strip-space -
-        preserve-space -
-        template -
-        apply-templates -
-        apply-imports -
-        call-template -
-        element -
-        attribute -
-        attribute-set -
-        text -
-        processing-instruction -
-        comment -
-        copy -
-        value-of -
-        number -
-        for-each -
-        if -
-        choose -
-        when -
-        otherwise -
-        sort -
-        variable -
-        param -
-        copy-of -
-        with-param -
-        key -
-        message {
+        xsl:stylesheet -
+        xsl:transform -
+        xsl:include -
+        xsl:import -
+        xsl:strip-space -
+        xsl:preserve-space -
+        xsl:template -
+        xsl:apply-templates -
+        xsl:apply-imports -
+        xsl:call-template -
+        xsl:element -
+        xsl:attribute -
+        xsl:attribute-set -
+        xsl:text -
+        xsl:processing-instruction -
+        xsl:comment -
+        xsl:copy -
+        xsl:value-of -
+        xsl:number -
+        xsl:for-each -
+        xsl:if -
+        xsl:choose -
+        xsl:when -
+        xsl:otherwise -
+        xsl:sort -
+        xsl:variable -
+        xsl:param -
+        xsl:copy-of -
+        xsl:with-param -
+        xsl:key -
+        xsl:message -
+        xsl:decimal-format -
+        xsl:namespace-alias -
+        xsl:fallback {
             return [list bool true]
         }
-        decimal-format -
-        output -
-        namespace-alias -
-        fallback -
+        xsl:output -
         default {
             return [list bool false]
         }
@@ -578,6 +581,11 @@ proc ::dom::xpathFunc::element-avaliable { ctxNode pos
 #----------------------------------------------------------------------------
 #   system-property
 #
+#   This is not strictly correct. The XSLT namespace may be bound
+#   to another prefix (and the prefix 'xsl' may be bound to another
+#   namespace). Since the expression context isn't available at the
+#   moment at tcl coded XPath functions, this couldn't be done better
+#   than this "works in the 'normal' cases" version.
 #----------------------------------------------------------------------------
 proc ::dom::xpathFunc::system-property { ctxNode pos
                                          nodeListType nodeList args } {
