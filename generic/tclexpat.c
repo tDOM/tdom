@@ -92,7 +92,7 @@
 typedef enum {
     EXPAT_INPUT_STRING,
     EXPAT_INPUT_CHANNEL,
-    EXPAT_INPUT_FILENAME,
+    EXPAT_INPUT_FILENAME
 } TclExpat_InputType;
 
 
