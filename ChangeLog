@@ -1,3 +1,18 @@
+--- Release 0.7.6, 24. Mar. 2003 ---
+
+2003-03-22  Rolf Ade  <rolf@pointsman.de>
+
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h
+        * mac/Prefix/tncPrefix.h
+        * mac/Prefix/tncPrefix_OSX.h
+        * mac/tDOM_OSX.prj.xml: Final tweaking for 0.7.6.
+
+        * expat/VERSION
+        * expat/expat.h: Updated to an after 1.95.6 version, which
+          fixes the problem, that some compilers had with the 1.95.6
+          version.
+
 2003-03-22  Rolf Ade  <rolf@pointsman.de>
 
         * README
