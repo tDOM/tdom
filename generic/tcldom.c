@@ -2496,7 +2496,7 @@ static int serializeAsXML (
     Tcl_Obj    *CONST objv[]
 )
 {
-    char       *option, *channelId;
+    char       *channelId;
     int         indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
     int         optionIndex;
     Tcl_Obj    *resultPtr;
@@ -2703,7 +2703,7 @@ static int applyXSLT (
     Tcl_Obj     *CONST objv[]
     )
 {
-    char          *str, *usage, **parameters = NULL, *errMsg;
+    char          *usage, **parameters = NULL, *errMsg;
     Tcl_Obj       *objPtr, *localListPtr = (Tcl_Obj *)NULL;
     int            i, result, length, optionIndex;
     int            ignoreUndeclaredParameters = 0;
