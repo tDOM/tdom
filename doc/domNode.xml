@@ -305,7 +305,7 @@ node.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>namespaceURI</method></command>
+        <command><method>prefix</method></command>
         <desc> ...todo...  Returns the localName from the tag name of the given
 node.</desc>
       </commanddef>
