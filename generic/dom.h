@@ -37,6 +37,7 @@
 #define __DOM_H__
 
 #include <tcl.h>
+#include <ctype.h>
 #include <expat.h>
 #include <utf8conv.h>
 #include <domalloc.h>
@@ -78,6 +79,14 @@
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
 # define CONST84
+#endif
+
+/*
+ * Starting with Tcl 8.2 the Tcl_Panic() is defined properly
+ * over the stubs table.
+ */
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION < 2)
+# define Tcl_Panic panic
 #endif
 
 /*

@@ -992,7 +992,7 @@ static domDocument * tcldom_getDocumentFromName (
             tabDoc = (domDocument*)Tcl_GetHashValue(entryPtr);
             Tcl_MutexUnlock(&tableMutex);
             if (doc != tabDoc) {
-                panic("document mismatch; doc=%x, in table=%x\n", doc, tabDoc);
+                Tcl_Panic("document mismatch; doc=%x, in table=%x\n", doc, tabDoc);
             }
         }
     )
