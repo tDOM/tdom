@@ -1,0 +1,59 @@
+
+
+test xslt-1.1 {unicode chars outside of US-ASCII in var name} {
+     set xml [dom parse {<root/>}]
+     set xslt [dom parse [tDOM::xmlReadFile data/xslt_1.xsl]]
+     set xmlroot [$xml documentElement]
+     $xmlroot xslt $xslt resultDoc
+     set resultroot [$resultDoc documentElement]
+     set result [$resultroot asXML]
+     $xml delete
+     $xslt delete
+     $resultDoc delete
+     set result
+} {foo}
+
+
+test xslt-1.2 {xpath parse real number} {
+     set xml [dom parse {<root/>}]
+     set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:template match="/">
+      <xsl:value-of select=".12345"/>
+  </xsl:template>
+</xsl:stylesheet>}]
+     set xmlroot [$xml documentElement]
+     $xmlroot xslt $xslt resultDoc
+     set resultroot [$resultDoc documentElement]
+     set result [$resultroot asXML]
+     $xml delete
+     $xslt delete
+     $resultDoc delete
+     set result
+} {0.12345}
+
+test xslt-1.2 {xpath parse real number} {
+     set xml [dom parse {<root/>}]
+     set xslt [dom parse {<xsl:stylesheet 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  version="1.0">
+  <xsl:template match="/">
+      <xsl:value-of select="-.12345"/>
+  </xsl:template>
+</xsl:stylesheet>}]
+     set xmlroot [$xml documentElement]
+     $xmlroot xslt $xslt resultDoc
+     set resultroot [$resultDoc documentElement]
+     set result [$resultroot asXML]
+     $xml delete
+     $xslt delete
+     $resultDoc delete
+     set result
+} {-0.12345}
+     
+
+
+# cleanup
+::tcltest::cleanupTests
+return

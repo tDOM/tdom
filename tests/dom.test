@@ -1,0 +1,10 @@
+
+
+test dom-1.1 {try to create Document with root node name not a NCNAME} {
+    catch {dom createDocument "root node"}
+} {1}
+
+
+# cleanup
+::tcltest::cleanupTests
+return
