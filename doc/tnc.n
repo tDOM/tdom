@@ -206,7 +206,7 @@ You cannot validate XML documents with standalone="yes" in the XML
 Declaration
 .PP
 Violations of the validity constraints Proper Group/PE Nesting and
-Proper Conditional Section/PE Nesting are not detected. The could only happen
+Proper Conditional Section/PE Nesting are not detected. They could only happen
 inside a invalid DTD, not in the content of a document.
 .SH KEYWORDS
 Validation
