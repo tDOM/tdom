@@ -44,7 +44,6 @@ if {[lsearch [namespace children] ::tdom] == -1} {
     source [file join [file dir [info script]] ../lib tdom.tcl]
 }
 
-
 # Argument check
 if {[llength $argv] != 2 && [llength $argv] != 3} {
     puts stderr "usage: $argv0 <xml-file> <xslt-file> \
@@ -98,7 +97,7 @@ switch $outputOpt {
     asText -
     text {
         set resultRoot [$resultDoc documentElement]
-        puts [$resultRoot nodeValue]
+        puts [$resultDoc asText]
     }
     default {
         puts stderr "Unknown output method '$outputOpt'!"
