@@ -272,6 +272,13 @@ of the external entity to be parsed.  The third element of the list are data,
 either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
 "channel".
+.IP "\fB-useForeignDTD  \fI<boolen>\fP\fR"
+If <boolen> is true and the document does not have
+an external subset, the parser will call the -externalentitycommand script with
+empty values for the systemId and publicID arguments. Pleace notice, that, if
+the document also doesn't have an internal subset, the
+-startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
+called.
 .PP
 .RE
 .TP

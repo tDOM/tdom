@@ -133,6 +133,18 @@ either the already read data out of the external entity as string in the case
 of type "string", or the name of a tcl channel, in the case of type
 "channel".</desc>
               </optdef>
+
+              <optdef>
+                <optname>-useForeignDTD</optname>
+                <optarg>&lt;boolen&gt;</optarg>
+                <desc>If &lt;boolen&gt; is true and the document does not have
+an external subset, the parser will call the -externalentitycommand script with
+empty values for the systemId and publicID arguments. Pleace notice, that, if
+the document also doesn't have an internal subset, the
+-startdoctypedeclcommand and -enddoctypedeclcommand scripts, if set, are not
+called.</desc>
+              </optdef>
+
             </optlist>
 <p/>
 </desc>

@@ -53,6 +53,7 @@ namespace eval ::dom {
 
 namespace eval ::tDOM { 
     variable extRefHandlerDebug 0
+    variable useForeignDTD ""
 }
 
 #----------------------------------------------------------------------------
@@ -848,11 +849,21 @@ proc tDOM::xmlReadFile {filename {encodingString {}}} {
 if {![catch {package require uri}]} {
     proc tDOM::extRefHandler {base systemId publicId} {
         variable extRefHandlerDebug
+        variable useForeignDTD
+
         if {$extRefHandlerDebug} {
             puts stderr "tDOM::extRefHandler called with:"
             puts stderr "\tbase:     '$base'"
             puts stderr "\tsystemId: '$systemId'"
             puts stderr "\tpublicId: '$publicId'"
+        }
+        if {$systemId == ""} {
+            if {$useForeignDTD != ""} {
+                set systemId $useForeignDTD
+            } else {
+                return -code error -errorinfo "::tDOM::useForeignDTD does\
+                        not point to the foreign DTD"
+            }
         }
         set absolutURI [uri::resolve $base $systemId]
         array set uriData [uri::split $absolutURI]

@@ -1,25 +1,25 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode925">DESCRIPTION</a> · <a href="#SECTnode949">COMMAND OPTIONS</a> · <a href="#SECTnode1438"> COMMAND METHODS </a> · <a href="#SECTnode1637">Callback Command Return Codes</a> · <a href="#SECTnode1655">SEE ALSO</a> · <a href="#SECTnode1664">KEYWORDS</a>
+<a href="#SECTid883">NAME</a> · <a href="#SECTid894">SYNOPSIS</a> · <a href="#SECTid925">DESCRIPTION</a> · <a href="#SECTid949">COMMAND OPTIONS</a> · <a href="#SECTid1450"> COMMAND METHODS </a> · <a href="#SECTid1649">Callback Command Return Codes</a> · <a href="#SECTid1667">SEE ALSO</a> · <a href="#SECTid1676">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTnode894">SYNOPSIS</a></h2><pre class="syntax">
+    <h2><a name="SECTid894">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require tdom</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml::parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-    <h2><a name="SECTnode925">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTid925">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
@@ -28,15 +28,15 @@ the associated structures in the document being parsed.  A start tag is an
 example of the kind of structures for which you may register a handler
 script.</p><p>The parsers do not validate the XML document. They do parse the internal DTD
 and, at request, external DTD and external entities, if you resolve the
-identifier of the external entities with the -externalentitycommand (see
+identifier of the external entities with the -externalentitycommand script (see
 there).</p><p>Additionly, the Tcl extension code that implements this command provides an
 API for adding C level coded handlers. Up to now, there exists the parser
-extension command &quot;tdom&quot;. The handler set installed by this extension build an
-in memory &quot;tDOM&quot; DOM tree, while the parser is parsing the input.</p><p>It is possible to register an arbitrary amount of different handler scripts
+extension command "tdom". The handler set installed by this extension build an
+in memory "tDOM" DOM tree, while the parser is parsing the input.</p><p>It is possible to register an arbitrary amount of different handler scripts
 and C level handlers for most of the events. If the event occurs, the are
 called in turn.</p>
 
-    <h2><a name="SECTnode949">COMMAND OPTIONS</a></h2><dl class="optlist">
+    <h2><a name="SECTid949">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -56,17 +56,17 @@ command. You can't enable (nor disable) namespace parsing with
 
           <dd>
 <p>This option indicates whether the document data next
-presented to the parse method is the final part of the document. A value of &quot;0&quot;
-indicates that more data is expected. A value of &quot;1&quot; indicates that no more is
-expected.  The default value is &quot;1&quot;.</p>
+presented to the parse method is the final part of the document. A value of "0"
+indicates that more data is expected. A value of "1" indicates that no more is
+expected.  The default value is "1".</p>
 
-<p>If this option is set to &quot;0&quot; then the parser will not report certain errors
+<p>If this option is set to "0" then the parser will not report certain errors
 if the XML data is not well-formed upon end of input, such as unclosed or
 unbalanced start or end tags. Instead some data may be saved by the parser
 until the next call to the parse method, thus delaying the reporting of some of
 the data.</p>
 
-<p>If this option is set to &quot;1&quot; then documents which are not well-formed upon
+<p>If this option is set to "1" then documents which are not well-formed upon
 end of input will generate an error.</p>
 </dd>
         
@@ -97,12 +97,12 @@ for passing to the array set Tcl command.</p>
 
 <p>Example:</p>
 <pre class="example">proc HandleStart {name attlist} {
-    puts stderr &quot;Element start ==&gt; $name has attributes $attlist&quot;
+    puts stderr "Element start ==&gt; $name has attributes $attlist"
 }
 
 $parser configure -elementstartcommand HandleStart
 
-$parser parse {&lt;test id=&quot;123&quot;&gt;&lt;/test&gt;}
+$parser parse {&lt;test id="123"&gt;&lt;/test&gt;}
 </pre>
 
 <p>This would result in the following command being invoked:</p>
@@ -126,12 +126,12 @@ indicate whether it is an empty element. See the description of the
 
 <p>Example: </p>
 <pre class="example">proc HandleEnd {name} {
-    puts stderr &quot;Element end ==&gt; $name&quot;
+    puts stderr "Element end ==&gt; $name"
 }
 
 $parser configure -elementendcommand HandleEnd
 
-$parser parse {&lt;test id=&quot;123&quot;&gt;&lt;/test&gt;}
+$parser parse {&lt;test id="123"&gt;&lt;/test&gt;}
 </pre>
 
 <p>This would result in the following command being invoked:</p>
@@ -161,7 +161,7 @@ from other features.</p>
 <p>Example: </p>
 
 <pre class="example">proc HandleText {data} {
-    puts stderr &quot;Character data ==&gt; $data&quot;
+    puts stderr "Character data ==&gt; $data"
 }
 
 $parser configure -characterdatacommand HandleText
@@ -190,7 +190,7 @@ followed by two arguments: the PI target and the PI data.</p>
 <p>Example: </p>
 
 <pre class="example">proc HandlePI {target data} {
-    puts stderr &quot;Processing instruction ==&gt; $target $data&quot;
+    puts stderr "Processing instruction ==&gt; $target $data"
 }
 
 $parser configure -processinginstructioncommand HandlePI
@@ -236,13 +236,13 @@ may be the empty list.</p>
 <p>This handler script has to return a tcl list consisting of three
 elements. The first element of this list signals, how the external entity is
 returned to the processor. At the moment, the three allowed types are
-&quot;string&quot;, &quot;channel&quot; and &quot;filename&quot;. The second
+"string", "channel" and "filename". The second
 element of the list has to be the (absolute) base URI of the external entity to
 be parsed.  The third element of the list are data, either the already read
 data out of the external entity as string in the case of type
-&quot;string&quot;, or the name of a tcl channel, in the case of type
-&quot;channel&quot;, or the path to the external entity to be read in case of
-type &quot;filename&quot;. Behind the scene, the external entity referenced by
+"string", or the name of a tcl channel, in the case of type
+"channel", or the path to the external entity to be read in case of
+type "filename". Behind the scene, the external entity referenced by
 the returned Tcl channel, string or file name will be parsed with an expat
 external entity parser with the same handler sets as the main parser. If
 parsing of the external entity fails, the whole parsing is stopped with an
@@ -258,22 +258,22 @@ an error.</p>
     if {![regexp {^[a-zA-Z]+:/} $systemId]}  {
         regsub {^[a-zA-Z]+:} $base {} base
         set basedir [file dirname $base]
-        set systemId &quot;[set basedir]/[set systemId]&quot;
+        set systemId "[set basedir]/[set systemId]"
     } else {
         regsub {^[a-zA-Z]+:} $systemId systemId
     }
     if {[catch {set fd [open $systemId]}]} {
         return -code error \
-                -errorinfo &quot;Failed to open external entity $systemId&quot;
+                -errorinfo "Failed to open external entity $systemId"
     }
     return [list channel $systemId $fd]
 }
 
 set parser [expat -externalentitycommand externalEntityRefHandler \
-                  -baseurl &quot;file:///local/doc/doc.xml&quot; \
+                  -baseurl "file:///local/doc/doc.xml" \
                   -paramentityparsing notstandalone]
 $parser parse {&lt;?xml version='1.0'?&gt;
-&lt;!DOCTYPE test SYSTEM &quot;test.dtd&quot;&gt;
+&lt;!DOCTYPE test SYSTEM "test.dtd"&gt;
 &lt;test/&gt;}
 </pre>
 
@@ -285,8 +285,8 @@ externalEntityRefHandler file:///local/doc/doc.xml test.dtd {}
 
 <p>External entities are only tried to resolve via this handler script, if
 necessary. This means, external parameter entities triggers this handler only,
-if -paramentityparsing is used with argument &quot;always&quot; or if
--paramentityparsing is used with argument &quot;notstandalone&quot; and the
+if -paramentityparsing is used with argument "always" or if
+-paramentityparsing is used with argument "notstandalone" and the
 document isn't marked as standalone.</p>
             </dd>
         
@@ -310,7 +310,7 @@ document isn't marked as standalone.</p>
 namespace declarations in the document. The actual command consists of this
 option followed by two arguments: the namespace prefix and the namespace
 URI. For an xmlns attribute, prefix will be the empty list.  For an
-xmlns=&quot;&quot; attribute, uri will be the empty list. The call to the start
+xmlns="" attribute, uri will be the empty list. The call to the start
 and end element handlers occur between the calls to the start and end namespace
 declaration handlers.</p></dd>
         
@@ -344,7 +344,7 @@ the comment data.</p>
 
 <pre class="example">
 proc HandleComment {data} {
-    puts stderr &quot;Comment ==&gt; $data&quot;
+    puts stderr "Comment ==&gt; $data"
 }
 
 $parser configure -commentcommand HandleComment
@@ -368,7 +368,7 @@ HandleComment { this is &lt;obviously&gt; a comment }
 
           <dd><p>This Tcl command is called, if the document is not
 standalone (it has an external subset or a reference to a parameter entity, but
-does not have standalone=&quot;yes&quot;). It is called with no additional
+does not have standalone="yes"). It is called with no additional
 arguments.</p></dd>
         
 
@@ -404,23 +404,23 @@ declarations. The actual command consists of this option followed by two
 arguments: the name of the element and the content model. The content model arg
 is a tcl list of four elements. The first list element specifies the type of
 the XML element; the six different possible types are reported as
-&quot;MIXED&quot;, &quot;NAME&quot;, &quot;EMPTY&quot;, &quot;CHOICE&quot;,
-&quot;SEQ&quot; or &quot;ANY&quot;. The second list element reports the
-quantifier to the content model in XML Syntax (&quot;?&quot;, &quot;*&quot; or
-&quot;+&quot;) or is the empty list. If the type is &quot;MIXED&quot;, then the
-quantifier will be &quot;{}&quot;, indicating an PCDATA only element, or
-&quot;*&quot;, with the allowed elements to intermix with PCDATA as tcl list as
-the fourth argument. If the type is &quot;NAME&quot;, the name is the third
+"MIXED", "NAME", "EMPTY", "CHOICE",
+"SEQ" or "ANY". The second list element reports the
+quantifier to the content model in XML Syntax ("?", "*" or
+"+") or is the empty list. If the type is "MIXED", then the
+quantifier will be "{}", indicating an PCDATA only element, or
+"*", with the allowed elements to intermix with PCDATA as tcl list as
+the fourth argument. If the type is "NAME", the name is the third
 arg; otherwise the third argument is the empty list. If the type is
-&quot;CHOICE&quot; or &quot;SEQ&quot; the fourth argument will contain a list
-of content models build like this one. The &quot;EMPTY&quot;, &quot;ANY&quot;,
-and &quot;MIXED&quot; types will only occur at top level.</p>
+"CHOICE" or "SEQ" the fourth argument will contain a list
+of content models build like this one. The "EMPTY", "ANY",
+and "MIXED" types will only occur at top level.</p>
 
 <p>Examples:</p>
 
 <pre class="example">
 proc elDeclHandler {name content} {
-     puts &quot;$name $content&quot;
+     puts "$name $content"
 }
 
 set parser [expat -elementdeclcommand elDeclHandler]
@@ -467,14 +467,14 @@ a single Attlist declaration with multiple attributes declared will generate
 multiple calls to this handler. The arguments are the element name this
 attribute belongs to, the name of the attribute, the type of the attribute, the
 default value (may be the empty list) and a required flag. If this flag is true
-and the default value is not the empty list, then this is a &quot;#FIXED&quot;
+and the default value is not the empty list, then this is a "#FIXED"
 default.</p>
 
 <p>Example:</p>
 
 <pre class="example">
 proc attlistHandler {elname name type default isRequired} {
-    puts &quot;$elname $name $type $default $isRequired&quot;
+    puts "$elname $name $type $default $isRequired"
 }
 
 set parser [expat -attlistdeclcommand attlistHandler]
@@ -527,9 +527,9 @@ subset.  It is called with no additional arguments.</p></dd>
 </dt>
           
 
-          <dd><p>&quot;never&quot; disables expansion of parameter entities,
-&quot;always&quot; expands always and &quot;notstandalone&quot; only, if the
-document isn't &quot;standalone='no'&quot;.</p></dd>
+          <dd><p>"never" disables expansion of parameter entities,
+"always" expands always and "notstandalone" only, if the
+document isn't "standalone='no'".</p></dd>
         
         
         
@@ -578,7 +578,7 @@ whitespaces isn't reported with the
 configure options. Any option value pair following this option in the
 same call to the parser are modifying the named Tcl handler set. If
 you don't use this option, you are modifying the default Tcl handler
-set, named &quot;default&quot;.</p></dd>
+set, named "default".</p></dd>
         
 
         
@@ -597,8 +597,26 @@ parser all internal entities are silent lost for the handler sets without a
 default handler.</p>
             </dd>
         
+
+        
+          <dt>
+<b>-useForeignDTD</b> <i>&lt;boolen&gt;</i>
+</dt>
+          
+          <dd>If &lt;boolen&gt; is true and the document does not have an
+external subset, the parser will call the -externalentitycommand script with
+empty values for the systemId and publicID arguments. This option must be set,
+before the first piece of data is parsed. Setting this option, after the
+parsing has started has no effect. The default is not to use a foreign DTD. The
+default is restored, after reseting the parser. Pleace notice, that a
+-paramentityparsing value of "never" (which is the default) suppresses any call
+to the -externalentitycommand script. Pleace notice, that, if the document also
+doesn't have an internal subset, the -startdoctypedeclcommand and
+enddoctypedeclcommand scripts, if set, are not called.</dd>
+        
+
       </dl>
-    <h2><a name="SECTnode1438"> COMMAND METHODS </a></h2><dl class="commandlist">
+    <h2><a name="SECTid1450"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -714,30 +732,26 @@ document.</p></dd>
         
       </dl>
 
-    <h2><a name="SECTnode1637">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTid1649">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
-than &quot;ok&quot; or &quot;error&quot;. All callbacks may in addition return
-&quot;break&quot; or &quot;continue&quot;.</p><p>If a callback script returns an &quot;error&quot; error code then
+than "ok" or "error". All callbacks may in addition return
+"break" or "continue".</p><p>If a callback script returns an "error" error code then
 processing of the document is terminated and the error is propagated in the
-usual fashion.</p><p>If a callback script returns a &quot;break&quot; error code then all
+usual fashion.</p><p>If a callback script returns a "break" error code then all
 further processing of every handler script out of this Tcl handler set is
 suppressed for the further parsing. This does not influence any other handler
-set.</p><p>If a callback script returns a &quot;continue&quot; error code then
+set.</p><p>If a callback script returns a "continue" error code then
 processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    <h2><a name="SECTnode1655">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid1667">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTnode1664">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
-  </div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-	<a class="navaid" href="index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+    <h2><a name="SECTid1676">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+  </div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>
