@@ -27,6 +27,12 @@
 |   Portions created by Jochen Loewer are Copyright (C) 1999 - 2001
 |   Jochen Loewer. All Rights Reserved.
 |
+|   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
+|   Zoran Vasiljevic. All Rights Reserved.
+|
+|   Portions created by Rolf Ade are Copyright (C) 1999-2002
+|   Rolf Ade. All Rights Reserved.
+|
 |   Contributor(s):
 |       April00  Rolf Ade   Add support for following/preceding/
 |                           precedingSibling axis plus several
@@ -36,6 +42,14 @@
 |                           bug fixes/reports
 |
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
+|       
+|        2002    Rolf Ade   Namespace aware nodetests and NS wildcard
+|                           expr, namespace aware variables, keys and
+|                           function, made lexer utf-8 aware, node sets
+|                           could now include nodes of different types,
+|                           better IEEE 754 rules support, code
+|                           restructured, serveral optimizations and bug
+|                           fixes.
 |
 |   written by Jochen Loewer
 |   July, 1999
@@ -75,7 +89,7 @@
 #define INITIAL_SIZE     100
 
 #define ADD_TOKEN(t)  if ((l+1)>=allocated) {                                \
-                          tokens=(XPathTokens)REALLOC((char*)tokens, 2*allocated\
+                       tokens=(XPathTokens)REALLOC((char*)tokens, 2*allocated\
                                                       *sizeof(XPathToken));  \
                           allocated = allocated * 2;                         \
                       }                                                      \
@@ -139,21 +153,23 @@
 |
 \---------------------------------------------------------------------------*/
 typedef enum {
-    LPAR, RPAR, LBRACKET, RBRACKET, DOT, DOTDOT, ATTRIBUTEPREFIX, ATTRIBUTE,
-    COMMA,  COLONCOLON, LITERAL, NSPREFIX, NSWC, INTNUMBER, REALNUMBER,
-    SLASH, SLASHSLASH,
+    LPAR, RPAR, LBRACKET, RBRACKET, DOT, DOTDOT, ATTRIBUTEPREFIX,
+    ATTRIBUTE, COMMA,  COLONCOLON, LITERAL, NSPREFIX, NSWC,
+    INTNUMBER, REALNUMBER, SLASH, SLASHSLASH,
     PIPE, PLUS, MINUS, EQUAL, NOTEQ, LT, LTE, GT, GTE,
-    AND, OR, MOD, DIV, MULTIPLY, FUNCTION, VARIABLE, FQVARIABLE,
-    WCARDNAME, COMMENT, TEXT, PINSTR, NODE, AXISNAME, STAR, EOS
+    AND, OR, MOD, DIV, MULTIPLY, FUNCTION, VARIABLE,
+    FQVARIABLE, WCARDNAME, COMMENT, TEXT, PINSTR, NODE, AXISNAME, 
+    EOS
 } Token;
 
 static char *token2str[] = {
-    "LPAR", "RPAR", "LBRACKET", "RBRACKET", "DOT", "DOTDOT", "ATTRIBUTEPREFIX", "ATTRIBUTE",
-    "COMMA", "COLONCOLON", "LITERAL", "NSPREFIX", "NSWC", "INTNUMBER", "REALNUMBER",
-    "SLASH", "SLASHSLASH",
+    "LPAR", "RPAR", "LBRACKET", "RBRACKET", "DOT", "DOTDOT", "ATTRIBUTEPREFIX",
+    "ATTRIBUTE", "COMMA", "COLONCOLON", "LITERAL", "NSPREFIX", "NSWC",
+    "INTNUMBER", "REALNUMBER", "SLASH", "SLASHSLASH",
     "PIPE", "PLUS", "MINUS", "EQUAL", "NOTEQ", "LT", "LTE", "GT", "GTE",
-    "AND", "OR", "MOD", "DIV", "MULTIPLY", "FUNCTION", "VARIABLE", "FQVARIABLE",
-    "WCARDNAME", "COMMENT", "TEXT", "PI", "NODE", "AXISNAME", "STAR", "EOS"
+    "AND", "OR", "MOD", "DIV", "MULTIPLY", "FUNCTION", "VARIABLE",
+    "FQVARIABLE", "WCARDNAME", "COMMENT", "TEXT", "PI", "NODE", "AXISNAME",
+    "EOS"
 };
 
 
@@ -177,15 +193,16 @@ typedef XPathToken *XPathTokens;
 static char *astType2str[] = {
     "Int", "Real", "Mult", "Div", "Mod", "UnaryMinus", "IsNSElement",
     "IsNode", "IsComment", "IsText", "IsPI", "IsSpecificPI", "IsElement",
-    "IsFQElement", "GetVar", "GetFQVar", "Literal", "ExecFunction", "Pred", "EvalSteps",
-    "SelectRoot", "CombineSets", "Add", "Substract", "Less", "LessOrEq",
-    "Greater", "GreaterOrEq", "Equal", "NotEqual", "And", "Or", "IsNSAttr", "IsAttr",
-    "AxisAncestor", "AxisAncestorOrSelf", "AxisAttribute", "AxisChild",
+    "IsFQElement", "GetVar", "GetFQVar", "Literal", "ExecFunction", "Pred",
+    "EvalSteps", "SelectRoot", "CombineSets", "Add", "Substract", "Less",
+    "LessOrEq", "Greater", "GreaterOrEq", "Equal", "NotEqual", "And", "Or",
+    "IsNSAttr", "IsAttr", "AxisAncestor", "AxisAncestorOrSelf",
+    "AxisAttribute", "AxisChild",
     "AxisDescendant", "AxisDescendantOrSelf", "AxisFollowing",
     "AxisFollowingSibling", "AxisNamespace", "AxisParent",
     "AxisPreceding", "AxisPrecedingSilbing", "AxisSelf",
     "GetContextNode", "GetParentNode", "AxisDescendantOrSelfLit",
-    "AxisDescendantLit",
+    "AxisDescendantLit", "SlashSlash",
 
     "CombinePath", "IsRoot", "ToParent", "ToAncestors", "FillNodeList",
     "FillWithCurrentNode",
@@ -222,6 +239,11 @@ static int xpathEvalStep (ast step, domNode *ctxNode, domNode *exprContext,
                           int position, xpathResultSet *nodeList,
                           xpathCBs *cbs, xpathResultSet *result,
                           int *docOrder, char **errMsg);
+
+static int xpathEvalPredicate (ast steps, domNode *exprContext, 
+                               xpathResultSet *result, 
+                               xpathResultSet *stepResult,
+                               xpathCBs *cbs, int *docOrder, char **errMsg);
 
 /*----------------------------------------------------------------------------
 |   xpath result set functions
@@ -392,12 +414,13 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
                             i--;
                         }
                         DBG (
-                            fprintf (stderr, "attr insert, insertIndex %d\n", i+1);
+                            fprintf (stderr, "attr insert, insertIndex %d\n",
+                                     i+1);
                             fprintf (stderr, "attr to insert: %s\n",
                                      ((domAttrNode *)node)->nodeValue);
                             if (rs->nodes[i]->nodeType == ATTRIBUTE_NODE) {
                                 fprintf (stderr, "previos node is attr: %s\n",
-                                         ((domAttrNode *)rs->nodes[i])->nodeValue);
+                                    ((domAttrNode *)rs->nodes[i])->nodeValue);
                             } else {
                                 fprintf (stderr, "previos node is node: %s\n",
                                          rs->nodes[i]->nodeNumber);
@@ -427,7 +450,7 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
 
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
-                                           2 * rs->allocated * sizeof(domNode*));
+                                         2 * rs->allocated * sizeof(domNode*));
             rs->allocated = rs->allocated * 2;
         }
         if (insertIndex == rs->nr_nodes) {
@@ -458,7 +481,7 @@ void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
     } else {
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
-                                           2 * rs->allocated * sizeof(domNode*));
+                                         2 * rs->allocated * sizeof(domNode*));
             rs->allocated = rs->allocated * 2;
         }
         rs->nodes[rs->nr_nodes++] = node;
@@ -1841,7 +1864,6 @@ Production(StepPattern)
                 b = New1( FillNodeList, aCopy);
                 b->intvalue = savedmax;
                 Append( a, b);
-/*                  Append( a, New1( FillNodeList, aCopy)); */
             }
             Append (a, c);
         }
@@ -3529,6 +3551,7 @@ static int xpathEvalStep (
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;
     char            *localName, prefix[MAX_PREFIX_LEN];
+    astType          savedAstType;
 
     if (result->type == EmptyResult) useFastAdd = 1;
     else useFastAdd = 0;
@@ -3566,9 +3589,91 @@ static int xpathEvalStep (
         )
         break;
 
+    case SlashSlash:
+        if (step->intvalue) predLimit = 1;
+        else predLimit = 0;
+        predLimit = 0;
+        xpathRSInit (&tResult);
+        node = ctxNode->firstChild;
+        while (node) {
+            if (node->nodeType == ELEMENT_NODE) {
+                rc = xpathEvalStep (step, node, exprContext, position,
+                                    nodeList, cbs, result, docOrder, errMsg);
+                if (rc) {
+                    xpathRSFree (&tResult);
+                    return rc;
+                }
+            }
+            if (xpathNodeTest(node, exprContext, step)) {
+                rsAddNodeFast( &tResult, node);
+                if (predLimit) {
+                    count++;
+                    if (count >= step->intvalue) break;
+                }
+            }
+            node = node->nextSibling;
+        }
+        if (node) {
+            node = node->nextSibling;
+            while (node) {
+                if (node->nodeType == ELEMENT_NODE) {
+                    rc = xpathEvalStep (step, node, exprContext, position,
+                                        nodeList, cbs, result, docOrder,
+                                        errMsg);
+                    if (rc) {
+                        xpathRSFree (&tResult);
+                        return rc;
+                    }
+                }
+                node = node->nextSibling;
+            }
+        }
+        rc = xpathEvalPredicate (step->next, exprContext, result, &tResult,
+                                  cbs, docOrder, errMsg);
+        xpathRSFree (&tResult);
+        CHECK_RC;
+        break;
+
     case AxisDescendant:
-    case AxisDescendantLit:
     case AxisDescendantOrSelf:
+        if (step->next && step->next->type == Pred) {
+            *docOrder = 1;
+            if (step->intvalue
+                && (step->type == AxisDescendantLit 
+                    || step->type == AxisDescendantOrSelfLit)) predLimit = 1;
+            else predLimit = 0;
+            if (ctxNode->nodeType == ATTRIBUTE_NODE
+                && (
+                    step->type == AxisDescendantOrSelf
+                    || step->type == AxisDescendantOrSelfLit)) {
+                if (xpathNodeTest(ctxNode, exprContext, step))
+                    rsAddNode( result, ctxNode);
+                break;
+            }
+            if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
+            if (step->type == AxisDescendantOrSelf
+                || step->type == AxisDescendantOrSelfLit) {
+                if (xpathNodeTest(ctxNode, exprContext, step)) {
+                    xpathRSInit (&tResult);
+                    rsAddNodeFast( &tResult, ctxNode);
+                    rc = xpathEvalPredicate (step->next, exprContext, result,
+                                              &tResult, cbs, docOrder, errMsg);
+                    xpathRSFree (&tResult);
+                    CHECK_RC;
+                }
+            }
+            savedAstType = step->type;
+            step->type = SlashSlash;
+            rc = xpathEvalStep (step, ctxNode, exprContext, position, 
+                                nodeList, cbs, result, docOrder, errMsg);
+            step->type = savedAstType;
+            CHECK_RC;
+            break;
+        }
+        /* whithout following Pred step, // is the same as 
+           AxisDescendantOrSelf, fall throu */
+
+    case AxisDescendantLit:
     case AxisDescendantOrSelfLit:
         *docOrder = 1;
         if (step->intvalue
@@ -4737,58 +4842,29 @@ static int xpathEvalStepAndPredicates (
     char              **errMsg
 )
 {
-    xpathResultSet  stepResult, tmpResult;
-    int             rc, i, j;
-    int            *done;
-    domNode        *parent;
+    xpathResultSet  stepResult;
+    int             rc;
 
-    if (steps->next && steps->next->type == Pred) {
+
+    /* For AxisDescendantOrSelf/AxisDescendant, the predicate filtering
+       is already done 'inlined' during xpathEvalStep, to do the filtering
+       "with respect to the child axis" (XPath rec. 3.3) in an efficienter
+       way, then up to now. */
+    if (   steps->next 
+        && steps->next->type == Pred
+        && steps->type != AxisDescendantOrSelf 
+        && steps->type != AxisDescendant) {
         xpathRSInit (&stepResult);
-        rc = xpathEvalStep( steps, currentNode, exprContext, currentPos, nodeList,
-                            cbs, &stepResult, docOrder, errMsg);
-        CHECK_RC;
-        /* This special handling of the // abbreviation is one of the
-           more trickier things in the xpath recommendation. 3.3 says:
-           "The Predicate filters the node-set with respect to the
-           child axis" */
-        if (steps->type == AxisDescendantOrSelf || steps->type == AxisDescendant) {
-            done = (int*)MALLOC(stepResult.nr_nodes*sizeof (int));
-            memset(done, 0, stepResult.nr_nodes*sizeof (int));
-            for (i = 0; i < stepResult.nr_nodes; i++) {
-                if (done[i]) continue;
-                xpathRSInit (&tmpResult);
-                if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) {
-                    parent = ((domAttrNode *)stepResult.nodes[i])->parentNode;
-                } else {
-                    parent = stepResult.nodes[i]->parentNode;
-                }
-                for (j = i; j < stepResult.nr_nodes; j++) {
-                    if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
-                        if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) {
-                            done[j] = 1;
-                            rsAddNodeFast (&tmpResult, stepResult.nodes[j]);
-                        }
-                    } else {
-                        if (stepResult.nodes[j]->parentNode == parent) {
-                            done[j] = 1;
-                            rsAddNodeFast (&tmpResult, stepResult.nodes[j]);
-                        }
-                    }
-                }
-                rc = xpathEvalPredicate (steps->next, exprContext, result, &tmpResult,
-                                         cbs, docOrder, errMsg);
-                CHECK_RC;
-                xpathRSFree (&tmpResult);
-            }
-            FREE((char*)done);
-        } else {
-            rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
-                                     cbs, docOrder, errMsg);
-            CHECK_RC;
+        rc = xpathEvalStep( steps, currentNode, exprContext, currentPos,
+                            nodeList, cbs, &stepResult, docOrder, errMsg);
+        if (rc) {
+            xpathRSFree (&stepResult);
+            return rc;
         }
+        rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
+                                 cbs, docOrder, errMsg);
         xpathRSFree (&stepResult);
-        sortByDocOrder (result);
-
+        CHECK_RC;
     } else {
         /* for steps not followed by a predicate immediately add to
            the final result set */
@@ -4851,8 +4927,8 @@ int xpathEvalSteps (
             xpathRSInit (result);
             for (i=0; i<nodeList->nr_nodes; i++) {
                 rc = xpathEvalStepAndPredicates (steps, nodeList,
-                                                 nodeList->nodes[i], exprContext, i,
-                                                 docOrder, cbs,
+                                                 nodeList->nodes[i],
+                                                 exprContext, i, docOrder, cbs,
                                                  result, errMsg);
                 if (rc) {
                     xpathRSFree (result);
