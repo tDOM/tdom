@@ -4,7 +4,7 @@
 #	a Tcl extension.
 #
 # Copyright (c) 1999-2000 Ajuba Solutions.
-# Copyright (c) 2002 ActiveState Corporation.
+# Copyright (c) 2002-2003 ActiveState Corporation.
 #
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
@@ -742,6 +742,14 @@ AC_DEFUN(TEA_CONFIG_CFLAGS, [
 	do64bit=yes
     fi
 
+    # Step 0.c: Cross-compiling options for Windows/CE builds?
+
+    if test "${TEA_PLATFORM}" = "windows" ; then
+	AC_MSG_CHECKING([if Windows/CE build is requested])
+	AC_ARG_ENABLE(wince,[  --enable-wince          enable Win/CE support (where applicable)], [doWince=$enableval], [doWince=no])
+	AC_MSG_RESULT($doWince)
+    fi
+
     # Step 1: set the variable "system" to hold the name and version number
     # for the system.  This can usually be done via the "uname" command, but
     # there are a few systems, like Next, where this doesn't work.
@@ -818,6 +826,53 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 		fi
 	    fi
 
+	    if test "$doWince" != "no" ; then
+		if test "$do64bit" = "yes" ; then
+		    AC_MSG_ERROR([Windows/CE and 64-bit builds incompatible])
+		fi
+		if test "$GCC" = "yes" ; then
+		    AC_MSG_ERROR([Windows/CE and GCC builds incompatible])
+		fi
+		TEA_PATH_CELIB
+		# set defaults
+		# Currently Tcl requires 300+
+		CEVERSION=300;	  # could be 211 300 301 ...
+		TARGETCPU=ARM;	  # could be ARM MIPS SH3 X86 ...
+		PLATFORM="Pocket PC 2002"
+		if test "$doWince" = "yes"; then
+		    doWince="300,ARM,ARM,Pocket PC 2002"
+		fi
+		eval `echo $doWince | awk -F "," '{ \
+		    if (length([$]1)) { printf "CEVERSION=%s\n", [$]1 }; \
+		    if (length([$]2)) { printf "TARGETCPU=%s\n", toupper([$]2) }; \
+		    if (length([$]3)) { printf "ARCH=%s\n", toupper([$]3) }; \
+		    if (length([$]4)) { printf "PLATFORM=%s\n", [$]4 }; \
+		    }'`
+		OSVERSION=WCE$CEVERSION;
+		if test "x${ARCH}" = "x" ; then
+	            ARCH=$TARGETCPU;  # could be ARM MIPS SH3 X86 X86EM ...
+		fi
+		if test "x${WCEROOT}" = "x" ; then
+		    WCEROOT="C:/Program Files/Microsoft eMbedded Tools"
+		fi
+		if test "x${SDKROOT}" = "x" ; then
+		    SDKROOT="C:/Windows CE Tools"
+		fi
+		# In order to work in the tortured autoconf environment,
+		# we need to ensure that this path has no spaces
+		WCEROOT=`cygpath -w -s "$WCEROOT" | sed -e 's!\\\!/!g'`
+		SDKROOT=`cygpath -w -s "$SDKROOT" | sed -e 's!\\\!/!g'`
+		CELIB_DIR=`cygpath -w -s "$CELIB_DIR" | sed -e 's!\\\!/!g'`
+		if test ! -d "${SDKROOT}/${OSVERSION}/${PLATFORM}/Lib/${TARGETCPU}" \
+		    -o ! -d "${WCEROOT}/EVC/${OSVERSION}/bin"; then
+		    AC_MSG_ERROR([could not find PocketPC SDK or target compiler to enable WinCE mode [$CEVERSION,$TARGETCPU,$ARCH,$PLATFORM]])
+		    doWince="no"
+		else
+		    CEINCLUDE=`cygpath -w -s "${SDKROOT}/${OSVERSION}/${PLATFORM}/include" | sed -e 's!\\\!/!g'`
+		    CELIBPATH=`cygpath -w -s "${SDKROOT}/${OSVERSION}/${PLATFORM}/Lib/${TARGETCPU}" | sed -e 's!\\\!/!g'`
+    		fi
+	    fi
+
 	    if test "$GCC" != "yes" ; then
 	        if test "${SHARED_BUILD}" = "0" ; then
 		    runtime=-MT
@@ -838,7 +893,26 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 		    export LINKBIN="${MSSDK}/bin/win64/link.exe ${lflags}"
 		    CFLAGS_DEBUG="-nologo -Zi -Od -W3 ${runtime}d"
 		    CFLAGS_OPTIMIZE="-nologo -O2 -Gs -W2 ${runtime}"
-	        else
+		elif test "$doWince" != "no" ; then
+		    if test "${TARGETCPU}" = "X86"; then
+			CC="${WCEROOT}/EVC/${OSVERSION}/bin/cl.exe -I\"${CELIB_DIR}/inc\" -I\"${CEINCLUDE}\""
+		    else
+			CC="${WCEROOT}/EVC/${OSVERSION}/bin/cl${TARGETCPU}.exe -I\"${CELIB_DIR}/inc\" -I\"${CEINCLUDE}\""
+		    fi
+		    RC="${WCEROOT}/Common/EVC/bin/rc.exe"
+		    cpulower=`echo ${TARGETCPU} | awk '{print tolower([$]0)}'`
+		    defs="${TARGETCPU} _${TARGETCPU}_ ${cpulower} _${cpulower}_ POCKET_SIZE PALM_SIZE _MT _DLL _WINDOWS"
+		    for i in $defs ; do
+			AC_DEFINE_UNQUOTED($i)
+		    done
+		    AC_DEFINE_UNQUOTED(_WIN32_WCE, $CEVERSION)
+		    AC_DEFINE_UNQUOTED(UNDER_CE, $CEVERSION)
+		    CFLAGS_DEBUG="-nologo -Zi -Od"
+		    CFLAGS_OPTIMIZE="-nologo -Ox"
+		    lflags="-MACHINE:${TARGETCPU} -LIBPATH:\"${CELIBPATH}\" -subsystem:windowsce,3.00"
+		    STLIB_LD="${WCEROOT}/EVC/${OSVERSION}/bin/lib.exe -nologo ${lflags}"
+		    LINKBIN="${WCEROOT}/EVC/${OSVERSION}/bin/link.exe ${lflags}"
+		else
 		    RC="rc"
 		    STLIB_LD="lib -nologo"
     		    LINKBIN="link -link50compat"
@@ -860,14 +934,19 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 		SHLIB_LD="${LINKBIN} -dll -nologo"
 		UNSHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}\$\{DBGX\}.lib'
 		EXTRA_CFLAGS="-YX"
+		PATHTYPE=-w
 		# For information on what debugtype is most useful, see:
 		# http://msdn.microsoft.com/library/en-us/dnvc60/html/gendepdebug.asp
 		# This essentially turns it all on.
 		LDFLAGS_DEBUG="-debug:full -debugtype:both -warn:2"
 		LDFLAGS_OPTIMIZE="-release"
-		LDFLAGS_CONSOLE="-link -subsystem:console ${lflags}"
-		LDFLAGS_WINDOW="-link -subsystem:windows ${lflags}"
-		PATHTYPE=-w
+		if test "$doWince" != "no" ; then
+		    LDFLAGS_CONSOLE="-link ${lflags}"
+		    LDFLAGS_WINDOW=${LDFLAGS_CONSOLE}
+		else
+		    LDFLAGS_CONSOLE="-link -subsystem:console ${lflags}"
+		    LDFLAGS_WINDOW="-link -subsystem:windows ${lflags}"
+		fi
 	    fi
 
 	    SHLIB_LD_LIBS='${LIBS}'
@@ -2434,6 +2513,9 @@ The PACKAGE variable must be defined by your TEA configure.in])
 	    ;;
     esac
 
+    # Check if exec_prefix is set. If not use fall back to prefix
+    if test x$exec_prefix = xNONE ; then exec_prefix=$prefix ; fi
+
     AC_SUBST(EXEEXT)
     AC_SUBST(CYGPATH)
 ])
@@ -2786,7 +2868,7 @@ AC_DEFUN(TEA_PRIVATE_TCL_HEADERS, [
 AC_DEFUN(TEA_PUBLIC_TCL_HEADERS, [
     AC_MSG_CHECKING([for Tcl public headers])
 
-    AC_ARG_WITH(tclinclude, [  --with-tclinclude      directory containing the public Tcl header files], with_tclinclude=${withval})
+    AC_ARG_WITH(tclinclude, [  --with-tclinclude       directory containing the public Tcl header files], with_tclinclude=${withval})
 
     AC_CACHE_VAL(ac_cv_c_tclh, [
 	# Use the value from --with-tclinclude, if it was given
@@ -2979,7 +3061,13 @@ AC_DEFUN(TEA_PROG_TCLSH, [
     AC_MSG_CHECKING([for tclsh])
 
     AC_CACHE_VAL(ac_cv_path_tclsh, [
-	search_path=`echo ${TCL_BIN_DIR}:${TCL_BIN_DIR}/../bin:${exec_prefix}/bin:${prefix}/bin:${PATH} | sed -e 's/:/ /g'`
+	if test "x${CELIB_DIR}" != "x" ; then
+	    # If CELIB_DIR is defined, assume Windows/CE target is requested
+	    # which means target tclsh cannot be run (cross-compile)
+	    search_path=`echo ${PATH} | sed -e 's/:/ /g'`
+	else
+	    search_path=`echo ${TCL_BIN_DIR}:${TCL_BIN_DIR}/../bin:${exec_prefix}/bin:${prefix}/bin:${PATH} | sed -e 's/:/ /g'`
+	fi
 	for dir in $search_path ; do
 	    for j in `ls -r $dir/tclsh[[8-9]]*${EXEEXT} 2> /dev/null` \
 		    `ls -r $dir/tclsh*${EXEEXT} 2> /dev/null` ; do
@@ -3022,7 +3110,13 @@ AC_DEFUN(TEA_PROG_WISH, [
     AC_MSG_CHECKING([for wish])
 
     AC_CACHE_VAL(ac_cv_path_wish, [
-	search_path=`echo ${TK_BIN_DIR}:${TK_BIN_DIR}/../bin:${TCL_BIN_DIR}:${TCL_BIN_DIR}/../bin:${exec_prefix}/bin:${prefix}/bin:${PATH} | sed -e 's/:/ /g'`
+	if test "x${CELIB_DIR}" != "x" ; then
+	    # If CELIB_DIR is defined, assume Windows/CE target is requested
+	    # which means target wish cannot be run (cross-compile)
+	    search_path=`echo ${PATH} | sed -e 's/:/ /g'`
+	else
+	    search_path=`echo ${TK_BIN_DIR}:${TK_BIN_DIR}/../bin:${TCL_BIN_DIR}:${TCL_BIN_DIR}/../bin:${exec_prefix}/bin:${prefix}/bin:${PATH} | sed -e 's/:/ /g'`
+	fi
 	for dir in $search_path ; do
 	    for j in `ls -r $dir/wish[[8-9]]*${EXEEXT} 2> /dev/null` \
 		    `ls -r $dir/wish*${EXEEXT} 2> /dev/null` ; do
@@ -3193,4 +3287,71 @@ AC_DEFUN(TEA_LOAD_CONFIG, [
     AC_SUBST($1_STUB_LIB_FILE)
     AC_SUBST($1_STUB_LIB_SPEC)
     AC_SUBST($1_STUB_LIB_PATH)
+])
+
+#------------------------------------------------------------------------
+# TEA_PATH_CELIB --
+#
+#	Locate Keuchel's celib emulation layer for targeting Win/CE
+#
+# Arguments:
+#	none
+#
+# Results:
+#
+#	Adds the following arguments to configure:
+#		--with-celib=...
+#
+#	Defines the following vars:
+#		CELIB_DIR	Full path to the directory containing
+#				the include and platform lib files
+#------------------------------------------------------------------------
+
+AC_DEFUN(TEA_PATH_CELIB, [
+    # First, look for one uninstalled.
+    # the alternative search directory is invoked by --with-celib
+
+    if test x"${no_celib}" = x ; then
+	# we reset no_celib in case something fails here
+	no_celib=true
+	AC_ARG_WITH(celib,[  --with-celib=DIR        use Windows/CE support library from DIR], with_celibconfig=${withval})
+	AC_MSG_CHECKING([for Windows/CE celib directory])
+	AC_CACHE_VAL(ac_cv_c_celibconfig,[
+	    # First check to see if --with-celibconfig was specified.
+	    if test x"${with_celibconfig}" != x ; then
+		if test -d "${with_celibconfig}/inc" ; then
+		    ac_cv_c_celibconfig=`(cd ${with_celibconfig}; pwd)`
+		else
+		    AC_MSG_ERROR([${with_celibconfig} directory doesn't contain inc directory])
+		fi
+	    fi
+
+	    # then check for a celib library
+	    if test x"${ac_cv_c_celibconfig}" = x ; then
+		for i in \
+			../celib-palm-3.0 \
+			../celib \
+			../../celib-palm-3.0 \
+			../../celib \
+			`ls -dr ../celib-*3.[[0-9]]* 2>/dev/null` \
+			${srcdir}/../celib-palm-3.0 \
+			${srcdir}/../celib \
+			`ls -dr ${srcdir}/../celib-*3.[[0-9]]* 2>/dev/null` \
+			; do
+		    if test -d "$i/inc" ; then
+			ac_cv_c_celibconfig=`(cd $i; pwd)`
+			break
+		    fi
+		done
+	    fi
+	])
+	if test x"${ac_cv_c_celibconfig}" = x ; then
+	    CELIB_DIR="# no Celib configs found"
+	    AC_MSG_ERROR([Cannot find celib support library directory])
+	else
+	    no_celib=
+	    CELIB_DIR=${ac_cv_c_celibconfig}
+	    AC_MSG_RESULT([found $CELIB_DIR])
+	fi
+    fi
 ])
