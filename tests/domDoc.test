@@ -26,6 +26,7 @@
 #    domDoc-20.*: selectNodes
 #    domDoc-21.*: baseURI
 #    domDoc-22.*: appendFromScript
+#    domDoc-23.*: getElementsByTagNameNS
 #
 # Copyright (c) 2004 Rolf Ade.
 
@@ -954,6 +955,30 @@ test domDoc-22.2 {appendFromScript} {
     $doc delete
     set result
 } {<root/><e1/><e2/> {} 1 {} 1 {} 1}
+
+test domDoc-23.1 {getElementsByTagNameNS} {
+    dom createNodeCmd elementNode child
+
+    set doc [dom createDocument root]
+    $doc documentElement root
+    $root appendFromScript {
+        for {set x 0} {$x < 250} {incr x} {
+            child [list xmlns ns$x] {}
+        }
+    }
+    set xml [$doc asXML]
+    $doc delete
+    set doc [dom parse $xml]
+    set result 1
+    for {set x 0} {$x < 250} {incr x} {
+        set nodes [$doc getElementsByTagNameNS ns$x *]
+        if {[llength $nodes] != 1} {
+            set result 0
+        }
+    }
+    $doc delete
+    set result
+} {1}
 
 # cleanup
 ::tcltest::cleanupTests

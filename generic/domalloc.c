@@ -147,8 +147,8 @@ fillHashTable (
             /* all is fine, block is already in hash table */
             return;
         }
-        if      (hashedBlock->hashIndex1 == i) hashedBlock = hashedBlock->hashNext1;
-        else if (hashedBlock->hashIndex2 == i) hashedBlock = hashedBlock->hashNext2;
+        if      (hashedBlock->hashIndex1 == (int)i) hashedBlock = hashedBlock->hashNext1;
+        else if (hashedBlock->hashIndex2 == (int)i) hashedBlock = hashedBlock->hashNext2;
         else hashedBlock = NULL;
     }
 

@@ -1315,7 +1315,7 @@ TclExpatConfigure (interp, expat, objc, objv)
         }
         /* Cannot be changed after parsing as started (which is kind of
            understandable). We silently ignore return code. */
-        XML_UseForeignDTD (expat->parser, bool);
+        XML_UseForeignDTD (expat->parser, (unsigned char)bool);
         break;
 
       case EXPAT_COMMENTCMD:      /* -commentcommand */

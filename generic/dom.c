@@ -1996,7 +1996,7 @@ domReadDocument (
        and we want to compare the pointers */
     info.baseURIstack[0].baseURI = XML_GetBase (parser);
     info.baseURIstack[0].depth = 0;
-    XML_UseForeignDTD (parser, useForeignDTD);
+    XML_UseForeignDTD (parser, (unsigned char) useForeignDTD);
     XML_SetElementHandler(parser, startElement, endElement);
     XML_SetCharacterDataHandler(parser, characterDataHandler);
     XML_SetCommentHandler(parser, commentHandler);
@@ -2672,20 +2672,6 @@ domFreeDocument (
     FREE ((char*)doc);
 }
 
-/*---------------------------------------------------------------------------
-|   domDeleteDocument
-|
-\--------------------------------------------------------------------------*/
-domException
-domDeleteDocument (
-    domDocument     * doc,
-    domFreeCallback   freeCB,
-    void            * clientData
-)
-{
-    domFreeDocument(doc, freeCB, clientData);
-    return OK;
-}
 /*---------------------------------------------------------------------------
 |   domSetAttribute
 |

@@ -33,10 +33,25 @@
 \---------------------------------------------------------------------------*/
 
 
-#ifndef __TCLDOM_H__
-#define __TCLDOM_H__  
+#ifndef __TCLDOM_H_INCLUDE__
+#define __TCLDOM_H_INCLUDE__  
 
 #include <tcl.h>
+
+
+/* The following procs are defined in tcldom.c - since they are used
+ * in nodecmd.c these need a prototype somewhere. The prototypes can
+ * live here for now. */
+int  tcldom_textCheck(Tcl_Interp *interp, char *text, char *errText);
+int  tcldom_commentCheck(Tcl_Interp *interp, char *text);
+int  tcldom_CDATACheck(Tcl_Interp *interp, char *text);
+int  tcldom_PIValueCheck(Tcl_Interp *interp, char *text);
+int  tcldom_PINameCheck(Tcl_Interp *interp, char *name);
+int  tcldom_nameCheck(Tcl_Interp *interp, char *name, char *nameType,
+                      int isFQName);
+void tcldom_createNodeObj(Tcl_Interp * interp, domNode *node,
+                          char *objCmdName);
+
 
 void tcldom_initialize(void);
 
