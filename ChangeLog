@@ -1,3 +1,11 @@
+2005-03-11  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/nodecmd.c
+        * tests/dom.test: Using of a node creating command outside of
+          node context after that node creating command was already
+          used in node context didn't raised error (as it should) but
+          could have all kinds of effects (including seg fault).
+
 2005-02-26  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Fix for MT-enabled tDOM: If a doc was
