@@ -1,3 +1,9 @@
+2003-02-09  Rolf Ade  <rolf@pointsman.de>
+
+        Added 'systemId' and 'publicId' methods to the domDoc
+        commands. Added flag -doctypeDeclaration to the asXML and
+        asHTML methods of the domDoc commands.     
+
 2003-01-29  Rolf Ade  <rolf@pointsman.de>
 
         Changed the escaping while serializing XML data: in the past
