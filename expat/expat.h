@@ -8,17 +8,17 @@
 #ifdef __VMS
 /*      0        1         2         3      0        1         2         3
         1234567890123456789012345678901     1234567890123456789012345678901 */
-#define XML_SetProcessingInstructionHandler XML_SetProcessingInstrHandler   
-#define XML_SetUnparsedEntityDeclHandler    XML_SetUnparsedEntDeclHandler   
-#define XML_SetStartNamespaceDeclHandler    XML_SetStartNamespcDeclHandler  
-#define XML_SetExternalEntityRefHandlerArg  XML_SetExternalEntRefHandlerArg 
+#define XML_SetProcessingInstructionHandler XML_SetProcessingInstrHandler
+#define XML_SetUnparsedEntityDeclHandler    XML_SetUnparsedEntDeclHandler
+#define XML_SetStartNamespaceDeclHandler    XML_SetStartNamespcDeclHandler
+#define XML_SetExternalEntityRefHandlerArg  XML_SetExternalEntRefHandlerArg
 #endif
 
 #include <stdlib.h>
 
 #ifndef XMLPARSEAPI
 #if defined(_MSC_EXTENSIONS) && !defined(__BEOS__) && !defined(__CYGWIN__)
-#ifdef _STATIC
+#ifdef XML_STATIC
 #define XMLPARSEAPI(type) type __cdecl
 #else
 #define XMLPARSEAPI(type) __declspec(dllimport) type __cdecl
@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#ifdef XML_UNICODE_WCHAR_T 
+#ifdef XML_UNICODE_WCHAR_T
 #define XML_UNICODE
 #endif
 
@@ -208,7 +208,7 @@ XMLPARSEAPI(XML_Parser)
 XML_ParserCreateNS(const XML_Char *encoding, XML_Char namespaceSeparator);
 
 
-/* Constructs a new parser using the memory management suit referred to
+/* Constructs a new parser using the memory management suite referred to
    by memsuite. If memsuite is NULL, then use the standard library memory
    suite. If namespaceSeparator is non-NULL it creates a parser with
    namespace processing as described above. The character pointed at
@@ -225,7 +225,7 @@ XML_ParserCreate_MM(const XML_Char *encoding,
 /* Prepare a parser object to be re-used.  This is particularly
    valuable when memory allocation overhead is disproportionatly high,
    such as when a large number of small documnents need to be parsed.
-   All handlers are cleared from the parser, except for the 
+   All handlers are cleared from the parser, except for the
    unknownEncodingHandler. The parser's external state is re-initialized
    except for the values of ns and ns_triplets.
 
@@ -267,7 +267,7 @@ typedef void (*XML_EndCdataSectionHandler)(void *userData);
    (comments, markup declarations), or characters that are part of a
    construct which could be reported but for which no handler has been
    supplied. The characters are passed exactly as they were in the XML
-   document except that they will be encoded in UTF-8 or UTF-16. 
+   document except that they will be encoded in UTF-8 or UTF-16.
    Line boundaries are not normalized. Note that a byte order mark
    character is not passed to the default handler. There are no
    guarantees about how characters are divided between calls to the
@@ -320,7 +320,7 @@ typedef void (*XML_EntityDeclHandler) (void *userData,
                                        const XML_Char *systemId,
                                        const XML_Char *publicId,
                                        const XML_Char *notationName);
-                                       
+
 XMLPARSEAPI(void)
 XML_SetEntityDeclHandler(XML_Parser parser,
                          XML_EntityDeclHandler handler);
@@ -366,8 +366,8 @@ typedef void (*XML_EndNamespaceDeclHandler)(void *userData,
 
 /* This is called if the document is not standalone, that is, it has an
    external subset or a reference to a parameter entity, but does not
-   have standalone="yes". If this handler returns 0, then processing
-   will not continue, and the parser will return a
+   have standalone="yes". If this handler returns XML_STATUS_ERROR,
+   then processing will not continue, and the parser will return a
    XML_ERROR_NOT_STANDALONE error.
    If parameter entity parsing is enabled, then in addition to the
    conditions above this handler will only be called if the referenced
@@ -399,10 +399,11 @@ typedef int (*XML_NotStandaloneHandler)(void *userData);
    expected by the context argument to XML_ExternalEntityParserCreate;
    context is valid only until the handler returns, so if the
    referenced entity is to be parsed later, it must be copied.
+   context is NULL only when the entity is a parameter entity.
 
-   The handler should return 0 if processing should not continue
-   because of a fatal error in the handling of the external entity.
-   In this case the calling parser will return an
+   The handler should return XML_STATUS_ERROR if processing should not
+   continue because of a fatal error in the handling of the external
+   entity.  In this case the calling parser will return an
    XML_ERROR_EXTERNAL_ENTITY_HANDLING error.
 
    Note that unlike other handlers the first argument is the parser,
@@ -496,8 +497,8 @@ typedef struct {
    the encoding declaration.
 
    If the callback can provide information about the encoding, it must
-   fill in the XML_Encoding structure, and return 1.  Otherwise it
-   must return 0.
+   fill in the XML_Encoding structure, and return XML_STATUS_OK.
+   Otherwise it must return XML_STATUS_ERROR.
 
    If info does not describe a suitable encoding, then the parser will
    return an XML_UNKNOWN_ENCODING error.
@@ -650,9 +651,9 @@ XML_SetUserData(XML_Parser parser, void *userData);
    XML_ParserCreate. On success XML_SetEncoding returns non-zero,
    zero otherwise.
    Note: Calling XML_SetEncoding after XML_Parse or XML_ParseBuffer
-     has no effect and returns zero.
+     has no effect and returns XML_STATUS_ERROR.
 */
-XMLPARSEAPI(int)
+XMLPARSEAPI(enum XML_Status)
 XML_SetEncoding(XML_Parser parser, const XML_Char *encoding);
 
 /* If this function is called, then the parser will be passed as the
@@ -686,10 +687,10 @@ XML_UseForeignDTD(XML_Parser parser, XML_Bool useDTD);
    left to the application: this value will be passed through as the
    base argument to the XML_ExternalEntityRefHandler,
    XML_NotationDeclHandler and XML_UnparsedEntityDeclHandler. The base
-   argument will be copied.  Returns zero if out of memory, non-zero
-   otherwise.
+   argument will be copied.  Returns XML_STATUS_ERROR if out of memory,
+   XML_STATUS_OK otherwise.
 */
-XMLPARSEAPI(int)
+XMLPARSEAPI(enum XML_Status)
 XML_SetBase(XML_Parser parser, const XML_Char *base);
 
 XMLPARSEAPI(const XML_Char *)
@@ -760,7 +761,7 @@ XML_ParseBuffer(XML_Parser parser, int len, int isFinal);
    an ExternalEntityRefHandler so longer as the parser has not yet
    been freed.  The new parser is completely independent and may
    safely be used in a separate thread.  The handlers and userData are
-   initialized from the parser argument.  Returns 0 if out of memory.
+   initialized from the parser argument.  Returns NULL if out of memory.
    Otherwise returns a new XML_Parser object.
 */
 XMLPARSEAPI(XML_Parser)
@@ -801,20 +802,22 @@ XMLPARSEAPI(int)
 XML_SetParamEntityParsing(XML_Parser parser,
                           enum XML_ParamEntityParsing parsing);
 
-/* If XML_Parse or XML_ParseBuffer have returned 0, then
+/* If XML_Parse or XML_ParseBuffer have returned XML_STATUS_ERROR, then
    XML_GetErrorCode returns information about the error.
 */
 XMLPARSEAPI(enum XML_Error)
 XML_GetErrorCode(XML_Parser parser);
 
 /* These functions return information about the current parse
-   location.  They may be called when XML_Parse or XML_ParseBuffer
-   return 0; in this case the location is the location of the
-   character at which the error was detected.
-
-   They may also be called from any other callback called to report
-   some parse event; in this the location is the location of the first
-   of the sequence of characters that generated the event.
+   location.  They may be called from any callback called to report
+   some parse event; in this case the location is the location of
+   the first of the sequence of characters that generated the event. 
+   
+   They may also be called after returning from a call to XML_Parse
+   or XML_ParseBuffer.  If the return value is XML_STATUS_ERROR then
+   the location is the location of the character at which the error
+   was detected; otherwise the location is the location of the last
+   parse event, as described above.
 */
 XMLPARSEAPI(int) XML_GetCurrentLineNumber(XML_Parser parser);
 XMLPARSEAPI(int) XML_GetCurrentColumnNumber(XML_Parser parser);
@@ -845,6 +848,20 @@ XML_GetInputContext(XML_Parser parser,
 #define XML_GetErrorLineNumber   XML_GetCurrentLineNumber
 #define XML_GetErrorColumnNumber XML_GetCurrentColumnNumber
 #define XML_GetErrorByteIndex    XML_GetCurrentByteIndex
+
+/* Frees the content model passed to the element declaration handler */
+XMLPARSEAPI(void)
+XML_FreeContentModel(XML_Parser parser, XML_Content *model);
+
+/* Exposing the memory handling functions used in Expat */
+XMLPARSEAPI(void *)
+XML_MemMalloc(XML_Parser parser, size_t size);
+
+XMLPARSEAPI(void *)
+XML_MemRealloc(XML_Parser parser, void *ptr, size_t size);
+
+XMLPARSEAPI(void)
+XML_MemFree(XML_Parser parser, void *ptr);
 
 /* Frees memory used by the parser. */
 XMLPARSEAPI(void)
@@ -885,7 +902,7 @@ enum XML_FeatureEnum {
 
 typedef struct {
   enum XML_FeatureEnum  feature;
-  XML_LChar            *name;
+  const XML_LChar       *name;
   long int              value;
 } XML_Feature;
 
@@ -900,7 +917,7 @@ XML_GetFeatureList(void);
 */
 #define XML_MAJOR_VERSION 1
 #define XML_MINOR_VERSION 95
-#define XML_MICRO_VERSION 5
+#define XML_MICRO_VERSION 6
 
 #ifdef __cplusplus
 }
