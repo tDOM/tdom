@@ -144,8 +144,10 @@
 static char dom_usage[] =
                 "Usage dom <subCommand> <args>, where subCommand can be:    \n"
                 "          parse ?-keepEmpties? ?-channel <channel> ?-baseurl <baseurl>?  \n"
-                "                ?-feedbackAfter <#Bytes>? ?-externalentitycommand <cmd>? \n"
-                "                ?-simple? ?-html? ?<xml>? ?<objVar>? \n"
+                "                ?-feedbackAfter <#Bytes>?                  \n"
+                "                ?-externalentitycommand <cmd>?             \n"
+                "                ?-useForeignDTD <boolean>?                 \n"
+                "                ?-simple? ?-html? ?<xml>? ?<objVar>?       \n"
                 "          createDocument docElemName ?objVar?              \n"
                 TDomThreaded(
                 "          attachDocument docObjCommand ?objVar?            \n"
@@ -243,6 +245,7 @@ static char node_usage[] =
                 "    selectNodes xpathQuery ?typeVar? \n"
                 "    toXPath                     \n"
                 "    disableOutputEscaping ?boolean? \n"
+                "    startBefore node            \n"
                 "    xslt ?-parameters parameterList? <xsltDocNode>\n"
                 TDomThreaded(
                 "    readlock                    \n"
@@ -1044,6 +1047,7 @@ int tcldom_appendXML (
                            NULL,
                            NULL,
                            node->ownerDocument->extResolver,
+                           0,
                            interp);
     if (doc == NULL) {
         char s[50];
@@ -2026,8 +2030,7 @@ void tcldom_AppendEscaped (
                 if ((unsigned char)*pc > 127) {
                     clen = UTF8_CHAR_LEN(*pc);
                     if (!clen) {
-                        DBG(fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");)
-                        exit(1); /*FIXME */
+                        domPanic ("tcldom_AppendEscaped: can only handle UTF-8 chars up to 3 bytes length");
                     }
                     if (escapeNonASCII) {
                         Tcl_UtfToUniChar (pc, &uniChar);
@@ -2801,14 +2804,14 @@ static int applyXSLT (
                           tcldom_xsltMsgCB, &xsltMsgInfo,
                           &errMsg, &resultDoc);
 
-    if (parameters) {
-        Tcl_DecrRefCount (localListPtr);
-        FREE((char *) parameters);
-    }
     if (result < 0) {
         SetResult ( errMsg );
         FREE(errMsg);
-        return TCL_ERROR;
+        goto applyXSLTCleanUP;
+    }
+    if (parameters) {
+        Tcl_DecrRefCount (localListPtr);
+        FREE((char *) parameters);
     }
     if (xsltMsgInfo.msgcmd) {
         Tcl_DecrRefCount (xsltMsgInfo.msgcmd);
@@ -2900,7 +2903,7 @@ int tcldom_NodeObjCmd (
 )
 {
     GetTcldomTSD()
-    domNode     *node, *child, *refChild, *oldChild;
+    domNode     *node, *child, *refChild, *oldChild, *refNode;
     domNS       *ns;
     domAttrNode *attrs;
     domException exception;
@@ -2929,7 +2932,7 @@ int tcldom_NodeObjCmd (
         "asHTML",          "prefix",         "getBaseURI",      "appendFromScript",
         "xslt",            "toXPath",        "delete",          "getElementById",
         "getElementsByTagName",              "getElementsByTagNameNS",
-        "disableOutputEscaping",
+        "disableOutputEscaping",             "startBefore",
 #ifdef TCL_THREADS
         "readlock",        "writelock",
 #endif
@@ -2950,7 +2953,7 @@ int tcldom_NodeObjCmd (
         m_asHTML,          m_prefix,         m_getBaseURI,      m_appendFromScript,
         m_xslt,            m_toXPath,        m_delete,          m_getElementById,
         m_getElementsByTagName,              m_getElementsByTagNameNS,
-        m_disableOutputEscaping
+        m_disableOutputEscaping,             m_startBefore,
 #ifdef TCL_THREADS
         ,m_readlock,        m_writelock
 #endif
@@ -3789,6 +3792,41 @@ int tcldom_NodeObjCmd (
                 }
             }
             break;
+
+        case m_startBefore:
+            CheckArgs (3,3,2, "node");
+            nodeName = Tcl_GetStringFromObj (objv[2], NULL);
+            refNode = tcldom_getNodeFromName (interp, nodeName, &errMsg);
+            if (refNode == NULL) {
+                SetResult (errMsg);
+                return TCL_ERROR;
+            }
+            if (node->ownerDocument != refNode->ownerDocument) {
+                SetResult ("Cannot compare the relative order of nodes out of different documents.");
+                return TCL_ERROR;
+            }
+            if (((node->parentNode == NULL) 
+                 && (node != node->ownerDocument->documentElement)
+                 && (node != node->ownerDocument->rootNode))
+                || 
+                ((refNode->parentNode == NULL)
+                 && (refNode != refNode->ownerDocument->documentElement)
+                 && (refNode != refNode->ownerDocument->rootNode))) {
+                SetResult ("Cannot compare the relative order of a node with a node out of the fragment list.");
+                return TCL_ERROR;
+            }
+            if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
+                domRenumberTree (node->ownerDocument->rootNode);
+                node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+            }
+            if (node->nodeNumber < refNode->nodeNumber) {
+                SetIntResult (1);
+            } else if (node->nodeNumber > refNode->nodeNumber) {
+                SetIntResult (-1);
+            } else {
+                SetIntResult (0);
+            }
+            break;
             
         TDomThreaded(
         case m_writelock:
@@ -4236,12 +4274,14 @@ int tcldom_parse (
 {
     GetTcldomTSD()
     char        *xml_string, *option, *errStr, *channelId, *baseURI = NULL;
+    CONST84 char *interpResult;
     int          xml_string_len, mode;
     int          ignoreWhiteSpaces   = 1;
     int          takeSimpleParser    = 0;
     int          takeHTMLParser      = 0;
     int          setVariable         = 0;
     int          feedbackAfter       = 0;
+    int          useForeignDTD       = 0;
     domDocument *doc;
     Tcl_Obj     *newObjName = NULL, *extResolver = NULL;
     XML_Parser   parser;
@@ -4305,6 +4345,21 @@ int tcldom_parse (
             if (objc > 1) {
                 extResolver = objv[1];
                 Tcl_IncrRefCount (objv[1]);
+            } else {
+                SetResult (dom_usage);
+                return TCL_ERROR;
+            }
+            objv++; objc--;
+            continue;
+        }
+        if (strcmp(option, "-useForeignDTD")==0) {
+            objv++; objc--;
+            if (objc > 1) {
+                if (Tcl_GetBooleanFromObj (interp, objv[1], &useForeignDTD)
+                    != TCL_OK) {
+                    SetResult ("-useForeignDTD must have a boolean arg");
+                    return TCL_ERROR;
+                }
             } else {
                 SetResult (dom_usage);
                 return TCL_ERROR;
@@ -4397,6 +4452,7 @@ int tcldom_parse (
     return TCL_ERROR;
 #else
     parser = XML_ParserCreate(NULL);
+    Tcl_ResetResult (interp);
 
     doc = domReadDocument (parser, xml_string,
                                    xml_string_len,
@@ -4407,37 +4463,41 @@ int tcldom_parse (
                                    chan,
                                    baseURI,
                                    extResolver,
+                                   useForeignDTD,
                                    interp);
     if (doc == NULL) {
         char s[50];
         long byteIndex, i;
 
-        Tcl_ResetResult(interp);
-        sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
-        Tcl_AppendResult(interp, "error \"", XML_ErrorString(XML_GetErrorCode(parser)),
-                                 "\" at line ", s, " character ", NULL);
-        sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
-        Tcl_AppendResult(interp, s, NULL);
-        byteIndex = XML_GetCurrentByteIndex(parser);
-        if ((byteIndex != -1) && (chan == NULL)) {
-             Tcl_AppendResult(interp, "\n\"", NULL);
-             s[1] = '\0';
-             for (i=-20; i < 40; i++) {
-                 if ((byteIndex+i)>=0) {
-                     if (xml_string[byteIndex+i]) {
-                         s[0] = xml_string[byteIndex+i];
-                         Tcl_AppendResult(interp, s, NULL);
-                         if (i==0) {
-                             Tcl_AppendResult(interp, " <--Error-- ", NULL);
-                         }
-                     } else {
-                         break;
-                     }
-                 }
-             }
-             Tcl_AppendResult(interp, "\"",NULL);
+        interpResult = Tcl_GetStringResult (interp);
+        if (interpResult[0] == '\0') {
+            sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
+            Tcl_AppendResult(interp, "error \"", 
+                             XML_ErrorString(XML_GetErrorCode(parser)),
+                             "\" at line ", s, " character ", NULL);
+            sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
+            Tcl_AppendResult(interp, s, NULL);
+            byteIndex = XML_GetCurrentByteIndex(parser);
+            if ((byteIndex != -1) && (chan == NULL)) {
+                Tcl_AppendResult(interp, "\n\"", NULL);
+                s[1] = '\0';
+                for (i=-20; i < 40; i++) {
+                    if ((byteIndex+i)>=0) {
+                        if (xml_string[byteIndex+i]) {
+                            s[0] = xml_string[byteIndex+i];
+                            Tcl_AppendResult(interp, s, NULL);
+                            if (i==0) {
+                                Tcl_AppendResult(interp, " <--Error-- ", NULL);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                Tcl_AppendResult(interp, "\"",NULL);
+            }
+            XML_ParserFree(parser);
         }
-        XML_ParserFree(parser);
         return TCL_ERROR;
     }
     XML_ParserFree(parser);
@@ -4525,7 +4585,7 @@ int tcldom_domCmd (
         for (i=2; i<objc; i++) mobjv[i] = objv[i];
         return (cmdInfo.objProc (cmdInfo.objClientData, interp, objc, mobjv));
     }
-    CheckArgs (2,10,1,dom_usage);
+    CheckArgs (2,12,1,dom_usage);
     switch ((enum domMethod) methodIndex ) {
 
         case m_createDocument:
