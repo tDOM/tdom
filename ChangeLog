@@ -1,3 +1,42 @@
+2003-04-09  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c: Fixed a bug in the creation of the error msg
+          in case of parsing errors in an external entity.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxslt.c
+        * tests/domCmd.test
+        * doc/dom.*
+        * generic/tcldom.c: Added option -paramentityparsing to the
+          [dom parse] method. [dom parse] option parsing now uses
+          Tcl_GetIndexFromObj() (which additionally fixes a minor bug
+          with the current option parsing).
+        
+        * generic/tcldom.c: Removed an unused variable. Improved error
+          reporting in case of not found attribute. Better options
+          check for the 'xslt' methods. Changed implementation of the
+          dom method isQName to use the lately introduced API function
+          domIsQNAME.
+
+        * generic/tclexpat.c
+          tests/parser.test: Fixed a bug in the value parsing of the
+          -paramentityparsing option.
+
+        * tests/domCmd.test: Added tests for the interface of the
+          xsltCmds.
+
+        * tests/xpath.test: Added test which documents the bug prior
+          to domxpath.c r1.63.  
+  
+        * doc/dom.*: Added 'package require tdom' to the syntax
+          decription (http://groups.yahoo.com/group/tdom/message/446)
+
+        * doc/domDoc.*: Added documentation for the toXSLTcmd method
+          and the resulting xsltCmds. Corrected the documentation for
+          the xslt method (missed -ignoreUndeclaredParameters and
+          -xsltmessagecmd in the method syntax).  
+          
 2003-04-05  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tclexpat.c: Bug fix: If the parsing state is already
