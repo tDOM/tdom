@@ -120,13 +120,15 @@ decimal representation.</desc>
 
       <commanddef>
         <command><method>asHTML</method> <option>?-channel
-channelId?</option> <option>?-escapeNonASCII?</option></command> 
+channelId?</option> <option>?-escapeNonASCII?</option> <option>?-htmlEntities?</option></command> 
         <desc>Returns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
 channelId. If the option <m>-escapeNonASCII</m> is given, every non 7 bit ASCII
 character in attribute values or element PCDATA content will be escaped as
-character reference in decimal representation.</desc>
+character reference in decimal representation. If the option
+<m>-htmlEntities</m> is given, a character is outputed using a HTML 4.01
+character entity reference, if one is defined for it.</desc>
       </commanddef>
 
       <commanddef>

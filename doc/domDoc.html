@@ -4,7 +4,7 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1226">SEE ALSO</a> · <a href="#SECTnode1235">KEYWORDS</a>
+<a href="#SECTnode883">NAME</a> · <a href="#SECTnode894">SYNOPSIS</a> · <a href="#SECTnode908">DESCRIPTION </a> · <a href="#SECTnode1232">SEE ALSO</a> · <a href="#SECTnode1241">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
   <h2><a name="SECTnode883">NAME</a></h2><p class="namesection">
@@ -124,14 +124,16 @@ decimal representation.</dd>
       
         <dt>
 <b class="method">asHTML</b> <b class="option">?-channel
-channelId?</b> <b class="option">?-escapeNonASCII?</b>
+channelId?</b> <b class="option">?-escapeNonASCII?</b> <b class="option">?-htmlEntities?</b>
 </dt> 
         <dd>Returns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
 channelId. If the option <i class="m">-escapeNonASCII</i> is given, every non 7 bit ASCII
 character in attribute values or element PCDATA content will be escaped as
-character reference in decimal representation.</dd>
+character reference in decimal representation. If the option
+<i class="m">-htmlEntities</i> is given, a character is outputed using a HTML 4.01
+character entity reference, if one is defined for it.</dd>
       
 
       
@@ -153,11 +155,11 @@ tried to be executed. This allows quick method additions on Tcl level.</p><p>New
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTnode1226">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode1232">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTnode1235">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTnode1241">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
