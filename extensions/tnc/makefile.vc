@@ -68,8 +68,8 @@ NODEBUG = 1
 NAMEPREFIX = tnc
 STUBPREFIX = $(NAMEPREFIX)stub
 DOTVERSION = 0.2
-VERSION = 01
-TDOMVER = 07
+VERSION = 02
+TDOMVER = 075
 
 BINROOT         = .
 !IF "$(NODEBUG)" == "1"
@@ -110,7 +110,7 @@ lib32          = "$(TOOLS32)\bin\lib.exe"
 
 TNCDIR         = $(ROOT)\extensions\tnc
 GENERICDIR     = $(ROOT)\generic
-EXPATINCDIR    = $(ROOT)\expat-1.95.1
+EXPATINCDIR    = $(ROOT)\expat
 TCLINCDIR      = $(INSTALLDIR)\Include
 
 TCL_INCLUDES   = -I"$(TNCDIR)" -I"$(GENERICDIR)" -I"$(EXPATINCDIR)" -I"$(TCLINCDIR)"
@@ -134,8 +134,7 @@ cdebug = -Z7 -Od
 !ENDIF
 
 # declarations common to all compiler options
-cflags = -c -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DUSE_TCL_STUBS -DUSE_TDOM_STUBS -DVERSION="\"1.95.1\""
-#cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DCOMPILED_FROM_DSP -DVERSION="\"1.95.1\""
+cflags = -c -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DUSE_TCL_STUBS -DUSE_TDOM_STUBS
 cvarsdll = -MD$(DBGX)
 
 TCL_CFLAGS     = $(cdebug) $(cflags) $(cvarsdll) $(include32) \
@@ -168,8 +167,7 @@ guilflags = $(lflags) -subsystem:windows -entry:WinMainCRTStartup
 libc = libc$(DBGX).lib oldnames.lib
 libcdll = msvcrt$(DBGX).lib oldnames.lib
 
-baselibs   = kernel32.lib $(optlibs) advapi32.lib user32.lib tclstub83$(DBGX).lib tdomstub$(TDOMVER).lib 
-#baselibs    = kernel32.lib $(optlibs) advapi32.lib user32.lib tcl83.lib
+baselibs   = kernel32.lib $(optlibs) advapi32.lib user32.lib tclstub83$(DBGX).lib libtdomstub$(TDOMVER).lib 
 winlibs     = $(baselibs) gdi32.lib comdlg32.lib winspool.lib
 
 
