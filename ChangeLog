@@ -1,3 +1,14 @@
+2005-01-10  Rolf Ade  <rolf@pointsman.de>
+
+       * generic/dom.c
+       * generic/dom.h
+       * generic/domxpath.c
+       * generic/domxpath.h
+       * generic/tcldom.c
+       * tests/domNode.test: Don't embed Tcl_HashTables into dom Docs,
+         use pointers to the hash table. Added -cache option to the
+         selectNodes method.
+
 2005-01-07  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
