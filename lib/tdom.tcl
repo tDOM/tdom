@@ -29,6 +29,10 @@
 #
 #
 #   $Log$
+#   Revision 1.3  2002/02/28 00:39:00  rolf
+#   Added tcl coded xpath function element-avaliable. Changed
+#   function-avaliable accordingly.
+#
 #   Revision 1.2  2002/02/26 14:04:16  rolf
 #   Updated the [package provide] to the new version number 0.7
 #
@@ -519,6 +523,7 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
         count -
         current -
         document -
+        element-avaliable -
         false -
         floor -
         generate-id -
@@ -546,8 +551,7 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
         unparsed-entity-uri {
             return [list bool true]
         }
-        format-number -
-        element-avaliable {
+        format-number {
             return [list bool false]
         }
         default {
@@ -562,7 +566,64 @@ proc ::dom::xpathFunc::function-available { ctxNode pos
 }
 
 #----------------------------------------------------------------------------
-#   functions-available
+#   element-avaliable
+#
+#----------------------------------------------------------------------------
+proc ::dom::xpathFunc::element-avaliable { ctxNode pos
+                                            nodeListType nodeList args} {
+
+    if {[llength $args] != 2} {
+        error "element-avaliable(); wrong # of args!"
+    }
+    foreach { arg1Typ arg1Value } $args break
+    set str [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value ]
+    switch $str {
+        stylesheet -
+        transform -
+        include -
+        import -
+        strip-space -
+        preserve-space -
+        template -
+        apply-templates -
+        apply-imports -
+        call-template -
+        element -
+        attribute -
+        attribute-set -
+        text -
+        processing-instruction -
+        comment -
+        copy -
+        value-of -
+        number -
+        for-each -
+        if -
+        choose -
+        when -
+        otherwise -
+        sort -
+        variable -
+        param -
+        copy-of -
+        with-param -
+        key -
+        message {
+            return [list bool true]
+        }
+        decimal-format -
+        output -
+        namespace-alias -
+        fallback -
+        default {
+            return [list bool false]
+        }
+    }
+}
+
+
+#----------------------------------------------------------------------------
+#   system-property
 #
 #----------------------------------------------------------------------------
 proc ::dom::xpathFunc::system-property { ctxNode pos
@@ -584,7 +645,7 @@ proc ::dom::xpathFunc::system-property { ctxNode pos
             return [list string "http://sdf.lonestar.org/~loewerj/tdom.cgi"]
         }
         default {
-            return [string ""]
+            return [list string ""]
         }
     }
 }
