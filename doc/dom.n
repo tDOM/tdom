@@ -299,18 +299,18 @@ their XML declaration.
 .TP
 \&\fB\fBdom\fP \fBcreateDocument\fP \fIdocElemName\fB ?\fIobjVar\fB?
 \&\fRCreates a new DOM document object with one element node with
-node name \fIdocElemName\fR. The \fIobjVar\fR controlls the
+node name \fIdocElemName\fR. The \fIobjVar\fR controls the
 memory handling as explained above.
 .TP
 \&\fB\fBdom\fP \fBcreateDocumentNS\fP \fIuri\fB \fIdocElemName\fB ?\fIobjVar\fB?
 \&\fRCreates a new DOM document object with one element node with
 node name \fIdocElemName\fR. \fIUri\fR gives the namespace of the
-document element to create. The \fIobjVar\fR controlls the
+document element to create. The \fIobjVar\fR controls the
 memory handling as explained above.
 .TP
 \&\fB\fBdom\fP \fBcreateDocumentNode\fP ?\fIobjVar\fB?
 \&\fRCreates a new, 'empty' DOM document object without any element
-node. \fIobjVar\fR controlls the memory handling as explained above.
+node. \fIobjVar\fR controls the memory handling as explained above.
 .TP
 \&\fB\fBdom\fP \fBsetResultEncoding\fP ?\fIencodingName\fB?
 \&\fRIf \fIencodingName\fR is not given the current global
