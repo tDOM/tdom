@@ -5657,7 +5657,7 @@ getExternalDocument (
         storeLineColumn = 0;
     }
 
-    parser = XML_ParserCreate (NULL);
+    parser = XML_ParserCreate_MM (NULL, MEM_SUITE, NULL);
 
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */

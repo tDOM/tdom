@@ -2,7 +2,7 @@
 |   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 +-----------------------------------------------------------------------------
 |
-|   $Header$
+|   $Id$
 |
 |
 |   A DOM implementation for Tcl using James Clark's expat XML parser
@@ -147,8 +147,10 @@ static char dom_usage[] =
                 "                ?-feedbackAfter <#Bytes>?                  \n"
                 "                ?-externalentitycommand <cmd>?             \n"
                 "                ?-useForeignDTD <boolean>?                 \n"
+                "                ?-paramentityparsing <none|always|standalone>\n"
                 "                ?-simple? ?-html? ?<xml>? ?<objVar>?       \n"
                 "          createDocument docElemName ?objVar?              \n"
+                "          createDocumentNode ?objVar?                      \n"
                 TDomThreaded(
                 "          attachDocument docObjCommand ?objVar?            \n"
                 )
@@ -383,8 +385,8 @@ void tcldom_docCmdDeleteProc  (
         Tcl_MutexLock(&tableMutex);
         if (dinfo->document->refCount > 1) {
             /* Detach all nodecommands attached to this tree */
-            tcldom_docDeleteNode(dinfo->document->documentElement, dinfo->interp);
-            domFreeNode(dinfo->document->documentElement,
+            tcldom_docDeleteNode(dinfo->document->rootNode, dinfo->interp);
+            domFreeNode(dinfo->document->rootNode,
                         tcldom_docDeleteNode, dinfo->interp, 1);
             dinfo->document->refCount--;
             Tcl_MutexUnlock(&tableMutex);
@@ -1035,7 +1037,7 @@ int tcldom_appendXML (
     SetResult ("tDOM was compiled without Expat!");
     return TCL_ERROR;
 #else
-    parser = XML_ParserCreate(NULL);
+    parser = XML_ParserCreate_MM (NULL, MEM_SUITE, NULL);
 
     doc = domReadDocument (parser,
                            xml_string,
@@ -2112,7 +2114,7 @@ void tcldom_treeAsHTML (
 
     if (node->nodeType == DOCUMENT_NODE) {
         doc = (domDocument*) node;
-        if (doctypeDeclaration) {
+        if (doctypeDeclaration && doc->documentElement) {
             writeChars (htmlString, chan, "<!DOCTYPE ", 10);
             writeChars (htmlString, chan, doc->documentElement->nodeName, -1);
             if (   doc->doctype 
@@ -2298,7 +2300,7 @@ void tcldom_treeAsXML (
 
     if (node->nodeType == DOCUMENT_NODE) {
         doc = (domDocument*) node;
-        if (doctypeDeclaration) {
+        if (doctypeDeclaration && doc->documentElement) {
             writeChars (xmlString, chan, "<!DOCTYPE ", 10);
             writeChars (xmlString, chan, doc->documentElement->nodeName, -1);
             if (   doc->doctype 
@@ -3948,7 +3950,8 @@ int tcldom_DocObjCmd (
         case m_documentElement:
             CheckArgs (2,3,2,"");
             return tcldom_returnNodeObj (interp, doc->documentElement,
-                                         (objc == 3), (objc == 3) ? objv[2] : NULL);
+                                         (objc == 3), 
+                                         (objc == 3) ? objv[2] : NULL);
 
         case m_getElementsByTagName:
             CheckArgs (3,3,2,"elementName");
@@ -4192,6 +4195,33 @@ int tcldom_createDocument (
     doc = domCreateDocument ( interp, NULL,
                               Tcl_GetStringFromObj (objv[1], NULL) );
     if (!doc) return TCL_ERROR;
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+}
+
+/*----------------------------------------------------------------------------
+|   tcldom_createDocumentNode
+|
+\---------------------------------------------------------------------------*/
+static
+int tcldom_createDocumentNode (
+    ClientData  clientData,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    * const objv[]
+)
+{
+    int          setVariable = 0;
+    domDocument *doc;
+    Tcl_Obj     *newObjName = NULL;
+
+
+    CheckArgs (1,2,1,"?newObjVar?");
+
+    if (objc == 2) {
+        newObjName = objv[1];
+        setVariable = 1;
+    }
+    doc = domCreateDoc ();
     return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
 }
 
@@ -4528,7 +4558,7 @@ int tcldom_parse (
     Tcl_AppendResult(interp, "tDOM was compiled without Expat!", NULL);
     return TCL_ERROR;
 #else
-    parser = XML_ParserCreate(NULL);
+    parser = XML_ParserCreate_MM (NULL, MEM_SUITE, NULL);
     Tcl_ResetResult (interp);
 
     doc = domReadDocument (parser, xml_string,
@@ -4610,7 +4640,7 @@ int tcldom_domCmd (
         "createDocument",  "createDocumentNS",  "createNodeCmd",
         "parse",           "setResultEncoding", "setStoreLineColumn",
         "isCharData",      "isName",            "isQName",
-        "isNCName", 
+        "isNCName",        "createDocumentNode",
 #ifdef TCL_THREADS
         "attachDocument",
 #endif
@@ -4620,7 +4650,7 @@ int tcldom_domCmd (
         m_createDocument,    m_createDocumentNS,  m_createNodeCmd,
         m_parse,             m_setResultEncoding, m_setStoreLineColumn,
         m_isCharData,        m_isName,            m_isQName,
-        m_isNCName
+        m_isNCName,          m_createDocumentNode
 #ifdef TCL_THREADS
         ,m_attachDocument
 #endif
@@ -4669,8 +4699,14 @@ int tcldom_domCmd (
             return tcldom_createDocument (clientData, interp, --objc, objv+1);
 
         case m_createDocumentNS:
-            return tcldom_createDocumentNS (clientData, interp, --objc, objv+1);
-                                            
+            return tcldom_createDocumentNS (clientData, interp, --objc, 
+                                            objv+1);
+
+        case m_createDocumentNode:
+            SetResult ("not avaliable yet (comming soon)");
+            return TCL_ERROR;
+/*             return tcldom_createDocumentNode (clientData, interp, --objc, */
+/*                                               objv+1); */
         case m_createNodeCmd:
             return nodecmd_createNodeCmd (clientData, interp, --objc, objv+1);
 
