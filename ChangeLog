@@ -1,3 +1,8 @@
+2003-09-14  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: dist target: Don't include CVS dirs and hidden
+          files into the distribution file.
+
 2003-09-14  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* Makefile.in
@@ -15,7 +20,7 @@
 
 2003-09-14  Rolf Ade  <rolf@pointsman.de>
 
-        Merged fixes of 0.7.8 back to HEAD. This includes:
+        Merged fixes from 0.7.8 into HEAD. This includes:
 
         2003-08-06  Zoran Vasiljevic  <zoran@archiware.com>
 
