@@ -5,9 +5,9 @@
 
    Copyright (c) 2001 Rolf Ade */
 
-#include <tclexpat.h>
+#include <tdom.h>
 #include <string.h>
-#include <mcheck.h>
+#include <stdlib.h>
 
 #define Tcl_Alloc(x) malloc((x))
 #define Tcl_Free(x)  free((x))
@@ -279,6 +279,9 @@ static const unsigned char nameStart7Bit[] = {
 /* 0x78 */    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+
+extern char *Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact);
+
 static void
 signalNotValid (userData, code)
     void        *userData;
@@ -487,7 +490,7 @@ printf ("'one' pointer %p\n", &one);
                 entryPtr);
 #endif
         emodel = (XML_Content*) Tcl_GetHashValue(entryPtr);
-        tmodel = Tcl_Alloc (sizeof (TNC_Content));
+        tmodel = (TNC_Content*) Tcl_Alloc (sizeof (TNC_Content));
         TncRewriteModel (emodel, tmodel, tncdata->tagNames);
         Tcl_SetHashValue (entryPtr, tmodel);
         free (emodel);
@@ -2424,7 +2427,17 @@ EXTERN int
 Tnc_Init (interp)
     Tcl_Interp *interp;
 {
-    Tcl_PkgRequire (interp, "expat", "2.0", 0);
+#ifdef USE_TCL_STUBS
+    if (Tcl_InitStubs(interp, "8", 0) == NULL) {
+        return TCL_ERROR;
+    }
+#endif
+#ifdef USE_TDOM_STUBS
+    if (Tdom_InitStubs(interp, "1", 0) == NULL) {
+        return TCL_ERROR;
+    }
+#endif
+    Tcl_PkgRequire (interp, "tdom", "1.0", 0);
     Tcl_CreateObjCommand (interp, "tnc", TclTncObjCmd, NULL, NULL );
     Tcl_PkgProvide (interp, "tnc", "1.0");
     return TCL_OK;
