@@ -1,32 +1,23 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><link rel="stylesheet" href="manpage.css"><title>tDOM manual: domDoc</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domDoc</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode6">NAME</a> Â· <a href="#SECTnode17">SYNOPSIS</a> Â· <a href="#SECTnode31">DESCRIPTION </a> Â· <a href="#SECTnode265">SEE ALSO</a> Â· <a href="#SECTnode274">KEYWORDS</a>
+<a href="#SECTnode4427">NAME</a> · <a href="#SECTnode4438">SYNOPSIS</a> · <a href="#SECTnode4452">DESCRIPTION </a> · <a href="#SECTnode4708">SEE ALSO</a> · <a href="#SECTnode4717">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTnode6">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTnode4427">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTnode17">SYNOPSIS</a></h2>
-    <pre class="syntax">
+  <h2><a name="SECTnode4438">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
-  
 
-  
-    <h2><a name="SECTnode31">DESCRIPTION </a></h2>
-
-    <p>This command manipulates one particular instance of a document
+  <h2><a name="SECTnode4452">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
 methods should closely conform to the W3C recommendation &quot;Document Object Model
 (Core) Level 1&quot; (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
-at these documents for a deeper understanding of the functionality.</p>
-
-      <p>The valid methods are:</p>
-
-      <dl class="commandlist">
+at these documents for a deeper understanding of the functionality.</p><p>The valid methods are:</p><dl class="commandlist">
         
           <dt>
 <b class="method">documentElement</b> ?<i class="m">objVar</i>?</dt>
@@ -43,6 +34,15 @@ element).</p></dd>
           <dd><p> Returns a list of all elements in the document matching
 (glob style) <i class="m">name</i>.</p></dd>
         
+
+      
+        <dt>
+<b class="method">getElementsByTagNameNS</b> <i class="m">uri</i> <i class="m">localname</i>
+</dt>
+        <dd> Returns a list of all elements in the subtree
+matching (glob style) <i class="m">localname</i> and having the given namespace
+<i class="m">uri</i>.</dd>
+      
 
         
           <dt>
@@ -118,31 +118,25 @@ and the underlying DOM tree.</p></dd>
           <dd><p> Returns the default output method of the document. This is
 usually a result of a XSLT transformation.</p></dd>
         
-      </dl>
-
-      <p>Otherwise, if an unknown method name is given, the command with the
+      </dl><p>Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace <tt class="samp">::dom::domDoc</tt> is
-tried to be executed. This allows quick method additions on Tcl level.</p>
-
-      <p>Newly created nodes are appended to a hidden fragment list. If there
+tried to be executed. This allows quick method additions on Tcl level.</p><p>Newly created nodes are appended to a hidden fragment list. If there
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    
-
-    <h2><a name="SECTnode265">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTnode4708">SEE ALSO</a></h2><p class="seealso">
 <a href="dom.html">dom</a>, <a href="domNode.html">domNode</a>
 </p>
 
-    <h2><a name="SECTnode274">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTnode4717">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 
 </div><div class="footer">
 <hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
 	<a class="navaid" href="index.html">Table of Contents</a>
- Â·	<a class="navaid" href="category-index.html">Index</a>
- Â·	<a class="navaid" href="keyword-index.html">Keywords</a>
+ ·	<a class="navaid" href="category-index.html">Index</a>
+ ·	<a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </div>
 </body>
