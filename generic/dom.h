@@ -29,6 +29,10 @@
 |
 |
 |   $Log$
+|   Revision 1.8  2002/04/26 01:14:44  rolf
+|   Improved namespace support. New domCopyTo() for XSLT. Little
+|   improvement of xpathGetPrio().
+|
 |   Revision 1.7  2002/04/22 00:54:15  rolf
 |   Improved handling of literal result elements: now namespaces in scope
 |   are also copied to the result tree, if needed. exclude-result-prefixes
@@ -154,6 +158,8 @@
   */
   
 #endif
+
+#define XML_NAMESPACE (const char*) "http://www.w3.org/XML/1998/namespace" 
 
 #if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0) || TCL_MAJOR_VERSION < 8 
 #define TclOnly8Bits 1

@@ -1796,6 +1796,7 @@ int xpathNodeTest (
             if ((step->child->strvalue[0] == '*') &&
                 (step->child->strvalue[1] == '\0') &&
                 (node->ownerDocument->rootNode != node)) return 1;
+            if (node->namespace) return 0;
             return (strcmp(node->nodeName, step->child->strvalue)==0);
         }
         return 0;
@@ -2228,9 +2229,10 @@ static int xpathEvalStep (
     xpathResultSet   leftResult, rightResult, replaceResult;
     xpathResultSet  *pleftResult, *prightResult, tResult;
     int              i, j, k, rc, res, pwhite, len,  NaN, switchResult;
-    char             *replaceStr, *pfrom, *pto, tmp[80], tmp1[80], *uri;
-    domNode          *node, *child, *startingNode, *ancestor;
-    domAttrNode      *attr;
+    char            *replaceStr, *pfrom, *pto, tmp[80], tmp1[80], *uri;
+    domNode         *node, *child, *startingNode, *ancestor;
+    domAttrNode     *attr;
+    domNS           *ns;
     double           leftReal;
     ast              nextStep;
     int              argc, savedDocOrder;
@@ -2240,15 +2242,15 @@ static int xpathEvalStep (
     unsigned int     from, leftNodeNr, rightNodeNr;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
-    char             *leftStr = NULL, *rightStr = NULL;
+    char            *leftStr = NULL, *rightStr = NULL;
 #if TclOnly8Bits
-    char             *fStr;
+    char            *fStr;
 #else 
     int              found;
     int              lenstr, fromlen, utfCharLen;
     char             utfBuf[TCL_UTF_MAX];        
     Tcl_DString      tstr, tfrom, tto, tresult;
-    Tcl_UniChar      *ufStr, *upfrom, unichar;
+    Tcl_UniChar     *ufStr, *upfrom, unichar;
 #endif    
 
     if (result->nr_nodes == 0) useFastAdd = 1;
@@ -2278,12 +2280,19 @@ static int xpathEvalStep (
     case AxisDescendant:
     case AxisDescendantOrSelf:
         *docOrder = 1;
-        if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
 
+        if (ctxNode->nodeType == ATTRIBUTE_NODE
+            && step->type == AxisDescendantOrSelf) {
+            if (xpathNodeTest(ctxNode, exprContext, step)) 
+                rsAddNode( result, ctxNode);
+            break;
+        }
+        if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         if (step->type == AxisDescendantOrSelf) {
             if (xpathNodeTest(ctxNode, exprContext, step)) 
                 rsAddNode( result, ctxNode);
         }
+
         startingNode = ctxNode;
         node = ctxNode->firstChild;
         while (node && node != startingNode) {
@@ -2549,16 +2558,50 @@ static int xpathEvalStep (
 
     case AxisNamespace:
         *docOrder = 1;
-        if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
-        uri = domNamespaceURI(ctxNode);
-        if (step->child->type == IsElement) {
-            if ((step->child->strvalue[0] == '*') &&
-                (step->child->strvalue[1] == '\0')) {
-                 rsSetString (result, uri);
-            } else {
-                if (strcmp(uri, step->child->strvalue)==0) {
-                     rsSetString (result, uri);
+        if (ctxNode->nodeType == ELEMENT_NODE) {
+            node = ctxNode;
+        } else
+        if (ctxNode->nodeType == ATTRIBUTE_NODE) {
+            node = ((domAttrNode*) ctxNode)->parentNode;
+        } else return XPATH_OK;
+
+        while (node) {
+            attr = node->firstAttr;
+            while (attr && (attr->nodeFlags & IS_NS_NODE)) {
+                if (step->child->type == IsElement) {
+                    if ((step->child->strvalue[0] != '*')) {
+                        ns = domLookupPrefix (exprContext, 
+                                              step->child->strvalue);
+                        if (!ns) {
+                            /* This is more an error: the prefix should be
+                               bound to a namespace. TODO: error msg. */
+                            return XPATH_OK;
+                        }
+                        if (strcmp(attr->nodeValue, ns->uri)!=0) {
+                            attr = attr->nextSibling;
+                            continue;
+                        }
+                    }
                 }
+                rc = 0;
+                for (i = 0; i < result->nr_nodes; i++) {
+                    if (strcmp (attr->nodeName, ((domAttrNode*)result->nodes[i])->nodeName)==0) {
+                        rc = 1; break;
+                    }
+                }
+                if (rc) {attr = attr->nextSibling; continue;}
+                rsAddNodeFast (result, (domNode *)attr);
+                attr = attr->nextSibling;
+            }
+
+            if (node == ctxNode->ownerDocument->documentElement) {
+                if (ctxNode != ctxNode->ownerDocument->rootNode) {
+                    node = ctxNode->ownerDocument->rootNode;
+                } else {
+                    node = NULL;
+                }
+            } else {
+                node = node->parentNode;
             }
         }
         break;
@@ -3708,7 +3751,6 @@ static int xpathEvalStep (
                         xpathRSFree( &leftResult );
                         return XPATH_OK;
                     } else {
-                        rsPrint (&leftResult);
                         *errMsg = (char*)strdup("count() requires a node set!");
                         xpathRSFree( &leftResult );
                         return XPATH_EVAL_ERR;
@@ -3839,7 +3881,15 @@ static int xpathEvalStep (
                     }
                 } else 
                 if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                    rsSetString (result, ((domAttrNode*)leftResult.nodes[0])->nodeName );
+                    if (leftResult.nodes[0]->nodeFlags & IS_NS_NODE) {
+                        if (((domAttrNode *)leftResult.nodes[0])->nodeName[5] == '\0') {
+                            rsSetString (result, "");
+                        } else {
+                            rsSetString (result, &((domAttrNode*)leftResult.nodes[0])->nodeName[6]);
+                        }
+                    } else {
+                        rsSetString (result, ((domAttrNode*)leftResult.nodes[0])->nodeName );
+                    }
                 } else 
                 if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
                     if (((domProcessingInstructionNode*)leftResult.nodes[0])->targetLength > 79) {
@@ -4007,35 +4057,37 @@ static int xpathEvalStepAndPredicates (
            more trickier things in the xpath recommendation. 3.3 says:
            "The Predicate filters the node-set with respect to the
            child axis" */
-        if (steps->type == AxisDescendantOrSelf) {
-            for (i = 0; i < stepResult.nr_nodes; i++) {
-                xpathRSInit (&tmpResult);
-                if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) {
-                    parent = ((domAttrNode *)stepResult.nodes[i])->parentNode;
-                } else {
-                    parent = stepResult.nodes[i]->parentNode;
-                }
-                for (j = 0; j < stepResult.nr_nodes; j++) {                    
-                    if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
-                        if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) {
-                            rsAddNode (&tmpResult, stepResult.nodes[j]);
-                        }
-                    } else {
-                        if (stepResult.nodes[j]->parentNode == parent) {
-                            rsAddNode (&tmpResult, stepResult.nodes[j]);
-                        }
-                    }
-                }
-                rc = xpathEvalPredicate (steps->next, exprContext, result, &tmpResult,
-                                         cbs, docOrder, errMsg);
-                CHECK_RC;
-                xpathRSFree (&tmpResult);
-            }
-        } else {
-            rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
-                                     cbs, docOrder, errMsg);
-            CHECK_RC;
-        }
+/*          if (steps->type == AxisDescendantOrSelf) { */
+/*              for (i = 0; i < stepResult.nr_nodes; i++) { */
+/*                  xpathRSInit (&tmpResult); */
+/*                  if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) { */
+/*                      parent = ((domAttrNode *)stepResult.nodes[i])->parentNode; */
+/*                  } else { */
+/*                      parent = stepResult.nodes[i]->parentNode; */
+/*                  } */
+/*                  for (j = 0; j < stepResult.nr_nodes; j++) {                     */
+/*                      if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) { */
+/*                          if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) { */
+/*                              rsAddNode (&tmpResult, stepResult.nodes[j]); */
+/*                          } */
+/*                      } else { */
+/*                          if (stepResult.nodes[j]->parentNode == parent) { */
+/*                              rsAddNode (&tmpResult, stepResult.nodes[j]); */
+/*                          } */
+/*                      } */
+/*                  } */
+/*                  rc = xpathEvalPredicate (steps->next, exprContext, result, &tmpResult, */
+/*                                           cbs, docOrder, errMsg); */
+/*                  CHECK_RC; */
+/*                  xpathRSFree (&tmpResult); */
+/*              } */
+/*          } else { */
+/*              rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult, */
+/*                                       cbs, docOrder, errMsg); */
+/*              CHECK_RC; */
+        rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
+                                 cbs, docOrder, errMsg);
+        CHECK_RC;
         xpathRSFree (&stepResult);
         
     } else {
@@ -4290,6 +4342,7 @@ int xpathMatches (
                     if ((steps->child->strvalue[0] != '*') ||
                         (steps->child->strvalue[1] != '\0')) 
                     {
+                        if (nodeToMatch->namespace) return 0;
                         if (strcmp(nodeToMatch->nodeName, steps->child->strvalue)!=0) {
                             xpathRSFree (&nodeList); return 0;
                         }
@@ -4337,6 +4390,7 @@ int xpathMatches (
                 if ((steps->strvalue[0] != '*') ||
                     (steps->strvalue[1] != '\0')) 
                 {
+                    if (nodeToMatch->namespace) return 0;
                     if (strcmp(nodeToMatch->nodeName, steps->strvalue)!=0) {
                         xpathRSFree (&nodeList); return 0;
                     }
@@ -4764,10 +4818,14 @@ double xpathGetPrio (
         if ( (steps->type == IsNode)
            ||(steps->type == IsText)
            ||(steps->type == IsPI)
+           ||(steps->type == IsComment)
            ||(steps->type == IsSpecificPI)
         ) {
             return -0.5;
         }
+    }
+    if (steps->type == AxisChild || steps->type == EvalSteps) {
+        return (xpathGetPrio (steps->child));
     }
     if (steps->type == CombinePath) {
         max = -0.5;

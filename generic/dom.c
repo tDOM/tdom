@@ -158,6 +158,11 @@ typedef struct _domReadInfo {
 
 } domReadInfo;
 
+/*--------------------------------------------------------------------------
+|   Prototypes
+|
+\-------------------------------------------------------------------------*/
+static domAttrNode *domCreateXMLNamespaceNode (domNode *parent);
 
 #ifdef TCL_THREADS
 /*---------------------------------------------------------------------------
@@ -1489,6 +1494,7 @@ domReadDocument (
     rootNode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
+    rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
     if (storeLineColumn) {
         lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
         rootNode->nodeFlags |= HAS_LINE_COLUMN;
@@ -1634,6 +1640,37 @@ domGetLineColumn (
     }
 }
 
+static domAttrNode *
+domCreateXMLNamespaceNode (
+    domNode  *parent
+)
+{
+    Tcl_HashEntry  *h;
+    int             hnew;
+    domAttrNode    *attr;
+    domNS          *ns;
+    
+    GetTDomTSD();
+    
+    attr = (domAttrNode *) domAlloc (sizeof (domAttrNode));
+    memset (attr, 0, sizeof (domAttrNode));
+    h = Tcl_CreateHashEntry( &TSDPTR(attrNames), "xmlns:xml", &hnew);
+    
+    ns = domLookupNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
+    if (!ns) {
+        ns = domNewNamespace (parent->ownerDocument, "xml", XML_NAMESPACE);
+    }
+    attr->nodeType      = ATTRIBUTE_NODE;
+    attr->nodeFlags     = IS_NS_NODE;
+    attr->namespace     = ns->index;
+    attr->nodeName      = (char *)&(h->key);
+    attr->parentNode    = parent;
+    attr->valueLength   = strlen (XML_NAMESPACE);
+    attr->nodeValue     = XML_NAMESPACE;
+    MutationEvent();
+    return attr;
+}
+
 /*---------------------------------------------------------------------------
 |   domCreateDoc
 |
@@ -1671,7 +1708,8 @@ domCreateDoc ( )
     rootNode->nodeNumber    = ++TSDPTR(domUniqueNodeNr);
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;    
-    rootNode->firstChild = rootNode->lastChild = NULL;
+    rootNode->firstChild    = rootNode->lastChild = NULL;
+    rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
 
     doc->rootNode = rootNode;
     return doc;
@@ -1726,25 +1764,10 @@ domCreateDocument (
     node->ownerDocument   = doc;
     node->nodeName        = (char *)&(h->key);
     doc->documentElement  = node;
-    doc->ids              = (Tcl_HashTable *)Tcl_Alloc (sizeof(Tcl_HashTable));
-    doc->unparsedEntities = (Tcl_HashTable *)Tcl_Alloc (sizeof(Tcl_HashTable));
-    doc->baseURIs         = (Tcl_HashTable *)Tcl_Alloc (sizeof (Tcl_HashTable));
-    Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->unparsedEntities, TCL_STRING_KEYS);
-    Tcl_InitHashTable (doc->baseURIs, TCL_ONE_WORD_KEYS);
-    doc->nsptr            = -1;
-    doc->nslen            =  4;
-    doc->namespaces       = (domNS**) Tcl_Alloc (sizeof (domNS*) * doc->nslen);
     if (uri) {
         ns = domNewNamespace (doc, prefix, uri);
         node->namespace   = ns->index;
-        /* It's unclear, if the DOM spec expects, that
-           also the according namespace declaration attribute is created.
-           According to what DOM 2 1.1.7 says, I'm afraid, not.
-           But this is all a real mess.
-           Setting the node->namespace to a namespace index, without
-           creating the according namespace attribute isn't exactly
-           intuitive. */
+        domAddNSToNode (node, ns);
     }
     doc->rootNode->firstChild = doc->rootNode->lastChild = doc->documentElement;
 
@@ -1973,6 +1996,7 @@ domFreeDocument (
         Tcl_DecrRefCount (doc->extResolver);
     }
 
+    if (doc->rootNode->firstAttr) domFree ((void*)doc->rootNode->firstAttr);
     domFree ((void*)doc->rootNode);
     Tcl_Free ((void*)doc);
 }
@@ -3196,7 +3220,6 @@ domNewElementNodeNS (
     return node;
 }
 
-
 /*---------------------------------------------------------------------------
 |   domCloneNode
 |
@@ -3256,6 +3279,106 @@ domCloneNode (
         }
     }
     return n;
+}
+
+
+/*---------------------------------------------------------------------------
+|   domCopyTo
+|
+\--------------------------------------------------------------------------*/
+void 
+domCopyTo (
+    domNode *node,
+    domNode *parent,
+    int      copyNS
+)
+{
+    domAttrNode *attr, *nattr;
+    domNode     *n, *n1, *child;
+    domNS       *ns, *ns1;
+
+    /*------------------------------------------------------------------
+    |   create new node
+    \-----------------------------------------------------------------*/
+    if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
+        domProcessingInstructionNode *pinode = (domProcessingInstructionNode*)node;
+        n = (domNode*) domNewProcessingInstructionNode(
+                                         parent->ownerDocument, 
+                                         pinode->targetValue, 
+                                         pinode->targetLength,
+                                         pinode->dataValue,
+                                         pinode->dataLength);
+        domAppendChild (parent, n);
+        return;
+    }
+    if (node->nodeType != ELEMENT_NODE) {
+        domTextNode *tnode = (domTextNode*)node;
+        n =  (domNode*) domNewTextNode(parent->ownerDocument, 
+                                         tnode->nodeValue, tnode->valueLength,
+					 tnode->nodeType);
+        domAppendChild (parent, n);
+        return;
+    }
+    
+    n = domNewElementNode(parent->ownerDocument, node->nodeName, node->nodeType);    
+    domAppendChild (parent, n);
+    
+    if (copyNS) {
+        n1 = node;
+        while (n1) {
+            attr = n1->firstAttr;
+            while (attr && (attr->nodeFlags & IS_NS_NODE)) {
+                ns = node->ownerDocument->namespaces[attr->namespace-1];
+                ns1 = domLookupPrefix (n, ns->prefix);
+                if (!ns1 || (strcmp (ns->uri, ns1->uri)!=0)) {
+                    ns1 = domNewNamespace (n->ownerDocument, ns->prefix,
+                                           ns->uri);
+                    domAddNSToNode (n, ns1);
+                }
+                attr = attr->nextSibling;
+            }
+            n1 = n1->parentNode;
+        }
+    }
+
+    if (node->namespace) {
+        ns = node->ownerDocument->namespaces[node->namespace-1];
+        ns1 = domLookupPrefix (n, ns->prefix);
+        n->namespace = ns1->index;
+    }
+
+     
+    /*------------------------------------------------------------------
+    |   copy attributes (if any) 
+    \-----------------------------------------------------------------*/
+    attr = node->firstAttr;
+    while (attr != NULL) {
+        nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
+        nattr->nodeFlags = attr->nodeFlags;
+        if (attr->nodeFlags & IS_NS_NODE) {
+            ns = node->ownerDocument->namespaces[attr->namespace-1];
+            ns1 = domLookupNamespace (n->ownerDocument, 
+                                      ns->prefix, ns->uri);
+            if (!ns1) {
+                ns1 = domNewNamespace (n->ownerDocument,
+                                       ns->prefix, ns->uri);
+            }
+            nattr->namespace = ns1->index;
+        } else {
+            if (attr->namespace) {
+                ns = node->ownerDocument->namespaces[attr->namespace-1];
+                ns1 = domLookupPrefix (n, ns->prefix);
+                nattr->namespace = ns1->index;
+            }
+        }
+        attr = attr->nextSibling;
+    }
+    
+    child = node->firstChild;
+    while (child) {
+        domCopyTo(child, n, 0);
+        child = child->nextSibling;
+    }
 }
 
 
