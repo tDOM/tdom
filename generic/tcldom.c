@@ -1262,6 +1262,7 @@ int tcldom_xpathFuncCallBack (
                     }
                     rsAddNode (result, node);
                 }
+                sortByDocOrder (result);
             } else
             if (strcmp(typeStr, "attrnodes")==0) {
                 *errMsg = tdomstrdup("attrnodes not implemented yet!");
@@ -1292,7 +1293,7 @@ int tcldom_xpathFuncCallBack (
     strcat(*errMsg, functionName );
     strcat(*errMsg, "':\n" );
     strcat(*errMsg, errStr);
-    Tcl_DecrRefCount(Tcl_GetObjResult(interp));
+    Tcl_ResetResult (interp);
 
     DBG( fprintf(stderr, "returning XPATH_EVAL_ERR \n"); )
     return XPATH_EVAL_ERR;
