@@ -3022,7 +3022,7 @@ static int xsltAddTemplate (
     tpl->match      = getAttr(node,"match", a_match);
     str = getAttr(node, "name", a_name);
     if (!tpl->match && !str) {
-        reportError (node, " xsl:template must have a a name or" 
+        reportError (node, " xsl:template must have a name or" 
                      " match attribute (or both)", errMsg);
         FREE ((char*)tpl);
         return -1;
