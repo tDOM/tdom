@@ -1272,8 +1272,6 @@ static int xsltFormatNumber (
 }
 
 #else
-/*  #undef DBG */
-/*  #define DBG(x) x */
 
 static int addCurrencySymbol (
     Tcl_UniChar  *p,
@@ -1627,8 +1625,6 @@ static int xsltFormatNumber (
     *resultLen = strlen(*resultStr);
     return 0;
 }
-/*  #undef DBG */
-/*  #define DBG(x) */
 
 #endif /* TclOnly8Bits */
 
@@ -5280,12 +5276,14 @@ getExternalDocument (
     Tcl_Obj      *cmdPtr, *resultObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj      *channelIdObj, *resultTypeObj;
     int           len, mode, result, storeLineColumn;
-    char         *resultType, *extbase, *xmlstring, *channelId;
+    char         *resultType, *extbase, *xmlstring, *channelId, s[20];
+    CONST84 char *str;
     domDocument  *doc;
     xsltSubDoc   *sdoc;
     XML_Parser    parser;
     Tcl_Channel   chan;
-
+    Tcl_DString   dStr;
+    
     cmdPtr = Tcl_DuplicateObj (xsltDoc->extResolver);
     Tcl_IncrRefCount (cmdPtr);
     if (baseURI) {
@@ -5313,6 +5311,7 @@ getExternalDocument (
     }
 
     resultObj = Tcl_GetObjResult (interp);
+    Tcl_IncrRefCount (resultObj);
     result = Tcl_ListObjLength (interp, resultObj, &len);
     if ((result != TCL_OK) || (len != 3)) {
         goto wrongScriptResult;
@@ -5367,12 +5366,35 @@ getExternalDocument (
 
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
+    Tcl_ResetResult (interp);
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
                            chan, extbase, xsltDoc->extResolver, interp);
 
     if (doc == NULL) {
-        *errMsg = tdomstrdup (XML_ErrorString (XML_GetErrorCode (parser)));
+        fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
+                 strlen (xmlstring), xmlstring);
+        Tcl_DStringInit (&dStr);
+        Tcl_DStringAppend (&dStr, "Error while accessing \"", -1);
+        Tcl_DStringAppend (&dStr, href, -1);
+        Tcl_DStringAppend (&dStr, "\":\n", -1);
+        str = Tcl_GetStringResult (interp);
+        if (str[0] == '\0') {
+            Tcl_DStringAppend (&dStr, "At line ", -1);
+            sprintf (s, "%d", XML_GetCurrentLineNumber (parser));
+            Tcl_DStringAppend (&dStr, s, -1);
+            Tcl_DStringAppend (&dStr, " character ", -1);
+            sprintf (s, "%d", XML_GetCurrentColumnNumber (parser));
+            Tcl_DStringAppend (&dStr, s, -1);
+            Tcl_DStringAppend (&dStr, ": ", 2);
+            Tcl_DStringAppend (&dStr, 
+                               XML_ErrorString (XML_GetErrorCode(parser)), -1);
+        } else {
+            Tcl_DStringAppend (&dStr, str, -1);
+        }
+        *errMsg = tdomstrdup (Tcl_DStringValue (&dStr));
+        Tcl_DStringFree (&dStr);
         XML_ParserFree (parser);
+        Tcl_DecrRefCount (resultObj);
         return NULL;
     }
     XML_ParserFree (parser);
@@ -5392,6 +5414,7 @@ getExternalDocument (
     }
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
+    Tcl_DecrRefCount (resultObj);
 
     return doc;
 
