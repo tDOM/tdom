@@ -632,7 +632,7 @@ tcldom_getElementsByTagName (
 )
 {
     int      result;
-    domNode *child, *temp;
+    domNode *child;
 
     /* nsIndex == -1 ==> DOM 1 no NS i.e getElementsByTagName
        nsIndex != -1 are the NS aware cases
