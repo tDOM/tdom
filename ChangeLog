@@ -1,3 +1,16 @@
+2003-05-16  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.h
+	* generic/tcldom.c
+	* generic/domxslt.c
+	* generic/tclexpat.c: Switched to use XML_ParserCreate_MM(), to be
+	  able (at tDOM build time) to make the expat parser use custom
+	  *alloc/free() functions (macro MEM_SUITE in dom.h). For
+	  TCL_MEM_DEBUG and NS_AOLSERVER builds the mem functions, used by
+	  the parser default now to Tcl_Alloc()/Tcl_Realloc()/Tcl_Free().
+	  Switched to XML_FreeContentModel(), for freeing stored element
+	  content models.
+
 2003-05-11  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
