@@ -1292,7 +1292,8 @@ DispatchPCDATA (
                 node->previousSibling = parentNode->lastChild;
                 parentNode->lastChild = (domNode*)node;
             } else {
-                parentNode->firstChild = parentNode->lastChild = (domNode*)node;
+                parentNode->firstChild = parentNode->lastChild = 
+                    (domNode*)node;
             }
         }
         if (info->storeLineColumn) {
