@@ -1,3 +1,12 @@
+2003-03-06  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/domalloc.c: removed include malloc.h since 
+	  not needed nor not found on macosx
+
+	* configure.in: adds "-lm" even when linking the shared image
+	  since Starkit users need that. Also, fixed alternative libdir
+	  usage when installing in non-standard (user-given) location.
+
 2003-03-03  Rolf Ade  <rolf@pointsman.de>
 
         * tests/dom.test    
