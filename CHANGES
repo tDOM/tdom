@@ -1,3 +1,15 @@
+2003-04-09  Rolf Ade  <rolf@pointsman.de>
+
+        Added domDoc method toXSLTcmd, which converts the domDoc to an
+        XSLTcmd. This has not advantage over the current method in
+        one-shot cases (transformation of one XML document) but
+        improves the speed of batch processing of several XML
+        documents or server applications. The implementation was
+        already included in the 0.7.7 release, only the documentation
+        was not included in that release.
+
+        Added option -paramentityparsing to the dom parse method.        
+
 --- Release 0.7.7, 25. Mar. 2003 --- See ChangeLog for details ---
 
 --- Release 0.7.6, 24. Mar. 2003 --- See ChangeLog for details ---
