@@ -3275,7 +3275,7 @@ generateModel (interp, rep, model)
     }
 
     if (model->name) {
-        Tcl_ListObjAppendElement (interp, rep, Tcl_NewStringObj (model->name, -1));
+        Tcl_ListObjAppendElement (interp, rep, Tcl_NewStringObj ((char*)model->name, -1));
     }
     else {
         Tcl_ListObjAppendElement (interp, rep, Tcl_NewStringObj ("", 0));
@@ -3454,7 +3454,7 @@ TclGenExpatAttlistDeclHandler(userData, elname, name, type, dflt, isrequired)
       }
       else {
           Tcl_ListObjAppendElement (expat->interp, cmdPtr,
-                                    Tcl_NewStringObj (dflt, strlen (dflt)));
+                                    Tcl_NewStringObj ((char*)dflt, strlen (dflt)));
       }
       Tcl_ListObjAppendElement (expat->interp, cmdPtr,
                                 Tcl_NewIntObj (isrequired));
@@ -3716,9 +3716,9 @@ TclGenExpatXmlDeclHandler (userData, version, encoding, standalone)
       Tcl_Preserve ((ClientData) expat->interp);
 
       Tcl_ListObjAppendElement (expat->interp, cmdPtr,
-                                Tcl_NewStringObj (version, -1));
+                                Tcl_NewStringObj ((char*)version, -1));
       Tcl_ListObjAppendElement (expat->interp, cmdPtr,
-                                Tcl_NewStringObj (encoding, -1));
+                                Tcl_NewStringObj ((char*)encoding, -1));
       if (standalone == -1) {
           Tcl_ListObjAppendElement (expat->interp, cmdPtr,
                                     Tcl_NewStringObj ("", 0));
