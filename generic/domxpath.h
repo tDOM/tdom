@@ -61,8 +61,6 @@
 
 #define IS_NAN(v) ((v) != (v))
 #ifdef DBL_MAX
-/*  #   define IS_INF(v) ((((v) > DBL_MAX) || ((v) < -DBL_MAX)) ? \ */
-/*                               (((v) > DBL_MAX) ? 1 : -1) : 0) */
 #   define IS_INF(v) ((v) > DBL_MAX ? 1 : ((v) < -DBL_MAX ? -1 : 0))
 #else
 #   define IS_INF(v) 0
@@ -73,7 +71,7 @@
 |
 \---------------------------------------------------------------------------*/
 typedef enum {
-    Int, Real, Str, Mult, Div, Mod, UnaryMinus, IsNSElement,
+    Int, Real, Mult, Div, Mod, UnaryMinus, IsNSElement,
     IsNode, IsComment, IsText, IsPI, IsSpecificPI, IsElement,
     IsFQElement, GetVar, GetFQVar, Literal, ExecFunction, Pred, EvalSteps,
     SelectRoot, CombineSets, Add, Substract, Less, LessOrEq,
