@@ -1,10 +1,16 @@
 # Features covered:  Parser functions
 #
 # This file tests the parser's basic functions.
-# Sourcing this file into Tcl runs the tests and generates output
-# for errors.  No output means no errors were found.
+#
+#    parser-1.*: parser creation
+#    parser-2.*: return code 'break' from callback
+#    parser-3.*: return code 'continue' from callback
+#    parser-4.*: return code 'error' from callback
+#    parser-5.*: parse input from channel
+#    parser-6.*: reuse parser 
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
+# Copyright (c) 2002-2003 Rolf Ade
 #
 # $Id$
 
@@ -106,6 +112,44 @@ test parser-1.5 {parser freeing, wrong nr of args} {
     }
     set result
 } 1
+
+test parser-1.6 {parser create syntax check} {
+    set result [catch {set parser [expat -paramentityparsing wrong]} errMsg]
+    lappend result $errMsg
+} {1 {bad value "wrong": must be always, never, or notstandalone}}
+
+test parser-1.7 {parser cget syntax} {
+    catch {rename parser-1.7 {}}
+    set parser [expat parser-1.7]
+    set result [catch {$parser cget} errMsg]
+    lappend result $errMsg
+} {1 {wrong # args: should be "parser-1.7 cget ?-handlerset handlersetname? switch"}}
+
+test parser-1.8 {parser cget syntax} {
+    catch {rename parser-1.8 {}}
+    set parser [expat parser-1.8]
+    set result [catch {$parser cget -handlerset -final} errMsg]
+    lappend result $errMsg
+} {1 {wrong # args: should be "?-handlerset handlersetname? switch"}}
+
+test parser-1.9 {parser cget syntax} {
+    catch {rename parser-1.9 {}}
+    set parser [expat parser-1.9]
+    set result [catch {$parser cget -handlerset dontexist -baseurl} errMsg]
+    lappend result $errMsg
+} {1 {invalid handlerset name: dontexist}}
+
+test parser-1.10 {parser cget syntax} {
+    catch {rename parser-1.10 {}}
+    set parser [expat parser-1.10]
+    set result [$parser cget -handlerset default -baseurl]
+} {}
+
+test parser-1.11 {parser cget syntax} {
+    catch {rename parser-1.11 {}}
+    set parser [expat parser-1.11 -baseurl http://foo.org/]
+    set result [$parser cget -handlerset default -baseurl]
+} {http://foo.org/}
 
 # Test break return code from callback
 
@@ -312,11 +356,18 @@ test parser-5.1 {parse channel input} {
     list $::count
 } {42}
 
-test parser-6.1 {parser create syntax check} {
-    set result [catch {set parser [expat -paramentityparsing wrong]} errMsg]
-    lappend result $errMsg
-} {1 {bad value "wrong": must be always, never, or notstandalone}}
-
+test parser-6.1 {reuse parser} {
+    catch {rename parser-6.1 {}}
+    set parser [expat parser-6.1 -baseurl file:///foo/bar]
+    set result [$parser cget -baseurl]
+    $parser parse <data/>
+    lappend result [$parser cget -baseurl]
+    $parser configure -baseurl file:///bar/foo
+    lappend result [$parser cget -baseurl]
+    $parser parse <otherdata/>
+    lappend result [$parser cget -baseurl]
+    set result
+} {file:///foo/bar {} file:///bar/foo {}}
 
 foreach parser [info commands xmlparser*] {
     $parser free
@@ -328,6 +379,3 @@ foreach parser [info commands parser-*] {
 # cleanup
 ::tcltest::cleanupTests
 return
-
-
-
