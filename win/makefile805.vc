@@ -57,8 +57,8 @@ NODEBUG = 1
 #-------------------------------------------------------------------------
 
 NAMEPREFIX = libtdom
-DOTVERSION = 0.8.0
-VERSION = 080
+DOTVERSION = 0.8.1
+VERSION = 081
 
 BINROOT         = .
 !IF "$(NODEBUG)" == "1"
