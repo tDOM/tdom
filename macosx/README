@@ -1,0 +1,9 @@
+
+This directory will contain the ProjectBuilder files for building
+the tdom library under Mac OS X operating system. 
+
+For the time being, please go to ../unix directory and inspect 
+the CONFIG file. There you will find example on how to configure
+the library using standard GNU configure/make tools.
+
+-EOF
