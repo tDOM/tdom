@@ -1,3 +1,23 @@
+2005-01-16  Zoran Vasiljevic  <zv@archiware.com>
+
+	* Makefile.in:                 Bumped version to 0.8.1.
+	* configure:                   Added TEA-3 support.
+	* configure.in:                Made AOLserver 4.x virtual-server aware
+	* tdom.m4:                     and added examples how to build the
+	* generic/aolstub.cpp:         lib as AOLserver module for 4.x series.
+	* generic/tdominit.c:          
+	* README:
+	* README.AOL:
+	* mac/Prefix/tDOMPrefix.h:
+	* mac/Prefix/tDOMPrefix_OSX.h:
+	* win/makefile.vc:
+	* win/makefile805.vc:
+	* win/pkgIndex.tcl:
+	* tclconfig/ChangeLog:
+	* tclconfig/tcl.m4:
+	* tests/loadtdom.tcl:
+	* unix/CONFIG:
+	
 2005-01-11  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domDoc.*
