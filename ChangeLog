@@ -1,5 +1,9 @@
 2005-01-11  Rolf Ade  <rolf@pointsman.de>
 
+        * doc/domDoc.*
+        * doc/domNode.*: Added documentation for the -cache option of
+          the selectNodes method.
+
         * lib/tdom.tcl: Scripted xpath function element-available:
           moved xsl:output to the avaliable elements, since it's in
           fact avaliable in the meantime (with exception of the
