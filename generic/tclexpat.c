@@ -83,13 +83,6 @@
                          expat->firstTclHandlerSet = activeTclHandlerSet; \
                       }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION > 0))
-#define TCLGETBYTES(obj,pLen) Tcl_GetByteArrayFromObj(obj,pLen)
-#define TCLNEWBYTES(obj,len)  Tcl_NewByteArrayObj(obj,len)
-#else
-#define TCLGETBYTES(obj,pLen) Tcl_GetStringFromObj(obj,pLen)
-#define TCLNEWBYTES(obj,len)  Tcl_NewStringObj(obj,len)
-#endif
 
 /*----------------------------------------------------------------------------
 |   typedefs
@@ -646,7 +639,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_PARSE:
 
       CheckArgs (3,3,2,"<XML-String>");
-      data = TCLGETBYTES(objv[2], &len);
+      data = Tcl_GetStringFromObj(objv[2], &len);
       result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_STRING);
       break;
 
@@ -725,7 +718,12 @@ TclExpatParse (interp, expat, data, len, type)
   XML_Parser *parser;
   Tcl_Channel channel = NULL;
   CHandlerSet *activeCHandlerSet;
-  
+#if !TclOnly8Bits    
+  Tcl_Obj       *bufObj;
+  Tcl_DString    dStr;
+  int            useBinary;
+  char          *str;
+#endif
 
   expat->status = TCL_OK;
   if (expat->result != NULL) {
@@ -764,6 +762,44 @@ TclExpatParse (interp, expat, data, len, type)
           Tcl_AppendResult (interp, "channel \"", data, "wasn't opened for reading", (char *) NULL);
           return TCL_ERROR;
       }
+#if !TclOnly8Bits
+      Tcl_DStringInit (&dStr);
+      if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
+          return TCL_ERROR;
+      }
+      if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
+      else useBinary = 0;
+      Tcl_DStringFree (&dStr);
+      if (useBinary) {
+          do {
+              bytesread = Tcl_Read (channel, buf, sizeof (buf));
+              done = bytesread < sizeof (buf);
+              if (done) {
+                  result = XML_Parse (expat->parser, buf, bytesread, done);
+              } else {
+                  if (!XML_Parse (expat->parser, buf, bytesread, done)) {
+                      result = 0;
+                      break;
+                  }
+              }
+          } while (!done);
+      } else {
+          bufObj = Tcl_NewObj();
+          Tcl_IncrRefCount (bufObj);
+          Tcl_SetObjLength (bufObj, 6144);
+          do {
+              len = Tcl_ReadChars (channel, bufObj, 1024, 0);
+              done = (len < 1024);
+              str = Tcl_GetStringFromObj (bufObj, &len);
+              if (!XML_Parse (expat->parser, str, len, done)) {
+                  result = 0;
+                  break;
+              }
+          } while (!done);
+          result = 1;
+          Tcl_DecrRefCount (bufObj);
+      }
+#else             
       do {
           bytesread = Tcl_Read (channel, buf, sizeof (buf));
           done = bytesread < sizeof (buf);
@@ -772,12 +808,13 @@ TclExpatParse (interp, expat, data, len, type)
           } else {
               if (!XML_Parse (expat->parser, buf, bytesread, done)) {
                   result = 0;
-                  break;
+                      break;
               }
           }
       } while (!done);
+#endif      
       break;
-
+      
   case EXPAT_INPUT_FILENAME:
       fd = open(data, O_BINARY|O_RDONLY);
       if (fd < 0) {
@@ -1998,7 +2035,6 @@ TclGenExpatCharacterDataHandler(userData, s, len)
 
       vector[0] = activeTclHandlerSet->datacommand;
       vector[1] = Tcl_NewStringObj ((char *)s, len);
-/*        vector[1] = TCLNEWBYTES((char *)s, len); */
       Tcl_Preserve((ClientData) expat->interp);
       result = activeTclHandlerSet->datacommandObjProc(activeTclHandlerSet->datacommandclientData, expat->interp, 2, vector);
       Tcl_Release((ClientData) expat->interp);
