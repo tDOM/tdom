@@ -7,7 +7,7 @@
 #	replaced in the actual Makefile.
 #
 # Copyright (c) 1999 Scriptics Corporation.
-# Copyright (c) 2002 ActiveState SRL.
+# Copyright (c) 2002-2003 ActiveState Corporation.
 #
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
@@ -15,79 +15,15 @@
 # RCS: @(#) $Id$
 
 #========================================================================
-# Edit the following few lines when writing a new extension
-#========================================================================
-
-#========================================================================
-# Enumerate the names of the source files included in this package.
-# This will be used when a dist target is added to the Makefile.
-# EXTRA_SOURCES will be replaced by WIN_SOURCES or UNIX_SOURCES, as is
-# appropriate for your platform.  It is not important to specify the
-# directory, as long as it is the $(srcdir) or in the generic, win or
-# unix subdirectory.
-#========================================================================
-
-EXPAT_SOURCES   = xmlrole.c      \
-                  xmltok.c       \
-                  xmlparse.c
-
-TDOM_SOURCES    = xmlsimple.c    \
-                  utf8conv.c     \
-                  dom.c          \
-                  domalloc.c     \
-                  domhtml.c      \
-                  domxpath.c     \
-                  domxslt.c      \
-                  domlock.c      \
-                  tcldom.c       \
-                  nodecmd.c      \
-                  tdominit.c     \
-                  tclexpat.c     \
-                  tdomStubInit.c
-
-tdomstub_SOURCES= tdomStubLib.c
-tdom_SOURCES    = $(TDOM_SOURCES) $(EXPAT_SOURCES) @EXTRA_SOURCES@
-
-WIN_SOURCES	= 
-UNIX_SOURCES    =
-
-#========================================================================
-# Identify the object files.  This replaces .c with .$(OBJEXT) for all
-# the named source files.   These objects are created and linked into the
-# final library.  In these do not correspond directly to the source files
-# above, you will need to enumerate the object files here.
-# Normally we would use $(OBJEXT), but certain make executables won't do
-# the extra macro in a macro conversion properly.
-#
-# "sample_LIB_FILE" refers to the library (dynamic or static as per
-# configuration options) composed of the named objects.
-#========================================================================
-
-tdom_OBJECTS		= $(tdom_SOURCES:.c=.@OBJEXT@)
-tdom_LIB_FILE		= @tdom_LIB_FILE@
-
-tdomstub_OBJECTS	= $(tdomstub_SOURCES:.c=.@OBJEXT@)
-tdomstub_LIB_FILE	= @tdomstub_LIB_FILE@
-
-#========================================================================
-# RUNTIME_SOURCES identifies Tcl runtime files that are associated with
-# this package that need to be installed, if any.
-#========================================================================
-
-RUNTIME_SOURCES = tdom.tcl
-
-#========================================================================
-# This is a list of header files to be installed
-#========================================================================
-
-GENERIC_HDRS	= 
-
-#========================================================================
 # Add additional lines to handle any additional AC_SUBST cases that
-# have been added to the configure script.
+# have been added in a customized configure script.
 #========================================================================
 
 AOL_DIR		= @AOL_DIR@
+TDOMSHELL	= @TDOMSHELL@
+TCL_LIB_SPEC	= @TCL_LIB_SPEC@
+LIB_RUNTIME_DIR	= $(libdir)
+TDOM_LD_SEARCH_FLAGS = @TDOM_LD_SEARCH_FLAGS@
 
 #========================================================================
 # This are additional flags to be appended to the test suite run
@@ -96,19 +32,47 @@ AOL_DIR		= @AOL_DIR@
 TESTFLAGS       = -constraints longRunning
 
 #========================================================================
-# Nothing of the variables below this line need to be changed.  Please
-# check the TARGETS section below to make sure the make targets are
-# correct.
+# Nothing of the variables below this line should need to be changed.
+# Please check the TARGETS section below to make sure the make targets
+# are correct.
 #========================================================================
 
 #========================================================================
-# The variable "$(PACKAGE)_LIB_FILE" is the parameterized name of the
-# library that we are building.
+# The names of the source files is defined in the configure script.
+# The object files are used for linking into the final library.
+# This will be used when a dist target is added to the Makefile.
+# It is not important to specify the directory, as long as it is the
+# $(srcdir) or in the generic, win or unix subdirectory.
 #========================================================================
 
-lib_BINARIES	= $($(PACKAGE)_LIB_FILE) $($(PACKAGE)stub_LIB_FILE)
-bin_BINARIES	= $(TDOMSHELL) 
-#BINARIES	= $(lib_BINARIES) $(bin_BINARIES)
+PKG_SOURCES	= @PKG_SOURCES@
+PKG_OBJECTS	= @PKG_OBJECTS@
+
+PKG_STUB_SOURCES = @PKG_STUB_SOURCES@
+PKG_STUB_OBJECTS = @PKG_STUB_OBJECTS@
+
+#========================================================================
+# PKG_TCL_SOURCES identifies Tcl runtime files that are associated with
+# this package that need to be installed, if any.
+#========================================================================
+
+PKG_TCL_SOURCES = @PKG_TCL_SOURCES@
+
+#========================================================================
+# This is a list of public header files to be installed, if any.
+#========================================================================
+
+PKG_HEADERS	= @PKG_HEADERS@
+
+#========================================================================
+# "PKG_LIB_FILE" refers to the library (dynamic or static as per
+# configuration options) composed of the named objects.
+#========================================================================
+
+PKG_LIB_FILE	= @PKG_LIB_FILE@
+PKG_STUB_LIB_FILE = @PKG_STUB_LIB_FILE@
+
+lib_BINARIES	= $(PKG_LIB_FILE) $(PKG_STUB_LIB_FILE)
 BINARIES	= $(lib_BINARIES)
 
 SHELL		= @SHELL@
@@ -125,7 +89,7 @@ includedir	= @includedir@
 
 DESTDIR		=
 
-PKG_DIR		= $(PACKAGE)$(VERSION)
+PKG_DIR		= $(PACKAGE_NAME)$(PACKAGE_VERSION)
 pkgdatadir	= $(datadir)/$(PKG_DIR)
 pkglibdir	= $(libdir)/$(PKG_DIR)
 pkgincludedir	= $(includedir)/$(PKG_DIR)
@@ -137,50 +101,33 @@ INSTALL_PROGRAM	= @INSTALL_PROGRAM@
 INSTALL_DATA	= @INSTALL_DATA@
 INSTALL_SCRIPT	= @INSTALL_SCRIPT@
 
-TDOMSHELL	= @TDOMSHELL@
-PACKAGE		= @PACKAGE@
-VERSION		= @VERSION@
+PACKAGE_NAME	= @PACKAGE_NAME@
+PACKAGE_VERSION	= @PACKAGE_VERSION@
 CC		= @CC@
-CFLAGS_DEBUG	= @CFLAGS_DEBUG@
-CFLAGS_WARNING	= @CFLAGS_WARNING@
 CFLAGS_DEFAULT	= @CFLAGS_DEFAULT@
-CFLAGS_OPTIMIZE	= @CFLAGS_OPTIMIZE@
+CFLAGS_WARNING	= @CFLAGS_WARNING@
 CLEANFILES	= @CLEANFILES@
 EXEEXT		= @EXEEXT@
-LDFLAGS_DEBUG	= @LDFLAGS_DEBUG@
 LDFLAGS_DEFAULT	= @LDFLAGS_DEFAULT@
-LDFLAGS_OPTIMIZE = @LDFLAGS_OPTIMIZE@
 MAKE_LIB	= @MAKE_LIB@
-MAKE_STUB_LIB	= @MAKE_STUB_LIB@
 MAKE_SHARED_LIB	= @MAKE_SHARED_LIB@
 MAKE_STATIC_LIB	= @MAKE_STATIC_LIB@
+MAKE_STUB_LIB	= @MAKE_STUB_LIB@
 OBJEXT		= @OBJEXT@
 RANLIB		= @RANLIB@
+RANLIB_STUB	= @RANLIB_STUB@
 SHLIB_CFLAGS	= @SHLIB_CFLAGS@
 SHLIB_LD	= @SHLIB_LD@
-SHLIB_LDFLAGS	= @SHLIB_LDFLAGS@
+SHLIB_LD_FLAGS	= @SHLIB_LD_FLAGS@
 SHLIB_LD_LIBS	= @SHLIB_LD_LIBS@
 STLIB_LD	= @STLIB_LD@
 TCL_DEFS	= @TCL_DEFS@
 TCL_BIN_DIR	= @TCL_BIN_DIR@
 TCL_SRC_DIR	= @TCL_SRC_DIR@
-TCL_DBGX	= @TCL_DBGX@
-DL_LIBS		= @DL_LIBS@
-MATH_LIBS	= @MATH_LIBS@
-
 # This is necessary for packages that use private Tcl headers
-# TCL_TOP_DIR_NATIVE	= @TCL_TOP_DIR_NATIVE@
-
-#========================================================================
-# This is needed so we can link the custom shell
-# For runtime linker, you can extend/modify the LIB_RUNTIME_DIR to point
-# to a comma-separated list of directories for looking-up shared libs.
-#========================================================================
-
+#TCL_TOP_DIR_NATIVE	= @TCL_TOP_DIR_NATIVE@
+# Not used, but retained for reference of what libs Tcl required
 TCL_LIBS	= @TCL_LIBS@
-TCL_LIB_SPEC	= @TCL_LIB_SPEC@
-LIB_RUNTIME_DIR	= $(libdir)
-TDOM_LD_SEARCH_FLAGS = @TDOM_LD_SEARCH_FLAGS@
 
 #========================================================================
 # TCLLIBPATH seeds the auto_path in Tcl's init.tcl so we can test our
@@ -191,29 +138,32 @@ TDOM_LD_SEARCH_FLAGS = @TDOM_LD_SEARCH_FLAGS@
 
 EXTRA_PATH	= $(top_builddir):$(TCL_BIN_DIR)
 TCLSH_ENV	= TCL_LIBRARY=`@CYGPATH@ $(TCL_SRC_DIR)/library` \
-		  LD_LIBRARY_PATH="$(EXTRA_PATH):$(LD_LIBRARY_PATH)" \
-		  LIBPATH="$(EXTRA_PATH):${LIBPATH}" \
-		  SHLIB_PATH="$(EXTRA_PATH):${SHLIB_PATH}" \
+		  @LD_LIBRARY_PATH_VAR@="$(EXTRA_PATH):$(@LD_LIBRARY_PATH_VAR@)" \
 		  PATH="$(EXTRA_PATH):$(PATH)" \
 		  TCLLIBPATH="$(top_builddir)"
 TCLSH_PROG	= @TCLSH_PROG@
 TCLSH		= $(TCLSH_ENV) $(TCLSH_PROG)
 SHARED_BUILD	= @SHARED_BUILD@
 
-INCLUDES	= @TDOM_INCLUDES@ @TCL_INCLUDES@ @AOL_INCLUDES@
+INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@
 
-EXTRA_CFLAGS	= $(MEM_DEBUG_FLAGS) @EXTRA_CFLAGS@ -DBYTEORDER=@BYTEORDER@
+PKG_CFLAGS	= @PKG_CFLAGS@
 
-DEFS		= $(TCL_DEFS) @DEFS@
+# TCL_DEFS is not strictly need here, but if you remove it, then you
+# must make sure that configure.in checks for the necessary components
+# that your library may use.  TCL_DEFS can actually be a problem if
+# you do not compile with a similar machine setup as the Tcl core was
+# compiled with.
+#DEFS		= $(TCL_DEFS) @DEFS@ $(PKG_CFLAGS)
+DEFS		= @DEFS@ $(PKG_CFLAGS)
 
-CONFIG_CLEAN_FILES = Makefile tdomConfig.sh
+CONFIG_CLEAN_FILES = Makefile
 
 CPPFLAGS	= @CPPFLAGS@
-LIBS		= @LIBS@
-AR		= @AR@
-
-CFLAGS		= @CFLAGS_DEFAULT@ $(EXTRA_CFLAGS) $(SHLIB_CFLAGS) -DTCL_DBGX=$(TCL_DBGX)
-COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
+LIBS		= @PKG_LIBS@ @LIBS@
+AR		= ar
+CFLAGS		= @CFLAGS@
+COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 
 #========================================================================
 # Start of user-definable TARGETS section
@@ -233,11 +183,10 @@ all: binaries libraries doc
 # TDOM enabled shell is build as an extra directive, since non TEA. 
 #========================================================================
 
-$(TDOMSHELL): $(tdomsh_OBJECTS) $(tdom_OBJECTS)
-	$(COMPILE) -c `@CYGPATH@ tclAppInit.c`
-	$(CC) @LDFLAGS@ -o $@ tclAppInit.$(OBJEXT) $(tdom_OBJECTS) \
+$(TDOMSHELL): $(PKG_OBJECTS)
+	$(COMPILE) -c `@CYGPATH@ $(srcdir)/unix/tclAppInit.c`
+	$(CC) @LDFLAGS@ -o $@ tclAppInit.$(OBJEXT) $(PKG_OBJECTS) \
 	  $(TCL_LIBS) $(TCL_LIB_SPEC) $(LIBS) $(TDOM_LD_SEARCH_FLAGS)
-	  
 
 #========================================================================
 # The binaries target builds executable programs, Windows .dll's, unix
@@ -251,27 +200,27 @@ binaries: $(BINARIES) pkgIndex.tcl-hand
 libraries:
 
 doc:
+	@echo "If you have documentation to create, place the commands to"
+	@echo "build the docs in the 'doc:' target.  For example:"
+	@echo "        xml2nroff sample.xml > sample.n"
+	@echo "        xml2html sample.xml > sample.html"
 
-install: all install-binaries install-doc
+install: all install-binaries install-libraries install-doc
 
 install-binaries: binaries install-lib-binaries install-bin-binaries
-	@if test "x$(SHARED_BUILD)" = "x1"; then \
-	    $(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
-	fi
 
 #========================================================================
 # This rule installs platform-independent files, such as header files.
+# The list=...; for p in $$list handles the empty list case x-platform.
 #========================================================================
 
 install-libraries: libraries
 	@mkdir -p $(DESTDIR)$(includedir)
 	@echo "Installing header files in $(DESTDIR)$(includedir)"
-	@if test "x$(GENERIC_HDRS)" != "x"; then \
-	  for i in $(GENERIC_HDRS) ; do \
-	    echo " $(INSTALL_DATA) $$i" ; \
-	      $(INSTALL_DATA) $$i $(DESTDIR)$(includedir) ; \
-	  done;
-	fi
+	@list='$(PKG_HEADERS)'; for i in $$list; do \
+	    echo "Installing $(srcdir)/$$i" ; \
+	    $(INSTALL_DATA) $(srcdir)/$$i $(DESTDIR)$(includedir) ; \
+	done;
 
 #========================================================================
 # Install documentation.  Unix manpages should go in the $(mandir)
@@ -281,27 +230,19 @@ install-libraries: libraries
 install-doc: doc
 	@mkdir -p $(DESTDIR)$(mandir)/mann
 	@echo "Installing documentation in $(DESTDIR)$(mandir)"
-	@for i in $(srcdir)/doc/*.n; do \
-	  echo " $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann/`basename $$i`"; \
+	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+	    echo "Installing $$i"; \
 	    rm -f $(DESTDIR)$(mandir)/mann/`basename $$i`; \
-	      $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
+	    $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
 	done
-
-#========================================================================
-# To be able to "make test" *before* we did the "make install"
-# we must temporarily copy the Tcl part of the package in the
-# correct place, so the "package require" will be able to load
-# the package by using simple "package require tdom".
-#========================================================================
 
 test: binaries libraries
-	@for i in $(RUNTIME_SOURCES); do \
-	  cp $(srcdir)/lib/$$i $(top_builddir)/; \
+	@list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
+	    if test -f $(srcdir)/$$p; then \
+		$(INSTALL_DATA) $(srcdir)/$$p `basename $$p`; \
+	    fi; \
 	done
 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
-	@for i in $(RUNTIME_SOURCES); do \
-	  rm -rf $(top_builddir)/$$i; \
-	done
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
@@ -312,24 +253,24 @@ gdb:
 depend:
 
 #========================================================================
-# $($(PACKAGE)_LIB_FILE) should be listed as part of the BINARIES variable
+# $(PKG_LIB_FILE) should be listed as part of the BINARIES variable
 # mentioned above.  That will ensure that this target is built when you
 # run "make binaries".
 #
-# The $($(PACKAGE)_OBJECTS) objects are created and linked into the final
+# The $(PKG_OBJECTS) objects are created and linked into the final
 # library.  In most cases these object files will correspond to the
 # source files above.
 #========================================================================
 
-$($(PACKAGE)stub_LIB_FILE): $($(PACKAGE)stub_OBJECTS)
-	-rm -f $($(PACKAGE)stub_LIB_FILE)
-	${MAKE_STUB_LIB}
-	$(RANLIB) $($(PACKAGE)stub_LIB_FILE)
-
-$($(PACKAGE)_LIB_FILE): $($(PACKAGE)_OBJECTS)
-	-rm -f $($(PACKAGE)_LIB_FILE)
+$(PKG_LIB_FILE): $(PKG_OBJECTS)
+	-rm -f $(PKG_LIB_FILE)
 	${MAKE_LIB}
-	$(RANLIB) $($(PACKAGE)_LIB_FILE)
+	$(RANLIB) $(PKG_LIB_FILE)
+
+$(PKG_STUB_LIB_FILE): $(PKG_STUB_OBJECTS)
+	-rm -f $(PKG_STUB_LIB_FILE)
+	${MAKE_STUB_LIB}
+	$(RANLIB_STUB) $(PKG_STUB_LIB_FILE)
 
 #========================================================================
 # We need to enumerate the list of .c to .o lines here.
@@ -346,9 +287,9 @@ $($(PACKAGE)_LIB_FILE): $($(PACKAGE)_OBJECTS)
 # As necessary, add $(srcdir):$(srcdir)/compat:....
 #========================================================================
 
-VPATH = $(srcdir)/generic:$(srcdir)/expat:$(srcdir)/unix:$(srcdir)/win
+VPATH = $(srcdir)/expat:$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 
-.c.$(OBJEXT):
+.c.@OBJEXT@:
 	$(COMPILE) -c `@CYGPATH@ $<` -o $@
 
 #========================================================================
@@ -360,11 +301,11 @@ VPATH = $(srcdir)/generic:$(srcdir)/expat:$(srcdir)/unix:$(srcdir)/win
 #========================================================================
 
 pkgIndex.tcl:
-	@(echo pkg_mkIndex . $($(PACKAGE)_LIB_FILE) \; exit; ) | $(TCLSH)
+	( echo pkg_mkIndex . $(PKG_LIB_FILE) \; exit; ) | $(TCLSH)
 
 pkgIndex.tcl-hand:
-	@(echo 'package ifneeded $(PACKAGE) $(VERSION)\
-	"load [list [file join $$dir $($(PACKAGE)_LIB_FILE)]];\
+	@(echo 'package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION)\
+	"load [list [file join $$dir $(PKG_LIB_FILE)]];\
          source [list [file join $$dir tdom.tcl]]"'\
 	) > pkgIndex.tcl
 
@@ -373,38 +314,39 @@ pkgIndex.tcl-hand:
 # You may need to tweak this target to make it work correctly.
 #========================================================================
 
-COMPRESS	= tar zcf $(DIST_FILE) --exclude='CVS' --exclude='\.*' $(PKG_DIR)
-DIST_ROOT	= $(top_builddir)/dist
+#COMPRESS	= tar cvf $(PKG_DIR).tar $(PKG_DIR); compress $(PKG_DIR).tar
+COMPRESS	= gtar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
+DIST_ROOT	= /tmp/dist
 DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
-DIST_FILE	= $(PKG_DIR).tar.gz
 
 dist-clean:
-	@rm -rf $(DIST_ROOT)
+	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
 
 dist: dist-clean
-	@mkdir -p $(DIST_DIR)/tclconfig
-	@mkdir -p $(DIST_DIR)/unix
-	@mkdir -p $(DIST_DIR)/win
-	@cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/LICENSE \
-	  $(srcdir)/NPL-1_1Final.html $(srcdir)/CHANGES \
-	  $(srcdir)/configure-tcl8.0.5 $(srcdir)/tdom.m4 \
-	  $(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.in \
-	  $(DIST_DIR)/
-	@cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
-	  $(DIST_DIR)/tclconfig/
-	@chmod +x $(DIST_DIR)/tclconfig/install-sh
-	@cp -p $(srcdir)/unix/CONFIG $(srcdir)/unix/tclAppInit.c \
-	  $(DIST_DIR)/unix/
-	@cp -p $(srcdir)/win/config.h $(srcdir)/win/makefile.vc \
-	  $(srcdir)/win/makefile805.vc $(DIST_DIR)/win/
-	@(list='apps doc encodings expat extensions generic lib mac macosx tests xe'; \
+	mkdir -p $(DIST_DIR)
+	cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/license* \
+		$(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.in \
+		$(DIST_DIR)/
+	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
+	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.in
+
+	cp -p $(srcdir)/*.[ch] $(DIST_DIR)/
+
+	mkdir $(DIST_DIR)/tclconfig
+	cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
+		$(DIST_DIR)/tclconfig/
+	chmod 664 $(DIST_DIR)/tclconfig/tcl.m4
+	chmod +x $(DIST_DIR)/tclconfig/install-sh
+
+	list='demos doc generic library mac tests unix win'; \
 	for p in $$list; do \
-	  if test -d $(srcdir)/$$p ; then \
-	    cp -pr $(srcdir)/$$p $(DIST_DIR)/; \
-	  fi; \
-	done; \
-	(cd $(DIST_ROOT); $(COMPRESS); rm -rf $(PKG_DIR)))
-	@echo "Distribution file is $(DIST_ROOT)/$(DIST_FILE)"
+	    if test -d $(srcdir)/$$p ; then \
+		mkdir $(DIST_DIR)/$$p; \
+		cp -p $(srcdir)/$$p/*.* $(DIST_DIR)/$$p/; \
+	    fi; \
+	done
+
+	(cd $(DIST_ROOT); $(COMPRESS);)
 
 #========================================================================
 # End of user-definable section
@@ -415,13 +357,12 @@ dist: dist-clean
 # variable in configure.in
 #========================================================================
 
-clean:
+clean:  
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
-	-test -z "$(TDOMSHELL)" || rm -f $(TDOMSHELL)
 	-rm -f *.$(OBJEXT) core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
-distclean: clean dist-clean
+distclean: clean
 	-rm -f *.tab.c
 	-rm -f $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log config.status
@@ -438,14 +379,19 @@ distclean: clean dist-clean
 #========================================================================
 
 install-lib-binaries:
-	@echo "Installing library files in $(pkglibdir)"
 	@mkdir -p $(DESTDIR)$(pkglibdir)
 	@list='$(lib_BINARIES)'; for p in $$list; do \
 	  if test -f $$p; then \
 	    echo " $(INSTALL_PROGRAM) $$p $(DESTDIR)$(pkglibdir)/$$p"; \
 	    $(INSTALL_PROGRAM) $$p $(DESTDIR)$(pkglibdir)/$$p; \
-	    echo " $(RANLIB) $(DESTDIR)$(pkglibdir)/$$p"; \
-	    $(RANLIB) $(DESTDIR)$(pkglibdir)/$$p; \
+	    stub=`echo $$p|sed -e "s/.*\(stub\).*/\1/"`; \
+	    if test "x$$stub" = "xstub"; then \
+		echo " $(RANLIB_STUB) $(DESTDIR)$(pkglibdir)/$$p"; \
+		$(RANLIB_STUB) $(DESTDIR)$(pkglibdir)/$$p; \
+	    else \
+		echo " $(RANLIB) $(DESTDIR)$(pkglibdir)/$$p"; \
+		$(RANLIB) $(DESTDIR)$(pkglibdir)/$$p; \
+	    fi; \
 	    ext=`echo $$p|sed -e "s/.*\.//"`; \
 	    if test "x$$ext" = "xdll"; then \
 		lib=`basename $$p|sed -e 's/.[^.]*$$//'`.lib; \
@@ -456,18 +402,17 @@ install-lib-binaries:
 	    fi; \
 	  fi; \
 	done
-	@list='$(RUNTIME_SOURCES)'; for p in $$list; do \
-	  if test -f $(srcdir)/lib/$$p; then \
-	    echo " $(INSTALL_DATA) $$p $(DESTDIR)$(pkglibdir)/$$p"; \
-	    $(INSTALL_DATA) $(srcdir)/lib/$$p $(DESTDIR)$(pkglibdir)/$$p; \
+	@list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
+	  if test -f $(srcdir)/$$p; then \
+	    destp=`basename $$p`; \
+	    echo " Install $$destp $(DESTDIR)$(pkglibdir)/$$destp"; \
+	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkglibdir)/$$destp; \
 	  fi; \
 	done
-	@list='tdomConfig.sh'; for p in $$list; do \
-	  if test -f $$p; then \
-	    echo " $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p"; \
-	    $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p; \
-	  fi; \
-	done
+	@if test "x$(SHARED_BUILD)" = "x1"; then \
+	    echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
+	    $(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
+	fi
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)
@@ -479,7 +424,6 @@ install-lib-binaries:
 #========================================================================
 
 install-bin-binaries:
-	@echo "Installing executables in $(DESTDIR)$(bindir)"
 	@mkdir -p $(DESTDIR)$(bindir)
 	@list='$(bin_BINARIES)'; for p in $$list; do \
 	  if test -f $$p; then \
@@ -498,7 +442,8 @@ uninstall-binaries:
 	list='$(lib_BINARIES)'; for p in $$list; do \
 	  rm -f $(DESTDIR)$(pkglibdir)/$$p; \
 	done
-	list='$(RUNTIME_SOURCES)'; for p in $$list; do \
+	list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
+	  p=`basename $$p`; \
 	  rm -f $(DESTDIR)$(pkglibdir)/$$p; \
 	done
 	list='$(bin_BINARIES)'; for p in $$list; do \

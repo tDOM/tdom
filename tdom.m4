@@ -197,6 +197,13 @@ AC_DEFUN(TDOM_PATH_AOLSERVER, [
         AC_MSG_RESULT([none found])
     else
         AOL_DIR=${ac_cv_c_aolserver}
+        AOL_INCLUDES="-I\"${AOL_DIR}/include\""
+        if test "`uname -s`" = Darwin ; then
+            aollibs=`ls ${AOL_DIR}/lib/libns* 2>/dev/null`
+            if test x"$aollibs" != x ; then
+                AOL_LIBS="-L\"${AOL_DIR}/lib\" -lnsd -lnsthread"
+            fi
+        fi
         AC_MSG_RESULT([found AOLserver in $AOL_DIR])
         AC_DEFINE(NS_AOLSERVER)
         AC_DEFINE(USE_NORMAL_ALLOCATOR)
