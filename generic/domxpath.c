@@ -2386,7 +2386,7 @@ xpathEvalFunction (
 #if TclOnly8Bits
     char            *fStr;
 #else
-    int              found;
+    int              found, j;
     int              lenstr, fromlen, utfCharLen;
     char             utfBuf[TCL_UTF_MAX];
     Tcl_DString      tstr, tfrom, tto, tresult;
