@@ -1,3 +1,7 @@
+2004-09-13  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Corrected a typo in an error msg.
+
 2004-09-08  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Editorial changes.
