@@ -497,12 +497,11 @@ special XML characters. If the optional boolean value \fIboolean\fR is given,
 the flag is set accordingly. You should not set this flag to 1, until you
 really know, what you do.
 .TP
-\&\fB\fBstartBefore\fP \fIrefnode\fB
-\&\fRCompares the relative order of node and \fIrefnode\fR. Both
+\&\fB\fBprecedes\fP \fIrefnode\fB
+\&\fRCompares the relative order of the node and \fIrefnode\fR. Both
 nodes must be part of the same documents and not out of the fragment list of
-the document. Returns 1, if node is in document order before (or, in case of
-nested element nodes, start before) \fIrefnode\fR, 0 if node and
-\&\fIrefnode\fR are the same node and -1 otherwise.
+the document. Returns true, if node is in document order (in the sense of the
+XPath 1.0 recommendation) before \fIrefnode\fR and false otherwise.
 .TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fB?-ignoreUndeclaredParameters?\fP \fB?-xsltmessagecmd script?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the document using the XSLT
