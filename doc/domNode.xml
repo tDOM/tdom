@@ -295,19 +295,17 @@ Otherwise an error is generated.</desc>
 
       <commanddef>
         <command><method>prefix</method></command>
-        <desc> ...todo...  Returns the namespace prefix.</desc>
+        <desc>Returns the namespace prefix.</desc>
       </commanddef>
 
       <commanddef>
         <command><method>namespaceURI</method></command>
-        <desc> ...todo...  Returns the URI from the namespace of the given
-node.</desc>
+        <desc>Returns the URI from the namespace of the given node.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>prefix</method></command>
-        <desc> ...todo...  Returns the localName from the tag name of the given
-node.</desc>
+        <command><method>localName</method></command>
+        <desc>Returns the localName from the tag name of the given node.</desc>
       </commanddef>
 
       <commanddef>
