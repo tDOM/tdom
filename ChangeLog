@@ -1,3 +1,8 @@
+2003-11-01  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Minor bug fix: Special handling is
+          needed, if xsl:copy-of is used, to copy namespace nodes.
+
 2003-10-26  Rolf Ade  <rolf@pointsman.de>
         
         * apps/xslt.tcl: Removed not needed code.
