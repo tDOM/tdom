@@ -157,7 +157,8 @@ typedef struct xsltSubDoc
     xsltExclExtNS      * extensionNS;
     int                  fwCmpProcessing;
     int                  isStylesheet;
-
+    int                  mustFree;
+    
     struct xsltSubDoc  * next;
 
 } xsltSubDoc;
@@ -1828,8 +1829,8 @@ void StripXMLSpace (
 {
     domNode       *child, *newChild, *parent;
     int            i, len, onlySpace, found, strip;
-    char          *p, *nsname, *localName, prefix[MAX_PREFIX_LEN];
-    double        *f, stripPrecedence, stripPrio;
+    char          *p, *localName, prefix[MAX_PREFIX_LEN];
+    double        *f;
     domNS         *ns;
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
@@ -5161,13 +5162,14 @@ int fillElementList (
         }
         *pc = save;
     }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
-|   StripSpace
+|   StripXSLTSpace
 |
 \---------------------------------------------------------------------------*/
-void StripSpace (
+void StripXSLTSpace (
     xsltState  * xs,
     domNode    * node
 )
@@ -5211,7 +5213,7 @@ void StripSpace (
         child = node->firstChild;
         while (child) {
             newChild = child->nextSibling;
-            StripSpace (xs, child);
+            StripXSLTSpace (xs, child);
             child = newChild;
         }
     } else {
@@ -5483,6 +5485,7 @@ getExternalDocument (
     sdoc->excludeNS = NULL;
     sdoc->extensionNS = NULL;
     sdoc->fwCmpProcessing = 0;
+    sdoc->mustFree = 1;
     sdoc->isStylesheet = isStylesheet;
     if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
@@ -5635,7 +5638,6 @@ static int processTopLevelVars (
 static int processTopLevel (
     Tcl_Interp    * interp,
     domNode       * xsltDocumentElement,
-    domNode       * xmlNode,
     xsltState     * xs,
     double          precedence,
     double        * precedenceLowBound,
@@ -5645,13 +5647,13 @@ static int processTopLevel (
     domNode           *node;
     domDocument       *extStyleSheet;
     int                rc, hnew, clen, newdf = 0, nonImportElemSeen = 0;
+    int                ignore;
     double             childPrecedence, childLowBound;
     char              *str, *name, *match, *use, *baseURI, *href;
     char              *localName, prefix[MAX_PREFIX_LEN];
     xsltTag            tag;
     xsltAttrSet       *attrSet;
     xsltKeyInfo       *keyInfo;
-    xpathResultSet     nodeList;
     xsltDecimalFormat *df;
     xsltTopLevelVar   *topLevelVar;
     xsltNSAlias       *nsAlias;
@@ -5659,8 +5661,6 @@ static int processTopLevel (
     Tcl_HashEntry     *h;
     Tcl_DString        dStr;
 
-    xpathRSInit( &nodeList );
-    rsAddNodeFast( &nodeList, xmlNode);
 
     DBG(fprintf (stderr, "start processTopLevel. precedence: %f precedenceLowBound %f\n", precedence, *precedenceLowBound););
     node = xsltDocumentElement->firstChild;
@@ -5952,8 +5952,8 @@ static int processTopLevel (
                 childPrecedence = (precedence + *precedenceLowBound) / 2;
                 childLowBound = *precedenceLowBound;
                 rc = processTopLevel (interp, extStyleSheet->documentElement,
-                                      xmlNode, xs, childPrecedence,
-                                      &childLowBound, errMsg);
+                                      xs, childPrecedence, &childLowBound,
+                                      errMsg);
                 *precedenceLowBound = childPrecedence;
                 if (rc != 0) {
                     return rc;
@@ -5984,8 +5984,8 @@ static int processTopLevel (
                 }
                 xs->currentXSLTNode = extStyleSheet->documentElement;
                 rc = processTopLevel (interp, extStyleSheet->documentElement,
-                                      xmlNode, xs, precedence,
-                                      precedenceLowBound, errMsg);
+                                      xs, precedence, precedenceLowBound,
+                                      errMsg);
                 if (rc != 0) {
                     return rc;
                 }
@@ -6080,15 +6080,17 @@ static int processTopLevel (
                 }
 
                 nsAlias = xs->nsAliases;
+                ignore = 0;
                 while (nsAlias) {
                     if (strcmp (nsAlias->fromUri, nsFrom->uri)==0) {
                         if (nsAlias->precedence > precedence) {
-                            return 0;
+                            ignore = 1;
                         }
                         break;
                     }
                     nsAlias = nsAlias->next;
                 }
+                if (ignore) break;
                 if (nsAlias) {
                     FREE(nsAlias->toUri);
                 } else {
@@ -6230,13 +6232,11 @@ static int processTopLevel (
         }
         node = node->nextSibling;
     }
-    xpathRSFree (&nodeList);
     return 0;
 }
 
-
 /*----------------------------------------------------------------------------
-|   xsltFreeStats
+|   xsltFreeState
 |
 \---------------------------------------------------------------------------*/
 static void
@@ -6265,7 +6265,7 @@ xsltFreeState (
          entryPtr = Tcl_NextHashEntry (&search)) {
         tpl = (xsltTemplate *) Tcl_GetHashValue (entryPtr);
         if (!tpl->match) {
-            FREE((char*)tpl);
+            FREE(tpl);
         }
     }
     Tcl_DeleteHashTable (&xs->namedTemplates);
@@ -6278,7 +6278,7 @@ xsltFreeState (
             if (tpl->freeAst) xpathFreeAst (tpl->freeAst);        
             tplsave = tpl;
             tpl = tpl->next;
-            FREE((char*)tplsave);
+            FREE(tplsave);
         }
     }
     Tcl_DeleteHashTable (&xs->isElementTpls);
@@ -6303,8 +6303,8 @@ xsltFreeState (
             entryPtr != (Tcl_HashEntry*) NULL;
             entryPtr = Tcl_NextHashEntry(&search)) {
         nf = (xsltNumberFormat *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)nf->tokens);
-        FREE((char *)nf);
+        FREE(nf->tokens);
+        FREE(nf);
     }
     Tcl_DeleteHashTable(&xs->formats);
 
@@ -6313,7 +6313,7 @@ xsltFreeState (
              entryPtr != (Tcl_HashEntry*) NULL;
              entryPtr = Tcl_NextHashEntry(&search)) {
             tlv = (xsltTopLevelVar *) Tcl_GetHashValue (entryPtr);
-            FREE((char *)tlv);
+            FREE(tlv);
         }
         Tcl_DeleteHashTable (&xs->topLevelVars);
     }
@@ -6328,7 +6328,7 @@ xsltFreeState (
             ki = ki->next;
             xpathFreeAst (kisave->matchAst);
             xpathFreeAst (kisave->useAst);
-            FREE((char*)kisave);
+            FREE(kisave);
         }
     }
     Tcl_DeleteHashTable (&xs->keyInfos);
@@ -6350,12 +6350,12 @@ xsltFreeState (
                 while (kv) {
                     kvsave = kv;
                     kv = kv->next;
-                    FREE((char*)kvsave);
+                    FREE(kvsave);
                 }
-                FREE((char*)kvalues);
+                FREE(kvalues);
             }
             Tcl_DeleteHashTable (htable);
-            FREE((char*)htable);
+            FREE(htable);
         }
         Tcl_DeleteHashTable (&sdsave->keyData);
         eNS = sdsave->excludeNS;
@@ -6363,20 +6363,20 @@ xsltFreeState (
             if (eNS->uri) FREE(eNS->uri);
             eNSsave = eNS;
             eNS = eNS->next;
-            FREE((char *)eNSsave);
+            FREE(eNSsave);
         }
         eNS = sdsave->extensionNS;
         while (eNS) {
             if (eNS->uri) FREE(eNS->uri);
             eNSsave = eNS;
             eNS = eNS->next;
-            FREE((char *)eNSsave);
+            FREE(eNSsave);
         }
-        if (sdsave->next && sdsave->next->next) {
+        if (sdsave->baseURI) FREE(sdsave->baseURI);
+        if (sdsave->mustFree) {
             domFreeDocument (sdsave->doc, NULL, NULL);
-            if (sdsave->baseURI) FREE(sdsave->baseURI);
         }
-        FREE((char*)sdsave);
+        FREE(sdsave);
     }
 
     nsAlias = xs->nsAliases;
@@ -6385,7 +6385,7 @@ xsltFreeState (
         nsAlias = nsAlias->next;
         if (nsAliasSave->fromUri) FREE(nsAliasSave->fromUri);
         if (nsAliasSave->toUri) FREE(nsAliasSave->toUri);
-        FREE((char *) nsAliasSave);
+        FREE(nsAliasSave);
     }
 
     /*--- free decimal formats ---*/
@@ -6395,7 +6395,7 @@ xsltFreeState (
         df = df->next;
         if (dfsave->name) FREE(dfsave->name);
         if (dfsave->uri) FREE(dfsave->uri);
-        FREE((char*)dfsave);
+        FREE(dfsave);
     }
 
     /*--- free attribute sets ---*/
@@ -6403,7 +6403,7 @@ xsltFreeState (
     while (as) {
        assave = as;
        as = as->next;
-       FREE((char*)assave);
+       FREE(assave);
     }
 
     /*--- free templates ---*/
@@ -6412,14 +6412,14 @@ xsltFreeState (
        tplsave = tpl;
        if (tpl->freeAst) xpathFreeAst (tpl->freeAst);
        tpl = tpl->next;
-       FREE((char*)tplsave);
+       FREE(tplsave);
     }
 
     for (entryPtr = Tcl_FirstHashEntry (&(xs->wsInfo.stripTokens), &search);
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
+        FREE(f);
     }
     Tcl_DeleteHashTable (&(xs->wsInfo.stripTokens));
 
@@ -6427,15 +6427,281 @@ xsltFreeState (
          entryPtr != (Tcl_HashEntry*) NULL;
          entryPtr = Tcl_NextHashEntry (&search)) {
         f = (double *) Tcl_GetHashValue (entryPtr);
-        FREE((char *)f);
+        FREE(f);
     }
     Tcl_DeleteHashTable (&(xs->wsInfo.preserveTokens));
 
-    FREE((char*)xs->varFramesStack);
-    FREE((char*)xs->varStack);
+    FREE(xs->varFramesStack);
+    FREE(xs->varStack);
     if (xs->outputMethod) FREE(xs->outputMethod);
     if (xs->outputEncoding) FREE(xs->outputEncoding);
     if (xs->outputMediaType) FREE(xs->outputMediaType);
+    FREE (xs);
+}
+
+void
+xsltFreeStateWrapper (
+    void      *clientData
+    )
+{
+    xsltFreeState ((xsltState *)clientData);
+}
+
+/*----------------------------------------------------------------------------
+|   xsltResetState
+|
+\---------------------------------------------------------------------------*/
+static void
+xsltResetState (
+    xsltState      * xs
+    )
+{
+    xsltSubDoc        *sd,  *sdsave, *lastSubDoc = NULL;
+    xsltKeyValues     *kvalues;
+    xsltKeyValue      *kv,  *kvsave;
+    Tcl_HashEntry     *entryPtr, *entryPtr1;
+    Tcl_HashSearch     search, search1;
+    Tcl_HashTable     *htable;
+    
+    /*--- free sub documents ---*/
+    sd = xs->subDocs;
+    while (sd)  {
+        sdsave = sd;
+        sd = sd->next;
+        if (!sdsave->isStylesheet) {
+            for (entryPtr = Tcl_FirstHashEntry (&sdsave->keyData, &search);
+                 entryPtr != (Tcl_HashEntry*) NULL;
+                 entryPtr = Tcl_NextHashEntry (&search)) {
+                htable = (Tcl_HashTable *) Tcl_GetHashValue (entryPtr);
+                for (entryPtr1 = Tcl_FirstHashEntry (htable, &search1);
+                     entryPtr1 != (Tcl_HashEntry*) NULL;
+                     entryPtr1 = Tcl_NextHashEntry (&search1)) {
+                    kvalues = (xsltKeyValues *) Tcl_GetHashValue (entryPtr1);
+                    kv = kvalues->value;
+                    while (kv) {
+                        kvsave = kv;
+                        kv = kv->next;
+                        FREE(kvsave);
+                    }
+                    FREE(kvalues);
+                }
+                Tcl_DeleteHashTable (htable);
+                FREE(htable);
+            }
+            Tcl_DeleteHashTable (&sdsave->keyData);
+        }
+        /* XML documents don't have excludeNS and extensionNS information
+           and the already parsed XSLT documents information is
+           preserved, therefor we don't touch extensionNS and extensionNS
+           information */
+        if (sdsave->isStylesheet) {
+            
+            if (lastSubDoc) {
+                lastSubDoc->next = sdsave;
+            } else {
+                xs->subDocs = sdsave;
+            }
+            lastSubDoc = sdsave;
+            sdsave->next = NULL;
+        } else {
+            if (sdsave->mustFree) {
+                domFreeDocument (sdsave->doc, NULL, NULL);
+            }
+            if (sdsave->baseURI) FREE(sdsave->baseURI);
+            
+            FREE(sdsave);
+        }
+    }
+    if (xs->outputMethod) {
+        FREE(xs->outputMethod);
+        xs->outputMethod = NULL;
+    }
+    if (xs->outputEncoding) {
+        FREE(xs->outputEncoding);
+        xs->outputEncoding = NULL;
+    }
+    if (xs->outputMediaType) {
+        FREE(xs->outputMediaType);
+        xs->outputMediaType = NULL;
+    }
+    xs->nsUniqeNr = 0;
+    /* In theory, the varFramesStack and varStack pointers should
+       be always back to there inital state. But to be sure, we
+       re-initialize, just in case of a bizarre error or something. */
+    xs->varFramesStackPtr = -1;
+    xs->varStackPtr       = -1;
+}
+
+/*----------------------------------------------------------------------------
+|   xsltCompileStylesheet
+|
+\---------------------------------------------------------------------------*/
+void *
+xsltCompileStylesheet (
+    domDocument       * xsltDoc,
+    xpathFuncCallback   funcCB,
+    void              * xpathFuncClientData,
+    int                 guardXSLTTree,
+    char             ** errMsg
+    )
+{
+    domNode        *node;
+    int             rc;
+    char           *baseURI, *tailptr;
+    double          d, precedence, precedenceLowBound;
+    xsltState      *xs;
+    xsltSubDoc     *sdoc;
+    domAttrNode    *attr;
+    xsltTemplate   *tpl;
+
+    *errMsg = NULL;
+    xs = (xsltState *) MALLOC (sizeof (xsltState));
+    
+    Tcl_InitHashTable ( &(xs->namedTemplates), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->isElementTpls), TCL_STRING_KEYS);
+    xs->cbs.varCB           = xsltGetVar;
+    xs->cbs.varClientData   = (void*)xs;
+    xs->cbs.funcCB          = xsltXPathFuncs;
+    xs->cbs.funcClientData  = xs;
+    xs->orig_funcCB         = funcCB;
+    xs->orig_funcClientData = xpathFuncClientData;
+    xs->xsltMsgCB           = NULL;
+    xs->xsltMsgClientData   = NULL;
+    xs->varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame) * 4);
+    xs->varFramesStackPtr   = -1;
+    xs->varFramesStackLen   = 4;
+    xs->varStack            = (xsltVariable *)MALLOC(sizeof (xsltVariable) * 8);
+    xs->varStackPtr         = -1;
+    xs->varStackLen         = 8;
+    xs->templates           = NULL;
+    xs->lastNode            = NULL;
+    xs->attrSets            = NULL;
+    xs->outputMethod        = NULL;
+    xs->outputEncoding      = NULL;
+    xs->outputMediaType     = NULL;
+    xs->decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
+    xs->subDocs             = NULL;
+    xs->currentTplRule      = NULL;
+    xs->currentXSLTNode     = NULL;
+    xs->xsltDoc             = xsltDoc;
+    xs->varsInProcess       = NULL;
+    xs->nsAliases           = NULL;
+    xs->nsUniqeNr           = 0;
+    Tcl_InitHashTable ( &(xs->wsInfo.stripTokens), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->wsInfo.preserveTokens), TCL_STRING_KEYS);
+    xs->wsInfo.hasData      = 0;
+    xs->wsInfo.stripAll     = 0;
+    xs->wsInfo.wildcardPrec = 0.0;
+    Tcl_InitHashTable ( &(xs->xpaths), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->pattern), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->formats), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->topLevelVars), TCL_STRING_KEYS);
+    Tcl_InitHashTable ( &(xs->keyInfos), TCL_STRING_KEYS);
+    xs->decimalFormats->name              = NULL;
+    xs->decimalFormats->uri               = NULL;
+#if TclOnly8Bits
+    xs->decimalFormats->decimalSeparator  = '.';
+    xs->decimalFormats->groupingSeparator = ',';
+    xs->decimalFormats->minusSign         = '-';
+    xs->decimalFormats->percent           = '%';
+    xs->decimalFormats->zeroDigit         = '0';
+    xs->decimalFormats->digit             = '#';
+    xs->decimalFormats->patternSeparator  = ';';
+#else 
+    xs->decimalFormats->decimalSeparator  = 46;          
+    xs->decimalFormats->groupingSeparator = 44;          
+    xs->decimalFormats->minusSign         = 45;          
+    xs->decimalFormats->percent           = 37;          
+    xs->decimalFormats->perMille          = 0x2030;          
+    xs->decimalFormats->zeroDigit         = 48;          
+    xs->decimalFormats->digit             = 35;          
+    xs->decimalFormats->patternSeparator  = 59;          
+#endif /* TclOnly8Bits */
+    xs->decimalFormats->infinity          = "Infinity";
+    xs->decimalFormats->NaN               = "NaN";
+    xs->decimalFormats->next              = NULL;
+    
+    node = xsltDoc->documentElement;
+
+    /* add the xslt doc to the doc list */
+    sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
+    sdoc->doc = xsltDoc;
+    baseURI = findBaseURI (xsltDoc->documentElement);
+    if (baseURI) {
+        sdoc->baseURI = tdomstrdup (baseURI);
+    } else {
+        sdoc->baseURI = NULL;
+    }
+    Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
+    sdoc->excludeNS = NULL;
+    sdoc->extensionNS = NULL;
+    sdoc->fwCmpProcessing = 0;
+    sdoc->isStylesheet = 1;
+    sdoc->next = xs->subDocs;
+    sdoc->mustFree = !guardXSLTTree;
+    xs->subDocs = sdoc;
+
+    xs->currentSubDoc = sdoc;
+    
+    if ((getTag(node) != stylesheet) && (getTag(node) != transform)) {
+        /* Check for "Literal Result Element as Stylesheet" (XSLT rec 2.3) */
+        attr = domGetAttributeNodeNS (node, XSLT_NAMESPACE, "version");
+        if (!attr) {
+            reportError (node, "The supplied DOM tree does not appear to be a stylesheet.", errMsg);
+            goto error;
+        }
+        d = strtod (attr->nodeValue, &tailptr);
+        if (d == 0.0 && tailptr == attr->nodeValue) {
+            reportError (node, "The value of the attribute \"version\" must be a number.", errMsg);
+            goto error;
+        }
+        if (d > 1.0) {
+            sdoc->fwCmpProcessing = 1;
+        } else if (d < 1.0) {
+            reportError (node, "Strange \"xsl:version\" value, don't know, how to handle.", errMsg);
+            goto error;
+        }
+        /* According to XSLT rec 2.3 we add the literal result element as
+           template, which matches "/" */
+        tpl = (xsltTemplate *) MALLOC (sizeof (xsltTemplate));
+        tpl->match      = "/";
+        tpl->name       = NULL;
+        tpl->nameURI    = NULL;
+        tpl->mode       = NULL;
+        tpl->modeURI    = NULL;
+        tpl->prio       = 0.5;
+        tpl->content    = node->ownerDocument->rootNode;
+        tpl->precedence = 1.0;
+        tpl->next       = NULL;
+        tpl->sDoc       = sdoc;
+        xpathParse (tpl->match, errMsg, &(tpl->freeAst), 1);
+        tpl->ast        = tpl->freeAst;
+        xs->templates = tpl;
+    } else {
+        rc = addExclExtNS (sdoc, node, errMsg);
+        if (rc < 0) goto error;
+        
+        precedence = 1.0;
+        precedenceLowBound = 0.0;
+        rc = 0;
+        rc = processTopLevel (xpathFuncClientData, node, xs, precedence, 
+                              &precedenceLowBound, errMsg);
+        if (rc != 0) goto error;
+    }
+        
+    /*  strip space, if allowed, from the XSLT documents,
+     */
+    sdoc = xs->subDocs;
+
+    while (sdoc) {
+        StripXSLTSpace (xs, sdoc->doc->documentElement);
+        sdoc = sdoc->next;
+    }
+    return xs;
+
+ error:
+    xsltFreeState (xs);
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -6445,6 +6711,7 @@ xsltFreeState (
 int xsltProcess (
     domDocument       * xsltDoc,
     domNode           * xmlNode,
+    void              * xsltCmdData,
     char             ** parameters,
     int                 ignoreUndeclaredParameters,
     xpathFuncCallback   funcCB,
@@ -6458,16 +6725,24 @@ int xsltProcess (
     xpathResultSet  nodeList;
     domNode        *node;
     int             rc;
-    double          precedence, precedenceLowBound;
-    xsltState       xs;
+    char           *baseURI;
+    xsltState      *xs;
     xsltSubDoc     *sdoc;
 
     *errMsg = NULL;
+    if (xsltCmdData) {
+        xs = (xsltState *) xsltCmdData;
+    } else {
+        xs = (xsltState *) xsltCompileStylesheet (xsltDoc, funcCB,
+                                                  xpathFuncClientData,
+                                                  1, errMsg);
+        if (!xs) return -1;
+    }
 
     if (xmlNode->nodeType == DOCUMENT_NODE) {
         xmlNode = ((domDocument *)xmlNode)->rootNode;
     } else {
-        xmlNode = xmlNode->ownerDocument->rootNode; /* jcl: hack, should pass document */
+        xmlNode = xmlNode->ownerDocument->rootNode;
     }
     DBG(printXML(xmlNode, 0, 1);)
 
@@ -6475,167 +6750,69 @@ int xsltProcess (
         domRenumberTree (xmlNode->ownerDocument->rootNode);
         xmlNode->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
     }
-        
-    Tcl_InitHashTable ( &(xs.namedTemplates), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.isElementTpls), TCL_STRING_KEYS);
-    xs.cbs.varCB           = xsltGetVar;
-    xs.cbs.varClientData   = (void*)&xs;
-    xs.cbs.funcCB          = xsltXPathFuncs;
-    xs.cbs.funcClientData  = &xs;
-    xs.orig_funcCB         = funcCB;
-    xs.orig_funcClientData = xpathFuncClientData;
-    xs.xsltMsgCB           = xsltMsgCB;
-    xs.xsltMsgClientData   = xsltMsgClientData;
-    xs.varFramesStack      = (xsltVarFrame *)MALLOC(sizeof (xsltVarFrame) * 4);
-    xs.varFramesStackPtr   = -1;
-    xs.varFramesStackLen   = 4;
-    xs.varStack            = (xsltVariable *)MALLOC(sizeof (xsltVariable) * 8);
-    xs.varStackPtr         = -1;
-    xs.varStackLen         = 8;
-    xs.templates           = NULL;
-    xs.resultDoc           = domCreateDoc();
-    xs.xmlRootNode         = xmlNode;
-    xs.lastNode            = xs.resultDoc->rootNode;
-    xs.attrSets            = NULL;
-    xs.outputMethod        = NULL;
-    xs.outputEncoding      = NULL;
-    xs.outputMediaType     = NULL;
-    xs.decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
-    xs.subDocs             = NULL;
-    xs.currentTplRule      = NULL;
-    xs.currentXSLTNode     = NULL;
-    xs.xsltDoc             = xsltDoc;
-    xs.varsInProcess       = NULL;
-    xs.nsAliases           = NULL;
-    xs.nsUniqeNr           = 0;
-    Tcl_InitHashTable ( &(xs.wsInfo.stripTokens), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.wsInfo.preserveTokens), TCL_STRING_KEYS);
-    xs.wsInfo.hasData      = 0;
-    xs.wsInfo.stripAll     = 0;
-    xs.wsInfo.wildcardPrec = 0.0;
-    Tcl_InitHashTable ( &(xs.xpaths), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.pattern), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.formats), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.topLevelVars), TCL_STRING_KEYS);
-    Tcl_InitHashTable ( &(xs.keyInfos), TCL_STRING_KEYS);
-    xs.decimalFormats->name              = NULL;
-    xs.decimalFormats->uri               = NULL;
-#if TclOnly8Bits
-    xs.decimalFormats->decimalSeparator  = '.';
-    xs.decimalFormats->groupingSeparator = ',';
-    xs.decimalFormats->minusSign         = '-';
-    xs.decimalFormats->percent           = '%';
-    xs.decimalFormats->zeroDigit         = '0';
-    xs.decimalFormats->digit             = '#';
-    xs.decimalFormats->patternSeparator  = ';';
-#else 
-    xs.decimalFormats->decimalSeparator  = 46;          
-    xs.decimalFormats->groupingSeparator = 44;          
-    xs.decimalFormats->minusSign         = 45;          
-    xs.decimalFormats->percent           = 37;          
-    xs.decimalFormats->perMille          = 0x2030;          
-    xs.decimalFormats->zeroDigit         = 48;          
-    xs.decimalFormats->digit             = 35;          
-    xs.decimalFormats->patternSeparator  = 59;          
-#endif /* TclOnly8Bits */
-    xs.decimalFormats->infinity          = "Infinity";
-    xs.decimalFormats->NaN               = "NaN";
-    xs.decimalFormats->next              = NULL;
-    
 
-    xsltPushVarFrame(&xs);
+    xs->resultDoc           = domCreateDoc();
+    xs->xmlRootNode         = xmlNode;
+    xs->lastNode            = xs->resultDoc->rootNode;
+    xs->xsltMsgCB           = xsltMsgCB;
+    xs->xsltMsgClientData   = xsltMsgClientData;
+
+        
+
+    xsltPushVarFrame(xs);
     xpathRSInit( &nodeList );
     rsAddNodeFast( &nodeList, xmlNode);
 
-    node = xsltDoc->documentElement;
+    /*  strip space from the XML document, if necessary */
+    if (xs->wsInfo.hasData) {
+        StripXMLSpace (xs, xmlNode);
+    }
 
     /* add the xml doc to the doc list */
     sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
     sdoc->doc = xmlNode->ownerDocument;
-    sdoc->baseURI = findBaseURI (xmlNode);
+    baseURI = findBaseURI (xmlNode);
+    if (baseURI) {
+        sdoc->baseURI = tdomstrdup (baseURI);
+    } else {
+        sdoc->baseURI = NULL;
+    }
     Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
     sdoc->excludeNS = NULL;
     sdoc->extensionNS = NULL;
     sdoc->fwCmpProcessing = 0;
     sdoc->isStylesheet = 0;
-    sdoc->next = xs.subDocs;
-    xs.subDocs = sdoc;
+    sdoc->mustFree = 0;
+    sdoc->next = xs->subDocs;
+    xs->subDocs = sdoc;
 
-    /* add the xslt doc to the doc list */
-    sdoc = (xsltSubDoc*)MALLOC(sizeof (xsltSubDoc));
-    sdoc->doc = xsltDoc;
-    sdoc->baseURI = findBaseURI (xsltDoc->documentElement);
-    Tcl_InitHashTable (&(sdoc->keyData), TCL_STRING_KEYS);
-    sdoc->excludeNS = NULL;
-    sdoc->extensionNS = NULL;
-    sdoc->fwCmpProcessing = 0;
-    sdoc->isStylesheet = 1;
-    sdoc->next = xs.subDocs;
-    xs.subDocs = sdoc;
-
-    xs.currentSubDoc = sdoc;
+    xs->currentSubDoc = sdoc;
     
-    if ((getTag(node) != stylesheet) && (getTag(node) != transform)) {
-        TRACE("no stylesheet node found --> ExecAction ");
-        StripSpace (&xs, node);
-        xs.currentXSLTNode = node;
-        rc = ExecAction (&xs, &nodeList, xmlNode, 1, node, errMsg);
-        DBG(fprintf(stderr, "ExecAction: rc=%d \n", rc);)
-        CHECK_RC;
-        xsltPopVarFrame (&xs);
-        xpathRSFree( &nodeList );
-        xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
-        xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
-        *resultDoc = xs.resultDoc;
-        xsltFreeState (&xs);
-        return 0;
-    } else {
-        rc = addExclExtNS (sdoc, node, errMsg);
-        if (rc < 0) goto error;
-    }
-
-    precedence = 1.0;
-    precedenceLowBound = 0.0;
-    rc = processTopLevel (xpathFuncClientData, node, xmlNode, &xs, precedence,
-                          &precedenceLowBound, errMsg);
-    if (rc != 0) goto error;
-    
-    /*  strip space, if allowed, from the XSLT documents,
-     *  but not from the XML document (last one in list)
-     */
-    sdoc = xs.subDocs;
-    while (sdoc && sdoc->next) {
-        StripSpace (&xs, sdoc->doc->documentElement);
-        sdoc = sdoc->next;
-    }
-    if (xs.wsInfo.hasData) {
-        StripXMLSpace (&xs, sdoc->doc->documentElement);
-    }
-
-    rc = processTopLevelVars (xmlNode, &xs, parameters, 
+    rc = processTopLevelVars (xmlNode, xs, parameters, 
                               ignoreUndeclaredParameters, errMsg);
     if (rc != 0) goto error;
 
-    rc = ApplyTemplates (&xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,
+    node = xs->xsltDoc->documentElement;
+    rc = ApplyTemplates (xs, &nodeList, xmlNode, 0, node, &nodeList, NULL,
                          NULL, errMsg);
     if (rc != 0) goto error;
 
     /* Rudimentary xsl:output support */
-    if (xs.outputMethod) {
-        if (strcmp (xs.outputMethod, "xml")==0) {
-            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
+    if (xs->outputMethod) {
+        if (strcmp (xs->outputMethod, "xml")==0) {
+            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
         } else
-        if (strcmp (xs.outputMethod, "html")==0) {
-            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
+        if (strcmp (xs->outputMethod, "html")==0) {
+            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
         } else
-        if (strcmp (xs.outputMethod, "text")==0) {
-            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_TEXT;
+        if (strcmp (xs->outputMethod, "text")==0) {
+            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_TEXT;
         } else {
-            xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_UNKNOWN;
+            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_UNKNOWN;
         }
     } else {
         /* default output method */
-        node = xs.resultDoc->rootNode->firstChild;
+        node = xs->resultDoc->rootNode->firstChild;
         if (node) {
             if (node->nodeType == TEXT_NODE) {
                 char *pc;
@@ -6654,42 +6831,50 @@ int xsltProcess (
             }
             if (node->nodeType == ELEMENT_NODE) {
                 if (STRCASECMP(node->nodeName, "html")==0) {
-                    xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
+                    xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
                 } else {
-                    xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
+                    xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
                 }
             } else {
-                xs.resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
+                xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
             }
         }
     }
     /* Make the first ELEMENT_NODE the documentElement. There could
        be text, comment or PI nodes before the first element node.
-       If the root node doesn't have a element node under it's childs,
+       If the root node doesn't have an element node under it's childs,
        fall back to the firstChild as documentElement. */
-    node = xs.resultDoc->rootNode->firstChild;
+    node = xs->resultDoc->rootNode->firstChild;
     while (node) {
         if (node->nodeType == ELEMENT_NODE) {
-            xs.resultDoc->documentElement = node;
+            xs->resultDoc->documentElement = node;
             break;
         }
         node = node->nextSibling;
     }
     if (!node) {
-        xs.resultDoc->documentElement = xs.resultDoc->rootNode->firstChild;
+        xs->resultDoc->documentElement = xs->resultDoc->rootNode->firstChild;
     }
-    *resultDoc = xs.resultDoc;
+    *resultDoc = xs->resultDoc;
 
-    xsltPopVarFrame (&xs);
+    xsltPopVarFrame (xs);
     xpathRSFree( &nodeList );
-    xsltFreeState (&xs);
+    if (xsltCmdData) {
+        xsltResetState (xs);
+    } else {
+        xsltFreeState (xs);
+    }
     return 0;
 
  error:
-    xsltPopVarFrame (&xs);
+    xsltPopVarFrame (xs);
     xpathRSFree( &nodeList );
-    xsltFreeState (&xs);
-    domFreeDocument (xs.resultDoc, NULL, NULL);
+    if (xsltCmdData) {
+        xsltResetState (xs);
+    } else {
+        xsltFreeState (xs);
+    }
+    domFreeDocument (xs->resultDoc, NULL, NULL);
     return -1;
 
 } /* xsltProcess */
