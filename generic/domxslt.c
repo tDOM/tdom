@@ -53,7 +53,7 @@
 #include <math.h>
 #include <limits.h>
 #include <ctype.h>
-/*  #include <locale.h> */
+#include <locale.h>
 #include <dom.h>
 #include <domxpath.h>
 #include <domxslt.h>
@@ -302,6 +302,7 @@ typedef struct xsltVarInProcess
 \-------------------------------------------------------------------------*/
 typedef struct xsltDecimalFormat
 {
+#if TclOnly8Bits
     char   * name;
     char   * uri;
     char     decimalSeparator;
@@ -313,6 +314,20 @@ typedef struct xsltDecimalFormat
     char     zeroDigit;
     char     digit;
     char     patternSeparator;
+#else 
+    char        * name;
+    char        * uri;
+    Tcl_UniChar   decimalSeparator;
+    Tcl_UniChar   groupingSeparator;
+    char        * infinity;
+    Tcl_UniChar   minusSign;
+    char        * NaN;
+    Tcl_UniChar   percent;
+    Tcl_UniChar   perMille;
+    Tcl_UniChar   zeroDigit;
+    Tcl_UniChar   digit;
+    Tcl_UniChar   patternSeparator;
+#endif /* TclOnly8Bits */
 
     struct xsltDecimalFormat * next;
 
@@ -1074,6 +1089,7 @@ static void formatValue (
 |   xsltFormatNumber
 |
 \---------------------------------------------------------------------------*/
+#if TclOnly8Bits
 static int xsltFormatNumber (
     double              number,
     char              * formatStr,
@@ -1086,7 +1102,7 @@ static int xsltFormatNumber (
     char *p, prefix[80], suffix[80], s[240], n[80], f[80];
     char *negformat = NULL, save = '\0', save1;
     int i, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
-/*      struct lconv *lc; */
+/*      struct lconv *lc = NULL;  */
 
     DBG(fprintf(stderr, "\nformatStr='%s' \n", formatStr);)
     if (number < 0.0) {
@@ -1254,6 +1270,367 @@ static int xsltFormatNumber (
     *resultLen = strlen(s);
     return 0;
 }
+
+#else
+/*  #undef DBG */
+/*  #define DBG(x) x */
+
+static int addCurrencySymbol (
+    Tcl_UniChar  *p,
+    Tcl_UniChar  *result,
+    int          *i
+)
+{
+    Tcl_DString dStr;
+    Tcl_UniChar *p1, *currencySymbol;
+    int move = 0;
+    struct lconv *lc; 
+
+    setlocale (LC_MONETARY, "");
+    lc = localeconv();
+    Tcl_DStringInit (&dStr);
+    if (*(p+1) == 0xa4) {
+        if (lc->int_curr_symbol[0] == '\0') {
+            currencySymbol = Tcl_UtfToUniCharDString ("$", -1, &dStr);
+        } else {
+            currencySymbol = 
+                Tcl_UtfToUniCharDString (lc->int_curr_symbol, -1, &dStr);
+        }
+        move = 1;
+    } else {
+        if (lc->currency_symbol[0] == '\0') {
+            currencySymbol = Tcl_UtfToUniCharDString ("$", -1, &dStr);
+        } else {
+            currencySymbol = 
+                Tcl_UtfToUniCharDString (lc->currency_symbol, -1, &dStr);
+        }
+    }
+    p1 = currencySymbol;
+    while (*p1 && (*i < 79)) {
+        result[(*i)++] = *p1;
+        p1++;
+    }
+    Tcl_DStringFree (&dStr);
+    return move;
+}
+
+static int xsltFormatNumber (
+    double              number,
+    char              * formatStr,
+    xsltDecimalFormat * df,
+    char             ** resultStr,
+    int               * resultLen,
+    char             ** errMsg
+)
+{
+    Tcl_UniChar prefix1[80], prefix2[80], suffix1[80], suffix2[80], s[240];
+    Tcl_UniChar save = '\0', save1, *prefix, *suffix, n[80], f[80];
+    char stmp[240], ftmp[80];
+    int i, j, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg, prefixMinux;
+    int percentMul = 0, perMilleMul = 0;
+    Tcl_DString  dStr;
+    Tcl_UniChar *format, *negformat = NULL, *p, *p1;
+    DBG(Tcl_DString dbStr;)
+
+    DBG(fprintf(stderr, "number: '%f'\nformatStr='%s' \n", number, formatStr);)
+    if (number < 0.0) {
+        isNeg = 1;
+        number *= -1.0;
+    } else if (number == 0.0) {
+        sprintf (stmp, "%f", number);
+        if (stmp[0] == '-') isNeg = 1;
+        else isNeg = 0;
+    } else {
+        isNeg = 0;
+    }
+    Tcl_DStringInit (&dStr);
+    format = Tcl_UtfToUniCharDString (formatStr, -1, &dStr);
+    p = format;
+    while (*p) {
+        if (*p == df->patternSeparator) {
+            save = *p;
+            *p = '\0';
+            negformat = ++p;
+            break;
+        }
+        p++;
+    }
+    p = format;
+
+    i = 0;
+    while (*p && (*p!=df->zeroDigit) && (*p!=df->digit) && (*p!=df->groupingSeparator) && (*p!=df->decimalSeparator)) {
+        if (*p == df->percent) (percentMul = 1);
+        else if (*p == df->perMille) (perMilleMul = 1);
+        if (i<79) { 
+            if (*p == 0xa4) {
+                p += addCurrencySymbol (p, prefix1, &i);
+           } else {
+                prefix1[i++] = *p;
+            }
+        }
+        p++;
+    }
+    prefix1[i] = '\0';
+    nHash = nZero = fHash = fZero = 0;
+    gLen = -2222;
+    while (*p) {
+             if (*p==df->digit) { nHash++; }
+        else if (*p==df->zeroDigit) { nZero++; }
+        else if (*p==df->groupingSeparator) { gLen=-1; }
+        else break;
+        p++; gLen++;
+    }
+    if (*p && (*p==df->decimalSeparator)) {
+        p++;
+        while (*p && (*p==df->zeroDigit)) { p++; fZero++; }
+        while (*p && (*p==df->digit)) { p++; fHash++; }
+    }
+    i = 0;
+    while (*p) {
+        if (*p == df->percent) (percentMul = 1);
+        else if (*p == df->perMille) (perMilleMul = 1);
+        if (i<79) {
+            if (*p == 0xa4) {
+                p += addCurrencySymbol (p, suffix1, &i);
+            } else {
+                suffix1[i++] = *p;
+            }
+        }
+        p++;
+    }
+    suffix1[i] = '\0';
+    if (save) *p = save;
+
+    if (isNeg && negformat) {
+        /* Only prefix and suffix are taken from the second format string */
+        percentMul = 0; perMilleMul = 0;
+        p++;
+        i = 0;
+        while (*p && *p!=df->zeroDigit && *p!=df->digit && *p!=df->groupingSeparator && *p!=df->decimalSeparator) {
+            if (*p == df->percent) (percentMul = 1);
+            else if (*p == df->perMille) (perMilleMul = 1);
+            if (i<79) { 
+                if (*p == 0xa4) {
+                    p += addCurrencySymbol (p, prefix2, &i);
+                } else {
+                    prefix2[i++] = *p;
+                }
+            }
+            p++;
+        }
+        prefix2[i] = '\0';
+        while (*p && ((*p==df->zeroDigit) || (*p==df->digit) || (*p==df->groupingSeparator) || (*p==df->decimalSeparator))) p++;
+        i = 0;
+        while (*p) {
+            if (*p == df->percent) (percentMul = 1);
+            else if (*p == df->perMille) (perMilleMul = 1);
+            if (i<79) {
+                if (*p == 0xa4) {
+                    p += addCurrencySymbol (p, suffix2, &i);
+                } else {
+                    suffix2[i++] = *p;
+                }
+            }
+            p++;
+        }
+        suffix2[i] = '\0';
+    }
+
+    if (isNeg) {
+        if (negformat) {
+            prefixMinux = 1;
+            p = prefix1;
+            p1 = prefix2;
+            while (prefixMinux) {
+                if (*p != *p1) {
+                    prefixMinux = 0;
+                    break;
+                }
+                if (*p == 0) break;
+                p++; p1++;
+            }
+            if (prefixMinux) {
+                p = suffix1;
+                p1 = suffix2;
+                while (prefixMinux) {
+                    if (*p != *p1) {
+                        prefixMinux = 0;
+                        break;
+                    }
+                    if (*p == 0) break;
+                    p++; p1++;
+                }
+            }
+            prefix = prefix2;
+            suffix = suffix2;
+        } else {
+            prefixMinux = 1;
+            prefix = prefix1;
+            suffix = suffix1;
+        }
+        if (prefixMinux) {
+            i = 0;
+            save = prefix[0];
+            prefix[0] = df->minusSign;
+            while (i < 79) {
+                i++;
+                save1 = prefix[i];
+                prefix[i] = save;
+                if (save == 0) break;
+                save = save1;
+            }
+            if (i == 79) prefix[79] = '\0';
+        }
+    } else {
+        prefix = prefix1;
+        suffix = suffix1;
+    }
+    
+    DBG(
+        Tcl_DStringInit (&dbStr);
+        fprintf (stderr, "prefix: '%s' ", Tcl_UniCharToUtfDString(prefix, Tcl_UniCharLen (prefix), &dbStr));
+        Tcl_DStringFree (&dbStr);
+        Tcl_DStringInit (&dbStr);
+        fprintf (stderr, "suffix: '%s'\n", Tcl_UniCharToUtfDString(suffix, Tcl_UniCharLen (suffix), &dbStr));
+        Tcl_DStringFree (&dbStr);
+    )
+
+    if (percentMul) {
+        number *= 100.0;
+    } else if (perMilleMul) { 
+        number *= 1000.0; 
+    }
+    
+    if (fHash + fZero == 0) {
+        i = (int) (number+0.5);
+    } else {
+        i = (int) number;
+    }
+    DBG(fprintf(stderr,"normal part nZero=%d i=%d glen=%d\n", nZero, i, gLen);)
+    /* fill in grouping char */
+    if (gLen > 0) {
+        sprintf(stmp,"%0*d", nZero, i);
+        l = strlen (stmp);
+        for (j = 0; j < l; j++) {
+            s[j] = df->zeroDigit + stmp[j] - 48;
+        }
+        s[l] = '\0';
+        DBG(
+            Tcl_DStringInit(&dbStr);
+            fprintf (stderr, "'%s' ---> ..\n", stmp);
+            fprintf(stderr,"s='%s' isNeg=%d'\n", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen(s), &dbStr), isNeg);
+            Tcl_DStringFree (&dbStr);
+        )
+        zl = l + ((l-1) / gLen);
+        DBG(fprintf(stderr, "l=%d zl=%d \n", l, zl);)
+        n[zl--] = '\0';
+        p = s + l -1;
+        g = 0;
+        while (zl>=0) {
+            g++;
+            n[zl--] = *p--;
+            if ((g == gLen) && (zl>=1)) {
+                n[zl--] = df->groupingSeparator;
+                g = 0;
+            }
+        }
+        DBG(
+            Tcl_DStringInit (&dbStr);
+            fprintf(stderr,"s='%s' --> ", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+            Tcl_DStringFree (&dbStr); 
+            Tcl_DStringInit (&dbStr);
+            fprintf(stderr,"n='%s'\n", Tcl_UniCharToUtfDString (n, Tcl_UniCharLen (n), &dbStr));
+            Tcl_DStringFree (&dbStr); 
+        )
+    } else {
+        sprintf(stmp,"%0*d", nZero, i);
+        l = strlen (stmp);
+        for (j = 0; j < l; j++) {
+            n[j] = df->zeroDigit + (int) stmp[j] - 48;
+        }
+        n[l] = '\0';
+        DBG(
+            Tcl_DStringInit (&dbStr);
+            fprintf(stderr,"n='%s'\n", Tcl_UniCharToUtfDString(n, Tcl_UniCharLen (n), &dbStr));
+            Tcl_DStringFree (&dbStr);
+        )
+    }
+    DBG(fprintf(stderr, "number=%f fHash=%d fZero=%d \n", number, fHash, fZero);)
+    if ((fHash+fZero) > 0) {
+        i = (int) number;
+        /* format fraction part */
+        sprintf(ftmp,"%0.*f", fZero+fHash, number -i);
+        l = strlen(ftmp);
+        while (l>0 && fHash>0) {   /* strip not need 0's */
+            if (ftmp[l-1] == '0') {
+                ftmp[l-1]='\0'; l--; fHash--;
+            } else {
+                break;
+            }
+        }
+        if ((number - i != 0.0) || (fZero > 0)) {
+            for (j = 0; j < l; j++) {
+                f[j] = df->zeroDigit + (int) ftmp[j] - 48;
+            }
+            f[l] = 0;
+        } else {
+            f[2] = 0;
+        }
+        DBG(fprintf(stderr, "f='%s'\n", f);)
+        j = 0;
+        p = prefix;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        p = n;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        if (f[2] != 0) {
+            s[j] = df->decimalSeparator;  j++;
+            p = &(f[2]);
+            while (*p) {
+                s[j] = *p; p++; j++;
+            }
+        }
+        p = suffix;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        s[j] = '\0';
+    } else {
+        j = 0;
+        p = prefix;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        p = n;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        p = suffix;
+        while (*p) {
+            s[j] = *p; p++; j++;
+        }
+        s[j] = '\0';
+    }
+    DBG(
+        Tcl_DStringInit (&dbStr);
+        fprintf(stderr, "returning s='%s' \n\n", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+        Tcl_DStringFree (&dbStr);
+    )
+    Tcl_DStringFree (&dStr);
+    Tcl_DStringInit (&dStr);
+    *resultStr = tdomstrdup(Tcl_UniCharToUtfDString(s, Tcl_UniCharLen(s),
+                                                    &dStr));
+    Tcl_DStringFree (&dStr);
+    *resultLen = strlen(*resultStr);
+    return 0;
+}
+/*  #undef DBG */
+/*  #define DBG(x) */
+
+#endif /* TclOnly8Bits */
 
 static int buildKeyInfoForDoc (
     xsltSubDoc     *sd,
@@ -2460,7 +2837,6 @@ static int addMatch (
 {
     xsltTemplate  *t, *prevTpl;
     int            rc, hnew;
-    ast            ast1;
     Tcl_DString    dStr;
     Tcl_HashEntry *h;
     domNS         *ns;
@@ -2578,7 +2954,7 @@ static int xsltAddTemplate (
     char     **errMsg
 )
 {
-    xsltTemplate  *tpl, *t, *prevTpl;
+    xsltTemplate  *tpl, *t;
     char          *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
     int            rc, hnew;
     domNS         *ns;
@@ -4437,9 +4813,9 @@ int ApplyTemplate (
     xsltTemplate   *tplChoosen, *currentTplRule;
     domNode        *child;
     xpathResultSet  rs;
-    int             rc, hnew;
+    int             rc;
     double          currentPrio, currentPrec;
-    char           *str, *localName, prefix[MAX_PREFIX_LEN];
+    char           *localName, prefix[MAX_PREFIX_LEN];
     Tcl_HashEntry  *h;
     Tcl_DString     dStr;
     domNS          *ns;
@@ -5148,7 +5524,7 @@ static int processTopLevel (
 {
     domNode           *node;
     domDocument       *extStyleSheet;
-    int                rc, hnew;
+    int                rc, hnew, clen, newdf = 0;
     double             childPrecedence, childLowBound;
     char              *str, *name, *match, *use, *baseURI, *href;
     char              *localName, prefix[MAX_PREFIX_LEN];
@@ -5239,7 +5615,9 @@ static int processTopLevel (
                     if (df == NULL) {
                         df = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
                         memset (df, 0, sizeof (xsltDecimalFormat));
+                        newdf = 1;
                         /* initialize to defaults */
+#if TclOnly8Bits
                         df->decimalSeparator  = '.';
                         df->groupingSeparator = ',';
                         df->infinity          = "Infinity";
@@ -5249,7 +5627,18 @@ static int processTopLevel (
                         df->zeroDigit         = '0';
                         df->digit             = '#';
                         df->patternSeparator  = ';';
-
+#else 
+                        df->decimalSeparator  = 46;          
+                        df->groupingSeparator = 44;          
+                        df->infinity          = "Infinity";  
+                        df->minusSign         = 45;          
+                        df->NaN               = "NaN";       
+                        df->percent           = 37;          
+                        df->perMille          = 0x2030;      
+                        df->zeroDigit         = 48;          
+                        df->digit             = 35;          
+                        df->patternSeparator  = 59;
+#endif /* TclOnly8Bits */
                         df->name = tdomstrdup(str);
                         if (ns) df->uri = tdomstrdup(ns->uri);
                         else df->uri = NULL;
@@ -5264,77 +5653,149 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "decimal-separator",  a_decimalSeparator);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "decimal-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "decimal-separator has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
                         return -1;
                     }
                     df->decimalSeparator = str[0];
+#else
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "decimal-separator has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->decimalSeparator);
+#endif /* TclOnly8Bits */
                 }
-                
-                /*    This should really be something like this:  */
-                /*    clen = UTF8_CHAR_LEN (str[0]); */
-                /*    if (str[clen+1] != '\0') { */
-                /*        reportError (node, "decimal-separator has to be a single char", errMsg); */
-                /*    } */
-                /*    But that needs an i18n aware xsltFormatNumber() and  */
-                /*    #if TclOnly8Bits ... #else for tcl8.0.5. Next time. */
-
                 str = getAttr(node, "grouping-separator", a_groupingSeparator);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "grouping-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "grouping-separator has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
                         return -1;
                     }
                     df->groupingSeparator = str[0];
+#else 
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "groupingSeparator has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->groupingSeparator);
+#endif /* TclOnly8Bits */                    
                 }
                 str = getAttr(node, "infinity",           a_infinity);
                 if (str) df->infinity = str;
                 str = getAttr(node, "minus-sign",         a_minusSign);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "minus-sign has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "minus-sign has to be a single char", errMsg);
                         return -1;
                     }
                     df->minusSign = str[0];
+#else                     
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "minus-sign has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->minusSign);
+#endif /* TclOnly8Bits */         
                 }
                 str = getAttr(node, "NaN",                a_nan);
                 if (str) df->NaN = str;
                 str = getAttr(node, "percent",            a_percent);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "percent has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "percent has to be a single char", errMsg);
                         return -1;
                     }
                     df->percent = str[0];
+#else
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "percent has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->percent);                    
+#endif /* TclOnly8Bits */
                 }
                 str = getAttr(node, "per-mille",          a_perMille);
                 if (str) {
-                    reportError (node, "User defined per-mille sign not supported yet, sorry.", errMsg);
+#if TclOnly8Bits
+                    reportError (node, "User defined per-mille sign not supported, sorry.", errMsg);
                     return -1;
+#else
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "per-mille has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->perMille);                    
+#endif /* TclOnly8Bits */
                 }
                 str = getAttr(node, "zero-digit",         a_zeroDigit);
                 if (str) {
+#if TclOnly8Bits                    
                     if (str[1] != '\0') {
-                        reportError (node, "zeroDigit has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "zero-digit has to be a single char", errMsg);
                         return -1;
                     }
                     df->zeroDigit = str[0];
+#else
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "zero-digit has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->zeroDigit);                    
+#endif /* TclOnly8Bits */
                 }
                 str = getAttr(node, "digit",              a_digit);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "digit has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "digit has to be a single char", errMsg);
                         return -1;
                     }
                     df->digit = str[0];
+#else 
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "digit has to be a single char", errMsg);
+                        if (newdf) FREE((char*)df);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->digit);
+#endif /* TclOnly8Bits */
                 }
                 str = getAttr(node, "pattern-separator",  a_patternSeparator);
                 if (str) {
+#if TclOnly8Bits
                     if (str[1] != '\0') {
-                        reportError (node, "pattern-separator has to be a single char (that is a 7-bit ASCII char, format-number() isn't i18n aware up to now, sorry)", errMsg);
+                        reportError (node, "pattern-separator has to be a single char", errMsg);
                         return -1;
                     }
                     df->patternSeparator = str[0];
+#else
+                    clen = UTF8_CHAR_LEN (str[0]);
+                    if (str[clen] != '\0') {
+                        reportError (node, "pattern-separator has to be a single char", errMsg);
+                        return -1;
+                    }
+                    Tcl_UtfToUniChar (str, &df->patternSeparator);
+#endif /* TclOnly8Bits */
                 }
                 break;
 
@@ -5940,15 +6401,26 @@ int xsltProcess (
     Tcl_InitHashTable ( &(xs.keyInfos), TCL_STRING_KEYS);
     xs.decimalFormats->name              = NULL;
     xs.decimalFormats->uri               = NULL;
+#if TclOnly8Bits
     xs.decimalFormats->decimalSeparator  = '.';
     xs.decimalFormats->groupingSeparator = ',';
-    xs.decimalFormats->infinity          = "Infinity";
     xs.decimalFormats->minusSign         = '-';
-    xs.decimalFormats->NaN               = "NaN";
     xs.decimalFormats->percent           = '%';
     xs.decimalFormats->zeroDigit         = '0';
     xs.decimalFormats->digit             = '#';
     xs.decimalFormats->patternSeparator  = ';';
+#else 
+    xs.decimalFormats->decimalSeparator  = 46;          
+    xs.decimalFormats->groupingSeparator = 44;          
+    xs.decimalFormats->minusSign         = 45;          
+    xs.decimalFormats->percent           = 37;          
+    xs.decimalFormats->perMille          = 0x2030;          
+    xs.decimalFormats->zeroDigit         = 48;          
+    xs.decimalFormats->digit             = 35;          
+    xs.decimalFormats->patternSeparator  = 59;          
+#endif /* TclOnly8Bits */
+    xs.decimalFormats->infinity          = "Infinity";
+    xs.decimalFormats->NaN               = "NaN";
     xs.decimalFormats->next              = NULL;
     
 
