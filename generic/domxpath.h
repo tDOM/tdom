@@ -32,6 +32,10 @@
 |
 |
 |   $Log$
+|   Revision 1.9  2002/07/03 10:12:51  zoran
+|   Fixed conditional for Sun compilation; now properly checks both __sun__
+|   and __sun to satisfy both GCC and Sun's own compiler.
+|
 |   Revision 1.8  2002/06/02 06:36:24  zoran
 |   Added thread safety with capability of sharing DOM trees between
 |   threads and ability to read/write-lock DOM documents
@@ -91,7 +95,7 @@
 #define XPATH_EVAL_ERR      -3
 #define XPATH_VAR_NOT_FOUND -4
 
-#if defined (__sun__) 
+#if defined (__sun) || defined (__sun__) 
 #include <ieeefp.h>
 #define isinf(d) ((fpclass(d)==FP_PINF)?1:((fpclass(d)==FP_NINF)?-1:0))
 #endif
