@@ -32,6 +32,13 @@
 |
 |
 |   $Log$
+|   Revision 1.4  2002/05/01 00:55:41  rolf
+|   Introduced AxisDescendantLit and AxisDescendantOrSelfLit (a bit of a,
+|   aehm, let't call it workaround). With that, wie can distinguish
+|   between // and descencant or descendant-or-self. And reinsert the
+|   handling of the predicate filter with respect to the child axes for //
+|   in xpathEvalStepAndPredicates().
+|
 |   Revision 1.3  2002/04/28 22:20:30  rolf
 |   Added full qualified and namespace wildcard attribute queries. Fixed
 |   a Bug with following axis expression starting from an attribute. Added
@@ -86,7 +93,8 @@ typedef enum {
     AxisDescendant, AxisDescendantOrSelf, AxisFollowing,
     AxisFollowingSibling, AxisNamespace, AxisParent,
     AxisPreceding, AxisPrecedingSibling, AxisSelf,
-    GetContextNode, GetParentNode,
+    GetContextNode, GetParentNode, AxisDescendantOrSelfLit,
+    AxisDescendantLit,
         
     CombinePath, IsRoot, ToParent, ToAncestors, FillNodeList,
     FillWithCurrentNode,
