@@ -213,6 +213,7 @@ typedef struct xsltKeyInfo {
 typedef struct xsltVariable {
 
     char           * name;
+    char           * uri;
     domNode        * node;
     xpathResultSet   rs;
     
@@ -2083,10 +2084,10 @@ static int xsltSetVar (
     int               forNextLevel,
     char            * variableName,
     xpathResultSet  * context,
-    domNode         * node,
+    domNode         * currentNode,
     int               currentPos,
     char            * select,
-    domNode         * actionNodeChild,
+    domNode         * actionNode,
     int               forTopLevel,
     char           ** errMsg
 )
@@ -2095,8 +2096,9 @@ static int xsltSetVar (
     int              rc;
     xpathResultSet   rs;
     xsltVarFrame    *tmpFrame = NULL;
-    domNode         *fragmentNode, *savedLastNode;
-        
+    domNode         *fragmentNode, *savedLastNode, *savedCurrent;
+    char             prefix[MAX_PREFIX_LEN], *localName;
+    domNS           *ns;
 
     TRACE1("xsltSetVar variableName='%s' \n", variableName);
     if (select!=NULL) {
@@ -2105,15 +2107,18 @@ static int xsltSetVar (
             xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr - 1]);
         }
         TRACE2("xsltSetVar variableName='%s' select='%s'\n", variableName, select);
-        xs->current = node;    
-        rc = evalXPath (xs, context, node, currentPos, select, &rs, errMsg);
+        savedCurrent = xs->current;
+        xs->current = currentNode;    
+        rc = evalXPath (xs, context, currentNode, currentPos, select, &rs,
+                        errMsg);
+        xs->current = savedCurrent;
         CHECK_RC;
         if (forNextLevel) {
             /* show new variable frame again */
             xs->varFrames = &(xs->varFramesStack[xs->varFramesStackPtr]);
         }
     } else {
-        if (!actionNodeChild) {
+        if (!actionNode->firstChild) {
             xpathRSInit (&rs);
             rsSetString (&rs, "");
         } else {
@@ -2123,8 +2128,8 @@ static int xsltSetVar (
             xs->lastNode = fragmentNode;
             /* process the children as well */
             xsltPushVarFrame (xs);
-            rc = ExecActions(xs, context, node, currentPos, actionNodeChild, 
-                             errMsg);
+            rc = ExecActions(xs, context, currentNode, currentPos, 
+                             actionNode->firstChild, errMsg);
             xsltPopVarFrame (xs);
             CHECK_RC;
             xpathRSInit(&rs);
@@ -2150,9 +2155,23 @@ static int xsltSetVar (
         tmpFrame->varStartIndex = xs->varStackPtr;
     }
     tmpFrame->nrOfVars++;
-    var->name = variableName;
+    domSplitQName (variableName, prefix, &localName);
+    if (prefix[0]) {
+        ns = domLookupPrefix (actionNode, prefix);
+        if (!ns) {
+            reportError (actionNode,
+                         "There isn't a namespace bound to the prefix.",
+                         errMsg);
+            return -1;
+        }
+        var->uri  = ns->uri;
+        var->name = localName;
+    } else {
+        var->uri  = NULL;
+        var->name = variableName;
+    }
     tmpFrame->polluted = 1;
-    var->node  = node;
+    var->node  = actionNode;
     var->rs     = rs;
     DBG(rsPrint(&(var->rs)));
     return 0;
@@ -2165,17 +2184,39 @@ static int xsltSetVar (
 \---------------------------------------------------------------------------*/
 static int xsltVarExists (
     xsltState  * xs,
-    char       * variableName
+    char       * variableName,
+    domNode    * exprContext
 )
 {
-    int  i, found = 0;
+    int      i, found = 0;
+    char     prefix[MAX_PREFIX_LEN], *localName, *uri, *varName;
+    domNS   *ns;
+
 
     if (!xs->varFrames || !xs->varFrames->nrOfVars) return 0;
     
+    domSplitQName (variableName, prefix, &localName);
+    if (prefix[0]) {
+        ns = domLookupPrefix (exprContext, prefix);
+        if (!ns) {
+            /* TODO: this is an error, not only 'not found' */
+            return 0;
+        }
+        uri = ns->uri;
+        varName = localName;
+    } else {
+        uri = NULL;
+        varName = variableName;
+    }
+        
     for (i = xs->varFrames->varStartIndex;
          i < xs->varFrames->varStartIndex + xs->varFrames->nrOfVars;
          i++) {
-        if (strcmp((&xs->varStack[i])->name, variableName)==0) {
+        if ( (uri && !((&xs->varStack[i])->uri))
+            || (!uri && (&xs->varStack[i])->uri)
+            || (uri && (&xs->varStack[i])->uri && (strcmp (uri, (&xs->varStack[i])->uri)!=0))
+            ) continue;
+        if (strcmp((&xs->varStack[i])->name, varName)==0) {
             found = 1;
             break; /* found the variable */
         }
@@ -2192,6 +2233,7 @@ static int xsltVarExists (
 static int xsltGetVar (
     void           * clientData,
     char           * variableName,
+    char           * varURI,
     xpathResultSet * result,
     char           **errMsg
 )
@@ -2254,18 +2296,11 @@ static int xsltGetVar (
             savedCurrentXSLTNode = xs->currentXSLTNode;
             xs->currentXSLTNode = topLevelVar->node;
             select = getAttr (topLevelVar->node, "select", a_select);
-            if (select) {
-                rc = xsltSetVar(xs, 0, variableName, &nodeList, 
-                                xs->xmlRootNode, 0, 
-                                select, NULL, 1, errMsg);
-            } else {
-                rc = xsltSetVar(xs, 0, variableName, &nodeList, 
-                                xs->xmlRootNode, 0,
-                                NULL, topLevelVar->node->firstChild, 1, errMsg);
-            }
+            rc = xsltSetVar (xs, 0, variableName, &nodeList, xs->xmlRootNode,
+                             0, select, topLevelVar->node, 1, errMsg);
             xpathRSFree ( &nodeList );
             CHECK_RC;
-            rc = xsltGetVar (xs, variableName, result, errMsg);
+            rc = xsltGetVar (xs, variableName, varURI, result, errMsg);
             CHECK_RC;
             /* remove var out of the varsInProcess list. Should be first
                in the list, shouldn't it? */
@@ -2392,7 +2427,7 @@ int ExecUseAttributeSets (
 )
 {
     xsltAttrSet *attrSet;
-    char        *pc, *aSet, save, *str, prefix[80], *localName;
+    char        *pc, *aSet, save, *str, prefix[MAX_PREFIX_LEN], *localName;
     int          rc;
     domNS       *ns;
         
@@ -2577,14 +2612,9 @@ static int setParamVars (
                     TRACE1("setting with-param '%s' \n", str);
                     xs->currentXSLTNode = child;
                     select = getAttr(child, "select", a_select);
-                    if (select) {
-                        TRACE1("with-param select='%s'\n", select);
-                        rc = xsltSetVar(xs, 1, str, context, currentNode, currentPos, 
-                                        select, NULL, 0, errMsg);
-                    } else {
-                        rc = xsltSetVar(xs, 1, str, context, currentNode, currentPos, 
-                                        NULL, child->firstChild, 0, errMsg);
-                    }
+                    TRACE1("with-param select='%s'\n", select);
+                    rc = xsltSetVar(xs, 1, str, context, currentNode,
+                                    currentPos, select, child, 0, errMsg);
                     CHECK_RC;
                 } else {
                     reportError (child, "xsl:with-param: missing mandatory attribute \"name\".", errMsg);
@@ -3767,26 +3797,12 @@ static int ExecAction (
             str = getAttr(actionNode, "name", a_name);
             if (str) {
                 TRACE1("setting param '%s' ??\n", str);
-                if (!xsltVarExists(xs, str)) {
+                if (!xsltVarExists(xs, str, actionNode)) {
                     TRACE1("setting param '%s': yes \n", str);
                     select = getAttr(actionNode, "select", a_select);
-                    if (select) {
-                        TRACE1("param select='%s'\n", select);
-                        rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
-                                        select, NULL, 0, errMsg);
-                    } else {
-                        rc = xsltSetVar(xs, 0, str, context, currentNode,
-                                        currentPos, NULL, 
-                                        actionNode->firstChild, 0, errMsg);
-/*                          if (actionNode->firstChild) { */
-/*                              rc = xsltSetVar(xs, 0, str, context, currentNode, */
-/*                                              currentPos, NULL,  */
-/*                                              actionNode->firstChild, 0, errMsg); */
-/*                          } else { */
-/*                              rc = xsltSetVar(xs, 0, str, context, currentNode,  */
-/*                                              currentPos, "", NULL, 0, errMsg); */
-/*                          } */
-                    }
+                    TRACE1("param select='%s'\n", select);
+                    rc = xsltSetVar(xs, 0, str, context, currentNode,
+                                    currentPos, select, actionNode, 0, errMsg);
                     CHECK_RC;
                 }
             } else {
@@ -3868,21 +3884,16 @@ static int ExecAction (
         case variable:
             str = getAttr(actionNode, "name", a_name);
             if (str) {
-                if (xsltVarExists (xs, str)) {
+                if (xsltVarExists (xs, str, actionNode)) {
                     reportError (actionNode, 
                                  "Variable is already declared in this template", 
                                  errMsg);
                     return -1;
                 }
                 select = getAttr(actionNode, "select", a_select);
-                if (select) {
-                    TRACE1("variable select='%s'\n", select);
-                    rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
-                                    select, NULL, 0, errMsg);
-                } else {
-                    rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
-                                    NULL, actionNode->firstChild, 0, errMsg);
-                }
+                TRACE1("variable select='%s'\n", select);
+                rc = xsltSetVar(xs, 0, str, context, currentNode, currentPos, 
+                                select, actionNode, 0, errMsg);
                 CHECK_RC;
             } else {
                 reportError (actionNode,
@@ -4676,7 +4687,7 @@ static int processTopLevelVars (
                 Tcl_DStringFree (&dStr);
                 return -1;
             }
-            if (xsltVarExists (xs, parameters[i])) {
+            if (xsltVarExists (xs, parameters[i], NULL)) {
                 i += 2;
                 continue;
             }
@@ -4708,7 +4719,7 @@ static int processTopLevelVars (
             entryPtr = Tcl_NextHashEntry(&search)) {
         topLevelVar = (xsltTopLevelVar *)Tcl_GetHashValue (entryPtr);
         str = Tcl_GetHashKey (&xs->topLevelVars, entryPtr);
-        if (xsltVarExists (xs, str)) {
+        if (xsltVarExists (xs, str, topLevelVar->node)) {
             continue;
         }
         varInProcess.name = str;
@@ -4717,13 +4728,8 @@ static int processTopLevelVars (
         
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
-        if (select) {
-            rc = xsltSetVar(xs, 0, str, &nodeList, xmlNode, 0, 
-                            select, NULL, 1, errMsg);
-        } else {
-            rc = xsltSetVar(xs, 0, str, &nodeList, xmlNode, 0,
-                            NULL, topLevelVar->node->firstChild, 1, errMsg);
-        }
+        rc = xsltSetVar(xs, 0, str, &nodeList, xmlNode, 0, select,
+                        topLevelVar->node, 1, errMsg);
         CHECK_RC;
     }
     xpathRSFree (&nodeList);
