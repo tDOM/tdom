@@ -348,6 +348,133 @@ domLookupNamespace (
     return NULL;
 }
 
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * domPrecedes --
+ *
+ *	This helper procedure returns if node precedes other with regard
+ *      to their position in the document and according to the document
+ *      order. The two nodes could be out of the two documents. Both
+ *      nodes must not be out of the fragments list.
+ *
+ * Results:
+ *	1 if node precedes other in document order, 0 otherwise.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+domPrecedes (
+    domNode *node,
+    domNode *other
+    )
+{
+    domNode *nodeAncestor, *otherAncestor, *otherToplevel;
+    domAttrNode *attrN, *attrO;
+    
+    if (node == other) {
+        return 0;
+    }
+    
+    if (node->nodeType == ATTRIBUTE_NODE) {
+        attrN = (domAttrNode*)node;
+        if (other->nodeType == ATTRIBUTE_NODE) {
+            attrO = (domAttrNode*)other;
+            if (attrN->parentNode == attrO->parentNode) {
+                attrN = attrN->nextSibling;
+                while (attrN) {
+                    if (attrN == attrO) {
+                        return 1;
+                    }
+                    attrN = attrN->nextSibling;
+                }
+                return 0;
+            } else {
+                node = attrN->parentNode;
+                other = attrO->parentNode;
+            }
+        } else {
+            if (attrN->parentNode == other) {
+                return 0;
+            } else {
+                node = attrN->parentNode;                
+            }
+        }
+    }
+    if (other->nodeType == ATTRIBUTE_NODE) {
+        attrO = (domAttrNode*)other;
+        if (node == attrO->parentNode) {
+            return 1;
+        } else {
+            other = attrO->parentNode;
+        }
+    }
+    
+    if (node->ownerDocument != other->ownerDocument) {
+        return (node->ownerDocument->documentNumber < 
+                other->ownerDocument->documentNumber);
+    }
+
+#ifndef TCL_THREADS
+    if (node->ownerDocument->nodeFlags & NEEDS_RENUMBERING) {
+        domRenumberTree (node->ownerDocument->rootNode);
+        node->ownerDocument->nodeFlags &= ~NEEDS_RENUMBERING;
+    }
+    return (node->nodeNumber < other->nodeNumber);
+# else 
+    if (!(node->ownerDocument->nodeFlags & NEEDS_RENUMBERING)) {
+        return (node->nodeNumber < other->nodeNumber);
+    }
+#endif
+    
+    otherAncestor = other;
+    while (otherAncestor->parentNode) {
+        otherAncestor = otherAncestor->parentNode;
+        if (otherAncestor == node) {
+            return 1;
+        }
+    }
+    otherToplevel = otherAncestor;
+    
+    nodeAncestor = node;
+    while (nodeAncestor->parentNode) {
+        otherAncestor = other;
+        while (otherAncestor->parentNode) {
+            if (nodeAncestor->parentNode == otherAncestor->parentNode) {
+                nodeAncestor = nodeAncestor->nextSibling;
+                while (nodeAncestor) {
+                    if (nodeAncestor == otherAncestor) {
+                        return 1;
+                    }
+                    nodeAncestor = nodeAncestor->nextSibling;
+                }
+                return 0;
+            }
+            otherAncestor = otherAncestor->parentNode;
+        }
+        nodeAncestor = nodeAncestor->parentNode;
+        if (nodeAncestor == other) {
+            return 0;
+        }
+    }
+    nodeAncestor = nodeAncestor->nextSibling;
+    while (nodeAncestor) {
+        if (nodeAncestor == otherAncestor) {
+            return 1;
+        }
+        nodeAncestor = nodeAncestor->nextSibling;
+    }
+    if (node == node->ownerDocument->rootNode) {
+        return 1;
+    }
+    return 0;
+}
+
 /*---------------------------------------------------------------------------
 |   domRenumberTree
 |
