@@ -1,3 +1,9 @@
+2004-07-13  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/xmlsimple.test
+        * generic/xmlsimple.c: Empty CDATA sections should not create
+          a node.
+  
 2004-07-08  Rolf Ade  <rolf@pointsman.de>
         
         * generic/tdominit.c: Test, if a non-mt tDOM is tried to load
