@@ -315,7 +315,7 @@ static char node_usage[] =
     "    appendFromScript script      \n"
     "    insertBeforeFromScript script ref \n"
     "    appendXML xmlString          \n"
-    "    selectNodes xpathQuery ?typeVar? \n"
+    "    selectNodes ?-namespaces prefixUriList? xpathQuery ?typeVar? \n"
     "    toXPath                      \n"
     "    disableOutputEscaping ?boolean? \n"
     "    precedes node                \n"
@@ -387,17 +387,14 @@ void tcldom_initialize()
 {
     if (!tcldomInitialized) {
         Tcl_MutexLock(&tableMutex);
-        if (!tcldomInitialized) {
-            Tcl_InitHashTable(&sharedDocs, TCL_ONE_WORD_KEYS);
-            Tcl_CreateExitHandler(tcldom_Finalize, NULL);
-            tcldomInitialized = 1;
-        }
+        Tcl_InitHashTable(&sharedDocs, TCL_ONE_WORD_KEYS);
+        Tcl_CreateExitHandler(tcldom_Finalize, NULL);
+        tcldomInitialized = 1;
         Tcl_MutexUnlock(&tableMutex);
     }
 }
 
 #endif /* TCL_THREADS */
-
 
 /*----------------------------------------------------------------------------
 |   tcldom_deleteNode
@@ -1459,18 +1456,79 @@ static
 int tcldom_selectNodes (
     Tcl_Interp *interp,
     domNode    *node,
-    Tcl_Obj    *obj,
-    Tcl_Obj    *typeObj
+    int         objc,
+    Tcl_Obj    *CONST objv[]
 )
 {
-    char          *xpathQuery, *typeVar;
-    char          *errMsg = NULL;
-    int            rc;
+    char          *xpathQuery, *typeVar, *option;
+    char          *errMsg = NULL, **mappings = NULL;
+    int            rc, i, len, optionIndex;
     xpathResultSet rs;
-    Tcl_Obj       *type;
+    Tcl_Obj       *type, *objPtr;
     xpathCBs       cbs;
 
-    xpathQuery = Tcl_GetString(obj);
+    static CONST84 char *selectNodesOptions[] = {
+        "-namespaces", NULL
+    };
+    enum selectNodesOption {
+        o_namespaces
+    };
+
+    GetTcldomTSD();
+    
+    if (objc < 2) {
+        SetResult("Wrong # of arguments.");
+        return TCL_ERROR;
+    }
+    while (objc > 2) {
+        option = Tcl_GetString (objv[1]);
+        if (option[0] != '-') {
+            break;
+        }
+        if (Tcl_GetIndexFromObj (NULL, objv[1], selectNodesOptions, "option",
+                                 0, &optionIndex) != TCL_OK) {
+            break;
+        }
+        switch ((enum selectNodesOption) optionIndex) {
+        case o_namespaces:
+            rc = Tcl_ListObjLength (interp, objv[2], &len);
+            if (rc != TCL_OK || (len % 2) != 0) {
+                SetResult ("The \"-namespaces\" option requires a 'prefix"
+                           " namespace' pairs list as argument");
+                return TCL_ERROR;
+            }
+            mappings = MALLOC (sizeof (char *) * (len + 1));
+            for (i = 0; i < len; i++) {
+                Tcl_ListObjIndex (interp, objv[2], i, &objPtr);
+                /* The prefixMappings array is only used at xpath expr
+                   compile time. (And every needed info is strdup'ed.)
+                   So, we don't need to fiddle around with the refcounts
+                   of the prefixMappings list members.
+                   If we, at some day, allow to evaluate tcl scripts during
+                   xpath lexing/parsing, this must be revisited. */
+                mappings[i] = Tcl_GetString (objPtr);
+            }
+            mappings[len] = NULL;
+            objc -= 2;
+            objv += 2;
+            break;
+        default:
+            Tcl_ResetResult (interp);
+            Tcl_AppendResult (interp, "bad option \"", 
+                              Tcl_GetString (objv[1]), "\"; must be "
+                              "-namespaces", NULL);
+            return TCL_ERROR;
+        }
+    }
+    if (objc != 2 && objc != 3) {
+        if (mappings) {
+            FREE (mappings);
+        }
+        SetResult("Wrong # of arguments.");
+        return TCL_ERROR;
+    }
+
+    xpathQuery = Tcl_GetString(objv[1]);
 
     xpathRSInit(&rs);
 
@@ -1479,7 +1537,7 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
-    rc = xpathEval (node, node, xpathQuery, &cbs, &errMsg, &rs);
+    rc = xpathEval (node, node, xpathQuery, mappings, &cbs, &errMsg, &rs);
 
     if (rc != XPATH_OK) {
         xpathRSFree(&rs);
@@ -1488,14 +1546,17 @@ int tcldom_selectNodes (
         if (errMsg) {
             FREE(errMsg);
         }
+        if (mappings) {
+            FREE(mappings);
+        }
         return TCL_ERROR;
     }
     if (errMsg) {
         FREE(errMsg);
     }
     typeVar = NULL;
-    if (typeObj != NULL) {
-        typeVar = Tcl_GetString(typeObj);
+    if (objc > 2) {
+        typeVar = Tcl_GetString(objv[2]);
     }
     type = Tcl_NewObj();
     Tcl_IncrRefCount(type);
@@ -1508,6 +1569,9 @@ int tcldom_selectNodes (
     Tcl_DecrRefCount(type);
 
     xpathRSFree( &rs );
+    if (mappings) {
+        FREE (mappings);
+    }
     return TCL_OK;
 }
 
@@ -3294,12 +3358,7 @@ int tcldom_NodeObjCmd (
             return applyXSLT(node, interp, NULL, objc, objv);
 
         case m_selectNodes:
-            CheckArgs(3,4,2, "xpathQuery");
-            if (objc == 4) {
-                return tcldom_selectNodes(interp, node, objv[2], objv[3]);
-            } else {
-                return tcldom_selectNodes(interp, node, objv[2], NULL );
-            }
+            return tcldom_selectNodes (interp, node, --objc, ++objv);
 
         case m_find:
             CheckArgs(4,5,2,"attrName attrVal ?nodeObjVar?");

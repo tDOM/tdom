@@ -2384,7 +2384,8 @@ static int evalXPath (
     if (!hnew) {
         t = (ast)Tcl_GetHashValue(h);
     } else {
-        rc = xpathParse(xpath, errMsg, &t, XPATH_EXPR);
+        rc = xpathParse (xpath, xs->currentXSLTNode, XPATH_EXPR, NULL, &t,
+                         errMsg);
         if (rc < 0) {
             reportError (xs->currentXSLTNode, *errMsg, errMsg);
             return rc;
@@ -2926,13 +2927,7 @@ static int addMatch (
         || tpl->ast->type == IsFQElement) {
         Tcl_DStringInit (&dStr);
         if (tpl->ast->type == IsFQElement) {
-            ns = domLookupPrefix (node, tpl->ast->strvalue);
-            if (!ns) {
-                reportError (node, "Not declared prefix in match expr", 
-                             errMsg);
-                return -1;
-            }
-            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, tpl->ast->strvalue, -1);
             Tcl_DStringAppend (&dStr, ":", 1);
         }
         if (tpl->mode) {
@@ -3128,8 +3123,8 @@ static int xsltAddTemplate (
     
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        rc = xpathParse(tpl->match, errMsg, &(tpl->freeAst), 
-                        XPATH_TEMPMATCH_PATTERN);
+        rc = xpathParse(tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL,
+                        &(tpl->freeAst), errMsg);
         if (rc < 0) {
             reportError (node, *errMsg, errMsg);
         } else {
@@ -3610,8 +3605,8 @@ static int xsltNumber (
             if (!hnew) {
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (count, errMsg, &t_count, 
-                                 XPATH_FORMAT_PATTERN);
+                rc = xpathParse (count, actionNode, XPATH_FORMAT_PATTERN, NULL,
+                                 &t_count, errMsg);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_count);
             }
@@ -3646,8 +3641,8 @@ static int xsltNumber (
             if (!hnew) {
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (Tcl_DStringValue (&dStr), errMsg, &t_count, 
-                                 XPATH_FORMAT_PATTERN);
+                rc = xpathParse (Tcl_DStringValue (&dStr), actionNode, 
+                                 XPATH_FORMAT_PATTERN, NULL, &t_count, errMsg);
                 if (rc < 0) {
                     Tcl_DStringFree (&dStr);
                     goto xsltNumberError;
@@ -3661,7 +3656,8 @@ static int xsltNumber (
             if (!hnew) {
                 t_from = (ast) Tcl_GetHashValue (h);
             } else {
-                rc = xpathParse (from, errMsg, &t_from, XPATH_FORMAT_PATTERN);
+                rc = xpathParse (from, actionNode, XPATH_FORMAT_PATTERN, NULL,
+                                 &t_from, errMsg);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_from);
             }
@@ -3922,8 +3918,8 @@ static int ExecAction (
                 Tcl_DStringInit (&dStr);
                 if (currentNode->namespace) {
                     domSplitQName (currentNode->nodeName, prefix, &localName);
-                    ns = domLookupPrefix (currentNode, prefix);
-                    Tcl_DStringAppend (&dStr, ns->uri, -1);
+                    Tcl_DStringAppend (&dStr, domNamespaceURI (currentNode),
+                                       -1);
                     Tcl_DStringAppend (&dStr, ":", 1);
                 }
                 if (mode) {
@@ -5272,8 +5268,7 @@ static int ApplyTemplate (
         Tcl_DStringInit (&dStr);
         if (currentNode->namespace) {
             domSplitQName (currentNode->nodeName, prefix, &localName);
-            ns = domLookupPrefix (currentNode, prefix);
-            Tcl_DStringAppend (&dStr, ns->uri, -1);
+            Tcl_DStringAppend (&dStr, domNamespaceURI (currentNode), -1);
             Tcl_DStringAppend (&dStr, ":", 1);
         }
         if (mode) {
@@ -6480,16 +6475,16 @@ static int processTopLevel (
 
                 keyInfo = (xsltKeyInfo *)MALLOC(sizeof(xsltKeyInfo));
                 keyInfo->node = node;
-                rc = xpathParse (match, errMsg, &(keyInfo->matchAst), 
-                                 XPATH_KEY_MATCH_PATTERN);
+                rc = xpathParse (match, node, XPATH_KEY_MATCH_PATTERN, NULL,
+                                 &(keyInfo->matchAst), errMsg);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     free ((char*)keyInfo);
                     return rc;
                 }
                 keyInfo->use       = use;
-                rc = xpathParse (use, errMsg, &(keyInfo->useAst), 
-                                 XPATH_KEY_USE_EXPR);
+                rc = xpathParse (use, node, XPATH_KEY_USE_EXPR, NULL,
+                                 &(keyInfo->useAst), errMsg);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     free ((char*)keyInfo);
@@ -7224,8 +7219,8 @@ xsltCompileStylesheet (
         tpl->precedence = 1.0;
         tpl->next       = NULL;
         tpl->sDoc       = sdoc;
-        rc = xpathParse (tpl->match, errMsg, &(tpl->freeAst), 
-                         XPATH_TEMPMATCH_PATTERN);
+        rc = xpathParse (tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL,
+                         &(tpl->freeAst), errMsg);
         tpl->ast        = tpl->freeAst;
         xs->templates = tpl;
         if (rc < 0) goto error;

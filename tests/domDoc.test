@@ -851,6 +851,22 @@ test domDoc-20.4 {selectNodes} {
     set result
 } {COMMENT_NODE ELEMENT_NODE PROCESSING_INSTRUCTION_NODE}
 
+test domDoc-20.5 {selectNodes with -namespaces option} {
+    set doc [dom createDocumentNS "http://tdom.org" tdom:doc]
+    set node [$doc selectNodes \
+                  -namespaces {tdom http://tdom.org} \
+                  tdom:doc]
+    set result [$node nodeName]
+    set node [$doc selectNodes \
+                  -namespaces {myPrefix http://tdom.org} \
+                  myPrefix:doc]
+    lappend result [$node nodeName]
+    lappend result [$doc selectNodes -namespaces {} doc typeVar]
+    lappend result $typeVar
+    $doc delete
+    set result
+} [list tdom:doc tdom:doc "" empty]
+
 test domDoc-21.1 {baseURI} {
     set doc [dom createDocumentNode]
     set result [$doc baseURI]

@@ -263,6 +263,7 @@ void xpathRSFree ( xpathResultSet *rs ) {
     }
     rs->type = EmptyResult;
 }
+
 void rsPrint ( xpathResultSet *rs ) {
     int i = 0,l;  char tmp[80];
     switch (rs->type) {
@@ -666,13 +667,16 @@ void xpathFreeAst(
 |
 \---------------------------------------------------------------------------*/
 static XPathTokens xpathLexer (
-    char  *xpath,
-    char **errMsg
+    char     *xpath,
+    domNode  *exprContext,
+    char    **prefixMappings,
+    int      *useNamespaceAxis,
+    char    **errMsg
 )
 {
     int  l, allocated;
     int  i, k, start;
-    char delim, *ps, save;
+    char delim, *ps, save, *uri;
     XPathTokens tokens;
     int token = EOS;
 
@@ -711,9 +715,17 @@ static XPathTokens xpathLexer (
                                i += UTF8_CHAR_LEN (xpath[i]);
                            save = xpath[i];
                            xpath[i] = '\0';
-                           tokens[l].strvalue = tdomstrdup(ps);
-                           xpath[i] = save;
                            if (save == ':' && xpath[i+1] != ':') {
+                               uri = domLookupPrefixWithMappings (
+                                   exprContext, ps, prefixMappings);
+                               if (!uri) {
+                                   xpath[i] = save;
+                                   *errMsg = tdomstrdup ("Prefix doesn't"
+                                                         " resolve");
+                                   return tokens;
+                               }
+                               tokens[l].strvalue = tdomstrdup (uri);
+                               xpath[i] = save;
                                token = ATTRIBUTEPREFIX;
                                ADD_TOKEN (token);
                                if (xpath[i+1] == '*') {
@@ -723,7 +735,9 @@ static XPathTokens xpathLexer (
                                } else {
                                    ps = &(xpath[++i]);
                                    if (!(isNCNameStart (&xpath[i]))) {
-                                       *errMsg = tdomstrdup ("Illegal attribute name");
+                                       *errMsg = 
+                                           tdomstrdup ("Illegal attribute"
+                                                       " name");
                                        return tokens;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
@@ -736,6 +750,8 @@ static XPathTokens xpathLexer (
                                    xpath[i--] = save;
                                }
                            } else {
+                               tokens[l].strvalue = tdomstrdup(ps);
+                               xpath[i] = save;
                                token = ATTRIBUTE;
                                i--;
                            }
@@ -827,16 +843,30 @@ static XPathTokens xpathLexer (
                                i +=  UTF8_CHAR_LEN(xpath[i]);
                            if (xpath[i] == ':' && xpath[i+1] != ':') {
                                token = FQVARIABLE;
-                               if (!isNCNameStart (&xpath[++i])) {
-                                   *errMsg = tdomstrdup ("Illegal variable name");
+                               save = xpath[i];
+                               xpath[i] = '\0';
+                               uri = domLookupPrefixWithMappings (
+                                   exprContext, ps, prefixMappings);
+                               if (!uri) {
+                                   xpath[i] = save;
+                                   *errMsg = tdomstrdup ("Prefix doesn't"
+                                                         " resolve");
+                                   return tokens;
+                               }
+                               tokens[l].strvalue = tdomstrdup (uri);
+                               xpath[i] = save;
+                               ADD_TOKEN (token);
+                               ps = &(xpath[++i]);
+                               if (!isNCNameStart (&xpath[i])) {
+                                   *errMsg = tdomstrdup ("Illegal variable"
+                                                         " name");
                                    return tokens;
                                }
                                i += UTF8_CHAR_LEN (xpath[i]);
                                while (xpath[i] && isNCNameChar (&xpath[i]))
                                    i += UTF8_CHAR_LEN (xpath[i]);
-                           } else {
-                               token = VARIABLE;
                            }
+                           token = VARIABLE;
                            save = xpath[i];
                            xpath[i] = '\0';
                            tokens[l].strvalue = tdomstrdup(ps);
@@ -870,7 +900,15 @@ static XPathTokens xpathLexer (
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
                                    token = NSWC;
-                                   tokens[l].strvalue = tdomstrdup (ps);
+                                   uri = domLookupPrefixWithMappings (
+                                       exprContext, ps, prefixMappings);
+                                   if (!uri) {
+                                       xpath[i] = save;
+                                       *errMsg = tdomstrdup ("Prefix doesn't"
+                                                             " resolve");
+                                       return tokens;
+                                   }
+                                   tokens[l].strvalue = tdomstrdup (uri);
                                    xpath[i] = save;
                                    i++;
                                    break;
@@ -879,12 +917,22 @@ static XPathTokens xpathLexer (
                                    save = xpath[i];
                                    xpath[i] = '\0'; /* terminate */
                                    token = NSPREFIX;
-                                   tokens[l].strvalue = tdomstrdup (ps);
+                                   uri = domLookupPrefixWithMappings (
+                                       exprContext, ps, prefixMappings);
+                                   if (!uri) {
+                                       xpath[i] = save;
+                                       *errMsg = tdomstrdup ("Prefix doesn't"
+                                                             " resolve");
+                                       return tokens;
+                                   }
+                                   tokens[l].strvalue = tdomstrdup (uri);
                                    xpath[i] = save;
                                    ADD_TOKEN (token);
                                    ps = &(xpath[++i]);
                                    if (!(isNCNameStart (&xpath[i]))) {
-                                       *errMsg = tdomstrdup ("Illegal character in localname");
+                                       *errMsg = 
+                                           tdomstrdup ("Illegal character in"
+                                                       " localname");
                                        return tokens;
                                    }
                                    i += UTF8_CHAR_LEN (xpath[i]);
@@ -939,6 +987,9 @@ static XPathTokens xpathLexer (
                                save = xpath[i];
                                xpath[i] = '\0'; /* terminate */
                                tokens[l].strvalue = tdomstrdup(ps);
+                               if (ps[0] == 'n'&& strcmp(ps, "namespace")==0) {
+                                   *useNamespaceAxis = 1;
+                               }
                                xpath[i] = save;
                            } else {
                                save = xpath[i];
@@ -1178,6 +1229,8 @@ Production(FilterExpr)
     } else if (LA==FQVARIABLE) {
         Consume(FQVARIABLE);
         a = NewStr( GetFQVar, STRVAL);
+        Consume(VARIABLE);
+        AddChild (a, NewStr( GetVar, STRVAL));
 
     } else if (LA==LPAR) {
         Consume(LPAR);
@@ -2004,22 +2057,39 @@ int xpathFreeTokens (
 }
 
 /*----------------------------------------------------------------------------
-|   checkPatternConstraints
+|   xpathParsePostProcess
 |
 \---------------------------------------------------------------------------*/
 static
-int checkPatternConstraints (
+int xpathParsePostProcess (
     ast           t,
     xpathExprType type,
+    domNode      *exprContext,
+    char        **prefixMappings,
     char        **errMsg
     )
 {
+    char *uri;
+    
     DBG(
-        fprintf(stderr, "checkPatternConstraints starrt:\n");
+        fprintf(stderr, "xpathParsePostProcess starrt:\n");
         printAst (0, t);
         )
     while (t) {
         DBG(printAst (4, t);)
+        if (t->type == AxisNamespace) {
+            if (t->child->type == IsElement && t->child->strvalue[0] != '*') {
+                uri = domLookupPrefixWithMappings (exprContext, 
+                                                   t->child->strvalue, 
+                                                   prefixMappings);
+                if (!uri) {
+                    *errMsg = tdomstrdup ("Prefix doesn't resolve");
+                    return 0;
+                }
+                FREE (t->child->strvalue);
+                t->child->strvalue = tdomstrdup (uri);
+            }
+        }
         if (type != XPATH_KEY_USE_EXPR) {
             /* 12.4: "It is an error to use the current function in a
                pattern." */
@@ -2039,15 +2109,15 @@ int checkPatternConstraints (
             if (t->type == ExecFunction 
                 && t->intvalue == f_unknown
                 && (strcmp (t->strvalue, "key")==0)) {
-                *errMsg = tdomstrdup(
-                    "The 'key' function is not allowed in the use and match attribute pattern of xsl:key."
-                    );
+                *errMsg = tdomstrdup("The 'key' function is not allowed "
+                                     "in the use and match attribute pattern "
+                                     "of xsl:key.");
                 return 0;
             }
             if (t->type == GetVar || t->type == GetFQVar) {
-                *errMsg = tdomstrdup(
-                    "Variable references are not allowed in the use and match attribute of xsl:key."
-                    );
+                *errMsg = tdomstrdup("Variable references are not allowed "
+                                     "in the use and match attribute of "
+                                     "xsl:key.");
                 return 0;
             }
         }
@@ -2055,14 +2125,15 @@ int checkPatternConstraints (
             /* 5.3: "It is an error for the value of the match
                attribute to contain a VariableReference." */
             if (t->type == GetVar || t->type == GetFQVar) {
-                *errMsg = tdomstrdup(
-                    "Variable references are not allowed in the match attribute of xsl:template."
+                *errMsg = tdomstrdup("Variable references are not allowed "
+                                     "in the match attribute of xsl:template."
                     );
                 return 0;
             }
         }
         if (t->child) {
-            if (!checkPatternConstraints (t->child, type, errMsg)) return 0;
+            if (!xpathParsePostProcess (t->child, type, exprContext, 
+                                        prefixMappings, errMsg)) return 0;
         }
         t = t->next;
     }
@@ -2075,18 +2146,22 @@ int checkPatternConstraints (
 \---------------------------------------------------------------------------*/
 int xpathParse (
     char         *xpath,
-    char        **errMsg,
+    domNode      *exprContext,
+    xpathExprType type,
+    char        **prefixMappings, 
     ast          *t,
-    xpathExprType type
+    char        **errMsg
 )
 {
     XPathTokens tokens;
     int  i, l, len, newlen, slen;
+    int  useNamespaceAxis = 0;
     char tmp[200];
 
     DDBG(fprintf(stderr, "\nLex output following tokens for '%s':\n", xpath);)
     *errMsg = NULL;
-    tokens = xpathLexer(xpath, errMsg);
+    tokens = xpathLexer(xpath, exprContext, prefixMappings, &useNamespaceAxis, 
+                        errMsg);
     if (*errMsg != NULL) {
         if (tokens != NULL) xpathFreeTokens (tokens);
         return XPATH_LEX_ERR;
@@ -2111,11 +2186,11 @@ int xpathParse (
     } else {
         *t = Pattern (&l, tokens, errMsg);
     }
-    if (*errMsg == NULL && type != XPATH_EXPR) {
-        checkPatternConstraints (*t, type, errMsg);
-    }
     if ((*errMsg == NULL) && (tokens[l].token != EOS)) {
         *errMsg = tdomstrdup("Unexpected tokens (beyond end)!");
+    }
+    if (*errMsg == NULL && (type != XPATH_EXPR || useNamespaceAxis)) {
+        xpathParsePostProcess (*t, type, exprContext, prefixMappings, errMsg);
     }
     if (*errMsg) {
         len    = strlen(*errMsg);
@@ -2173,11 +2248,9 @@ int xpathParse (
 \---------------------------------------------------------------------------*/
 int xpathNodeTest (
     domNode        *node,
-    domNode        *exprContext,
     ast             step
 )
 {
-    domNS  *contextNS;
     char   *localName, *nodeUri;
 
     if (!(step->child)) return 1;
@@ -2206,31 +2279,25 @@ int xpathNodeTest (
     } else
     if (step->child->type == IsFQElement) {
         if (node->nodeType != ELEMENT_NODE || node->namespace == 0) return 0;
-        contextNS = domLookupPrefix (exprContext, step->child->strvalue);
-        if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
         nodeUri = domNamespaceURI (node);
         if (!nodeUri) return 0;
-        if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
+        if (strcmp (step->child->strvalue, nodeUri) != 0) return 0;
         localName = domGetLocalName (node->nodeName);
         if (strcmp (step->child->child->strvalue, localName)==0) return 1;
         return 0;
     } else
     if (step->child->type == IsNSElement) {
-        contextNS = domLookupPrefix (exprContext, step->child->strvalue);
-        if (!contextNS) return 0; /* Hmmm, that's more an error, than a not match */
         nodeUri = domNamespaceURI (node);
         if (!nodeUri) return 0;
-        if (nodeUri && (strcmp (contextNS->uri, nodeUri)==0)) return 1;
+        if (nodeUri && (strcmp (step->child->strvalue, nodeUri)==0)) return 1;
         return 0;
     } else
     if (step->child->type == IsNSAttr) {
         if (node->nodeType != ATTRIBUTE_NODE
             || node->nodeFlags & IS_NS_NODE) return 0;
-        contextNS = domLookupPrefix (exprContext, step->child->strvalue);
-        if (!contextNS) return 0;
         nodeUri = domNamespaceURI (node);
         if (!nodeUri) return 0;
-        if (strcmp (contextNS->uri, nodeUri) != 0) return 0;
+        if (strcmp (step->child->strvalue, nodeUri) != 0) return 0;
         if (strcmp (step->child->child->strvalue, "*")==0) return 1;
         localName = domGetLocalName (((domAttrNode *) node)->nodeName);
         if (strcmp (step->child->child->strvalue, localName)==0) return 1;
@@ -2717,7 +2784,6 @@ xpathEvalFunction (
     int              left = 0, useFastAdd;
     double           dRight = 0.0;
     char            *leftStr = NULL, *rightStr = NULL;
-    domNS           *ns;
     Tcl_DString      dStr;
 #if TclOnly8Bits
     char            *fStr;
@@ -3542,16 +3608,11 @@ xpathEvalFunction (
         break;
 
     case f_fqfunction: 
-        ns = domLookupPrefix (exprContext, step->strvalue);
-        if (!ns) {
-            *errMsg = tdomstrdup ("There isn't a namespace bound to the prefix.");
-            return XPATH_EVAL_ERR;
-        }
         Tcl_DStringInit (&dStr);
         if (cbs->funcCB == NULL) {
             Tcl_DStringAppend (&dStr, "Unknown function ", -1);
         }
-        Tcl_DStringAppend (&dStr, ns->uri, -1);
+        Tcl_DStringAppend (&dStr, step->strvalue, -1);
         Tcl_DStringAppend (&dStr, "::", 2);
         nextStep = step->child;
         Tcl_DStringAppend (&dStr, nextStep->strvalue, -1);
@@ -3646,12 +3707,10 @@ static int xpathEvalStep (
     int              i, j, k, rc, res, NaN, NaN1, switchResult, count = 0;
     domNode         *node, *child, *startingNode, *ancestor;
     domAttrNode     *attr;
-    domNS           *ns;
     int              savedDocOrder, predLimit;
     int              left = 0, right = 0, useFastAdd;
     double           dLeft = 0.0, dRight = 0.0, dTmp;
     char            *leftStr = NULL, *rightStr = NULL;
-    char            *localName, prefix[MAX_PREFIX_LEN];
     astType          savedAstType;
 
     if (result->type == EmptyResult) useFastAdd = 1;
@@ -3670,7 +3729,7 @@ static int xpathEvalStep (
             while (child && (count < step->intvalue)) {
                 DBG(fprintf(stderr, "AxisChild: child '%s' domNode0x%x \n", 
                             child->nodeName, child);)
-                if (xpathNodeTest(child, exprContext, step)) {
+                if (xpathNodeTest(child, step)) {
                     DBG(fprintf(stderr, 
                       "AxisChild: after node taking child '%s' domNode0x%x \n",
                                 child->nodeName, child);)
@@ -3683,7 +3742,7 @@ static int xpathEvalStep (
             while (child) {
                 DBG(fprintf(stderr, "AxisChild: child '%s' domNode0x%x \n",
                             child->nodeName, child);)
-                if (xpathNodeTest(child, exprContext, step)) {
+                if (xpathNodeTest(child, step)) {
                     DBG(fprintf(stderr,
                       "AxisChild: after node taking child '%s' domNode0x%x \n",
                                 child->nodeName, child);)
@@ -3712,7 +3771,7 @@ static int xpathEvalStep (
                     return rc;
                 }
             }
-            if (xpathNodeTest(node, exprContext, step)) {
+            if (xpathNodeTest(node, step)) {
                 rsAddNodeFast( &tResult, node);
                 if (predLimit) {
                     count++;
@@ -3746,20 +3805,16 @@ static int xpathEvalStep (
     case AxisDescendantOrSelf:
         if (step->next && step->next->type == Pred) {
             *docOrder = 1;
-            if (step->intvalue
-                && (step->type == AxisDescendantLit 
-                    || step->type == AxisDescendantOrSelfLit)) predLimit = 1;
-            else predLimit = 0;
             if (ctxNode->nodeType == ATTRIBUTE_NODE
                 && step->type == AxisDescendantOrSelf) {
-                if (xpathNodeTest(ctxNode, exprContext, step))
+                if (xpathNodeTest(ctxNode, step)) {
                     checkRsAddNode( result, ctxNode);
+                }
                 break;
             }
             if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
-            if (step->type == AxisDescendantOrSelf
-                || step->type == AxisDescendantOrSelfLit) {
-                if (xpathNodeTest(ctxNode, exprContext, step)) {
+            if (step->type == AxisDescendantOrSelf) {
+                if (xpathNodeTest(ctxNode, step)) {
                     xpathRSInit (&tResult);
                     rsAddNodeFast( &tResult, ctxNode);
                     rc = xpathEvalPredicate (step->next, exprContext, result,
@@ -3789,14 +3844,15 @@ static int xpathEvalStep (
         if (ctxNode->nodeType == ATTRIBUTE_NODE
             && (step->type == AxisDescendantOrSelf
                 || step->type == AxisDescendantOrSelfLit)) {
-            if (xpathNodeTest(ctxNode, exprContext, step))
+            if (xpathNodeTest(ctxNode, step)) {
                 checkRsAddNode( result, ctxNode);
+            }
             break;
         }
         if (ctxNode->nodeType != ELEMENT_NODE) return XPATH_OK;
         if (step->type == AxisDescendantOrSelf
             || step->type == AxisDescendantOrSelfLit) {
-            if (xpathNodeTest(ctxNode, exprContext, step)) {
+            if (xpathNodeTest(ctxNode, step)) {
                 checkRsAddNode( result, ctxNode);
                 if (predLimit) {
                     count++;
@@ -3807,7 +3863,7 @@ static int xpathEvalStep (
         startingNode = ctxNode;
         node = ctxNode->firstChild;
         while (node && node != startingNode) {
-            if (xpathNodeTest(node, exprContext, step)) {
+            if (xpathNodeTest(node, step)) {
                  checkRsAddNode( result, node);
                  if (predLimit) {
                      count++;
@@ -3842,7 +3898,7 @@ static int xpathEvalStep (
     case AxisSelf:
         *docOrder = 1;
         DBG(fprintf(stderr, "AxisSelf :: \n");)
-        if (xpathNodeTest(ctxNode, exprContext, step)) {
+        if (xpathNodeTest(ctxNode, step)) {
             checkRsAddNode( result, ctxNode);
         }
         break;
@@ -3872,7 +3928,7 @@ static int xpathEvalStep (
                 while (attr && (attr->nodeFlags & IS_NS_NODE))
                     attr = attr->nextSibling;
                 while (attr) {
-                    if (xpathNodeTest( (domNode*)attr, exprContext, step)) {
+                    if (xpathNodeTest( (domNode*)attr, step)) {
                         rsAddNodeFast (result, (domNode *)attr);
                     }
                     attr = attr->nextSibling;
@@ -3884,7 +3940,7 @@ static int xpathEvalStep (
             while (attr && (attr->nodeFlags & IS_NS_NODE))
                 attr = attr->nextSibling;
             while (attr) {
-                if (xpathNodeTest ( (domNode*)attr, exprContext, step)) {
+                if (xpathNodeTest ( (domNode*)attr, step)) {
                     rsAddNodeFast (result, (domNode *)attr);
                 }
                 attr = attr->nextSibling;
@@ -3895,18 +3951,16 @@ static int xpathEvalStep (
     case AxisParent:
         *docOrder = 1;
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
-            if (xpathNodeTest(((domAttrNode *)ctxNode)->parentNode,
-                              exprContext, step)) {
+            if (xpathNodeTest(((domAttrNode *)ctxNode)->parentNode, step)) {
                 rsAddNode(result,((domAttrNode *)ctxNode)->parentNode);
             }
         } else {
             if (ctxNode->parentNode) {
-                if (xpathNodeTest(ctxNode->parentNode, exprContext, step)) {
+                if (xpathNodeTest(ctxNode->parentNode, step)) {
                     rsAddNode(result,ctxNode->parentNode);
                 }
             } else {
-                if (xpathNodeTest (ctxNode->ownerDocument->rootNode,
-                                   exprContext, step)) {
+                if (xpathNodeTest (ctxNode->ownerDocument->rootNode, step)) {
                     rsAddNode (result, ctxNode->ownerDocument->rootNode);
                 }
             }
@@ -3932,21 +3986,20 @@ static int xpathEvalStep (
         *docOrder = 0;
         xpathRSInit (&tResult);
         if (step->type == AxisAncestorOrSelf) {
-            if (xpathNodeTest(ctxNode, exprContext, step))
+            if (xpathNodeTest(ctxNode, step))
                 rsAddNodeFast(&tResult, ctxNode);
         }
         if (ctxNode->nodeType == ATTRIBUTE_NODE) {
             ctxNode = ((domAttrNode *)ctxNode)->parentNode;
-            if (xpathNodeTest(ctxNode, exprContext, step))
+            if (xpathNodeTest(ctxNode, step))
                 rsAddNodeFast(&tResult, ctxNode);
         }
         while (ctxNode->parentNode) {
             ctxNode = ctxNode->parentNode;
-            if (xpathNodeTest(ctxNode, exprContext, step))
+            if (xpathNodeTest(ctxNode, step))
                 rsAddNodeFast(&tResult, ctxNode);
         }
-        if (xpathNodeTest (ctxNode->ownerDocument->rootNode, exprContext, 
-                           step)) {
+        if (xpathNodeTest (ctxNode->ownerDocument->rootNode, step)) {
             rsAddNodeFast (&tResult, ctxNode->ownerDocument->rootNode);
         }
         for (i = tResult.nr_nodes - 1; i >= 0;  i--) {
@@ -3963,7 +4016,7 @@ static int xpathEvalStep (
         if (step->intvalue) {
             while (ctxNode->nextSibling && (count < step->intvalue)) {
                 ctxNode = ctxNode->nextSibling;
-                if (xpathNodeTest(ctxNode, exprContext, step)) {
+                if (xpathNodeTest(ctxNode, step)) {
                     checkRsAddNode(result, ctxNode);
                     count++;
                 }
@@ -3971,7 +4024,7 @@ static int xpathEvalStep (
         } else {
             while (ctxNode->nextSibling) {
                 ctxNode = ctxNode->nextSibling;
-                if (xpathNodeTest(ctxNode, exprContext, step)) {
+                if (xpathNodeTest(ctxNode, step)) {
                     checkRsAddNode(result, ctxNode);
                 }
             }
@@ -3987,7 +4040,7 @@ static int xpathEvalStep (
             node = ctxNode->previousSibling;
             xpathRSInit (&tResult);
             while (node && (count < step->intvalue)) {
-                if (xpathNodeTest (node, exprContext, step)) {
+                if (xpathNodeTest (node, step)) {
                     rsAddNodeFast (&tResult, node);
                     count++;
                 }
@@ -4007,7 +4060,7 @@ static int xpathEvalStep (
                 node = startingNode->ownerDocument->rootNode->firstChild;
             }
             while (node && (node != startingNode)) {
-                if (xpathNodeTest(node, exprContext, step)) {
+                if (xpathNodeTest(node, step)) {
                     checkRsAddNode(result, node);
                 } 
                 node = node->nextSibling;
@@ -4033,7 +4086,7 @@ static int xpathEvalStep (
             }
         }
         while (1) {
-            if (xpathNodeTest (node, exprContext, step)) {
+            if (xpathNodeTest (node, step)) {
                 checkRsAddNode (result, node);
                 if (step->intvalue) {
                     count++;
@@ -4080,11 +4133,11 @@ static int xpathEvalStep (
                 node = NULL;
             }
             while (startingNode != ancestor) {
-                if (xpathNodeTest(startingNode, exprContext, step)) {
+                if (xpathNodeTest(startingNode, step)) {
                     checkRsAddNode(result, startingNode);
                 }
                 while ((node) && (node != startingNode)) {
-                   if (xpathNodeTest(node,exprContext, step)) {
+                   if (xpathNodeTest(node, step)) {
                        checkRsAddNode(result, node);
                    }
                    if ((node->nodeType == ELEMENT_NODE) &&
@@ -4145,14 +4198,8 @@ static int xpathEvalStep (
             while (attr && (attr->nodeFlags & IS_NS_NODE)) {
                 if (step->child->type == IsElement) {
                     if ((step->child->strvalue[0] != '*')) {
-                        ns = domLookupPrefix (exprContext,
-                                              step->child->strvalue);
-                        if (!ns) {
-                            /* This is more an error: the prefix should be
-                               bound to a namespace. TODO: error msg. */
-                            return XPATH_OK;
-                        }
-                        if (strcmp(attr->nodeValue, ns->uri)!=0) {
+                        if (strcmp(attr->nodeValue, 
+                                   step->child->strvalue)!=0) {
                             attr = attr->nextSibling;
                             continue;
                         }
@@ -4185,16 +4232,8 @@ static int xpathEvalStep (
     case GetVar:
         if (cbs->varCB) {
             if (step->type == GetFQVar) {
-                domSplitQName (step->strvalue, prefix, &localName);
-                /* There must be a prefix, otherwise the Step type would
-                   not be GetFQVar. Omit test prefix[0] != '\0'. */
-                ns = domLookupPrefix (exprContext, prefix);
-                if (!ns) {
-                    *errMsg = tdomstrdup ("There isn't a namespace bound to the prefix.");
-                    return XPATH_EVAL_ERR;
-                }
-                leftStr  = localName;
-                rightStr = ns->uri;
+                leftStr  = step->child->strvalue;
+                rightStr = step->strvalue;
             } else {
                 leftStr  = step->strvalue;
                 rightStr = NULL;
@@ -5046,6 +5085,7 @@ int xpathEval (
     domNode          * node,
     domNode          * exprContext,
     char             * xpath,
+    char            ** prefixMappings,
     xpathCBs         * cbs,
     char            ** errMsg,
     xpathResultSet   * result
@@ -5056,7 +5096,8 @@ int xpathEval (
     ast            t;
 
     *errMsg = NULL;
-    rc = xpathParse(xpath, errMsg, &t, 0);
+    rc = xpathParse(xpath, exprContext, XPATH_EXPR, prefixMappings, &t,
+                    errMsg);
     CHECK_RC;
 
     xpathRSInit( &nodeList);
@@ -5092,7 +5133,6 @@ int xpathMatches (
     char           *localName = NULL, *nodeUri;
     domAttrNode    *attr;
     domNode        *child;
-    domNS          *contextNS;
 
     DBG(printAst(3,step));
     xpathRSInit (&nodeList);
@@ -5144,11 +5184,9 @@ int xpathMatches (
                     if (nodeToMatch->nodeType != ELEMENT_NODE) {
                         xpathRSFree (&nodeList); return 0;
                     }
-                    contextNS = domLookupPrefix (exprContext, step->child->strvalue);
-                    if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                     nodeUri = domNamespaceURI (nodeToMatch);
                     if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
-                    if (strcmp (contextNS->uri, nodeUri) != 0) {
+                    if (strcmp (step->child->strvalue, nodeUri) != 0) {
                         xpathRSFree (&nodeList); return 0;
                     }
                     localName = domGetLocalName (nodeToMatch->nodeName);
@@ -5159,11 +5197,9 @@ int xpathMatches (
                     break;
                 }
                 if (step->child->type == IsNSElement) {
-                    contextNS = domLookupPrefix (exprContext, step->child->strvalue);
-                    if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                     nodeUri = domNamespaceURI (nodeToMatch);
                     if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
-                    if (strcmp (contextNS->uri, nodeUri)!=0) {
+                    if (strcmp (step->child->strvalue, nodeUri)!=0) {
                         xpathRSFree (&nodeList); return 0;
                     }
                     break;
@@ -5192,11 +5228,9 @@ int xpathMatches (
                 if (nodeToMatch->nodeType != ELEMENT_NODE) {
                     xpathRSFree (&nodeList); return 0;
                 }
-                contextNS = domLookupPrefix (exprContext, step->strvalue);
-                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                 nodeUri = domNamespaceURI (nodeToMatch);
                 if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
-                if (strcmp (contextNS->uri, nodeUri) != 0) {
+                if (strcmp (step->strvalue, nodeUri) != 0) {
                     xpathRSFree (&nodeList); return 0;
                 }
                 localName = domGetLocalName (nodeToMatch->nodeName);
@@ -5207,11 +5241,9 @@ int xpathMatches (
                 break;
 
             case IsNSElement:
-                contextNS = domLookupPrefix (exprContext, step->strvalue);
-                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                 nodeUri = domNamespaceURI (nodeToMatch);
                 if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
-                if (strcmp (contextNS->uri, nodeUri)!=0) {
+                if (strcmp (step->strvalue, nodeUri)!=0) {
                     xpathRSFree (&nodeList); return 0;
                 }
                 break;
@@ -5233,11 +5265,9 @@ int xpathMatches (
                     || (nodeToMatch->nodeFlags & IS_NS_NODE)) {
                     xpathRSFree (&nodeList); return 0;
                 }
-                contextNS = domLookupPrefix (exprContext, step->strvalue);
-                if (!contextNS) { xpathRSFree (&nodeList); return 0; }
                 nodeUri = domNamespaceURI (nodeToMatch);
                 if (!nodeUri) { xpathRSFree (&nodeList); return 0; }
-                if (strcmp (contextNS->uri, nodeUri) != 0) {
+                if (strcmp (step->strvalue, nodeUri) != 0) {
                     xpathRSFree (&nodeList); return 0;
                 }
                 if (strcmp (step->child->strvalue, "*")==0) break;

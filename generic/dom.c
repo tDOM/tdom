@@ -609,6 +609,34 @@ domRenumberTree (
 }
 
 /*---------------------------------------------------------------------------
+|   domLookupPrefixWithMappings
+|
+\--------------------------------------------------------------------------*/
+char *
+domLookupPrefixWithMappings (
+    domNode *node,
+    char    *prefix,
+    char   **prefixMappings 
+    )
+{
+    int    i;
+    domNS *ns;
+    
+    if (prefixMappings) {
+        i = 0;
+        while (prefixMappings[i]) {
+            if (strcmp (prefix, prefixMappings[i]) == 0) {
+                return prefixMappings[i+1];
+            }
+            i += 2;
+        }
+    }
+    ns = domLookupPrefix (node, prefix);
+    if (ns) return ns->uri;
+    else    return NULL;
+}
+
+/*---------------------------------------------------------------------------
 |   domLookupPrefix
 |
 \--------------------------------------------------------------------------*/
@@ -2295,7 +2323,8 @@ domCreateDocument (
     }
     doc = domCreateDoc (NULL, 0);
 
-    h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), documentElementTagName, &hnew);
+    h = Tcl_CreateHashEntry(&HASHTAB(doc, tagNames), documentElementTagName,
+                            &hnew);
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType        = ELEMENT_NODE;

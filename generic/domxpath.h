@@ -157,10 +157,12 @@ typedef enum {
 |   Prototypes
 |
 \---------------------------------------------------------------------------*/
-int    xpathParse   (char *xpath, char **errMsg, ast *t, xpathExprType type);
+int    xpathParse   (char *xpath, domNode *exprContext, xpathExprType type, 
+                     char **prefixMappings, ast *t, char **errMsg);
 void   xpathFreeAst (ast t);
 double xpathGetPrio (ast t);
-int    xpathEval    (domNode *node, domNode *exprContext, char *xpath, xpathCBs *cbs,
+int    xpathEval    (domNode *node, domNode *exprContext, char *xpath, 
+                     char **prefixMappings, xpathCBs *cbs,
                      char **errMsg, xpathResultSet *rs
                      );
 int    xpathMatches (ast steps, domNode * exprContext, domNode *nodeToMatch,
