@@ -1,3 +1,56 @@
+2003-02-18  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4 (TEA_ENABLE_THREADS): Make sure -lpthread gets passed on
+	the link line when checking for the pthread_attr_setstacksize
+	symbol. (dejong)
+
+	* tcl.m4 (TEA_SETUP_COMPILER): added default calls to
+	TEA_TCL_EARLY_FLAGS, TEA_TCL_64BIT_FLAGS,
+	TEA_MISSING_POSIX_HEADERS and TEA_BUGGY_STRTOD.
+
+2003-02-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: correct HP-UX ia64 --enable-64bit build flags
+
+2003-01-29  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: check $prefix/lib as well as $exec_prefix/lib when
+	looking for tcl|tkConfig.sh, as this check is done before we would
+	set exec_prefix when the user does not define it.
+
+2003-01-21  Mo DeJong  <mdejong@users.sourceforge.net>
+
+	* tcl.m4 (TEA_CONFIG_CFLAGS): Fix build support
+	for mingw, the previous implementation would
+	use VC++ when compiling with mingw gcc. Don't
+	pass -fPIC since gcc always compiles pic code
+	under win32. Change some hard coded cases
+	of gcc to ${CC}.
+
+2002-10-15  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: move the CFLAGS definition from TEA_ENABLE_SHARED to
+	TEA_MAKE_LIB because setting too early confuses other AC_* macros.
+	Correct the HP-11 SHLIB_LD_LIBS setting.
+	
+	* tcl.m4: add the CFLAGS definition into TEA_ENABLE_SHARED and
+	make it pick up the env CFLAGS at configure time.
+
+2002-10-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tcl.m4: add --enable-symbols=mem option to enable TCL_MEM_DEBUG.
+	Improved AIX 64-bit build support, allow it on AIX-4 as well.
+	Enable 64-bit HP-11 compilation with gcc.
+	Enable 64-bit IRIX64-6 cc build support.
+	Correct FreeBSD thread library linkage.
+	Add OSF1 static build support.
+	Improve SunOS-5 shared build SHLIB_LD macro.
+
+2002-07-20  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* tcl.m4: Added MINGW32 to list of systems checked for Windows build.
+	Also, fixes some indentation issues with "--with-XXX" options.
+
 2002-04-23  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tcl.m4 (TEA_ENABLE_THREADS): added USE_THREAD_ALLOC define to
