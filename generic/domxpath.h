@@ -168,7 +168,9 @@ int xpathEvalSteps (ast steps, xpathResultSet *nodeList,
                     xpathCBs *cbs,
                     xpathResultSet *result, char **errMsg);
                     
-#define xpathRSInit(x) (x)->type = EmptyResult; (x)->nr_nodes = 0;
+#define xpathRSInit(x) (x)->type = EmptyResult; \
+                       (x)->intvalue = 0; \
+                       (x)->nr_nodes = 0;
 void   xpathRSFree (xpathResultSet *rs );
 
 int    xpathFuncBoolean  (xpathResultSet *rs);
