@@ -1,3 +1,7 @@
+2003-06-13  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Added an argument check for XSLTCmds.
+
 2003-06-11  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Fixed a bug in xsl:number. If there is no
