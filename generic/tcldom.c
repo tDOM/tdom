@@ -1465,53 +1465,57 @@ int tcldom_appendFromTclList (
     /*-------------------------------------------------------------------------
     |   create element node
     \------------------------------------------------------------------------*/
+    if (length != 3) {
+        SetResult ("invalid element node list format!");
+        return TCL_ERROR;
+    }
     newnode = domNewElementNode(node->ownerDocument, tag_name, ELEMENT_NODE);
     domAppendChild (node, newnode);
 
     /*-------------------------------------------------------------------------
     |   create atributes
     \------------------------------------------------------------------------*/
-    if (length > 1) {
-        if ((rc = Tcl_ListObjIndex (interp, lnode, 1, &attrListObj)) != TCL_OK) {
+    if ((rc = Tcl_ListObjIndex (interp, lnode, 1, &attrListObj)) != TCL_OK) {
+        return rc;
+    }
+    if ((rc = Tcl_ListObjLength(interp, attrListObj, &attrLength)) != TCL_OK) {
+        return rc;
+    }
+    if (attrLength % 2) {
+        SetResult ("invalid attributes list format!");
+        return TCL_ERROR;
+    }
+    for (i=0; i<attrLength; i++) {
+        
+        if ((rc = Tcl_ListObjIndex (interp, attrListObj, i, &attrObj)) != TCL_OK) {
             return rc;
         }
-        if ((rc = Tcl_ListObjLength(interp, attrListObj, &attrLength)) != TCL_OK) {
+        attrName = Tcl_GetStringFromObj (attrObj, NULL);
+        i++;
+        
+        if ((rc = Tcl_ListObjIndex (interp, attrListObj, i, &attrObj)) != TCL_OK) {
             return rc;
         }
-        for (i=0; i<attrLength; i++) {
-
-            if ((rc = Tcl_ListObjIndex (interp, attrListObj, i, &attrObj)) != TCL_OK) {
-                return rc;
-            }
-            attrName = Tcl_GetStringFromObj (attrObj, NULL);
-            i++;
-
-            if ((rc = Tcl_ListObjIndex (interp, attrListObj, i, &attrObj)) != TCL_OK) {
-                return rc;
-            }
-            attrValue = Tcl_GetStringFromObj (attrObj, &attrValueLength);
-
-            domSetAttribute (newnode, attrName, attrValue);
-        }
+        attrValue = Tcl_GetStringFromObj (attrObj, &attrValueLength);
+        
+        domSetAttribute (newnode, attrName, attrValue);
     }
 
     /*-------------------------------------------------------------------------
     |   add child nodes
     \------------------------------------------------------------------------*/
-    if (length == 3) {
-        if ((rc = Tcl_ListObjIndex (interp, lnode, 2, &childListObj)) != TCL_OK) {
+    if ((rc = Tcl_ListObjIndex (interp, lnode, 2, &childListObj)) != TCL_OK) {
+        return rc;
+    }
+    if ((rc = Tcl_ListObjLength(interp, childListObj, &childListLength)) != TCL_OK) {
+        return rc;
+    }
+    for (i=0; i<childListLength; i++) {
+        if ((rc = Tcl_ListObjIndex (interp, childListObj, i, &childObj)) != TCL_OK) {
             return rc;
         }
-        if ((rc = Tcl_ListObjLength(interp, childListObj, &childListLength)) != TCL_OK) {
-           return rc;
-        }
-        for (i=0; i<childListLength; i++) {
-            if ((rc = Tcl_ListObjIndex (interp, childListObj, i, &childObj)) != TCL_OK) {
-                return rc;
-            }
-            if ((rc = tcldom_appendFromTclList (interp, newnode, childObj)) != TCL_OK) {
-                return rc;
-            }
+        if ((rc = tcldom_appendFromTclList (interp, newnode, childObj)) != TCL_OK) {
+            return rc;
         }
     }
     return tcldom_returnNodeObj (interp, node, 0, NULL);
@@ -3540,7 +3544,7 @@ int tcldom_DocObjCmd (
     switch ((enum docMethod) methodIndex ) {
 
         case m_documentElement:
-            CheckArgs (2,2,2,"");
+            CheckArgs (2,3,2,"");
             return tcldom_returnNodeObj (interp, doc->documentElement,
                                          (objc == 3), (objc == 3) ? objv[2] : NULL);
 
