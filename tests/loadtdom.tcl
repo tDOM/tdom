@@ -10,8 +10,13 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
     namespace import ::tcltest::*
 }
-if {[lsearch [namespace children] ::tdom] == -1} {
 
-    package require tdom
+if {[catch {package present tdom}]} {
+    package require tdom 0.7.5
+} else {
+    if {[lsearch [namespace children] ::tdom] == -1} {
+        # tcldomsh without the script library. Source the lib.
+        source [file join [file dir [info script]] ../lib tdom.tcl]
+    }
 }
 
