@@ -2,10 +2,10 @@
 |   Copyright (c) 2000 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Id$
+|   $Header$
 |
 |
-|   A XSLT implementation for tDOM, according to the W3C
+|   A (partial) XSLT implementation for tDOM, according to the W3C
 |   recommendation (16 Nov 1999).
 |   See http://www.w3.org/TR/1999/REC-xslt-19991116 for details.
 |
@@ -157,7 +157,6 @@ typedef struct xsltSubDoc
     xsltExclExtNS      * extensionNS;
     int                  fwCmpProcessing;
     int                  isStylesheet;
-    int                  fixedXMLSource;
     int                  mustFree;
     
     struct xsltSubDoc  * next;
@@ -467,8 +466,8 @@ static int ExecActions (xsltState *xs, xpathResultSet *context,
 
 static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
                                           domDocument *xsltDoc, char *baseURI,
-                                          char *href, int isStylesheet,
-                                          int fixedXMLSource, char **errMsg);
+                                          char *href, int isXSLTdoc,
+                                          char **errMsg);
 
 
 /*----------------------------------------------------------------------------
@@ -745,7 +744,6 @@ static int xsltAddExternalDocument (
     xsltState       * xs,
     char            * baseURI,
     char            * str,
-    int               fixedXMLSource,
     xpathResultSet  * result,
     char           ** errMsg
 )
@@ -773,8 +771,7 @@ static int xsltAddExternalDocument (
         }
         extDocument = getExternalDocument (
                          (Tcl_Interp*)xs->orig_funcClientData,
-                         xs, xs->xsltDoc, baseURI, str, 0, fixedXMLSource,
-                         errMsg);
+                         xs, xs->xsltDoc, baseURI, str, 0, errMsg);
         if (extDocument) {
             rsAddNode (result, extDocument->rootNode);
         } else {
@@ -2207,7 +2204,7 @@ static int xsltXPathFuncs (
                         }
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                    if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2235,7 +2232,7 @@ static int xsltXPathFuncs (
                     str = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
-                if (xsltAddExternalDocument(xs, baseURI, str, 1,
+                if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
                     if (freeStr) FREE(str);
                     return -1;
@@ -2272,7 +2269,7 @@ static int xsltXPathFuncs (
                         freeStr = 0;
                         str = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                    if (xsltAddExternalDocument(xs, baseURI, str,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2284,7 +2281,7 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
-                if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                if (xsltAddExternalDocument(xs, baseURI, str,
                                             result, errMsg) < 0) {
                     FREE(str);
                     return -1;
@@ -2548,6 +2545,7 @@ static int fastMergeSort (
 }
 
 static int sortNodeSetFastMerge(
+    xsltState * xs,
     int         txt,
     int         asc,
     int         upperFirst,
@@ -2618,7 +2616,7 @@ static int xsltSetVar (
             xpathRSInit (&rs);
             rsSetString (&rs, "");
         } else {
-            fragmentNode = domNewElementNode(xs->resultDoc, "",
+            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -3439,9 +3437,10 @@ static int doSortActions (
                     }
                     xpathRSFree (&rs);
                 }
-                rc = sortNodeSetFastMerge (typeText, ascending, upperFirst,
-                                           nodelist->nodes, nodelist->nr_nodes,
-                                           vs, vd, pos, errMsg);
+                rc = sortNodeSetFastMerge (xs, typeText, ascending,
+                                           upperFirst, nodelist->nodes,
+                                           nodelist->nr_nodes, vs, vd,
+                                           pos, errMsg);
                 if (typeText) {
                     for (i = 0; i < nodelist->nr_nodes; i++) {
                         FREE(vs[i]);
@@ -3486,7 +3485,6 @@ static int xsltNumber (
     Tcl_HashEntry    *h;
     xsltNumberFormat *f;
     Tcl_DString       dStr;
-    domProcessingInstructionNode *pi;
 
     v = vs;
     value = getAttr(actionNode, "value",  a_value);
@@ -3515,7 +3513,7 @@ static int xsltNumber (
                 /* This covers both cases: non integer value after evaluation
                    and wrong (<= 0) integer value. */
                 reportError (actionNode, 
-                             "The value of \"grouping-size\" must evaluate to a positiv integer.",
+                             "The value of \"grouping-size\" must evalute to a positiv integer.",
                              errMsg);
             }
         }
@@ -4284,7 +4282,7 @@ static int ExecAction (
             break;
 
         case comment:
-            fragmentNode = domNewElementNode(xs->resultDoc, "",
+            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -4443,9 +4441,9 @@ static int ExecAction (
                         domSetAttributeNS(xs->lastNode, attr->nodeName,
                                           attr->nodeValue, uri, 1);
                     } else {
-                        if (*(rs.nodes[i]->nodeName) == '\0') {
-                            /* The rootNode of the Document or the rootNode
-                               of a result tree fragment */
+                        if (*(rs.nodes[i]->nodeName) == '(' &&
+                            ((strcmp(rs.nodes[i]->nodeName,"(fragment)")==0)
+                             || (strcmp(rs.nodes[i]->nodeName,"(rootNode)")==0))) {
                             child = rs.nodes[i]->firstChild;
                             while (child) {
                                 domCopyTo(child, xs->lastNode, 1);
@@ -4651,7 +4649,7 @@ static int ExecAction (
                              errMsg);
                 return -1;
             }
-            fragmentNode = domNewElementNode(xs->resultDoc, "",
+            fragmentNode = domNewElementNode(xs->resultDoc, "(fragment)",
                                              ELEMENT_NODE);
             savedLastNode = xs->lastNode;
             xs->lastNode = fragmentNode;
@@ -5561,7 +5559,6 @@ getExternalDocument (
     char        *baseURI,
     char        *href,
     int          isStylesheet,
-    int          fixedXMLSource,
     char       **errMsg
     )
 {
@@ -5661,7 +5658,7 @@ getExternalDocument (
         storeLineColumn = 0;
     }
 
-    parser = XML_ParserCreate_MM (NULL, MEM_SUITE, NULL);
+    parser = XML_ParserCreate (NULL);
 
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
@@ -5713,7 +5710,6 @@ getExternalDocument (
     sdoc->fwCmpProcessing = 0;
     sdoc->mustFree = 1;
     sdoc->isStylesheet = isStylesheet;
-    sdoc->fixedXMLSource = fixedXMLSource;
     if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
             Tcl_DeleteHashTable (&(sdoc->keyData));
@@ -6185,8 +6181,7 @@ static int processTopLevel (
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                      node->ownerDocument,
-                                                     baseURI, href, 1, 0, 
-                                                     errMsg);
+                                                     baseURI, href, 1, errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -6219,8 +6214,7 @@ static int processTopLevel (
                 }
                 extStyleSheet = getExternalDocument (interp, xs,
                                                      node->ownerDocument,
-                                                     baseURI, href, 1, 0,
-                                                     errMsg);
+                                                     baseURI, href, 1, errMsg);
                 if (!extStyleSheet) {
                     return -1;
                 }
@@ -6780,7 +6774,7 @@ xsltResetState (
            and the already parsed XSLT documents information is
            preserved, therefor we don't touch extensionNS and extensionNS
            information */
-        if (sdsave->isStylesheet || sdsave->fixedXMLSource) {
+        if (sdsave->isStylesheet) {
             
             if (lastSubDoc) {
                 lastSubDoc->next = sdsave;
@@ -6926,7 +6920,6 @@ xsltCompileStylesheet (
     sdoc->isStylesheet = 1;
     sdoc->next = xs->subDocs;
     sdoc->mustFree = !guardXSLTTree;
-    sdoc->fixedXMLSource = 0;
     xs->subDocs = sdoc;
 
     xs->currentSubDoc = sdoc;
@@ -7077,7 +7070,6 @@ int xsltProcess (
     sdoc->fwCmpProcessing = 0;
     sdoc->isStylesheet = 0;
     sdoc->mustFree = 0;
-    sdoc->fixedXMLSource = 0;
     sdoc->next = xs->subDocs;
     xs->subDocs = sdoc;
 
