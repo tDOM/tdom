@@ -1,7 +1,9 @@
 2003-09-28  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/tclexpat.c: Removed two unused vars.
+
         * tests/domnamespace.test
-        * dom.h: Changed type of domNameSpaceIndex, domNodeFlags,
+        * generic/dom.h: Changed type of domNameSpaceIndex, domNodeFlags,
           domAttrFlags, domDocFlags and info in dom*Node structs from
           int to unsigned int. This fixes bug with docs with more than
           128 different namespaces.
