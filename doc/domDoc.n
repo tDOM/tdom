@@ -241,13 +241,15 @@ sends the output directly to the given channelId. If the option
 values or element PCDATA content will be escaped as character reference in
 decimal representation.
 .TP
-\&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP
+\&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP \fB?-htmlEntities?\fP
 \&\fRReturns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
 channelId. If the option \fI-escapeNonASCII\fR is given, every non 7 bit ASCII
 character in attribute values or element PCDATA content will be escaped as
-character reference in decimal representation.
+character reference in decimal representation. If the option
+\&\fI-htmlEntities\fR is given, a character is outputed using a HTML 4.01
+character entity reference, if one is defined for it.
 .TP
 \&\fB\fBxslt\fP \fB?-parameters parameterList?\fP \fIstylesheet\fB \fI?outputVar?\fB
 \&\fRApplies an XSLT transformation on the whole document of the node
