@@ -38,6 +38,15 @@
 |       Aug01    Rolf Ade   id(), unparsed-entity(), lang(), fixes
 |
 |   $Log$
+|   Revision 1.11  2002/04/09 01:59:50  rolf
+|   xslt rec 5.2: "The string-value of an element node is the
+|   concatenation of the string-values of all text node descendants of the
+|   element node in document order." (Also true for root node.) The
+|   xpathGetTextValue() could not used for recursive getting of the text
+|   node descendants, because it also returns the text value of comment
+|   and processing instruction nodes. xpathGetTextValueForElement() does,
+|   what the spec requires.
+|
 |   Revision 1.10  2002/04/06 00:44:09  rolf
 |   Added a few more rsAddNodeFast and checkRsAddNode.
 |
@@ -425,9 +434,6 @@ void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
         rs->nodes[0]  = node;
 
     } else {
-    
-        int i;
-
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)realloc( (void*)rs->nodes,
                                             2 * rs->allocated * sizeof(domNode*) );
@@ -2015,6 +2021,44 @@ double xpathFuncNumber (
 |   xpathGetTextValue
 |
 \---------------------------------------------------------------------------*/
+char * xpathGetTextValueForElement (
+    domNode *node,
+    int     *len
+)
+{
+    char         *pc, *t;
+    int          l;
+    domNode     *child;
+    domAttrNode *attr;
+
+    if (node->nodeType == ELEMENT_NODE) {
+        DBG(fprintf(stderr,"GetTextValue: tag='%s' \n", node->nodeName);)
+        pc = malloc(1); *pc = '\0'; *len = 0;
+        child = node->firstChild;
+        while (child) {
+            t = xpathGetTextValueForElement(child, &l); 
+            pc = (char*)realloc(pc, 1 + *len + l);
+            memmove(pc + *len, t, l );
+            *len += l;
+            pc[*len] = '\0';
+            free(t);
+            child = child->nextSibling;
+        }
+    } else
+    if (node->nodeType == TEXT_NODE) {
+
+        *len = ((domTextNode*)node)->valueLength;
+        pc   = (char*)malloc(1+*len);
+        memmove(pc, ((domTextNode*)node)->nodeValue, *len);
+        pc[*len] = '\0';
+        DBG(fprintf(stderr,"GetTextValue: text='%s' \n", pc);)
+    } else {
+        pc   = strdup ("");
+        *len = 0;
+    }
+    return pc;
+}
+
 char * xpathGetTextValue (
     domNode *node,
     int     *len
@@ -2030,7 +2074,7 @@ char * xpathGetTextValue (
         pc = malloc(1); *pc = '\0'; *len = 0;
         child = node->firstChild;
         while (child) {
-            t = xpathGetTextValue(child, &l); 
+            t = xpathGetTextValueForElement(child, &l); 
             pc = (char*)realloc(pc, 1 + *len + l);
             memmove(pc + *len, t, l );
             *len += l;
@@ -2070,7 +2114,6 @@ char * xpathGetTextValue (
     }
     return pc;
 }
-
 
 /*----------------------------------------------------------------------------
 |   xpathFuncString
