@@ -1,3 +1,9 @@
+2005-04-04  Rolf Ade  <rolf@pointsman.de>
+
+        * expat/expat.h: Removed last comma in enum XML_Status
+          declaration, to prevent compiler errors (xlc on AIX
+          64). (Current expat CVS head has the same fix.)
+
 2005-03-26  Rolf Ade  <rolf@pointsman.de>
 
         * tests/xslt.test    
