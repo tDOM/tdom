@@ -1,3 +1,20 @@
+2003-10-04  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.h: Removed prototypes of functions, which
+          are not implemented. Editorial changes.
+
+        * generic/domxpath.h
+        * generic/domxpath.c
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * tests/dom.test
+        * tests/domCmd.test
+        * CHANGES
+        * doc/domDoc.*
+        * doc/domNode.*: Added new method 'asText' to domDocs and
+          domNodes. Renamed xpathGetTextValue() to
+          xpathGetStringValue(), to be more according to the vocabular
+          of the XPath rec.
 
 2003-10-01  Rolf Ade  <rolf@pointsman.de>
         
