@@ -2,10 +2,10 @@
 #------------------------------------------------------------------------
 # TDOM_ENABLE_DTD --
 #
-#   Allows the building with dtd
+#   Allows the building with DTD support
 #
 # Arguments:
-#   none
+#   None
 #   
 # Results:
 #
@@ -45,7 +45,7 @@ AC_DEFUN(TDOM_ENABLE_DTD, [
 #   Allows the building with namespace support
 #
 # Arguments:
-#   none
+#   None
 #   
 # Results:
 #
@@ -179,10 +179,12 @@ AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
 #------------------------------------------------------------------------
 
 AC_DEFUN(TDOM_PATH_AOLSERVER, [
-    AC_ARG_WITH(aol, [  --with-aolserver        directory containing AOLserver distribution], with_aolserver=${withval})
     AC_MSG_CHECKING([for AOLserver configuration])
-    AC_CACHE_VAL(ac_cv_c_aolserver,[
+    AC_ARG_WITH(aol, 
+    [  --with-aolserver        directory with AOLserver distribution],\
+    with_aolserver=${withval})
 
+    AC_CACHE_VAL(ac_cv_c_aolserver,[
     if test x"${with_aolserver}" != x ; then
         if test -f "${with_aolserver}/include/ns.h" ; then
             ac_cv_c_aolserver=`(cd ${with_aolserver}; pwd)`
@@ -191,7 +193,6 @@ AC_DEFUN(TDOM_PATH_AOLSERVER, [
         fi
     fi
     ])
-
     if test x"${ac_cv_c_aolserver}" = x ; then
         AC_MSG_RESULT([none found])
     else
@@ -201,3 +202,126 @@ AC_DEFUN(TDOM_PATH_AOLSERVER, [
         AC_DEFINE(USE_NORMAL_ALLOCATOR)
     fi
 ])
+
+#------------------------------------------------------------------------
+# TDOM_PATH_CONFIG --
+#
+#	Locate the tdomConfig.sh file
+#
+# Arguments:
+#	None
+#
+# Results:
+#
+#	Adds the following arguments to configure:
+#       --with-tdom=...
+#
+#	Defines the following vars:
+#       TDOM_BIN_DIR   Full path to the directory with tdomConfig.sh
+#------------------------------------------------------------------------
+
+AC_DEFUN(TDOM_PATH_CONFIG, [
+    if test x"${no_tdom}" = x ; then
+	    AC_MSG_CHECKING([for tDOM configuration])
+	    AC_ARG_WITH(tdom, 
+        [  --with-tdom             directory with tDOM tdomConfig.sh],\
+        with_tdomconfig=${withval})
+
+	    no_tdom=true
+        if test "${TEA_PLATFORM}" = "windows" ; then
+            bindir=win
+        else
+            bindir=unix
+        fi
+
+	    AC_CACHE_VAL(ac_cv_c_tdomconfig,[
+
+	    # First check to see if --with-tdom was specified.
+	    if test x"${with_tdomconfig}" != x ; then
+		    if test -f "${with_tdomconfig}/tdomConfig.sh" ; then
+		        ac_cv_c_tdomconfig=`(cd ${with_tdomconfig}; pwd)`
+		    else
+		        AC_MSG_ERROR([${with_tdomconfig} directory doesn't contain tdomConfig.sh])
+		    fi
+	    fi
+	    # Then check for a sibling installation
+	    if test x"${ac_cv_c_tdomconfig}" = x ; then
+		    for i in \
+			    ../tdom `ls -dr ../tdom-* 2>/dev/null` \
+			    ../../tdom `ls -dr ../../tdom-* 2>/dev/null` \
+			    ../../../tdom `ls -dr ../../../tdom-* 2>/dev/null` ; do
+		        if test -f "$i/$bindir/tdomConfig.sh" ; then
+			        ac_cv_c_tdomconfig=`(cd $i/$bindir; pwd)`
+			        break
+		        fi
+		    done
+	    fi
+	    # Check in a few common install locations
+	    if test x"${ac_cv_c_tdomconfig}" = x ; then
+		    for i in \
+                `ls -d ${prefix}/lib 2>/dev/null` \
+			    `ls -d /usr/local/lib 2>/dev/null` ; do
+		        if test -f "$i/tdomConfig.sh" ; then
+			        ac_cv_c_tdomconfig=`(cd $i; pwd)`
+			        break
+		        fi
+		    done
+	    fi
+	    # Check in a few other private locations
+	    if test x"${ac_cv_c_tdomconfig}" = x ; then
+		for i in \
+            ${srcdir}/../tdom \
+            `ls -dr ${srcdir}/../tdom[[0-9]].[[0-9]]* 2>/dev/null` ; do
+		        if test -f "$i/$bindir/tdomConfig.sh" ; then
+		            ac_cv_c_tdomconfig=`(cd $i/$bindir; pwd)`
+		            break
+		        fi
+		    done
+	    fi
+	    ])
+	    if test x"${ac_cv_c_tdomconfig}" = x ; then
+	        TDOM_BIN_DIR="# no tDOM configuration file found"
+	        AC_MSG_WARN(Can't find tDOM configuration definitions)
+	        exit 0
+	    else
+	        no_tdom=
+	        TDOM_BIN_DIR=${ac_cv_c_tdomconfig}
+	        AC_MSG_RESULT(found $TDOM_BIN_DIR/tdomConfig.sh)
+	    fi
+    fi
+])
+
+#------------------------------------------------------------------------
+# TDOM_LOAD_CONFIG --
+#
+#	Load the tdomConfig.sh file
+#
+# Arguments:
+#	
+#	Requires the following vars to be set:
+#		TDOM_BIN_DIR
+#
+#   Defines the following vars:
+#
+#   Sets the following vars:
+#
+#------------------------------------------------------------------------
+
+AC_DEFUN(TDOM_LOAD_CONFIG, [
+    AC_MSG_CHECKING([for existence of $TDOM_BIN_DIR/tdomConfig.sh])
+    if test -f "$TDOM_BIN_DIR/tdomConfig.sh" ; then
+        AC_MSG_RESULT([loading])
+	    . $TDOM_BIN_DIR/tdomConfig.sh
+    else
+        AC_MSG_RESULT([file not found])
+    fi
+    AC_SUBST(TDOM_MAJOR_VERSION)
+    AC_SUBST(TDOM_MINOR_VERSION)
+    AC_SUBST(TDOM_PATCHLEVEL)
+    AC_SUBST(TDOM_VERSION)
+    AC_SUBST(TDOM_BUILD_STUB_LIB_SPEC)
+    AC_SUBST(TDOM_STUB_LIB_SPEC)
+    AC_SUBST(TDOM_SRC_DIR)
+])
+
+# EOF
