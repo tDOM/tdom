@@ -273,8 +273,15 @@ install-doc: doc
 	      $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
 	done
 
+#========================================================================
+# To be able to "make test" *before* we did the "make install"
+# we must temporarily copy the Tcl part of the package in the
+# correct place, so the "package require" will be able to load
+# the package by using simple "package require tdom".
+#========================================================================
+
 test: binaries libraries
-	@cp $(srcdir)/lib/tdom.tcl .
+	@cp $(srcdir)/lib/tdom.tcl $(top_builddir)/tdom.tcl
 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
 	@rm -rf tdom.tcl
 
