@@ -1,3 +1,14 @@
+2002-11-03  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/domxpath.c
+        * generic/domxpath.h: Fixed ridiculously long runtime of
+          certain // expr on certain documents. During analysis and
+          testing, it turned out, that it would have been an even
+          simpler approach, to simply expand the abbreviation // in
+          the according productions. Though, the choosen implentation
+          seems often to be (slightly) faster and is a start to
+          collect experiences with early predicate evaluation.
+
 2002-11-02  Zoran Vasiljevic  <zoran@archiware.com>
 
 	* lib/tdomhtml.tcl: removed in favour of new tdom extension
