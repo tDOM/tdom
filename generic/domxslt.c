@@ -127,7 +127,8 @@ typedef enum {
     a_decimalSeparator, a_infinity, a_minusSign, a_nan, a_percent,
     a_perMille, a_zeroDigit, a_digit, a_patternSeparator, a_version,
     a_excludeResultPrefixes, a_extensionElementPrefixes,
-    a_stylesheetPrefix, a_resultPrefix
+    a_stylesheetPrefix, a_resultPrefix, a_indent, a_omitXMLDeclaration,
+    a_standalone
 
 } xsltAttr;
 
@@ -362,7 +363,8 @@ typedef struct {
     Tcl_HashTable       isElementTpls;
     xsltWSInfo          wsInfo;
     domNode           * xmlRootNode;
-    domDoctype          doctype;
+    domDocInfo          doctype;
+    int                 indentOutput;
     domDocument       * resultDoc;
     domNode           * lastNode;
     xsltVarFrame      * varFramesStack;
@@ -380,9 +382,6 @@ typedef struct {
     xsltNSAlias       * nsAliases;
     int                 nsUniqeNr;
     xsltVarInProcess  * varsInProcess;
-    char              * outputMethod;
-    char              * outputEncoding;
-    char              * outputMediaType;
     xpathCBs            cbs;
     xpathFuncCallback   orig_funcCB;
     void              * orig_funcClientData;
@@ -752,15 +751,17 @@ static int xsltAddExternalDocument (
 
     found = 0;
     sdoc = xs->subDocs;
-    while (sdoc) {
-        if (!sdoc->isStylesheet
-            && sdoc->baseURI 
-            && strcmp (sdoc->baseURI, str)==0) {
-            rsAddNode (result, sdoc->doc->rootNode);
-            found = 1;
-            break;
+    if (str) {
+        while (sdoc) {
+            if (!sdoc->isStylesheet
+                && sdoc->baseURI 
+                && strcmp (sdoc->baseURI, str)==0) {
+                rsAddNode (result, sdoc->doc->rootNode);
+                found = 1;
+                break;
+            }
+            sdoc = sdoc->next;
         }
-        sdoc = sdoc->next;
     }
     if (!found) {
         if (!xs->xsltDoc->extResolver) {
@@ -1929,7 +1930,12 @@ static void StripXMLSpace (
         if (node->firstChild == NULL) return;
         strip = xs->wsInfo.stripAll;
         found = 0;
-        domSplitQName (node->nodeName, prefix, &localName);
+        if (node->namespace) {
+            domSplitQName (node->nodeName, prefix, &localName);
+        } else {
+            prefix[0] = '\0';
+            localName = node->nodeName;
+        }
         ns = NULL;
         Tcl_DStringInit (&dStr);
         if (prefix[0] != '\0') {
@@ -2321,6 +2327,7 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
+                freeStr = 1;
                 if (*str == '\0') {
                     FREE(str);
                     freeStr = 0;
@@ -2712,7 +2719,6 @@ static int xsltSetVar (
     return 0;
 }
 
-
 /*----------------------------------------------------------------------------
 |   xsltVarExists
 |
@@ -2728,6 +2734,7 @@ static int xsltVarExists (
     domNS        *ns;
     xsltVarFrame *frame;
 
+    TRACE1("xsltVarExists variableName='%s' \n", variableName);
     domSplitQName (variableName, prefix, &localName);
     if (prefix[0]) {
         ns = domLookupPrefix (exprContext, prefix);
@@ -4801,10 +4808,6 @@ static int ExecAction (
                                     currentPos, select, actionNode, 1, errMsg);
                     CHECK_RC;
                 } 
-/*                  else { */
-/*                      reportError (actionNode, "Parameter is already declared in this template", errMsg); */
-/*                      return -1; */
-/*                  } */
             } else {
                 reportError (actionNode, "xsl:param: missing mandatory attribute \"name\".", errMsg);
                 return -1;
@@ -5684,8 +5687,9 @@ getExternalDocument (
         Tcl_ListObjAppendElement(interp, cmdPtr,
                                  Tcl_NewStringObj ("", 0));
     }
-    Tcl_ListObjAppendElement (interp, cmdPtr,
-                              Tcl_NewStringObj (href, strlen (href)));
+    Tcl_ListObjAppendElement (interp, cmdPtr, (href ?
+                              Tcl_NewStringObj (href, strlen (href))
+                              : Tcl_NewStringObj ("", 0)));
     Tcl_ListObjAppendElement (interp, cmdPtr,
                               Tcl_NewStringObj ("", 0));
 
@@ -6460,18 +6464,18 @@ static int processTopLevel (
                 }
                 str = getAttr(node, "method", a_method);
                 if (str) { 
-                    if (xs->outputMethod) FREE(xs->outputMethod);
-                    xs->outputMethod    = tdomstrdup(str);
+                    if (xs->doctype.method) FREE(xs->doctype.method);
+                    xs->doctype.method    = tdomstrdup(str);
                 }
                 str = getAttr(node, "encoding", a_encoding);
                 if (str) {
-                    if (xs->outputEncoding) FREE(xs->outputEncoding);
-                    xs->outputEncoding  = tdomstrdup(str);
+                    if (xs->doctype.encoding) FREE(xs->doctype.encoding);
+                    xs->doctype.encoding  = tdomstrdup(str);
                 }
                 str = getAttr(node, "media-type", a_mediaType);
                 if (str) { 
-                    if (xs->outputMediaType) FREE(xs->outputMediaType);
-                    xs->outputMediaType = tdomstrdup(str); 
+                    if (xs->doctype.mediaType) FREE(xs->doctype.mediaType);
+                    xs->doctype.mediaType = tdomstrdup(str); 
                 }
                 str = getAttr(node, "doctype-public", a_doctypePublic);
                 if (str) {
@@ -6486,6 +6490,44 @@ static int processTopLevel (
                         FREE ((char*) xs->doctype.systemId);
                     }
                     xs->doctype.systemId = tdomstrdup(str);
+                }
+                str = getAttr(node, "indent", a_indent);
+                if (str) {
+                    if (strcmp (str, "yes") == 0) {
+                        xs->indentOutput = 1;
+                    } else if (strcmp (str, "no") == 0) {
+                        xs->indentOutput = 0;
+                    } else {
+                        reportError (
+                            node,
+                            "Unexpected value for 'indent' attribute.",
+                            errMsg
+                            );
+                        return -1;
+                    }
+                }
+                str = getAttr(node, "omit-xml-declaration", 
+                              a_omitXMLDeclaration);
+                if (str) {
+                    if (strcmp (str, "yes") == 0) {
+                        xs->doctype.omitXMLDeclaration = 1;
+                    } else if (strcmp (str, "no") == 0) {
+                        xs->doctype.omitXMLDeclaration = 0;
+                    } else {
+                        reportError (node, "Unexpected value for 'omit-xml-declaration' attribute", errMsg);
+                        return -1;
+                    }
+                }
+                str = getAttr(node, "standalone", a_standalone);
+                if (str) {
+                    if (strcmp (str, "yes") == 0) {
+                        xs->doctype.standalone = 1;
+                    } else if (strcmp (str, "no") == 0) {
+                        xs->doctype.standalone = 0;
+                    } else {
+                        reportError (node, "Unexpected value for 'standalone' attribute", errMsg);
+                        return -1;
+                    }
                 }
                 break;
 
@@ -6812,9 +6854,9 @@ xsltFreeState (
 
     FREE(xs->varFramesStack);
     FREE(xs->varStack);
-    if (xs->outputMethod) FREE(xs->outputMethod);
-    if (xs->outputEncoding) FREE(xs->outputEncoding);
-    if (xs->outputMediaType) FREE(xs->outputMediaType);
+    if (xs->doctype.method) FREE(xs->doctype.method);
+    if (xs->doctype.encoding) FREE(xs->doctype.encoding);
+    if (xs->doctype.mediaType) FREE(xs->doctype.mediaType);
     FREE (xs);
 }
 
@@ -6885,18 +6927,6 @@ xsltResetState (
             FREE(sdsave);
         }
     }
-    if (xs->outputMethod) {
-        FREE(xs->outputMethod);
-        xs->outputMethod = NULL;
-    }
-    if (xs->outputEncoding) {
-        FREE(xs->outputEncoding);
-        xs->outputEncoding = NULL;
-    }
-    if (xs->outputMediaType) {
-        FREE(xs->outputMediaType);
-        xs->outputMediaType = NULL;
-    }
     xs->nsUniqeNr = 0;
     /* In theory, the varFramesStack and varStack pointers should
        be always back to there inital state. But to be sure, we
@@ -6949,9 +6979,6 @@ xsltCompileStylesheet (
     xs->templates           = NULL;
     xs->lastNode            = NULL;
     xs->attrSets            = NULL;
-    xs->outputMethod        = NULL;
-    xs->outputEncoding      = NULL;
-    xs->outputMediaType     = NULL;
     xs->decimalFormats      = (xsltDecimalFormat*)MALLOC(sizeof(xsltDecimalFormat));
     xs->subDocs             = NULL;
     xs->currentTplRule      = NULL;
@@ -6993,7 +7020,8 @@ xsltCompileStylesheet (
     xs->decimalFormats->infinity          = "Infinity";
     xs->decimalFormats->NaN               = "NaN";
     xs->decimalFormats->next              = NULL;
-    memset (&xs->doctype, 0, sizeof (domDoctype));
+    xs->indentOutput = 0;
+    memset (&xs->doctype, 0, sizeof (domDocInfo));
     
     node = xsltDoc->documentElement;
 
@@ -7122,17 +7150,42 @@ int xsltProcess (
 
     xs->resultDoc           = domCreateDoc(NULL, 0);
     if (xs->doctype.systemId) {
-        xs->resultDoc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
-        memset (xs->resultDoc->doctype, 0, (sizeof (domDoctype)));
+        xs->resultDoc->doctype = (domDocInfo *)MALLOC (sizeof (domDocInfo));
+        memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
         xs->resultDoc->doctype->systemId = tdomstrdup (xs->doctype.systemId);
     }
     if (xs->doctype.publicId) {
         if (!xs->resultDoc->doctype) {
-            xs->resultDoc->doctype = (domDoctype*)MALLOC (sizeof (domDoctype));
-            memset (xs->resultDoc->doctype, 0, (sizeof (domDoctype)));
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
         }
         xs->resultDoc->doctype->publicId = tdomstrdup (xs->doctype.publicId);
     }
+    if (xs->doctype.encoding) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
+        }
+        xs->resultDoc->doctype->encoding = tdomstrdup (xs->doctype.encoding);
+    }
+    if (xs->doctype.mediaType) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
+        }
+        xs->resultDoc->doctype->mediaType = tdomstrdup (xs->doctype.mediaType);
+    }
+    if (xs->doctype.standalone) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
+        }
+        xs->resultDoc->doctype->standalone = 1;
+    }
+    if (xs->indentOutput) {
+        xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_INDENT;
+    }
+    
     
     xs->xmlRootNode         = xmlNode;
     xs->lastNode            = xs->resultDoc->rootNode;
@@ -7180,21 +7233,14 @@ int xsltProcess (
     if (rc != 0) goto error;
 
     /* Rudimentary xsl:output support */
-    if (xs->outputMethod) {
-        if (strcmp (xs->outputMethod, "xml")==0) {
-            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
-        } else
-        if (strcmp (xs->outputMethod, "html")==0) {
-            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
-        } else
-        if (strcmp (xs->outputMethod, "text")==0) {
-            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_TEXT;
-        } else {
-            xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_UNKNOWN;
+    if (xs->doctype.method) {
+        if (!xs->resultDoc->doctype) {
+            xs->resultDoc->doctype = (domDocInfo*)MALLOC (sizeof (domDocInfo));
+            memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
         }
+        xs->resultDoc->doctype->method = tdomstrdup (xs->doctype.method);
     } else {
         /* default output method */
-        xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_XML;
         node = xs->resultDoc->rootNode->firstChild;
         while (node) {
             if (node->nodeType == TEXT_NODE) {
@@ -7214,8 +7260,7 @@ int xsltProcess (
             }
             if (node->nodeType == ELEMENT_NODE) {
                 if (STRCASECMP(node->nodeName, "html")==0) {
-                    xs->resultDoc->nodeFlags &= ~OUTPUT_DEFAULT_XML;
-                    xs->resultDoc->nodeFlags |= OUTPUT_DEFAULT_HTML;
+                    xs->resultDoc->doctype->method = tdomstrdup ("html");
                 }
                 break;
             }
