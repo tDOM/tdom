@@ -419,20 +419,42 @@ appends this subtree at the end of the current list of top level nodes of the do
 \&\fRParses \fIXMLstring\fR, creates an according DOM subtree and
 appends this subtree at the end of the current list of top level nodes of the document.
 .TP
-\&\fB\fBselectNodes\fP \fB?-namespaces prefixUriList?\fP \fIxpathQuery\fB \fB?typeVar?\fP
-\&\fRReturns the result of applying the XPath query
-\&\fIxpathQuery\fR to the subtree. This can be a
-string/value, a list of strings, a list of nodes or a list
+\&\fB\fBselectNodes\fP \fB?-namespaces prefixUriList?\fP \fB?-cache <boolean>?\fP \fIxpathQuery\fB \fB?typeVar?\fP
+\&\fR
+.RS
+.PP
+Returns the result of applying the XPath query
+\&\fIxpathQuery\fR to the document. The context node of the query is the root
+node in the sense of the XPath recommendation (not the document element). The
+result can be a string/value, a list of strings, a list of nodes or a list
 of attribute name / value pairs. If \fItypeVar\fR is given
 the result type name is stored into that variable (empty,
-bool, number, string, nodes, attrnodes or mixed). The option
-\&\fI-namespaces\fR expects a tcl list with prefix /
+bool, number, string, nodes, attrnodes or mixed).
+.PP
+The option \fI-namespaces\fR expects a tcl list with prefix /
 namespace pairs as argument. If this option is given, any
 namespace prefix within the xpath expression will be first
-resolved against this list. If this fails, then the
-namespace definitions in scope of the context node will be
-used to resolve the prefix, as usual.
-.RS
+resolved against this list. If the list bind the same prefix
+to different namespaces, then the first binding will win.
+If this fails, then the namespace definitions in scope of the
+context node will be used to resolve the prefix, as usual.
+.PP
+If the \fI-cache\fR option is used with a true value, then the
+\&\fIxpathQuery\fR will be looked up in a document specific cache. If the query
+is found, then the stored pre-compiled query will be used. If the
+query isn't found, it will be pre-compiled and stored in the cache,
+for use in further calls. Please notice, that the \fIxpathQuery\fR as given as
+string is used as key for the cache. This means, that equal XPath
+expressions, which differ only in white space are treated as
+different cache entries. Special care is needed, if the XPath
+expression includes namespace prefixes. During pre-compilation, the
+prefixes will be resolved first to the prefix / namespace pairs of
+the \fI-namespaces\fR option, if given, and to the namespaces
+in scope of the context node at pre-compilation time. If the XPath
+is found in the cache, neither the \fI-namespaces\fR option nor
+the namespaces in scope of the context node will be taken in
+account but the already resolved (stored) namespaces will be used
+for the query.
 .PP
 Examples:
 

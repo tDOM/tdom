@@ -334,7 +334,7 @@ Otherwise an error is generated.</desc>
 
       <commanddef>
         <command><method>namespaceURI</method></command>
-        <desc>Returns the URI from the namespace of the given node.</desc>
+        <desc>Returns the namespace URI.</desc>
       </commanddef>
 
       <commanddef>
@@ -343,20 +343,38 @@ Otherwise an error is generated.</desc>
       </commanddef>
 
       <commanddef>
-          <command><method>selectNodes</method> <option>?-namespaces prefixUriList?</option> <m>xpathQuery</m> <option>?typeVar?</option></command>
-          <desc>Returns the result of applying the XPath query
+          <command><method>selectNodes</method> <option>?-namespaces prefixUriList?</option> <option>?-cache &lt;boolean&gt;?</option> <m>xpathQuery</m> <option>?typeVar?</option></command>
+          <desc><p>Returns the result of applying the XPath query
 <m>xpathQuery</m> to the subtree. This can be a
 string/value, a list of strings, a list of nodes or a list
 of attribute name / value pairs. If <m>typeVar</m> is given
 the result type name is stored into that variable (empty,
-bool, number, string, nodes, attrnodes or mixed). The option
-<m>-namespaces</m> expects a tcl list with prefix /
+bool, number, string, nodes, attrnodes or mixed).</p>
+
+<p>The option <m>-namespaces</m> expects a tcl list with prefix /
 namespace pairs as argument. If this option is given, any
 namespace prefix within the xpath expression will be first
 resolved against this list. If the list bind the same prefix
 to different namespaces, then the first binding will win. 
 If this fails, then the namespace definitions in scope of the
-context node will be used to resolve the prefix, as usual.
+context node will be used to resolve the prefix, as usual.</p>
+
+<p>If the <m>-cache</m> option is used with a true value, then the
+<m>xpathQuery</m> will be looked up in a document specific cache. If the query
+is found, then the stored pre-compiled query will be used. If the
+query isn't found, it will be pre-compiled and stored in the cache,
+for use in further calls. Please notice, that the <m>xpathQuery</m> as given as
+string is used as key for the cache. This means, that equal XPath
+expressions, which differ only in white space are treated as
+different cache entries. Special care is needed, if the XPath
+expression includes namespace prefixes. During pre-compilation, the
+prefixes will be resolved first to the prefix / namespace pairs of
+the <m>-namespaces</m> option, if given, and to the namespaces
+in scope of the context node at pre-compilation time. If the XPath
+is found in the cache, neither the <m>-namespaces</m> option nor
+the namespaces in scope of the context node will be taken in
+account but the already resolved (stored) namespaces will be used
+for the query.</p>
 
 <p>Examples:</p>
           <example>set paragraphNodes [$node selectNodes {chapter[3]//para[@type='warning' or @type='error'} ]
