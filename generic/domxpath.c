@@ -65,7 +65,7 @@
 |
 \---------------------------------------------------------------------------*/
 #define JDBG(x)
-#define DBG(x)
+#define DBG(x)           
 #define DDBG(x)
 #define TRACE(x)         DDBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)      DDBG(fprintf(stderr,(x),(a)))
@@ -320,6 +320,10 @@ void rsPrint ( xpathResultSet *rs ) {
                  }
              }
              break;
+         case NaNResult: fprintf (stderr, "NaN result\n"); break;
+         case InfResult: fprintf (stderr, "Inf result\n"); break;
+         case NInfResult: fprintf (stderr, "-Inf result\n"); break;
+        
          default:
              fprintf (stderr, "unknown result type: '%d'!!!\n", rs->type);
              break;
@@ -338,7 +342,7 @@ void rsSetInf ( xpathResultSet *rs ) {
     rs->type = InfResult;
 }
 void rsSetNInf ( xpathResultSet *rs ) {
-    rs-> type = NInfResult;
+    rs->type = NInfResult;
 }
 void rsSetInt ( xpathResultSet *rs, int i) {
 
@@ -2064,10 +2068,28 @@ double xpathFuncNumber (
             return 0.0;
         case InfResult:
             *NaN = 1;
-            return 0.0;
+#ifdef INFINITY
+            return INFINITY;
+#else
+#   ifdef DBL_MAX                    
+            return DBL_MAX;
+#   else
+            /* well, what? */
+            return 0.0
+#   endif
+#endif
         case NInfResult:
             *NaN = -1;
-            return 0.0;
+#ifdef INFINITY
+            return -INFINITY;
+#else
+#   ifdef DBL_MAX                    
+            return -DBL_MAX;
+#   else
+            /* well, what? */
+            return 0.0
+#   endif
+#endif
         case StringResult:
               strncpy(tmp, rs->string, (rs->string_len<79) ? rs->string_len : 79);
               tmp[(rs->string_len<79) ? rs->string_len : 79] = '\0';
@@ -3739,17 +3761,56 @@ static int xpathEvalStep (
         DBG( fprintf(stderr,"right:\n");
              rsPrint(&rightResult);
         )
-
         dLeft  = xpathFuncNumber(&leftResult, &NaN);
-        if (NaN) {
-            rsSetNaN (result);
-            xpathRSFree (&rightResult);
-            xpathRSFree (&leftResult);
-            return XPATH_OK;
-        }
-        dRight = xpathFuncNumber(&rightResult, &NaN);
-        if (NaN) {
-            rsSetNaN (result);
+        dRight = xpathFuncNumber(&rightResult, &NaN1);
+        if (NaN || NaN1) {
+            if ((NaN == 2) || (NaN1 == 2)) {
+                rsSetNaN (result);
+            } else {
+                switch (step->type) {
+                case Substract:
+                    NaN1 = -1 * NaN1;
+                    /* fall throu */   
+                case Add:
+                    if (NaN == NaN1) {
+                        if (NaN == 1) rsSetInf (result);
+                        else          rsSetNInf (result);
+                    } else if ((rc = NaN + NaN1) != 0) {
+                        if (rc == 1)  rsSetInf (result);
+                        else          rsSetNInf (result);
+                    } else {
+                        rsSetNaN (result);
+                    }
+                    break;
+                case Mult:
+                    if ((dLeft == 0.0) || (dRight == 0.0)) rsSetNaN (result);
+                    else if (NaN && NaN1) {
+                        rc = NaN * NaN1;
+                        if (rc == 1)  rsSetInf (result);
+                        else          rsSetNInf (result);
+                    } else {
+                        if (NaN) dTmp = NaN * dRight;
+                        else     dTmp = NaN1 * dLeft;
+                        if (dTmp > 0.0)  rsSetInf (result);
+                        else             rsSetNInf (result);
+                    }
+                    break;
+                case Div:
+                    if (NaN && NaN1)   rsSetNaN (result);
+                    else if (NaN1)     rsSetInt (result, 0);
+                    else {
+                        if (dRight == 0.0) dTmp = NaN;
+                        else dTmp = NaN * dRight;
+                        if (dTmp > 0.0)  rsSetInf (result);
+                        else             rsSetNInf (result);
+                    }
+                    break;
+                case Mod:
+                    rsSetNaN (result);
+                    break;
+                default: break;
+                }
+            }
             xpathRSFree (&rightResult);
             xpathRSFree (&leftResult);
             return XPATH_OK;
@@ -3759,7 +3820,6 @@ static int xpathEvalStep (
         case Substract: rsSetReal (result, dLeft - dRight); break;
         case Mult:      rsSetReal (result, dLeft * dRight); break;
         case Div:
-        case Mod:
             if (dRight == 0.0) {
                 if (dLeft == 0.0) {
                     rsSetNaN (result);
@@ -3771,10 +3831,14 @@ static int xpathEvalStep (
                     }
                 }
             } else {
-                if (step->type == Div)
-                    rsSetReal (result, dLeft / dRight);
-                else
-                    rsSetInt  (result, ((int)dLeft) % ((int)dRight));
+                rsSetReal (result, dLeft / dRight);
+            }
+            break;
+        case Mod:
+            if (dRight == 0.0) {
+                rsSetNaN (result);
+            } else {
+                rsSetInt  (result, ((int)dLeft) % ((int)dRight));
             }
             break;
         default:        break;
@@ -4282,6 +4346,9 @@ static int xpathEvalStep (
                                break;
             case StringResult: rsSetString (result, leftResult.string);
                                break;
+            case NaNResult:    rsSetNaN (result); break;
+            case InfResult:    rsSetInf (result); break;
+            case NInfResult:   rsSetNInf (result); break;
             default:           break;
         }
         xpathRSFree( &leftResult  );
