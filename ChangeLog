@@ -1,3 +1,12 @@
+2003-12-11  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * tests/domCmd.test
+        * tests/pcdata.test
+        * tests/tdomcmd.test
+        * generic/tclexpat.c: Bug fix: Don't quash white space of non
+          white space only content in trim mode.
+
 2003-12-09  Rolf Ade  <rolf@pointsman.de>
 
         * lib/tdom.tcl: Improved regexp to extract encoding. Corrected
