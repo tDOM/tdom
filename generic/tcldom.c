@@ -87,6 +87,9 @@
 #define SetDoubleResult(d) Tcl_ResetResult(interp); \
                      Tcl_SetDoubleObj(Tcl_GetObjResult(interp), (d))
 
+#define SetBooleanResult(i) Tcl_ResetResult(interp); \
+                     Tcl_SetBooleanObj(Tcl_GetObjResult(interp), (i))
+ 
 #define AppendResult(str) {Tcl_Obj *o = Tcl_GetObjResult(interp); \
                      if (Tcl_IsShared(o)) { \
                           o = Tcl_DuplicateObj(o); \
@@ -150,6 +153,10 @@ static char dom_usage[] =
                 "          createNodeCmd (element|comment|text|cdata|pi)Node commandName \n"
                 "          setResultEncoding ?encodingName?                 \n"
                 "          setStoreLineColumn ?boolean?                     \n"
+                "          isCharData string                                \n"
+                "          isName string                                    \n"
+                "          isQName string                                   \n"
+                "          isNCName string                                  \n"
                 ;
 
 static char domObj_usage[] =
@@ -1616,20 +1623,20 @@ void tcldom_AppendEscaped (
             AP(*pc)
         }
 #else
-        } else {
+        } else 
         if ((unsigned char)*pc > 127) {
-                clen = UTF8_CHAR_LEN(*pc);
-                if (!clen) {
-                    fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");
-                    exit(1);
-                }
+            clen = UTF8_CHAR_LEN(*pc);
+            if (!clen) {
+                fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");
+                exit(1);
+            }
             for (i = 0; i < clen; i++) {
                 AP(*pc);
                 pc++;
             }
             pc--;
-            } else
-                AP(*pc);
+        } else {
+            AP(*pc);
         }
 #endif
         if (b >= bLimit) {
@@ -2074,7 +2081,7 @@ int tcldom_NodeObjCmd (
     ClientData  clientData,
     Tcl_Interp *interp,
     int         objc,
-    Tcl_Obj    * CONST objv[]
+    Tcl_Obj    *CONST objv[]
 )
 {
     GetTcldomTSD()
@@ -3659,6 +3666,7 @@ int tcldom_domCmd (
 {
     GetTcldomTSD()
     char        * method, tmp[300];
+    char        *localName, prefix[MAX_PREFIX_LEN];
     int           methodIndex, result, i, bool;
     Tcl_CmdInfo   cmdInfo;
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
@@ -3666,6 +3674,8 @@ int tcldom_domCmd (
     static CONST84 char *domMethods[] = {
         "createDocument",  "createDocumentNS",  "createNodeCmd",
         "parse",           "setResultEncoding", "setStoreLineColumn",
+        "isCharData",      "isName",            "isQName",
+        "isNCName", 
 #ifdef TCL_THREADS
         "attachDocument",
 #endif
@@ -3673,7 +3683,9 @@ int tcldom_domCmd (
     };
     enum domMethod {
         m_createDocument,    m_createDocumentNS,  m_createNodeCmd,
-        m_parse,             m_setResultEncoding, m_setStoreLineColumn
+        m_parse,             m_setResultEncoding, m_setStoreLineColumn,
+        m_isCharData,        m_isName,            m_isQName,
+        m_isNCName
 #ifdef TCL_THREADS
         ,m_attachDocument
 #endif
@@ -3761,6 +3773,38 @@ int tcldom_domCmd (
                 TSD(storeLineColumn) = bool;
             }
             return TCL_OK;
+
+        case m_isCharData:
+            CheckArgs(3,3,2,"string");
+            SetBooleanResult (domIsChar (Tcl_GetStringFromObj(objv[2],NULL)));
+            return TCL_OK;
+            
+        case m_isName:
+            CheckArgs(3,3,2,"string");
+            SetBooleanResult (domIsNAME (Tcl_GetStringFromObj(objv[2],NULL)));
+            return TCL_OK;
+            
+        case m_isQName:
+            CheckArgs(3,3,2,"string");
+            if ((Tcl_GetStringFromObj(objv[2], NULL))[0] == ':') {
+                SetBooleanResult (0);
+            } else {
+                domSplitQName (Tcl_GetStringFromObj(objv[2],NULL), prefix,
+                               &localName);
+                if (prefix[0]) {
+                    SetBooleanResult ((domIsNCNAME(prefix) 
+                                       && domIsNCNAME(localName)));
+                } else {
+                    SetBooleanResult (domIsNCNAME (localName));
+                }
+            }
+            return TCL_OK;
+
+        case m_isNCName:
+            CheckArgs(3,3,2,"string");
+            SetBooleanResult (domIsNCNAME(Tcl_GetStringFromObj(objv[2],NULL)));
+            return TCL_OK;
+
     }
     SetResult ( dom_usage);
     return TCL_ERROR;
