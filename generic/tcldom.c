@@ -340,6 +340,7 @@ tcldom_docDeleteNode (
     if (node->nodeFlags & VISIBLE_IN_TCL) {
         NODE_CMD(objCmdName, node);
         Tcl_DeleteCommand (interp, objCmdName);
+        node->nodeFlags &= ~VISIBLE_IN_TCL;
     }
 }
 
@@ -371,10 +372,16 @@ void tcldom_docCmdDeleteProc  (
         char objCmdName[40];
 
         Tcl_MutexLock(&tableMutex);
-        if(--dinfo->document->refCount > 0) {
+        if (dinfo->document->refCount > 1) {
+            /* Detach all nodecommands attached to this tree */
+            tcldom_docDeleteNode(dinfo->document->documentElement, dinfo->interp);
+            domFreeNode(dinfo->document->documentElement,
+                        tcldom_docDeleteNode, dinfo->interp, 1);
+            dinfo->document->refCount--;
             Tcl_MutexUnlock(&tableMutex);
-            return; /* While doc has still users attached */
+            return; /* Because doc has still users attached */
         }
+        /* Document has only one thread attached: the current thread */
         DOC_CMD(objCmdName, dinfo->document);
         entryPtr = Tcl_FindHashEntry(&sharedDocs, objCmdName);
         if (entryPtr) {
@@ -2685,6 +2692,17 @@ int tcldom_NodeObjCmd (
             }
         }
         return TCL_OK;
+    }
+
+    /*----------------------------------------------------------------------
+    |   node may have been deleted in the meantime by some other 
+    |   thread operating on the tree, so check this fact before.
+    |
+    \---------------------------------------------------------------------*/
+
+    if (node->nodeFlags & IS_DELETED) {
+        SetResult ( "node has been deleted" );
+        return TCL_ERROR;
     }
 
     /*----------------------------------------------------------------------
