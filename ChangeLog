@@ -1,5 +1,8 @@
 2002-10-30  Rolf Ade  <rolf@pointsman.de>
-        
+
+        * generic/tcldom.c: Added -escapeNonASCII and -htmlEntities
+          also to node_usage and domObj_usage.
+
         * extensions/tnc/test.tcl: Updated to use new tDOM
           features. Made more usable.    
 
