@@ -29,8 +29,11 @@
 #
 #
 #   $Log$
-#   Revision 1.1  2002/02/22 01:05:35  rolf
-#   Initial revision
+#   Revision 1.2  2002/02/26 14:04:16  rolf
+#   Updated the [package provide] to the new version number 0.7
+#
+#   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+#   tDOM0.7test with Jochens first set of patches
 #
 #
 #
@@ -40,7 +43,7 @@
 #----------------------------------------------------------------------------
 
 
-package provide tdom 0.6
+package provide tdom 0.7
 
 
 #----------------------------------------------------------------------------
