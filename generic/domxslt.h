@@ -30,8 +30,12 @@
 |
 |
 |   $Log$
-|   Revision 1.1  2002/02/22 01:05:35  rolf
-|   Initial revision
+|   Revision 1.2  2002/04/08 02:11:12  rolf
+|   Added -parameters option to domNode xslt method, to enable setting of
+|   top level parameters from tcl level.
+|
+|   Revision 1.1.1.1  2002/02/22 01:05:35  rolf
+|   tDOM0.7test with Jochens first set of patches
 |
 |   Revision 1.1  2002/02/04 08:08:19  jolo
 |   Initial revision
@@ -55,6 +59,7 @@
 \---------------------------------------------------------------------------*/
 int xsltProcess (domDocument       * xsltDoc,
                  domNode           * xmlNode,
+                 char             ** parameters,
                  xpathFuncCallback   funcCB,
                  void              * clientData,
                  char             ** errMsg,
