@@ -460,7 +460,7 @@ domGetNamespaceByIndex (
 |   domNewNamespace
 |
 \--------------------------------------------------------------------------*/
-static domNS* domNewNamespace (
+domNS* domNewNamespace (
     domDocument *doc,
     char        *prefix,
     char        *namespaceURI
@@ -2338,9 +2338,30 @@ domSetDocument (
 )
 {
     domNode *child;
-
+    domNS   *ns, *orgns;
     
-    node->ownerDocument = doc;
+    if (node->nodeType == ELEMENT_NODE) {
+        if (node->namespace) {
+            orgns = node->ownerDocument->namespaces[node->namespace-1];
+        }
+        node->ownerDocument = doc;
+        if (node->namespace) {
+            ns = domLookupPrefix (node, orgns->prefix);
+            if (ns && (strcmp (ns->uri, orgns->uri)==0)) {
+                node->namespace = ns->index;
+            } else {
+                domAddNSToNode (node, orgns);
+            }
+        } else {
+            ns = domLookupPrefix (node, "");
+            if (ns) {
+                if (strcmp(ns->uri, "")!=0) {
+                    ns = domNewNamespace (doc, "", "");
+                }
+                node->namespace = ns->index;
+            }
+        }
+    }
 
     DBG( fprintf(stderr, "domSetDocument node%s ", node->nodeName);
          __dbgAttr(node->firstAttr);             

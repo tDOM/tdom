@@ -29,6 +29,14 @@
 |
 |
 |   $Log$
+|   Revision 1.10  2002/05/10 02:30:30  rolf
+|   A few things at one: Made attribute set names namespace aware. If a
+|   literal result node has no namespace, and at the insertion point of
+|   the result tree is a default namespace in scope, unset the default
+|   namespace, while adding the node.  Enhanced domSetDocument, that it
+|   not only set the ownerDocument right, but also resets the namespace
+|   indexes.
+|
 |   Revision 1.9  2002/04/28 22:27:11  rolf
 |   Improved xsl:elements: non QNAME name as element name is detected
 |   now. Bug Fix in domSetAttributeNS(). Small improvement of domCopyTo():
@@ -674,6 +682,7 @@ domNS *        domLookupNamespace (domDocument *doc, char *prefix, char *namespa
 domNS *        domLookupPrefix  (domNode *node, char *prefix);
 domNS *        domLookupURI     (domNode *node, char *uri);
 domNS *        domGetNamespaceByIndex (domDocument *doc, int nsIndex);
+domNS *        domNewNamespace (domDocument *doc, char *prefix, char *namespaceURI);
 int            domGetLineColumn (domNode *node, int *line, int *column);
 
 int            domXPointerChild (domNode * node, int all, int instance, domNodeType type,
