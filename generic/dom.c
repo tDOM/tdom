@@ -344,7 +344,8 @@ domLookupPrefix (
                     break;
                 }
             } else {
-                if (strcmp (&NSattr->nodeName[6], prefix)==0) {
+                if (NSattr->nodeName[5] != '\0'
+                    && strcmp (&NSattr->nodeName[6], prefix)==0) {
                     found = 1;
                     break;
                 }
