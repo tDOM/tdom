@@ -35,3 +35,7 @@ test html-1.3 {character entities} {
     $doc delete
     set result
 } "\u20ac\u220b"
+
+# cleanup
+::tcltest::cleanupTests
+return
