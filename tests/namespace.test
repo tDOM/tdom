@@ -138,6 +138,10 @@ test ns-2.0 {Multiple namespace declarations, same prefix} {
     list $::result [eval keysort $::nsdecls]
 } {{Test x http://www.zveno.com/Schemas http://www.zveno.com/Schemas:Test http://www.zveno.com/Schemas:y x urn:schema urn:schema:Test urn:schema:z} {}}
 
+foreach parser [info commands ns-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return

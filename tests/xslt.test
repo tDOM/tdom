@@ -5,6 +5,7 @@
 # Tested commands and object commands:
 #    xslt-1.*: xpath Lexer/parser tests
 #    xslt-2.*: xslt method command variants, -parameters option
+#    xslt-3.*: xslt vars, scope, parameters
 #
 # Copyright (c) 2002 Rolf Ade.
 
@@ -284,6 +285,31 @@ test xslt-2.11 {xslt top level parameter: set with 'strange' value} {
     $resultDoc delete
     set result
 } {foo&quot;'&lt;&gt;bar}
+
+test xslt-3.1 {xslt variable scope} {
+    set xml [dom parse {<root/>}]
+    set xslt [dom parse {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:template match="/">
+    <xsl:variable name="main" select="'main'"/>
+    <xsl:call-template name="first"/>
+  </xsl:template>
+  <xsl:template name="first">
+    <xsl:variable name="firstVar" select="'firstVar'"/>
+    <xsl:call-template name="second"/>
+  </xsl:template>
+  <xsl:template name="second">
+    <xsl:variable name="secondVar" select="'secondVar'"/>
+    <xsl:value-of select="$main"/>
+    <xsl:value-of select="$firstVar"/>
+    <xsl:value-of select="$secondVar"/>
+  </xsl:template>
+    </xsl:stylesheet>}]
+    set xmlroot [$xml documentElement]
+    catch {$xmlroot xslt $xslt resultDoc} errMsg
+    $xml delete
+    $xslt delete
+    set errMsg
+} {Variable "main" has not been declared.}
 
 # cleanup
 ::tcltest::cleanupTests

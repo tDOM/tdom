@@ -91,6 +91,10 @@ test pcdata-1.3 {PCDATA with no entity expansion} {
     list $::result $::pcdataCounter
 } {{This is <PCDATA>} 4}
 
+foreach parser [info commands pcdata-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return

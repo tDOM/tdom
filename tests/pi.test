@@ -66,6 +66,10 @@ test pi-2.1 {PI with special characters} {
     set ::result
 } {Test {[if !VMLRender]}}
 
+foreach parser [info commands pi-*] {
+    $parser free
+}
+
 # cleanup
 ::tcltest::cleanupTests
 return
