@@ -264,7 +264,8 @@ DEFS_EXPAT	=-DXMLIMPORT=__declspec(dllexport)
 INCLUDES	= -I"$(WINDIR)" -I"$(GENERICDIR)" -I"$(EXPATDIR)" $(TCL_INCLUDES) 
 BASE_CLFAGS	= $(cflags) $(cdebug) $(crt) $(INCLUDES)
 CON_CFLAGS	= $(cflags) $(cdebug) $(crt) -DCONSOLE
-TCL_CFLAGS	= -DUSE_TCL_STUBS -DVERSION="\"$(DOTVERSION)\"" \
+TCL_CFLAGS      = -DUSE_TCL_STUBS -DPACKAGE_VERSION="\"$(DOTVERSION)\"" \
+                  -DPACKAGE_NAME="\"$(PROJECT)\"" \
                   $(BASE_CLFAGS) $(OPTDEFINES) $(DEFS) #$(DEFS_EXPAT)
 
 #---------------------------------------------------------------------
