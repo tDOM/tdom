@@ -774,13 +774,13 @@ proc tDOM::xmlOpenFile {filename {encodingString {}}} {
             # Try to find the end of the XML Declaration
             set closeIndex [string first ">" $head]
             if {$closeIndex == -1} {
-                error "Wired XML data or not XML data at all"
+                error "Weird XML data or not XML data at all"
             }
 
             seek $fd 0 start
             set xmlDeclaration [read $fd [expr {$closeIndex + 5}]]
             # extract the encoding information
-            set pattern {encoding=[\x20\x9\xd\xa]*["']([^ "']+)['"]}
+            set pattern {^[^>]+encoding=[\x20\x9\xd\xa]*["']([^ "']+)['"]}
             # emacs: "
             if {![regexp $pattern $head - encStr]} {
                 # Probably something like <?xml version="1.0"?>. 
