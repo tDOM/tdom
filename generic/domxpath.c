@@ -2925,7 +2925,6 @@ xpathEvalFunction (
         if (leftResult.type != xNodeSetResult) {
             if (leftResult.type == EmptyResult) {
                 rsSetInt (result, 0);
-                xpathRSFree( &leftResult );
                 return XPATH_OK;
             } else {
                 xpathRSFree( &leftResult );
@@ -2945,6 +2944,7 @@ xpathEvalFunction (
             leftReal += xpathFuncNumber(&rightResult, &NaN);
             if (NaN) {
                 rsSetNaN (result);
+                xpathRSFree( &leftResult );
                 return XPATH_OK;
             }
             DBG(fprintf(stderr, "leftReal = %f \n", leftReal);)
@@ -5025,6 +5025,8 @@ int xpathMatches (
     xpathRSInit (&nodeList);
     while (step) {
         TRACE1("xpathMatches type=%d \n", step->type);
+        if (nodeList.nr_nodes == 0) useFastAdd = 1;
+        else useFastAdd = 0;
         switch (step->type) {
 
             case AxisAttribute:
@@ -5292,8 +5294,6 @@ int xpathMatches (
                 }
                 currentPos = -1;
                 i = 0;
-                if (nodeList.nr_nodes == 0) useFastAdd = 1;
-                else useFastAdd = 0;
                 while (child) {
                     rc = xpathMatches (step->child, exprContext, child, cbs, errMsg);
                     if (rc == 1) {
