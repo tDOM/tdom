@@ -32,6 +32,9 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/02/24 02:31:27  rolf
+|   Fixed UTF-8 char byte length determination
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -262,25 +265,6 @@ static char * tcldom_docTrace (ClientData  clientData,
                                char       *name2,
                                int        flags  );
                                
-
-/*----------------------------------------------------------------------------
-|   UtfCount     
-|
-\---------------------------------------------------------------------------*/
-#if !TclOnly8Bits
-static int
-UtfCount(
-    int ch
-)
-{
-    if ((ch > 0) && (ch < 0x80)) { return 1; }
-    if (ch <= 0x7FF)             { return 2; }
-    if (ch <= 0xFFFF)            { return 3; } 
-    return 0;
-}
-#endif
-
-
 /*----------------------------------------------------------------------------
 |   tcldom_docDeleteNode
 |
@@ -1477,7 +1461,7 @@ void tcldom_AppendEscaped (
 #else
         } else {
         if ((unsigned char)*pc > 127) {
-                clen = UtfCount (*pc);
+                clen = UTF8_CHAR_LEN(*pc);
                 if (!clen) {
                     fprintf (stderr, "can only handle UTF-8 chars up to 3 bytes long.");
                     exit(1);
