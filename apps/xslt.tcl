@@ -28,6 +28,9 @@
 #
 #
 #   $Log$
+#   Revision 1.4  2002/06/06 11:27:07  rolf
+#   Fixed a bug (typo)
+#
 #   Revision 1.3  2002/05/17 14:24:37  rolf
 #   With space is significant, in source documents.
 #
@@ -138,7 +141,7 @@ proc externalEntityRefHandler { base systemId publicId } {
 
      set resultRoot [$resultDoc documentElement]
      if { $outputOpt != "" } {
-         puts -nonewline [$resultRoot #outputOpt]
+         puts -nonewline [$resultRoot $outputOpt]
      } else {
          puts -nonewline [$resultRoot asHTML]
      }
