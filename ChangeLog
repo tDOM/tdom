@@ -4,6 +4,11 @@
         * generic/domxpath.c
         * generic/dom.c: Fixed mem leaks/possible invalid read
     
+2002-10-30  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* generic/domxslt.c: added proper cast to arguments passed to
+	  FREE() macro to avoid compiler barking at us.
+
 2002-10-30  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Added -escapeNonASCII and -htmlEntities
