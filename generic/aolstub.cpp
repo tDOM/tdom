@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#if 0 && defined (NS_AOLSERVER)
+#if 1 && defined (NS_AOLSERVER)
 #include <ns.h>
 
 int Ns_ModuleVersion = 1;
