@@ -1516,7 +1516,11 @@ externalEntityRefHandler (
     /*
      * Take a copy of the callback script so that arguments may be appended.
      */
+#ifndef TCL_THREADS    
     cmdPtr = Tcl_DuplicateObj(info->document->extResolver);
+#else 
+    cmdPtr = Tcl_NewStringObj(Tcl_GetString(info->document->extResolver), -1);
+#endif
     Tcl_IncrRefCount(cmdPtr);
 
     if (base) {
