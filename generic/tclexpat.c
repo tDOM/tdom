@@ -526,7 +526,7 @@ TclExpatInitializeParser(interp, expat, resetOptions)
     }
     expat->eContents              = NULL;
     expat->finished               = 0;
-    expat->parsingStarted         = 0;
+    expat->parsingState           = 0;
 
     if (resetOptions) {
         expat->final              = 1;
@@ -695,8 +695,8 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_CONFIGURE:
 
         if (objc < 3) {
-            Tcl_SetResult (interp,
-                           "wrong # args: should be \"parserCmd configure <option> ?value ...?\"", 
+            Tcl_SetResult (interp, "wrong # args: should be "
+                           "\"parserCmd configure <option> ?value ...?\"", 
                            TCL_STATIC);
             return TCL_ERROR;
         }
@@ -712,56 +712,84 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_FREE:
 
         CheckArgs (2,2,1,"");
-	/* ericm@scriptics.com, 1999.9.13 */
-	Tcl_DeleteCommand(interp, Tcl_GetString(expat->name));
-	result = TCL_OK;
+
+        if (expat->parsingState > 1) {
+            Tcl_SetResult (interp, "parser freeing not allowed from within "
+                           "callback", TCL_STATIC);
+            result = TCL_ERROR;
+        } else {
+            Tcl_DeleteCommand(interp, Tcl_GetString(expat->name));
+            result = TCL_OK;
+        }
 	break;
 
     case EXPAT_GET:
 
-      /* ericm@scriptics.com, 1999.6.28 */
-      result = TclExpatGet(interp, expat, objc - 2, objv + 2);
-      break;
+        /* ericm@scriptics.com, 1999.6.28 */
+        result = TclExpatGet(interp, expat, objc - 2, objv + 2);
+        break;
 
     case EXPAT_PARSE:
 
-      CheckArgs (3,3,2,"<XML-String>");
-      data = Tcl_GetStringFromObj(objv[2], &len);
-      result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_STRING);
-      if (expat->final || result != TCL_OK) {
-          expat->final = 1;
-          expat->finished = 1;
-      }
-      break;
-
+        CheckArgs (3,3,2,"<XML-String>");
+        if (expat->parsingState > 1) {
+            Tcl_SetResult (interp, "Parser already in use.", TCL_STATIC);
+            result = TCL_ERROR;
+            break;
+        }
+        data = Tcl_GetStringFromObj(objv[2], &len);
+        result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_STRING);
+        if (expat->final || result != TCL_OK) {
+            expat->final = 1;
+            expat->finished = 1;
+        }
+        break;
+        
     case EXPAT_PARSECHANNEL:
 
-      CheckArgs (3,3,2,"<Tcl-Channel>");
-      data = Tcl_GetString(objv[2]);
-      result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_CHANNEL);
-      if (expat->final || result != TCL_OK) {
-          expat->final = 1;
-          expat->finished = 1;
-      }
-      break;
-
+        CheckArgs (3,3,2,"<Tcl-Channel>");
+        if (expat->parsingState > 1) {
+            Tcl_SetResult (interp, "Parser already in use.", TCL_STATIC);
+            result = TCL_ERROR;
+            break;
+        }
+        data = Tcl_GetString(objv[2]);
+        result = TclExpatParse(interp, expat, data, len, EXPAT_INPUT_CHANNEL);
+        if (expat->final || result != TCL_OK) {
+            expat->final = 1;
+            expat->finished = 1;
+        }
+        break;
+        
     case EXPAT_PARSEFILE:
 
-      CheckArgs (3,3,2, "<filename>");
-      data = Tcl_GetString(objv[2]);
-      result = TclExpatParse (interp, expat, data, len, EXPAT_INPUT_FILENAME);
-      if (expat->final || result != TCL_OK) {
-          expat->final = 1;
-          expat->finished = 1;
-      }
-      break;
+        CheckArgs (3,3,2, "<filename>");
+        if (expat->parsingState > 1) {
+            Tcl_SetResult (interp, "Parser already in use.", TCL_STATIC);
+            result = TCL_ERROR;
+            break;
+        }
+        data = Tcl_GetString(objv[2]);
+        result = TclExpatParse (interp, expat, data, len, 
+                                EXPAT_INPUT_FILENAME);
+        if (expat->final || result != TCL_OK) {
+            expat->final = 1;
+            expat->finished = 1;
+        }
+        break;
 
     case EXPAT_RESET:
 
-      CheckArgs (2,2,1,"");
-
-      result = TclExpatInitializeParser (interp, expat, 1);
-      break;
+        CheckArgs (2,2,1,"");
+      
+        if (expat->parsingState > 1) {
+            Tcl_SetResult (interp, "parser reset not allowed from within "
+                           "callback", TCL_STATIC);
+            result = TCL_ERROR;
+        } else {
+            result = TclExpatInitializeParser (interp, expat, 1);
+        }
+        break;
 
   }
 
@@ -811,7 +839,7 @@ TclExpatParse (interp, expat, data, len, type)
           return TCL_ERROR;
   }
 
-  if (!expat->parsingStarted) {
+  if (!expat->parsingState) {
       activeCHandlerSet = expat->firstCHandlerSet;
       while (activeCHandlerSet) {
           if (activeCHandlerSet->initParseProc) {
@@ -823,7 +851,7 @@ TclExpatParse (interp, expat, data, len, type)
           }
           activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
       }
-      expat->parsingStarted = 1;
+      expat->parsingState = 1;
   }
       
   Tcl_ResetResult (interp);
@@ -831,31 +859,38 @@ TclExpatParse (interp, expat, data, len, type)
   switch (type) {
 
   case EXPAT_INPUT_STRING:
+      expat->parsingState = 2;
       result = XML_Parse(expat->parser,
                          data, len,
                          expat->final);
+      expat->parsingState = 1;
       break;
 
   case EXPAT_INPUT_CHANNEL:
       channel = Tcl_GetChannel (interp, data, &mode);
       if (channel == NULL) {
           Tcl_ResetResult (interp);
-          Tcl_AppendResult (interp, "\"", data, "\" isn't a Tcl channel in this interpreter", (char *) NULL);
+          Tcl_AppendResult (interp, "\"", data,
+                            "\" isn't a Tcl channel in this interpreter", 
+                            (char *) NULL);
           return TCL_ERROR;
       }
       if (!(mode & TCL_READABLE)) {
           Tcl_ResetResult (interp);
-          Tcl_AppendResult (interp, "channel \"", data, "wasn't opened for reading", (char *) NULL);
+          Tcl_AppendResult (interp, "channel \"", data,
+                            "wasn't opened for reading", (char *) NULL);
           return TCL_ERROR;
       }
 #if !TclOnly8Bits
       Tcl_DStringInit (&dStr);
-      if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) != TCL_OK) {
+      if (Tcl_GetChannelOption (interp, channel, "-encoding", &dStr) 
+          != TCL_OK) {
           return TCL_ERROR;
       }
       if (strcmp (Tcl_DStringValue (&dStr), "binary")==0 ) useBinary = 1;
       else useBinary = 0;
       Tcl_DStringFree (&dStr);
+      expat->parsingState = 2;
       if (useBinary) {
           do {
               bytesread = Tcl_Read (channel, buf, sizeof (buf));
@@ -886,6 +921,7 @@ TclExpatParse (interp, expat, data, len, type)
           Tcl_DecrRefCount (bufObj);
       }
 #else
+      expat->parsingState = 2;
       do {
           bytesread = Tcl_Read (channel, buf, sizeof (buf));
           done = bytesread < sizeof (buf);
@@ -899,6 +935,7 @@ TclExpatParse (interp, expat, data, len, type)
           }
       } while (!done);
 #endif
+      expat->parsingState = 1;
       break;
 
   case EXPAT_INPUT_FILENAME:
@@ -910,6 +947,7 @@ TclExpatParse (interp, expat, data, len, type)
           return TCL_ERROR;
       }
       parser = expat->parser;
+      expat->parsingState = 2;
       for (;;) {
           int nread;
           char *fbuf = XML_GetBuffer (parser, READ_SIZE);
@@ -917,6 +955,7 @@ TclExpatParse (interp, expat, data, len, type)
               close (fd);
               Tcl_ResetResult (interp);
               Tcl_SetResult (interp, "Out of memory\n", NULL);
+              expat->parsingState = 1;
               return TCL_ERROR;
           }
           nread = read(fd, fbuf, READ_SIZE);
@@ -925,6 +964,7 @@ TclExpatParse (interp, expat, data, len, type)
               Tcl_ResetResult (interp);
               Tcl_AppendResult (interp, "error reading from file \"",
                                 data, "\"", (char *) NULL);
+              expat->parsingState = 1;
               return TCL_ERROR;
           }
           if (!XML_ParseBuffer (parser, nread, nread == 0)) {
@@ -937,6 +977,7 @@ TclExpatParse (interp, expat, data, len, type)
               break;
           }
       }
+      expat->parsingState = 1;
       break;
   }
 
@@ -974,7 +1015,6 @@ TclExpatParse (interp, expat, data, len, type)
       Tcl_SetObjResult(interp, expat->result);
       return expat->status;
   }
-
 }
 
 /*
@@ -1653,6 +1693,16 @@ TclExpatCget (interp, expat, objc, objv)
 
         SetIntResult (interp, expat->ns_mode);
         return TCL_OK;
+
+      case EXPAT_NOWHITESPACE:
+      case EXPAT_IGNOREWHITECDATA:		/* -ignorewhitecdata */
+
+          if (activeTclHandlerSet == NULL) {
+              /* Without any handler script, we return a default boolean
+                 value */
+              Tcl_SetResult(interp, "0", NULL);
+              return TCL_OK;
+          }
     }
     
     /*
@@ -4426,7 +4476,8 @@ TclExpatDeleteCmd(clientData)
   while (activeCHandlerSet) {
 
       if (activeCHandlerSet->freeProc) {
-          activeCHandlerSet->freeProc (expat->interp, activeCHandlerSet->userData);
+          activeCHandlerSet->freeProc (expat->interp,
+                                       activeCHandlerSet->userData);
       }
       FREE (activeCHandlerSet->name);
 

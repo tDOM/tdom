@@ -8,9 +8,12 @@
 #    parser-4.*: return code 'error' from callback
 #    parser-5.*: parse input from channel
 #    parser-6.*: reuse parser 
+#    parser-7.*: parser reset
+#    parser-8.*: parser free
+#    parser-9.*: parser parse
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
-# Copyright (c) 2002-2003 Rolf Ade
+# Copyright (c) 2002-2004 Rolf Ade
 #
 # $Id$
 
@@ -356,6 +359,31 @@ test parser-5.1 {parse channel input} {
     list $::count
 } {42}
 
+proc elementstart {args} {
+    global parser
+
+    if {![info exists ::count]} {
+        set ::count 1
+    } else {
+        incr ::count
+    }
+    set fd [open [file join [pwd] [file dir [info script]] data/books.xml]]
+    catch {$parser parsechannel $fd}
+    close $fd
+}
+
+test parser-5.2 {parse channel input with catched try to recursive parsing} {
+    catch {unset ::count}
+
+    catch {rename parser-5.1 {}}
+    set parser [::xml::parser parser-5.1 -elementstartcommand elementstart]
+    set fd [open [file join [pwd] [file dir [info script]] data/books.xml]]
+    $parser parsechannel $fd
+    close $fd
+    list $::count
+} {42}
+
+
 test parser-6.1 {reuse parser} {
     catch {rename parser-6.1 {}}
     set parser [expat parser-6.1 -baseurl file:///foo/bar]
@@ -368,6 +396,80 @@ test parser-6.1 {reuse parser} {
     lappend result [$parser cget -baseurl]
     set result
 } {file:///foo/bar {} file:///bar/foo {}}
+
+
+proc elementstart {args} {
+    global parser
+    
+    $parser reset
+}
+
+test parser-7.1 {parser reset called from within callback proc} {
+    set parser [expat -elementstartcommand elementstart]
+    set result [catch {$parser parse <root>foo</root>} errMsg]
+    lappend result $errMsg
+    $parser free
+    set result
+} {1 {parser reset not allowed from within callback}}
+
+test parser-7.2 {parser reset} {
+    set parser [expat -final 0]
+    $parser parse "<ro"
+    $parser reset
+    set result [list]
+    foreach option {-final -baseurl -ignorewhitecdata -useForeignDTD} {
+        lappend result [$parser cget $option]
+    }
+    $parser parse "<doc/>"
+    $parser free
+    set result
+} {1 {} 0 0}
+
+proc elementstart {args} {
+    global parser
+    
+    $parser free
+}
+
+test parser-8.1 {parser free called from within callback proc} {
+    set parser [expat -elementstartcommand elementstart]
+    set result [catch {$parser parse <root>foo</root>} errMsg]
+    lappend result $errMsg
+    $parser free
+    set result
+} {1 {parser freeing not allowed from within callback}}
+
+proc elementstart {args} {
+    global parser
+
+    $parser parse {<root>foo bar</root>}
+}
+
+test parser-9.1 {try to use the parser form within one of its callbacks} {
+    set parser [expat -elementstartcommand elementstart]
+    set result [catch {$parser parse <root>foo</root>} errMsg]
+    lappend result $errMsg
+    $parser free
+    set result
+} {1 {Parser already in use.}}
+
+proc calledFromElementstart {args} {
+    global parser
+
+    $parser parse {<root>foo bar</root>}
+}
+
+proc elementstart {args} {
+    calledFromElementstart
+}
+
+test parser-9.2 {try to use the parser form within one of its callbacks} {
+    set parser [expat -elementstartcommand elementstart]
+    set result [catch {$parser parse <root>foo</root>} errMsg]
+    lappend result $errMsg
+    $parser free
+    set result
+} {1 {Parser already in use.}}
 
 foreach parser [info commands xmlparser*] {
     $parser free

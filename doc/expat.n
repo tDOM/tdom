@@ -729,7 +729,9 @@ named handler set is returned.
 \&\fR
 .RS
 .PP
-Deletes the parser and the parser command.
+Deletes the parser and the parser command. A parser cannot
+be freed from within one of its handler callbacks (neither directly nor
+indirectly) and will raise a tcl error in this case.
 .RE
 .TP
 \&\fB\fBparser\fP \fBget\fP \fI-specifiedattributecount|-idattributeindex|-currentbytecount|-currentlinenumber|-currentcolumnnumber|-currentbyteindex\fB
@@ -785,7 +787,9 @@ Only one value may be requested at a time.
 .RS
 .PP
 Parses the XML string \fIdata\fR. The event callback
-scripts will be called, as there triggering events happens.
+scripts will be called, as there triggering events happens. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.
 .RE
 .TP
 \&\fB\fBparser\fP \fBparsechannel\fP \fIchannelID\fB
@@ -796,7 +800,9 @@ Reads the XML data out of the tcl channel \fIchannelID\fR
 (starting at the current access position, without any seek) up to the end of
 file condition and parses that data. The channel encoding is respected. Use the
 helper proc tDOM::xmlOpenFile out of the tDOM script library to open a file, if
-you want to use this method.
+you want to use this method. This method cannot
+be used from within a callback (neither directly nor indirectly) of
+the parser to be used and will raise an error in this case.
 .RE
 .TP
 \&\fB\fBparser\fP \fBparsefile\fP \fIfilename\fB
@@ -805,8 +811,10 @@ you want to use this method.
 .PP
 Reads the XML data directly out of the file with the
 filename \fIfilename\fR and parses that data. This is done with low level file
-operations. The XML data must be in ISO-8859-1, UTF-8 or UTF-16 encoding. If
-applicable, this is the fastest way, to parse XML data.
+operations. The XML data must be in US-ASCII, ISO-8859-1, UTF-8 or UTF-16
+encoding. If applicable, this is the fastest way, to parse XML data. This
+method cannot be used from within a callback (neither directly nor indirectly)
+of the parser to be used and will raise an error in this case.
 .RE
 .TP
 \&\fB\fBparser\fP \fBreset\fP
@@ -814,7 +822,9 @@ applicable, this is the fastest way, to parse XML data.
 .RS
 .PP
 Resets the parser in preparation for parsing another
-document.
+document. A parser cannot be reseted from within one of its handler callbacks
+(neither directly nor indirectly) and will raise a tcl error in this
+cases.
 .RE
 .SH "Callback Command Return Codes"
 .PP

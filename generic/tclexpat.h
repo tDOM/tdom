@@ -123,11 +123,13 @@ typedef struct TclGenExpatInfo {
     Tcl_Obj *result;		/* application return result */
     const char *context;        /* reference to the context pointer */  
     Tcl_Obj *cdata;             /* Accumulates character data */ 
-    ExpatElemContent *eContents;/* The reported XML_Content's as linked list */
+    ExpatElemContent *eContents;/* The reported XML_Contents as linked list */
     int ns_mode;                /* namespace mode */
     Tcl_Obj *baseURI;
     int finished;
-    int parsingStarted;
+    int parsingState;           /* 0 == freshly (re-)initialized
+                                   1 == initParserProcs called
+                                   2 == parsing an input chunk */
     XML_Char nsSeparator;       
     int paramentityparsing;     
     int noexpand;
