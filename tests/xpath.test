@@ -5,7 +5,8 @@
 # Tested commands and object commands:
 #    xpath-1.*: Function tests
 #    xpath-2.*: i18n
-#
+#    xpath-3.*: NaN/Inf
+#    xpath-4.*: math
 # Copyright (c) 2002 Rolf Ade.
 
 test xpath-1.1 {function normalize-space} {
@@ -23,6 +24,153 @@ test xpath-2.1 {non ASCII chars in element names} {
      $doc delete
      llength $nodes
 } {1}
+
+set doc [dom createDocument foo]
+set root [$doc documentElement]
+
+test xpath-3.1 {positive number mod by 0} {
+    $root selectNodes {4 mod 0}
+} {NaN}
+
+test xpath-3.2 {0 mod 0} {
+    $root selectNodes {0 mod 0}
+} {NaN}
+
+test xpath-3.3 {negative number mod 0} {
+    $root selectNodes {-1 mod 0}
+} {NaN}
+
+test xpath-3.4 {positive number div by 0} {
+    $root selectNodes {4 div 0}
+} {Infinity}
+
+test xpath-3.5 {0 div 0} {
+    $root selectNodes {0 div 0}
+} {NaN}
+
+test xpath-3.6 {negative div 0} {
+    $root selectNodes {-4 div 0}
+} {-Infinity}
+
+test xpath-3.7 {number value of a literal} {
+    $root selectNodes {number('foobar')}
+} {NaN}
+
+test xpath-3.8 {number value of an empty node set} {
+    $root selectNodes {number(noChilds)}
+} {NaN}
+
+test xpath-3.9 {propagation of NaN throu multiplication} {
+    $root selectNodes {2 * (4 mod 0)}
+} {NaN}
+
+test xpath-3.10 {propagation of Infinity throu multiplication} {
+    $root selectNodes {2 * (4 div 0)}
+} {Infinity}
+
+test xpath-3.11 {propagation of Infinity throu multiplication} {
+    $root selectNodes {-2 * (3 div 0)}
+} {-Infinity}
+
+test xpath-3.12 {propagation of Infinity throu multiplication} {
+    $root selectNodes {2 * (-7 div 0)}
+} {-Infinity}
+
+test xpath-3.13 {propagation of Infinity throu multiplication} {
+    $root selectNodes {-2 * (-23 div 0)}
+} {Infinity}
+
+test xpath-3.14 {multiplication of Infinity with Infinity} {
+    $root selectNodes {(2 div 0) * (3 div 0)}
+} {Infinity}
+
+test xpath-3.15 {multiplication of Infinity with -Infinity} {
+    $root selectNodes {(2 div 0) * (-3 div 0)}
+} {-Infinity}
+
+test xpath-3.16 {positive number divided by Infinity} {
+    $root selectNodes {2 div (23 div 0)}
+} {0}
+
+test xpath-3.17 {negative number divided by Infinity} {
+    $root selectNodes {-2 div (23 div 0)}
+} {0}
+
+test xpath-3.18 {positive number divided by -Infinity} {
+    $root selectNodes {2 div (-23 div 0)}
+} {0}
+
+test xpath-3.19 {negative number divided by -Infinity} {
+    $root selectNodes {-2.2 div (-23.7 div 0)}
+} {0}
+
+test xpath-3.20 {Infinity divided by Infinity} {
+    $root selectNodes {(2 div 0) div (3 div 0)}
+} {NaN}
+
+test xpath-3.21 {Infinity divided by postive number} {
+    $root selectNodes {(2.7 div 0) div 23}
+} {Infinity}
+
+test xpath-3.22 {Infinity divided by negative number} {
+    $root selectNodes {(2.7 div 0) div -23}
+} {-Infinity}
+
+test xpath-3.23 {-Infinity divided by postive number} {
+    $root selectNodes {(-2.7 div 0) div 23}
+} {-Infinity}
+
+test xpath-3.24 {-Infinity divided by negative number} {
+    $root selectNodes {(-2.7 div 0) div -23}
+} {Infinity}
+
+test xpath-3.25 {Infinity divided by NaN} {
+    $root selectNodes {(2 div 0) div (2 mod 0)}
+} {NaN}
+
+test xpath-3.26 {NaN divided by Infinity} {
+    $root selectNodes {(2 mod 0) div (2 div 0)}
+} {NaN}
+
+test xpath-3.27 {Infinity divided by zero} {
+    $root selectNodes {(2 div 0) div 0}
+} {Infinity}
+
+test xpath-3.28 {-Infinity divided by zero} {
+    $root selectNodes {(-2 div 0) div 0}
+} {-Infinity}
+
+test xpath-3.29 {Infinity plus positive number} {
+    $root selectNodes {(1 div 0) + 345}
+} {Infinity}
+
+test xpath-3.30 {Infinity minus positive number} {
+    $root selectNodes {(1 div 0) - 5}
+} {Infinity}
+
+test xpath-3.31 {number minus Infinity} {
+    $root selectNodes {27 - (1 div 0)} 
+} {-Infinity}
+
+test xpath-3.32 {number minus -Infinity} {
+    $root selectNodes {5 - (-1 div 0)}
+} {Infinity}
+
+test xpath-3.33 {Infinity plus Infinity} {
+    $root selectNodes {(1 div 0) + (1 div 0)}
+} {Infinity}
+
+test xpath-3.34 {Infinity plus -Infinity} {
+    $root selectNodes {(1 div 0) + (-1 div 0)}
+} {NaN}
+
+test xpath-3.35 {Infinity minus -Infinity} {
+    $root selectNodes {(1 div 0) - (-1 div 0)}
+} {Infinity}
+
+
+$doc delete
+
 
 # cleanup
 ::tcltest::cleanupTests
