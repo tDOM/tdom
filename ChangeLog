@@ -1,4 +1,4 @@
-2003-14-11  Rolf Ade  <rolf@pointsman.de>
+2003-12-14  Rolf Ade  <rolf@pointsman.de>
 
         * tests/attribute.text: Made test results independent from the
           (undefined) order of [array get].
