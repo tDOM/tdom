@@ -549,6 +549,7 @@ domNamespaceURI (
     if (!node->namespace) return NULL;
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
+        if (attr->nodeFlags & IS_NS_NODE) return NULL;
         ns = attr->parentNode->ownerDocument->namespaces[attr->namespace-1];
     } else 
     if (node->nodeType == ELEMENT_NODE) {
