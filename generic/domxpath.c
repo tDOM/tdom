@@ -2370,7 +2370,7 @@ xpathEvalFunction (
     )
 {
     xpathResultSet   leftResult, rightResult, replaceResult;
-    int              i, j, rc, pwhite, len,  NaN;
+    int              i, rc, pwhite, len,  NaN;
     char            *replaceStr, *pfrom, *pto, tmp[80], tmp1[80];
     domNode         *node;
     domAttrNode     *attr;
@@ -3308,7 +3308,9 @@ static int xpathEvalStep (
         startingNode = ctxNode;
         node = ctxNode->firstChild;
         while (node && node != startingNode) {
-            if (xpathNodeTest(node, exprContext, step)) checkRsAddNode( result, node);
+            if (xpathNodeTest(node, exprContext, step)) {
+                 checkRsAddNode( result, node);
+            }
             if ((node->nodeType == ELEMENT_NODE) && (node->firstChild)) {
                 node = node->firstChild;
                 continue;
@@ -3365,8 +3367,9 @@ static int xpathEvalStep (
             } else {
                 attr = ctxNode->firstAttr;
                 while (attr) {
-                    if (xpathNodeTest( (domNode*)attr, exprContext, step))
+                    if (xpathNodeTest( (domNode*)attr, exprContext, step)) {
                         checkRsAddNode (result, (domNode *)attr);
+                    }
                     attr = attr->nextSibling;
                 }
             }
@@ -3376,8 +3379,9 @@ static int xpathEvalStep (
             while (attr && (attr->nodeFlags & IS_NS_NODE))
                 attr = attr->nextSibling;
             while (attr) {
-                if (xpathNodeTest ( (domNode*)attr, exprContext, step))
+                if (xpathNodeTest ( (domNode*)attr, exprContext, step)) {
                     checkRsAddNode (result, (domNode *)attr);
+                }
                 attr = attr->nextSibling;
             }
         }
@@ -3450,7 +3454,9 @@ static int xpathEvalStep (
         }
         while (ctxNode->nextSibling) {
             ctxNode = ctxNode->nextSibling;
-            if (xpathNodeTest(ctxNode, exprContext, step)) checkRsAddNode(result, ctxNode);
+            if (xpathNodeTest(ctxNode, exprContext, step)) {
+                checkRsAddNode(result, ctxNode);
+            }
         }
         break;
 
@@ -3466,7 +3472,9 @@ static int xpathEvalStep (
             return XPATH_OK;
         }
         while (node != startingNode) {
-            if (xpathNodeTest(node, exprContext, step)) checkRsAddNode(result, node);
+            if (xpathNodeTest(node, exprContext, step)) {
+                checkRsAddNode(result, node);
+            } 
             node = node->nextSibling;
         }
         break;
@@ -3489,7 +3497,9 @@ static int xpathEvalStep (
             }
         }
         while (1) {
-            if (xpathNodeTest (node, exprContext, step)) checkRsAddNode (result, node);
+            if (xpathNodeTest (node, exprContext, step)) {
+                checkRsAddNode (result, node);
+            }
             if (node->nodeType == ELEMENT_NODE &&
                 node->firstChild) {
                 node = node->firstChild;
@@ -3530,10 +3540,13 @@ static int xpathEvalStep (
                 node = NULL;
             }
             while (startingNode != ancestor) {
-                if (xpathNodeTest(startingNode, exprContext, step))
+                if (xpathNodeTest(startingNode, exprContext, step)) {
                     checkRsAddNode(result, startingNode);
+                }
                 while ((node) && (node != startingNode)) {
-                   if (xpathNodeTest(node,exprContext, step)) checkRsAddNode(result, node);
+                   if (xpathNodeTest(node,exprContext, step)) {
+                       checkRsAddNode(result, node);
+                   }
                    if ((node->nodeType == ELEMENT_NODE) &&
                        (node->firstChild)) {
                        node = node->firstChild;
@@ -4179,6 +4192,9 @@ static int xpathEvalStep (
         rc = xpathEvalFunction (step, ctxNode, exprContext, position, nodeList,
                                 cbs, result, docOrder, errMsg);
         CHECK_RC;
+    default:
+        fprintf (stderr, "!! xpathEvalStep: not handled switch %d !!\n", step->type);
+        return XPATH_EVAL_ERR;
     }
     return XPATH_OK;
 
