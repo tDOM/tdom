@@ -30,6 +30,9 @@ if test ${srcdir} = "." ; then
     echo "Please cd to the platform-specific dir (unix or win) and invoke:"
     echo "  ../configure"
     echo ""
+    echo "Alternatively, you might want to look in unix/CONFIG file "
+    echo "for some common configure setups for Unix builds."
+    echo ""
     exit 1
 fi
 
