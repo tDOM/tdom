@@ -173,6 +173,9 @@ static char domObj_usage[] =
                 "          asXML ?-indent <none,0..8>? ?-channel <channelId>? ?-escapeNonASCII?\n" 
                 "          asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
                 "          getDefaultOutputMethod                  \n"
+                "          publicId ?publicId?                     \n"
+                "          systemId ?systemId?                     \n"
+                "          internalSubset ?internalSubset?         \n"
                 "          delete                                  \n"
                 "          xslt ?-parameters parameterList? ?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xsltDocNode> ?objVar?\n"
                 "          toXSLTcmd                               \n"
@@ -634,10 +637,10 @@ int tcldom_returnDocumentObj (
     }
     if (setVariable) {
         objVar = Tcl_GetStringFromObj (var_name, NULL);
-        dinfo->traceVarName = tdomstrdup(objVar);
         Tcl_UnsetVar (interp, objVar, 0);
         Tcl_SetVar   (interp, objVar, objCmdName, 0);
         if (trace) {
+            dinfo->traceVarName = tdomstrdup(objVar);
             Tcl_TraceVar (interp, objVar, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
                           (Tcl_VarTraceProc*)tcldom_docTrace,
                           (ClientData) dinfo);
@@ -2092,14 +2095,54 @@ void tcldom_treeAsHTML (
     Tcl_Channel  chan,
     int          escapeNonASCII,
     int          htmlEntities,
+    int          doctypeDeclaration,
     int          noEscaping
 )
 {
     int          empty, scriptTag;
     domNode     *child;
     domAttrNode *attrs;
+    domDocument *doc;
     char         tag[80], attrName[80];
 
+    if (node->nodeType == DOCUMENT_NODE) {
+        doc = (domDocument*) node;
+        if (doctypeDeclaration) {
+            writeChars (htmlString, chan, "<!DOCTYPE ", 10);
+            writeChars (htmlString, chan, doc->documentElement->nodeName, -1);
+            if (   doc->doctype 
+                && doc->doctype->systemId 
+                && doc->doctype->systemId[0] != '\0') {
+                if (   doc->doctype->publicId 
+                    && doc->doctype->publicId[0] != '\0') {
+                    writeChars (htmlString, chan, " PUBLIC \"", 9);
+                    writeChars (htmlString, chan, doc->doctype->publicId, -1);
+                    writeChars (htmlString, chan, "\" \"", 3);
+                    writeChars (htmlString, chan, doc->doctype->systemId, -1);
+                    writeChars (htmlString, chan, "\"", 1);
+                } else {
+                    writeChars (htmlString, chan, " SYSTEM \"", 9);
+                    writeChars (htmlString, chan, doc->doctype->systemId, -1);
+                    writeChars (htmlString, chan, "\"", 1);
+                }
+                if (doc->doctype->internalSubset) {
+                    writeChars (htmlString, chan, " [", 2);
+                    writeChars (htmlString, chan, doc->doctype->internalSubset,
+                                -1);
+                    writeChars (htmlString, chan, "]", 1);
+                }
+            }
+            writeChars (htmlString, chan, ">\n", 2);
+        }
+        child = doc->rootNode->firstChild;
+        while (child) {
+            tcldom_treeAsHTML (htmlString, child, chan, escapeNonASCII,
+                               htmlEntities, doctypeDeclaration, 0);
+            child = child->nextSibling;
+        }
+        return;
+    }
+    
     if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
         writeChars (htmlString, chan, "<?", 2);
         writeChars (htmlString, chan, 
@@ -2199,7 +2242,7 @@ void tcldom_treeAsHTML (
         child = node->firstChild;
         while (child != NULL) {
             tcldom_treeAsHTML (htmlString, child, chan, escapeNonASCII,
-                               htmlEntities, scriptTag);
+                               htmlEntities, doctypeDeclaration, scriptTag);
             child = child->nextSibling;
         }
         return;
@@ -2213,7 +2256,7 @@ void tcldom_treeAsHTML (
         }
         while (child != NULL) {
             tcldom_treeAsHTML (htmlString, child, chan, escapeNonASCII,
-                               htmlEntities, scriptTag);
+                               htmlEntities, doctypeDeclaration, scriptTag);
             child = child->nextSibling;
         }
         if ((node->firstChild != NULL) && (node->firstChild != node->lastChild)
@@ -2239,12 +2282,52 @@ void tcldom_treeAsXML (
     int         level,
     int         doIndent,
     Tcl_Channel chan,
-    int         escapeNonASCII
+    int         escapeNonASCII,
+    int         doctypeDeclaration
 )
 {
     domAttrNode *attrs;
     domNode     *child;
+    domDocument *doc;
     int          first, hasElements, i;
+
+    if (node->nodeType == DOCUMENT_NODE) {
+        doc = (domDocument*) node;
+        if (doctypeDeclaration) {
+            writeChars (xmlString, chan, "<!DOCTYPE ", 10);
+            writeChars (xmlString, chan, doc->documentElement->nodeName, -1);
+            if (   doc->doctype 
+                && doc->doctype->systemId
+                && (doc->doctype->systemId[0] != '\0')) {
+                if (   doc->doctype->publicId 
+                    && doc->doctype->publicId[0] != '\0') {
+                    writeChars (xmlString, chan, " PUBLIC \"", 9);
+                    writeChars (xmlString, chan, doc->doctype->publicId, -1);
+                    writeChars (xmlString, chan, "\" \"", 3);
+                    writeChars (xmlString, chan, doc->doctype->systemId, -1);
+                    writeChars (xmlString, chan, "\"", 1);
+                } else {
+                    writeChars (xmlString, chan, " SYSTEM \"", 9);
+                    writeChars (xmlString, chan, doc->doctype->systemId, -1);
+                    writeChars (xmlString, chan, "\"", 1);
+                }
+                if (doc->doctype->internalSubset) {
+                    writeChars (xmlString, chan, " [", 2);
+                    writeChars (xmlString, chan, doc->doctype->internalSubset,
+                                -1);
+                    writeChars (xmlString, chan, "]", 1);
+                }
+            }
+            writeChars (xmlString, chan, ">\n", 2);
+        }
+        child = doc->rootNode->firstChild;
+        while (child) {
+            tcldom_treeAsXML (xmlString, child, indent, level, doIndent, chan,
+                              escapeNonASCII, doctypeDeclaration);
+            child = child->nextSibling;
+        }
+        return;
+    }
 
     if (node->nodeType == TEXT_NODE) {
         if (node->nodeFlags & DISABLE_OUTPUT_ESCAPING) {
@@ -2331,7 +2414,7 @@ void tcldom_treeAsXML (
             }
             first = 0;
             tcldom_treeAsXML (xmlString, child, indent, level+1, doIndent,
-                              chan, escapeNonASCII);
+                              chan, escapeNonASCII, doctypeDeclaration);
             doIndent = 0;
             if ( (child->nodeType == ELEMENT_NODE)
                ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )
@@ -2414,22 +2497,35 @@ static int serializeAsXML (
 )
 {
     char       *option, *channelId;
-    int         indent, mode, escapeNonASCII = 0;
+    int         indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
+    int         optionIndex;
     Tcl_Obj    *resultPtr;
     Tcl_Channel chan = (Tcl_Channel) NULL;
 
-
-    if (objc > 7) {
+    static CONST84 char *asXMLOptions[] = {
+        "-indent", "-channel", "-escapeNonASCII", "-doctypeDeclaration",
+        NULL
+    };
+    enum asXMLOption {
+        m_indent, m_channel, m_escapeNonASCII, m_doctypeDeclaration
+    };
+    
+    if (objc > 9) {
         Tcl_WrongNumArgs(interp, 2, objv,
-                  "?-indent <0..8>? ?-channel <channelID>? ?-escapeNonASCII");
+                  "?-indent <0..8>? ?-channel <channelID>? ?-escapeNonASCII? -?doctypeDeclaration <boolean>?");
         return TCL_ERROR;
     }
     indent = 4;
     while (objc > 2) {
-        option = Tcl_GetStringFromObj (objv[2], NULL);
-        if (strcmp (option, "-indent") == 0)  {
+        if (Tcl_GetIndexFromObj (interp, objv[2], asXMLOptions, "option", 0,
+                               &optionIndex) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        switch ((enum asXMLOption) optionIndex) {
+
+        case m_indent:
             if (objc < 4) {
-                SetResult ("-indent have an argument (0..8 or 'no'/'none')");
+                SetResult ("-indent must have an argument (0..8 or 'no'/'none')");
                 return TCL_ERROR;
             }
             if (strcmp("none", Tcl_GetStringFromObj (objv[3], NULL))==0) {
@@ -2444,9 +2540,9 @@ static int serializeAsXML (
             }
             objc -= 2;
             objv += 2;
-            continue;
-        }
-        else if (strcmp (option, "-channel") == 0) {
+            break;
+
+        case m_channel:
             if (objc < 4) {
                 SetResult ("-channel must have a channeldID as argument");
                 return TCL_ERROR;
@@ -2464,27 +2560,39 @@ static int serializeAsXML (
             }
             objc -= 2;
             objv += 2;
-            continue;
-        }
-        else if (strcmp (option, "-escapeNonASCII")==0) {
+            break;
+
+        case m_escapeNonASCII:
             escapeNonASCII = 1;
             objc--;
             objv++;
-            continue;
-        }
-        else {
-            Tcl_ResetResult (interp);
-            Tcl_AppendResult (interp, "Unknown option \"", option, "\"", NULL);
-            return TCL_ERROR;
+            break;
+            
+        case m_doctypeDeclaration:
+            if (node->nodeType != DOCUMENT_NODE) {
+                SetResult ("-doctypeDeclaration as flag to the method 'asXML' is only allowed for domDocCmds");
+                return TCL_ERROR;
+            }
+            if (objc < 4) {
+                SetResult ("-doctypeDeclaration must have a boolean value as argument");
+                return TCL_ERROR;
+            }
+            if (Tcl_GetBooleanFromObj (interp, objv[3], &doctypeDeclaration)
+                != TCL_OK) {
+                return TCL_ERROR;
+            }
+            objc -= 2;
+            objv += 2;
+            break;
         }
     }
     if (indent > 8)  indent = 8;
     if (indent < -1) indent = -1;
 
     resultPtr = Tcl_NewStringObj ("", 0);
-    tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan, escapeNonASCII);
-    Tcl_AppendResult (interp, Tcl_GetStringFromObj (resultPtr, NULL), NULL);
-    Tcl_DecrRefCount (resultPtr);
+    tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan, escapeNonASCII,
+                     doctypeDeclaration);
+    Tcl_SetObjResult (interp, resultPtr);
     return TCL_OK;
 }
 
@@ -2499,19 +2607,33 @@ static int serializeAsHTML (
     Tcl_Obj    *CONST objv[]
 )
 {
-    char       *option, *channelId;
-    int         mode, escapeNonASCII = 0, htmlEntities = 0;
+    char       *channelId;
+    int         optionIndex, mode, escapeNonASCII = 0, htmlEntities = 0;
+    int         doctypeDeclaration = 0;
     Tcl_Obj    *resultPtr;
     Tcl_Channel chan = (Tcl_Channel) NULL;
 
-    if (objc > 6) {
+    static CONST84 char *asHTMLOptions[] = {
+        "-channel", "-escapeNonASCII", "-htmlEntities", "-doctypeDeclaration",
+        NULL
+    };
+    enum asHTMLOption {
+        m_channel, m_escapeNonASCII, m_htmlEntities, m_doctypeDeclaration
+    };
+    
+    if (objc > 8) {
         Tcl_WrongNumArgs(interp, 2, objv,
-                   "?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?");
+                   "?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities? ?-doctypeDeclaration <boolean>?");
         return TCL_ERROR;
     }
     while (objc > 2) {
-        option = Tcl_GetStringFromObj (objv[2], NULL);
-        if (strcmp (option, "-channel")==0) {
+        if (Tcl_GetIndexFromObj (interp, objv[2], asHTMLOptions, "option", 0,
+                                 &optionIndex) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        switch ((enum asHTMLOption) optionIndex) {
+            
+        case m_channel:
             if (objc < 4) {
                 SetResult ("-channel must have a channeldID as argument");
                 return TCL_ERROR;
@@ -2529,28 +2651,41 @@ static int serializeAsHTML (
             }
             objc -= 2;
             objv += 2;
-            continue;
-        } 
-        else if (strcmp (option, "-escapeNonASCII")==0) {
+            break;
+
+        case m_escapeNonASCII:
             escapeNonASCII = 1;
             objc--;
             objv++;
-            continue;
-        } 
-        else if (strcmp (option, "-htmlEntities")==0) {
-            htmlEntities = 2;
+            break;
+
+        case m_htmlEntities:
+            htmlEntities = 1;
             objc--;
             objv++;
-            continue;
-        } 
-        else {
-            Tcl_ResetResult (interp);
-            Tcl_AppendResult (interp, "Unknown option \"", option, "\"", NULL);
-            return TCL_ERROR;
+            break;
+
+        case m_doctypeDeclaration:
+            if (node->nodeType != DOCUMENT_NODE) {
+                SetResult ("-doctypeDeclaration as flag to the method 'asHTML' is only allowed for domDocCmds");
+                return TCL_ERROR;
+            }
+            if (objc < 4) {
+                SetResult ("-doctypeDeclaration must have a boolean value as argument");
+                return TCL_ERROR;
+            }
+            if (Tcl_GetBooleanFromObj (interp, objv[3], &doctypeDeclaration)
+                != TCL_OK) {
+                return TCL_ERROR;
+            }
+            objc -= 2;
+            objv += 2;
+            break;
         }
     }
     resultPtr = Tcl_NewStringObj ("", 0);
-    tcldom_treeAsHTML(resultPtr, node, chan, escapeNonASCII, htmlEntities, 0);
+    tcldom_treeAsHTML(resultPtr, node, chan, escapeNonASCII, htmlEntities,
+                      doctypeDeclaration, 0);
     Tcl_AppendResult (interp, Tcl_GetStringFromObj (resultPtr, NULL), NULL);
     Tcl_DecrRefCount (resultPtr);
     return TCL_OK;
@@ -3696,6 +3831,7 @@ int tcldom_DocObjCmd (
         "createComment",   "createProcessingInstruction",
         "createElementNS", "getDefaultOutputMethod",     "asXML",
         "asHTML",          "getElementsByTagNameNS",     "xslt", 
+        "publicId",        "systemId",                   "internalSubset",
         "toXSLTcmd",
 #ifdef TCL_THREADS
         "readlock", "writelock",
@@ -3708,6 +3844,7 @@ int tcldom_DocObjCmd (
         m_createComment,    m_createProcessingInstruction,
         m_createElementNS,  m_getdefaultoutputmethod,     m_asXML,
         m_asHTML,           m_getElementsByTagNameNS,     m_xslt,
+        m_publicId,         m_systemId,                   m_internalSubset,
         m_toXSLTcmd
 #ifdef TCL_THREADS
         ,m_readlock, m_writelock
@@ -3746,7 +3883,7 @@ int tcldom_DocObjCmd (
         return (cmdInfo.objProc (cmdInfo.objClientData, interp, objc, mobjv));
     }
 
-    CheckArgs (2,6,1,domObj_usage);
+    CheckArgs (2,10,1,domObj_usage);
 
     /*----------------------------------------------------------------------
     |   dispatch the doc object method
@@ -3878,23 +4015,16 @@ int tcldom_DocObjCmd (
 
         case m_asXML:
             Tcl_ResetResult (interp);
-            n = doc->rootNode->firstChild;
-            while (n) {
-                if (serializeAsXML (n, interp, objc, objv) != TCL_OK) {
-                    return TCL_ERROR;
-                }
-                n = n->nextSibling;
+            if (serializeAsXML ((domNode*)doc, interp, objc, objv) != TCL_OK) {
+                return TCL_ERROR;
             }
             return TCL_OK;
 
         case m_asHTML:
             Tcl_ResetResult (interp);
-            n = doc->rootNode->firstChild;
-            while (n) {
-                if (serializeAsHTML (n, interp, objc, objv) != TCL_OK) {
-                    return TCL_ERROR;
-                }
-                n = n->nextSibling;
+            if (serializeAsHTML ((domNode*)doc, interp, objc, objv)
+                != TCL_OK) {
+                return TCL_ERROR;
             }
             return TCL_OK;
 
@@ -3908,6 +4038,67 @@ int tcldom_DocObjCmd (
             CheckArgs(2,3,2, "?objVar?");
             return convertToXSLTCmd (doc, interp, (objc == 3),
                                      (objc == 3) ? objv[2] : NULL);
+            
+        case m_publicId:
+            CheckArgs(2,3,2, "?publicID?");
+            if (   !doc->doctype 
+                || !doc->doctype->publicId 
+                || doc->doctype->publicId[0] == '\0') {
+                SetResult("");
+            } else {
+                SetResult(doc->doctype->publicId);
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
+                    memset (doc->doctype, 0,(sizeof (domDoctype)));
+                } else if (doc->doctype->publicId) {
+                    FREE ((char*) doc->doctype->publicId);
+                }
+                doc->doctype->publicId = 
+                    tdomstrdup (Tcl_GetStringFromObj (objv[2], NULL));
+            }
+            return TCL_OK;
+            
+        case m_systemId:
+            CheckArgs(2,3,2, "?systemID?");
+            if (   !doc->doctype 
+                || !doc->doctype->systemId
+                || doc->doctype->systemId[0] == '\0') {
+                SetResult("");
+            } else {
+                SetResult(doc->doctype->systemId);
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
+                    memset (doc->doctype, 0,(sizeof (domDoctype)));
+                } else if (doc->doctype->systemId) {
+                    FREE ((char*) doc->doctype->systemId);
+                }
+                doc->doctype->systemId = 
+                    tdomstrdup (Tcl_GetStringFromObj (objv[2], NULL));
+            }
+            return TCL_OK;
+
+        case m_internalSubset:
+            CheckArgs(2,3,2, "?internalSubset?");
+            if (!doc->doctype || !doc->doctype->internalSubset) {
+                SetResult("");
+            } else {
+                SetResult(doc->doctype->internalSubset);
+            }
+            if (objc == 3) {
+                if (!doc->doctype) {
+                    doc->doctype = (domDoctype *)MALLOC (sizeof (domDoctype));
+                    memset (doc->doctype, 0,(sizeof (domDoctype)));
+                } else if (doc->doctype->systemId) {
+                    FREE ((char*) doc->doctype->systemId);
+                }
+                doc->doctype->internalSubset =
+                    tdomstrdup (Tcl_GetStringFromObj (objv[2], NULL));
+            }
+            return TCL_OK;
             
         TDomThreaded(
         case m_writelock:
