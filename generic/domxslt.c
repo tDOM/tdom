@@ -2975,7 +2975,7 @@ static int xsltAddTemplate (
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
                 reportError (node, "The prefix of the \"name\" attribute value isn't bound to a namespace.", errMsg);
-                FREE (tpl);
+                FREE ((char*)tpl);
                 return -1;
             }
             tpl->nameURI = ns->uri;
@@ -2994,7 +2994,7 @@ static int xsltAddTemplate (
             t = (xsltTemplate *) Tcl_GetHashValue (h);
             if (t->precedence == precedence) {
                 reportError (node, "There is already a template with the same name and precedence.", errMsg);
-                FREE (tpl);
+                FREE ((char*)tpl);
                 return -1;
             }
         }
@@ -3009,7 +3009,7 @@ static int xsltAddTemplate (
     if (str) {
         if (!tpl->match) {
             reportError (node, "A template without a \"match\" attribute must not have a \"mode\" attribute.", errMsg);
-            FREE (tpl);
+            FREE ((char*)tpl);
             return -1;
         }
         domSplitQName (str, prefix, &localName);
@@ -3017,7 +3017,7 @@ static int xsltAddTemplate (
             ns = domLookupPrefix (node, prefix);
             if (!ns) {
                 reportError (node, "The prefix of the \"mode\" attribute value isn't bound to a namespace.", errMsg);
-                FREE (tpl);
+                FREE ((char*)tpl);
                 return -1;
             }
             tpl->modeURI = ns->uri;
