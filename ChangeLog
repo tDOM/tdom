@@ -1,3 +1,11 @@
+2003-02-27  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: xsl:number attributes grouping-separator
+          and grouping-size now also interpreted as attribute value
+          templates. (The last two (missing up to now only by mistake)
+          attribute value templates under the recognized xsl
+          attributes.) 
+
 2003-02-26  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Removed unused variables.
