@@ -370,11 +370,14 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
     } else {
 
         int i;
-
+        
         /* is node already in result set ? */
-        for (i=0; i<rs->nr_nodes; i++) {
-            if (rs->nodes[i] == node) {
-                return;
+        if (node->nodeType == ATTRIBUTE_NODE
+            || node->nodeNumber <= rs->nodes[rs->nr_nodes - 1]->nodeNumber) {
+            for (i=0; i<rs->nr_nodes; i++) {
+                if (rs->nodes[i] == node) {
+                    return;
+                }
             }
         }
 
@@ -401,6 +404,39 @@ void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
         rs->nodes[0]  = node;
 
     } else {
+        if ((rs->nr_nodes+1) >= rs->allocated) {
+            rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
+                                           2 * rs->allocated * sizeof(domNode*));
+            rs->allocated = rs->allocated * 2;
+        }
+        rs->nodes[rs->nr_nodes++] = node;
+    }
+}
+
+void rsAddNodeSecure ( xpathResultSet *rs, domNode *node) {
+
+    if ((rs->type != EmptyResult) && (rs->type != xNodeSetResult)) {
+        fprintf(stderr, "could not add node to non NodeSetResult xpathResultSet!"); return;
+    }
+    if (rs->type == EmptyResult) {
+
+        rs->type      = xNodeSetResult;
+        rs->nodes     = (domNode**)MALLOC(INITIAL_SIZE * sizeof(domNode*));
+        rs->allocated = INITIAL_SIZE;
+        rs->nr_nodes  = 1;
+        rs->nodes[0]  = node;
+
+    } else {
+
+        int i;
+        
+        /* is node already in result set ? */
+        for (i=0; i<rs->nr_nodes; i++) {
+            if (rs->nodes[i] == node) {
+                return;
+            }
+        }
+
         if ((rs->nr_nodes+1) >= rs->allocated) {
             rs->nodes = (domNode**)REALLOC((void*)rs->nodes,
                                            2 * rs->allocated * sizeof(domNode*));
@@ -1769,7 +1805,6 @@ Production(IdKeyPattern)
         a->intvalue = f_id;
         Consume(LPAR);
         Consume(LITERAL);
-        /* STRVAL */
         b = NewStr( Literal, STRVAL);
         AddChild (a, b);
         Consume(RPAR);
@@ -1779,12 +1814,10 @@ Production(IdKeyPattern)
         a = NewStr( ExecIdKey, STRVAL);
         Consume(LPAR);
         Consume(LITERAL);
-        /* STRVAL */
         b = NewStr( Literal, STRVAL);
         AddChild (a, b);
         Consume(COMMA);
         Consume(LITERAL);
-        /* STRVAL */
         b = NewStr( Literal, STRVAL);
         AddChild (a, b);
         Consume(RPAR);
@@ -2491,6 +2524,7 @@ xpathEvalFunction (
     if (result->type == EmptyResult) useFastAdd = 1;
     else useFastAdd = 0;
 
+
     switch (step->intvalue) {
 
     case f_position:
@@ -2513,7 +2547,7 @@ xpathEvalFunction (
             /*  no parameter, the context node is the nodeset to
              *  operate with
              */
-            rsAddNode( &leftResult, ctxNode);
+            rsAddNodeFast( &leftResult, ctxNode);
         } else {
             XPATH_ARITYCHECK(step,1,errMsg);
             xpathRSInit (&leftResult);
@@ -2584,7 +2618,7 @@ xpathEvalFunction (
                /*  no parameter, the context node is the nodeset to
                 *  operate with
                 */
-               rsAddNode( &leftResult, ctxNode);
+               rsAddNodeFast( &leftResult, ctxNode);
 
            } else {
                XPATH_ARITYCHECK(step,1,errMsg);
@@ -2684,7 +2718,7 @@ xpathEvalFunction (
                        /* Don't report nodes out of the fragment list */
                        if (node->parentNode != NULL ||
                            (node == node->ownerDocument->documentElement)) {
-                           checkRsAddNode (result, node);
+                           rsAddNodeSecure (result, node);
                        }
                    }
                    FREE(leftStr);
@@ -2710,7 +2744,7 @@ xpathEvalFunction (
                            /* Don't report nodes out of the fragment list */
                            if (node->parentNode != NULL ||
                                (node == node->ownerDocument->documentElement)) {
-                               checkRsAddNode (result, node);
+                               rsAddNodeSecure (result, node);
                            }
                        }
                        pwhite = 1;
@@ -2732,7 +2766,7 @@ xpathEvalFunction (
                        /* Don't report nodes out of the fragment list */
                        if (node->parentNode != NULL ||
                            (node == node->ownerDocument->documentElement)) {
-                           rsAddNode (result, node);
+                           rsAddNodeSecure (result, node);
                        }
                    }
                }
@@ -4721,7 +4755,7 @@ int xpathEval (
     CHECK_RC;
 
     xpathRSInit( &nodeList);
-    rsAddNode( &nodeList, node);
+    rsAddNodeFast( &nodeList, node);
 
     rc = xpathEvalSteps( t, &nodeList, node, exprContext, 1, &docOrder, cbs, result,
                          errMsg);
@@ -4758,7 +4792,7 @@ int xpathMatchesSlow (
     while (1) {
         xpathRSInit( &rs );
         xpathRSInit( &nodeList );
-        rsAddNode( &nodeList, currentNode );
+        rsAddNodeFast( &nodeList, currentNode );
 
         rc = xpathEvalSteps( steps, &nodeList, currentNode, exprContext, 1, &docOrder,
                              cbs, &rs, errMsg);
