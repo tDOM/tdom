@@ -1,3 +1,18 @@
+2003-10-21  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Fixed bug with current(), if it is used
+          in the select expr of an xsl:sort.
+
+        * generic/domxpath.c
+        * generic/domxpath.h
+        * generic/domxslt.c: Changed handling of key node sets. It's a
+          somewhat focused optimization, for the price of a very small
+          overall cost. I've done it anyway, because it's an very
+          notable speed up for an important xslt pattern (the so
+          called Muenchian Method for grouping). 
+
+        * generic/tcldom.c: Removed two unused variables.
+
 2003-10-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c: Fixed dom parse -channel option, which got
