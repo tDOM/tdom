@@ -2,7 +2,7 @@
 #   Copyright (c) 1999-2001 Jochen Loewer (loewerj@hotmail.com)   
 #----------------------------------------------------------------------------
 #
-#   $Header$
+#   $Id$
 #
 #
 #   A simple command line XSLT processor using tDOMs XSLT engine.
@@ -33,9 +33,9 @@
 #
 #----------------------------------------------------------------------------
 
-package require tdom 0.7.8
+package require tdom 0.8.0
 
-# The following is normaly not needed, given, that tDOM is correctly
+# The following is not needed, given, that tDOM is correctly
 # installed. This code only ensures, that the tDOM script library gets
 # sourced, if the script is called with a tcldomsh out of the build
 # dir of a complete tDOM source installation.
@@ -43,6 +43,9 @@ if {[lsearch [namespace children] ::tdom] == -1} {
     # tcldomsh without the script library. Source the lib.
     source [file join [file dir [info script]] ../lib tdom.tcl]
 }
+
+# Import the tDOM helper procs
+namespace import tDOM::*
 
 # Argument check
 if {[llength $argv] != 2 && [llength $argv] != 3} {
@@ -53,26 +56,32 @@ if {[llength $argv] != 2 && [llength $argv] != 3} {
 foreach { xmlFile xsltFile outputOpt } $argv break
 
 
-# This is the callback proc for xslt:message elements. This proc is called
-# once every time an xslt:message element is encountered during processing
-# the stylesheet. The callback proc simply puts out the text message on
-# stderr.
+# This is the callback proc for xslt:message elements. This proc is
+# called once every time an xslt:message element is encountered during
+# processing the stylesheet. The callback proc simply sends the text
+# message to stderr.
 proc xsltmsgcmd {msg terminate} {
     puts stderr "xslt message: $msg"
 }
 
-set xmldoc [dom parse -baseurl [tDOM::baseURL $xmlFile] \
-                      -externalentitycommand ::tDOM::extRefHandler \
+#set ::tDOM::extRefHandlerDebug 1
+
+set xmldoc [dom parse -baseurl [baseURL $xmlFile] \
+                      -externalentitycommand extRefHandler \
                       -keepEmpties \
-                      [tDOM::xmlReadFile $xmlFile] ]
+                      [xmlReadFile $xmlFile] ]
 
 dom setStoreLineColumn 1
-set xsltdoc [dom parse -baseurl [tDOM::baseURL $xsltFile] \
-                       -externalentitycommand ::tDOM::extRefHandler \
+set xsltdoc [dom parse -baseurl [baseURL $xsltFile] \
+                       -externalentitycommand extRefHandler \
                        -keepEmpties \
-                       [tDOM::xmlReadFile $xsltFile] ]
+                       [xmlReadFile $xsltFile] ]
 dom setStoreLineColumn 0
-$xmldoc xslt -xsltmessagecmd xsltmsgcmd $xsltdoc resultDoc
+if {[catch {$xmldoc xslt -xsltmessagecmd xsltmsgcmd $xsltdoc resultDoc} \
+         errMsg]} {
+    puts stderr $errMsg
+    exit 1
+}
 
 if {$outputOpt == ""} {
     set outputOpt [$resultDoc getDefaultOutputMethod]
@@ -86,7 +95,12 @@ if {[$resultDoc systemId] != ""} {
 switch $outputOpt {
     asXML -
     xml  {
-        puts [$resultDoc asXML -indent no -escapeNonASCII \
+        if {[$resultDoc indent]} {
+            set indent 4
+        } else {
+            set indent no
+        }
+        puts [$resultDoc asXML -indent $indent -escapeNonASCII \
                 -doctypeDeclaration $doctypeDeclaration]
     }
     asHTML -
