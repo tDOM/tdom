@@ -56,10 +56,10 @@ NODEBUG = 1
 #
 #-------------------------------------------------------------------------
 
-NAMEPREFIX = tdom
+NAMEPREFIX = libtdom
 STUBPREFIX = $(NAMEPREFIX)stub
-DOTVERSION = 0.7
-VERSION = 07
+DOTVERSION = 0.7.5
+VERSION = 075
 
 BINROOT         = .
 !IF "$(NODEBUG)" == "1"
@@ -119,7 +119,7 @@ lib32          = "$(TOOLS32)\bin\lib.exe"
 
 WINDIR         = $(ROOT)\win
 GENERICDIR     = $(ROOT)\generic
-EXPATDIR       = $(ROOT)\expat-1.95.1
+EXPATDIR       = $(ROOT)\expat
 TCLINCDIR      = $(INSTALLDIR)\Include
 
 TCL_INCLUDES   = -I"$(WINDIR)" -I"$(GENERICDIR)" -I"$(EXPATDIR)" -I"$(TCLINCDIR)"
@@ -143,7 +143,7 @@ cdebug = -Z7 -Od
 !ENDIF
 
 # declarations common to all compiler options
-cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DXML_DTD -DXML_NS -DTDOM_NO_UNKNOWN_CMD -DUSE_TCL_STUBS -DVERSION="\"1.95.1\""
+cflags = -c -W3 -nologo -Fp$(TMPDIR)\ -YX -DHAVE_MEMMOVE -DXML_DTD -DXML_NS -DTDOM_NO_UNKNOWN_CMD -DUSE_TCL_STUBS
 cvarsdll = -MD$(DBGX)
 
 TCL_CFLAGS     = $(cdebug) $(cflags) $(cvarsdll) $(include32) \
