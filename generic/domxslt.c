@@ -5056,7 +5056,9 @@ static int ExecAction (
                     nsAlias = nsAlias->next;
                 }
                 ns1 = domAddNSToNode (xs->lastNode, ns);
-                xs->lastNode->namespace = ns1->index;
+                if (ns1) {
+                    xs->lastNode->namespace = ns1->index;
+                }
                 ns->uri = uri;
             } else {
                 ns = domLookupPrefix (xs->lastNode, "");
