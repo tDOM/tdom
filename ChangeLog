@@ -1,3 +1,8 @@
+2003-09-16  Zoran Vasiljevic  <zoran@archiware.com>
+
+	* Makefile.in: added SHLIB_CFLAGS to set of compiler
+	  switches in order to silence the picky linker.
+
 2003-09-14  Rolf Ade  <rolf@pointsman.de>
 
         * lib/tdom.tcl: Fixed scripting bugs in
