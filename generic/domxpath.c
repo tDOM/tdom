@@ -4278,6 +4278,7 @@ static int xpathEvalStepAndPredicates (
 {
     xpathResultSet  stepResult, tmpResult;
     int             rc, i, j;
+    int            *done;
     domNode        *parent;
     
     if (steps->next && steps->next->type == Pred) {
@@ -4290,21 +4291,25 @@ static int xpathEvalStepAndPredicates (
            "The Predicate filters the node-set with respect to the
            child axis" */
         if (steps->type == AxisDescendantOrSelf || steps->type == AxisDescendant) {
+            done = calloc (sizeof (int) * stepResult.nr_nodes, sizeof (int));
             for (i = 0; i < stepResult.nr_nodes; i++) {
+                if (done[i]) continue;
                 xpathRSInit (&tmpResult);
                 if (stepResult.nodes[i]->nodeType == ATTRIBUTE_NODE) {
                     parent = ((domAttrNode *)stepResult.nodes[i])->parentNode;
                 } else {
                     parent = stepResult.nodes[i]->parentNode;
                 }
-                for (j = 0; j < stepResult.nr_nodes; j++) {                    
+                for (j = i; j < stepResult.nr_nodes; j++) {                    
                     if (stepResult.nodes[j]->nodeType == ATTRIBUTE_NODE) {
                         if (((domAttrNode *)stepResult.nodes[j])->parentNode == parent) {
-                            rsAddNode (&tmpResult, stepResult.nodes[j]);
+                            done[j] = 1;
+                            rsAddNodeFast (&tmpResult, stepResult.nodes[j]);
                         }
                     } else {
                         if (stepResult.nodes[j]->parentNode == parent) {
-                            rsAddNode (&tmpResult, stepResult.nodes[j]);
+                            done[j] = 1;
+                            rsAddNodeFast (&tmpResult, stepResult.nodes[j]);
                         }
                     }
                 }
@@ -4313,6 +4318,7 @@ static int xpathEvalStepAndPredicates (
                 CHECK_RC;
                 xpathRSFree (&tmpResult);
             }
+            free (done);
         } else {
             rc = xpathEvalPredicate (steps->next, exprContext, result, &stepResult,
                                      cbs, docOrder, errMsg);
