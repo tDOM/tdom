@@ -1222,17 +1222,17 @@ set docElem [$doc documentElement]
 
 test dom-14.6 {asList of tree with comment nodes} {
     $docElem asList
-} {elem {} {{#comment { comment }} {#text text} {child {a v} {{#comment comment}}}}}
+} [list elem {} [list [list \#comment " comment "] [list \#text text] [list child [list a v] [list [list \#comment comment]]]]]
 
 test dom-14.7 {asList on a comment} {
     set commentNode [$docElem firstChild]
     $commentNode asList
-} {#comment { comment }}
+} [list \#comment " comment "]
 
 test dom-14.8 {asList on a comment} {
     set commentNode [$docElem selectNodes {(//comment())[2]}]
     $commentNode asList
-} {#comment comment}
+} [list \#comment comment]
 
 test dom-14.9 {appendFromList with comment nodes in the list} {
     set list [$docElem asList]
@@ -1251,17 +1251,19 @@ set docElem [$doc documentElement]
 
 test dom->14.10 {asList of tree with PI nodes} {
     $docElem asList
-} {elem {} {{#pi myPI value} {#text text} {child {a v} {{#pi myPI1 {the value}}}}}}
+} [list elem {} [list [list \#pi myPI value] [list \#text text] [list child [list a v] [list [list \#pi myPI1 "the value"]]]]] 
+
+#{elem {} {{#pi myPI value} {#text text} {child {a v} {{#pi myPI1 {the value}}}}}}
 
 test dom->14.11 {asList on a PI} {
     set piNode [$docElem firstChild]
     $piNode asList
-} {#pi myPI value}
+} [list \#pi myPI value]
 
 test dom->14.12 {asList on a PI} {
     set piNode [$docElem selectNodes {(//processing-instruction())[2]}]
     $piNode asList
-} {#pi myPI1 {the value}}
+} [list \#pi myPI1 "the value"]
 
 test dom-14.13 {appendFromList with comment node in the list} {
     set list [$docElem asList]
