@@ -28,6 +28,9 @@
 |
 |
 |   $Log$
+|   Revision 1.3  2002/05/16 12:03:30  rolf
+|   Corrected tdom stubs table export.
+|
 |   Revision 1.2  2002/02/23 01:13:33  rolf
 |   Some code tweaking for a mostly warning free MS build
 |
@@ -50,7 +53,9 @@
 #include <tcl.h>
 #include <dom.h>
 #include <tcldom.h>
+#include <tdom.h>
 
+extern TdomStubs tdomStubs;
 
 /*
  *----------------------------------------------------------------------------
@@ -74,7 +79,7 @@ Tdom_Init (interp)
 {
 
 #ifdef USE_TCL_STUBS
-    Tcl_InitStubs(interp, "8.3", 0);
+    Tcl_InitStubs(interp, "8", 0);
 #endif
     domModuleInitialize();
 
@@ -90,11 +95,14 @@ Tdom_Init (interp)
 #ifndef TDOM_NO_EXPAT    
     Tcl_CreateObjCommand (interp, "expat",       TclExpatObjCmd, NULL, NULL );
     Tcl_CreateObjCommand (interp, "xml::parser", TclExpatObjCmd, NULL, NULL );
-    Tcl_PkgProvide(interp, "expat", "2.0");      
 #endif
     
-    Tcl_PkgProvide (interp, "stackedtdom", "0.1");    
+#ifdef USE_TCL_STUBS
+    Tcl_PkgProvideEx (interp, "tdom",  STR_TDOM_VERSION(TDOM_VERSION), 
+                    (ClientData) &tdomStubs);
+#else
     Tcl_PkgProvide (interp, "tdom",  STR_TDOM_VERSION(TDOM_VERSION));
+#endif
 
     return TCL_OK;
 }
