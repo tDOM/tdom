@@ -1,26 +1,11 @@
-These files comprise the basic building blocks for a Tcl Extension
-Architecture (TEA) extension.  For more information on TEA see:
+The other files in this directory are the functional core of the Tcl
+Extension Architecture (TEA). For more information on TEA see:
 
 	http://www.tcl.tk/doc/tea/
 
-This package is part of the Tcl project at SourceForge, and latest
-sources should be available there:
+The other files in this directory are out of the tclconfig directory
+of:
 
-	http://tcl.sourceforge.net/
+http://cvs.sourceforge.net/viewcvs.py/tcl/sampleextension/
 
-This package is a freely available open source package.  You can do
-virtually anything you like with it, such as modifying it, redistributing
-it, and selling it either in whole or in part.
-
-CONTENTS
-========
-The following is a short description of the files you will find in
-the sample extension.
-
-README.txt	This file
-
-install-sh	Program used for copying binaries and script files
-		to their install locations.
-
-tcl.m4		Collection of Tcl autoconf macros.  Included by a package's
-		aclocal.m4 to define SC_* macros.
+from 2005-04-11 (TEA 3.2).
