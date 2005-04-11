@@ -33,7 +33,7 @@
 #
 #----------------------------------------------------------------------------
 
-package require tdom 0.8.0
+package require tdom 0.8.1
 
 # The following is not needed, given, that tDOM is correctly
 # installed. This code only ensures, that the tDOM script library gets
@@ -49,7 +49,7 @@ namespace import tDOM::*
 
 # Argument check
 if {[llength $argv] != 2 && [llength $argv] != 3} {
-    puts stderr "usage: $argv0 <xml-file> <xslt-file> \
+    puts stderr "usage: $argv0 <xml-file> <xslt-file>\
                         ?output_method (asHTML|asXML|asText)?"
     exit 1
 }
@@ -117,4 +117,3 @@ switch $outputOpt {
         exit 1
     }
 }
-
