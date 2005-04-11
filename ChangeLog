@@ -1,5 +1,12 @@
 2005-04-11  Rolf Ade  <rolf@pointsman.de>
 
+        * tclconfig/ChangeLog
+        * tclconfig/ac_c_bigendian_cross.m4: Deleted.     
+            
+        * tclconfig/README.txt: Updated.    
+
+        * apps/xslt.tcl: Updated to request tdom 0.8.1.
+
         * Makefile.in
         * configure
         * configure.in
