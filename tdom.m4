@@ -236,12 +236,12 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 
 	    no_tdom=true
         if test "${TEA_PLATFORM}" = "windows" ; then
-            bindir=win
+            tdom_bindir=win
         else
-            bindir=unix
+            tdom_bindir=unix
         fi
 
-	    AC_CACHE_VAL(ac_cv_c_tdomconfig,[
+            AC_CACHE_VAL(ac_cv_c_tdomconfig,[
 
 	    # First check to see if --with-tdom was specified.
 	    if test x"${with_tdomconfig}" != x ; then
@@ -257,12 +257,19 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 			    ../tdom `ls -dr ../tdom-* 2>/dev/null` \
 			    ../../tdom `ls -dr ../../tdom-* 2>/dev/null` \
 			    ../../../tdom `ls -dr ../../../tdom-* 2>/dev/null` ; do
-		        if test -f "$i/$bindir/tdomConfig.sh" ; then
-			        ac_cv_c_tdomconfig=`(cd $i/$bindir; pwd)`
+		        if test -f "$i/$tdom_bindir/tdomConfig.sh" ; then
+			        ac_cv_c_tdomconfig=`(cd $i/$tdom_bindir; pwd)`
 			        break
 		        fi
 		    done
 	    fi
+            # Then check if tnc/tdom are compilied in the source tree
+	    if test x"${ac_cv_c_tdomconfig}" = x ; then
+                    if test -f "../../$tdom_bindir/tdomConfig.sh" ; then 
+		        ac_cv_c_tdomconfig=`(cd ../../$tdom_bindir; pwd)`
+		        break
+ 	            fi
+            fi
 	    # Check in a few common install locations
 	    if test x"${ac_cv_c_tdomconfig}" = x ; then
 		    for i in \
@@ -279,8 +286,8 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 		for i in \
             ${srcdir}/../tdom \
             `ls -dr ${srcdir}/../tdom[[0-9]].[[0-9]]* 2>/dev/null` ; do
-		        if test -f "$i/$bindir/tdomConfig.sh" ; then
-		            ac_cv_c_tdomconfig=`(cd $i/$bindir; pwd)`
+		        if test -f "$i/$tdom_bindir/tdomConfig.sh" ; then
+		            ac_cv_c_tdomconfig=`(cd $i/$tdom_bindir; pwd)`
 		            break
 		        fi
 		    done
@@ -322,13 +329,42 @@ AC_DEFUN(TDOM_LOAD_CONFIG, [
     else
         AC_MSG_RESULT([file not found])
     fi
-    AC_SUBST(TDOM_MAJOR_VERSION)
-    AC_SUBST(TDOM_MINOR_VERSION)
-    AC_SUBST(TDOM_PATCHLEVEL)
     AC_SUBST(TDOM_VERSION)
     AC_SUBST(TDOM_BUILD_STUB_LIB_SPEC)
     AC_SUBST(TDOM_STUB_LIB_SPEC)
     AC_SUBST(TDOM_SRC_DIR)
+])
+
+#------------------------------------------------------------------------
+# TDOM_EXPORT_CONFIG --
+#
+#	Define the data to insert into the ${PACKAGE_NAME}Config.sh file
+#
+# Arguments:
+#	None
+#
+# Results:
+#	Subst the following vars:
+#
+#------------------------------------------------------------------------
+
+AC_DEFUN(TDOM_EXPORT_CONFIG, [
+    #--------------------------------------------------------------------
+    # These are for ${PACKAGE_NAME}Config.sh
+    #--------------------------------------------------------------------
+
+    # pkglibdir must be a fully qualified path and (not ${exec_prefix}/lib)
+    eval pkglibdir="[$]{libdir}/${PACKAGE_NAME}${PACKAGE_VERSION}"
+    if test "${TCL_LIB_VERSIONS_OK}" = "ok"; then
+	eval PKG_STUB_LIB_FLAG="-l${PACKAGE_NAME}stub${PACKAGE_VERSION}"
+    else
+	eval PKG_STUB_LIB_FLAG="-l${PACKAGE_NAME}stub`echo ${PACKAGE_VERSION} | tr -d .`"
+    fi
+    PKG_BUILD_STUB_LIB_SPEC="-L`pwd` ${PKG_STUB_LIB_FLAG}"
+    PKG_STUB_LIB_SPEC="-L${pkglibdir} ${PKG_STUB_LIB_FLAG}"
+
+    AC_SUBST(PKG_BUILD_STUB_LIB_SPEC)
+    AC_SUBST(PKG_STUB_LIB_SPEC)
 ])
 
 # EOF

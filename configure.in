@@ -27,7 +27,7 @@ AC_INIT([tdom], [0.8.1])
 # as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
 #--------------------------------------------------------------------
 
-TEA_INIT([3.1])
+TEA_INIT([3.2])
 
 AC_CONFIG_AUX_DIR(tclconfig)
 
@@ -121,7 +121,7 @@ TEA_ADD_TCL_SOURCES([lib/tdom.tcl])
 #--------------------------------------------------------------------
 
 if test "${TEA_PLATFORM}" = "windows" ; then
-    AC_DEFINE(BUILD_sample)
+    AC_DEFINE(BUILD_tdom)
     CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
     #TEA_ADD_SOURCES([win/winFile.c])
     #TEA_ADD_INCLUDES([-I\"$(${CYGPATH} ${srcdir}/win)\"])
@@ -221,10 +221,12 @@ TDOM_ENABLE_TDOMALLOC
 TDOMSHELL=tcldomsh
 AC_SUBST(TDOMSHELL)
 
+TDOM_EXPORT_CONFIG
+
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the Makefile.
 # You may alternatively have a special pkgIndex.tcl.in or other files
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([Makefile tdomConfig.sh])

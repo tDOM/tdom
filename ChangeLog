@@ -1,3 +1,17 @@
+2005-04-11  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in
+        * configure
+        * configure.in
+        * tdom.m4
+        * tdomConfig.sh.in
+        * tclconfig/tcl.m4
+        * extensions/tnc/Makefile.in
+        * extensions/tnc/configure
+        * extensions/tnc/configure.in
+        * extensions/tnc/tnc.c: Updated to use TEA 3.2. Thanks to
+          Daniel A. Steffen and Andreas Kupries for input.
+        
 2005-04-04  Rolf Ade  <rolf@pointsman.de>
 
         * expat/expat.h: Removed last comma in enum XML_Status
