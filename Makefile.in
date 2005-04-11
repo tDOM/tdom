@@ -157,11 +157,11 @@ PKG_CFLAGS	= @PKG_CFLAGS@
 #DEFS		= $(TCL_DEFS) @DEFS@ $(PKG_CFLAGS)
 DEFS		= @DEFS@ $(PKG_CFLAGS)
 
-CONFIG_CLEAN_FILES = Makefile
+CONFIG_CLEAN_FILES = Makefile tdomConfig.sh
 
 CPPFLAGS	= @CPPFLAGS@
 LIBS		= @PKG_LIBS@ @LIBS@
-AR		= ar
+AR		= @AR@
 CFLAGS		= @CFLAGS@
 COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 
@@ -200,10 +200,6 @@ binaries: $(BINARIES) pkgIndex.tcl-hand
 libraries:
 
 doc:
-	@echo "If you have documentation to create, place the commands to"
-	@echo "build the docs in the 'doc:' target.  For example:"
-	@echo "        xml2nroff sample.xml > sample.n"
-	@echo "        xml2html sample.xml > sample.html"
 
 install: all install-binaries install-libraries install-doc
 
@@ -413,6 +409,7 @@ install-lib-binaries:
 	    echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
 	    $(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
 	fi
+	$(INSTALL_DATA) tdomConfig.sh $(DESTDIR)$(libdir)
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)

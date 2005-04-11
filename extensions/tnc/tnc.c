@@ -2967,7 +2967,7 @@ Tnc_Init (interp)
 #endif
     Tcl_PkgRequire (interp, "tdom", "0.8.0", 0);
     Tcl_CreateObjCommand (interp, "tnc", TclTncObjCmd, NULL, NULL );
-    Tcl_PkgProvide (interp, "tnc", VERSION);
+    Tcl_PkgProvide (interp, "tnc", PACKAGE_VERSION);
     return TCL_OK;
 }
 
