@@ -828,7 +828,7 @@ TclExpatParse (interp, expat, data, len, type)
   Tcl_Channel channel = NULL;
   CHandlerSet *activeCHandlerSet;
 #if !TclOnly8Bits
-  Tcl_Obj       *bufObj;
+  Tcl_Obj       *bufObj = NULL;
   Tcl_DString    dStr;
   int            useBinary;
   char          *str;
@@ -917,8 +917,13 @@ TclExpatParse (interp, expat, data, len, type)
                   break;
               }
           } while (!done);
-          result = 1;
-          Tcl_DecrRefCount (bufObj);
+          /* In case of a parsing error we need the string rep of the
+             bufObj until the error reporting is done (otherwise,
+             calling XML_GetCurrentLineNumber() results in invalid mem
+             reads */
+          if (result) {
+              Tcl_DecrRefCount (bufObj);
+          }
       }
 #else
       expat->parsingState = 2;
@@ -994,6 +999,11 @@ TclExpatParse (interp, expat, data, len, type)
           sprintf(s, "%d", XML_GetCurrentColumnNumber(expat->parser));
           Tcl_AppendResult(interp, s, NULL);
       }
+#if !TclOnly8Bits
+      if (bufObj) {
+          Tcl_DecrRefCount (bufObj);
+      }
+#endif
       return TCL_ERROR;
   }
   switch (expat->status) {
@@ -3186,8 +3196,8 @@ TclGenExpatUnknownEncodingHandler(encodingHandlerData, name, info)
  *----------------------------------------------------------------------------
  */
 static int
-TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base,
-	systemId, publicId)
+TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
+                                    publicId)
      XML_Parser parser;
      CONST char *openEntityNames;
      CONST char *base;
