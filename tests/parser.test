@@ -397,14 +397,26 @@ proc elementstart {args} {
 test parser-5.2 {parse channel input with catched try to recursive parsing} {
     catch {unset ::count}
 
-    catch {rename parser-5.1 {}}
-    set parser [::xml::parser parser-5.1 -elementstartcommand elementstart]
+    catch {rename parser-5.2 {}}
+    set parser [::xml::parser parser-5.2 -elementstartcommand elementstart]
     set fd [open [file join [pwd] [file dir [info script]] data/books.xml]]
     $parser parsechannel $fd
     close $fd
     list $::count
 } {42}
 
+test parser-5.3 {parse channel - xml wrong} -setup {
+    set xmlFile [makeFile {<root><a></root>} parser.xml]
+} -body {
+    set fd [open $xmlFile]
+    catch {rename parser-5.3 {}}
+    set parser [::xml::parser parser-5.3 -elementstartcommand elementstart]
+    set result [catch {$parser parsechannel $fd}]
+    close $fd
+    set result
+} -cleanup {
+    removeFile parser.xml
+} -result 1
 
 test parser-6.1 {reuse parser} {
     catch {rename parser-6.1 {}}
