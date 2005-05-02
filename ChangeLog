@@ -1,3 +1,10 @@
+2005-05-02  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/parser.test    
+        * generic/tclexpat.c: Bug fix: expat parser method
+          parsechannel didn't (depending on the encoding of the
+          channel) reported parsing errors.
+
 2005-04-11  Rolf Ade  <rolf@pointsman.de>
 
         * tclconfig/ChangeLog
