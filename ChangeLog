@@ -1,9 +1,15 @@
+2005-05-12  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/domNode.test
+        * generic/tcldom.c: Fix: domNode nodeValue $newValue didn't
+          check the newValue for being valid pcdata.
+
 2005-05-02  Rolf Ade  <rolf@pointsman.de>
 
         * tests/parser.test    
         * generic/tclexpat.c: Bug fix: expat parser method
           parsechannel didn't (depending on the encoding of the
-          channel) reported parsing errors.
+          channel) report parsing errors.
 
 2005-04-11  Rolf Ade  <rolf@pointsman.de>
 
