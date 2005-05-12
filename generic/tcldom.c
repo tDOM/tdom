@@ -1639,6 +1639,7 @@ int tcldom_nameCheck (
         result = domIsNAME (name);
     }
     if (!result) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid ", nameType, " name '", name, "'",
                           (char *) NULL);
         return 0;
@@ -1657,6 +1658,7 @@ int tcldom_PINameCheck (
 {
     /* XML rec, production 17 */
     if (!domIsPINAME (name)) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid processing instruction name '", 
                           name, "'", NULL);
         return 0;
@@ -1675,6 +1677,7 @@ int tcldom_textCheck (
 )
 {
     if (!domIsChar (text)) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid ", errText, " value '", text, "'",
                           (char *) NULL);
         return 0;
@@ -1693,6 +1696,7 @@ int tcldom_commentCheck (
 )
 {
     if (!domIsComment (text)) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid comment value '", text, "'",
                           (char *) NULL);
         return 0;
@@ -1710,6 +1714,7 @@ int tcldom_CDATACheck (
 )
 {
     if (!domIsCDATA (text)) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid CDATA section value '", text, "'",
                           (char *) NULL);
         return 0;
@@ -1727,6 +1732,7 @@ int tcldom_PIValueCheck (
 )
 {
     if (!domIsPIValue (text)) {
+        Tcl_ResetResult (interp);
         Tcl_AppendResult (interp, "Invalid processing instruction value '", 
                           text, "'", (char *) NULL);
         return 0;
@@ -4231,8 +4237,14 @@ int tcldom_NodeObjCmd (
                                  dtn->nodeValue, dtn->valueLength);
             }
             if (objc == 3) {
-                attr_val = Tcl_GetStringFromObj(objv[2], &length);
-                exception = domSetNodeValue(node, attr_val, length);
+                str = Tcl_GetStringFromObj(objv[2], &length);
+                switch (node->nodeType) {
+                case TEXT_NODE: CheckText (interp, str, "text"); break;
+                case COMMENT_NODE: CheckComment (interp, str); break;
+                case CDATA_SECTION_NODE: CheckCDATA (interp, str); break;
+                default: break; /* Do nothing */
+                }
+                exception = domSetNodeValue(node, str, length);
                 if (exception != OK) {
                     SetResult(domException2String(exception));
                     return TCL_ERROR;

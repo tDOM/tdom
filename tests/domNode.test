@@ -933,6 +933,15 @@ test domNode-9.8 {nodeValue - CDATA_SECTION_NODE} {
 
 $doc delete
 
+test domNode-9.9 {nodeValue - invalid new value} {
+    set doc [dom parse <doc>text</doc>]
+    $doc documentElement root
+    set result [catch {[$root firstChild] nodeValue "ab\u0003\u0003cd"} \
+                     errMsg]
+    $doc delete
+    lappend result $errMsg
+} [list 1 "Invalid text value 'ab\u0003\u0003cd'"]
+
 set doc [dom parse <foo/>]
 set root [$doc documentElement]
 
