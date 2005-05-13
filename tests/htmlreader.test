@@ -4,6 +4,7 @@
 # Tested functionalities:
 #    html-1.*: Character encoding
 #    html-2.*: Parsing tests
+#    html-3.*: Bad data
 #
 # Copyright (c) 2002 Rolf Ade.
 #
@@ -58,7 +59,15 @@ test html-2.2 {HTML parsing} {
     $doc delete
     set result
 } {<html><head/><body><h1>HTML</h1></body></html>}
-   
+
+test html-3.1 {Bad data} {
+    set data {line 6 column 17 - Warning: <script> lacks "type" attribute
+line 10 column 17 - Warning: <script> lacks "type" attribute
+        line 11 column 17 - Warning: <table> lacks "summary" attribute}
+    catch {set doc [dom parse -html $data]}
+} 1
+
+        
 
 # cleanup
 ::tcltest::cleanupTests
