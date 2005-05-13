@@ -1,7 +1,7 @@
 2005-05-13  Rolf Ade  <rolf@pointsman.de>
 
         * tests/htmlreader.test
-        * generic/domhtml.c: Fixed seg fault is case of some garbage
+        * generic/domhtml.c: Fixed seg fault in case of some garbage
           input.
 
 2005-05-12  Rolf Ade  <rolf@pointsman.de>
