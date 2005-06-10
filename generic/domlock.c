@@ -104,7 +104,7 @@ domLocksUnlock(domlock *dl)
 void
 domLocksAttach(domDocument *doc)
 {
-    domlock *dl, *tmp = NULL;
+    domlock *dl;
 
     Tcl_MutexLock(&lockMutex);
     
