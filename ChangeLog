@@ -1,3 +1,26 @@
+2005-06-10  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domhtml.c
+        * generic/tcldom.c
+        * generic/xmlsimple.c: Internal dispersion: Cleaned up
+          rootNode/toplevel nodes connection, added new function
+          domSetDocumentElement.
+
+        * tcldom.c: Closed memory leak in case of not well-formed
+          input to the simple or html parser.  
+
+        * generic/domlock.h: Removed unused variable.
+
+        * tests/dom.test: Added test, to document handling of white
+          space outside the document element even in case of
+          -keepEmpties (it's markup white space and will be removed).
+
+        * tests/domDoc.test
+        * tests/htmlreader.test
+        * tests/xmlsimple.test: Added a few tests.
+
 2005-05-13  Rolf Ade  <rolf@pointsman.de>
 
         * tests/htmlreader.test
