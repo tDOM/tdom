@@ -1490,8 +1490,6 @@ int tcldom_selectNodes (
         o_namespaces, o_cache
     };
 
-    GetTcldomTSD();
-    
     if (objc < 2) {
         SetResult("Wrong # of arguments.");
         return TCL_ERROR;
@@ -4989,18 +4987,7 @@ int tcldom_DocObjCmd (
             if (setDocumentElement) {
                 /* The method call may have altered the documentElement. */
                 /* There may be even no node anymore */
-                doc->documentElement = NULL;
-                n = doc->rootNode->firstChild;
-                while (n) {
-                    if (n->nodeType == ELEMENT_NODE) {
-                        doc->documentElement = n;
-                        break;
-                    }
-                    n = n->nextSibling;
-                }
-                if (!doc->documentElement) {
-                    doc->documentElement = doc->rootNode->firstChild;
-                }
+                domSetDocumentElement (doc);
             }
             if (restoreDomCreateCmdMode) {
                 TSD(domCreateCmdMode) = DOM_CREATECMDMODE_AUTO;
@@ -5400,6 +5387,7 @@ int tcldom_parse (
                                           &byteIndex, &errStr);
         }
         if (errStr != NULL) {
+            domFreeDocument (doc, NULL, interp);
 
             Tcl_ResetResult(interp);
             sprintf(s, "%d", byteIndex);
@@ -5836,8 +5824,6 @@ int tcldom_UnregisterDocShared (
 )
 {
     int deleted;
-
-    GetTcldomTSD()
 
     Tcl_MutexLock(&tableMutex);
     if (doc->refCount > 1) {
