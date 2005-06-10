@@ -29,8 +29,9 @@
 #    domDoc-23.*: getElementsByTagNameNS
 #    domDoc-24.*: cdataSectionElements
 #    domDoc-25.*: selectNodesNamespaces
+#    domDoc-26.*: fragments list
 #
-# Copyright (c) 2004 Rolf Ade.
+# Copyright (c) 2004, 2005 Rolf Ade.
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
@@ -746,6 +747,22 @@ test domDoc-11.4 {firstChild} {
     set result
 } {newNode}
 
+test domDoc-11.5 {Delete top level node} {
+    set doc [dom parse {<!---comment on top level--><root/>}]
+    [$doc firstChild] delete
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root/>}
+
+test domDoc-11.6 {Delete top level node} {
+    set doc [dom parse {<!---comment on top level--><root/>}]
+    [$doc documentElement] delete
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<!---comment on top level-->}
+
 test domDoc-12.1 {lastChild} {
     set doc [dom createDocumentNode]
     set result [$doc lastChild]
@@ -817,6 +834,21 @@ test domDoc-14.1 {removeChild} {
     $doc delete
     set result
 } {}
+
+test domDoc-14.2 {removeChild} {
+    set doc [dom parse {<!---comment on top level--><root/>}]
+    $doc removeChild [$doc firstChild]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root/>}
+
+test domDoc-14.3 {removeChild} {
+    set doc [dom createDocumentNode]
+    set result [catch {$doc removeChild [$doc firstChild]}]
+    $doc delete
+    set result
+} {1}
 
 test domDoc-15.1 {hasChildNodes} {
     set doc [dom createDocumentNode]
@@ -980,6 +1012,17 @@ test domDoc-22.2 {appendFromScript} {
     $doc delete
     set result
 } {<root/><e1/><e2/> {} 1 {} 1 {} 1}
+
+test domDoc-22.3 {appendFromScript} {
+    set doc [dom createDocumentNode]
+    set nrOfNodeCmdsBefore [info commands domNode*]
+    $doc appendFromScript {
+            nodeCmds::e1
+    }
+    $doc delete
+    set nrOfNodeCmdsAfter [info commands domNode*]
+    expr {$nrOfNodeCmdsBefore == $nrOfNodeCmdsAfter}
+} {1}
 
 test domDoc-23.1 {getElementsByTagNameNS} {
     dom createNodeCmd elementNode child
@@ -1246,6 +1289,24 @@ test domDoc-25.9 {selectNodesNamespaces} {
     $doc delete
     set result
 } {{} elem1 elem11 {}}
+
+
+test domDoc-26.1 {Fragment list} {
+    set doc [dom parse {<!---comment on top level-->
+        <root>text1<child>text2</child>text3</root>}]
+    $doc removeChild [$doc firstChild]
+    $doc documentElement root
+    for {set i 1} {$i < 4} {incr i} {
+        set removedNode$i [$root removeChild [$root firstChild]]
+    }
+    $removedNode2 delete
+    $root appendChild $removedNode3
+    $root appendChild $removedNode1
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<root>text3text1</root>}
+
 
 # cleanup
 ::tcltest::cleanupTests
