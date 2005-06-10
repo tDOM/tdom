@@ -433,6 +433,24 @@ test dom-2.24 {parse - script error in -externalentitycommand} {
     lappend result $errMsg
 } {1 {2.24 external entitiy resolver script error}}
 
+test dom-2.25 {White space outside the document element is markup and ignored, even with -keepEmpties} {
+    set doc [dom parse -keepEmpties {
+<!-- First comment -->
+<doc>
+  <!-- Front comment -->
+  <inner/>
+  <!-- Back comment -->
+</doc>
+<!-- Last comment -->}]
+    set result [$doc asXML -indent none]
+    $doc delete
+    set result
+} {<!-- First comment --><doc>
+  <!-- Front comment -->
+  <inner/>
+  <!-- Back comment -->
+</doc><!-- Last comment -->}
+
 test dom-3.1 {isName} {
     dom isName ":foo"
 } {1}
