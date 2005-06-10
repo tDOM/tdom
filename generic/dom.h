@@ -691,6 +691,7 @@ domDocument *  domCreateDoc (char *baseURI, int storeLineColumn);
 domDocument *  domCreateDocument (Tcl_Interp *interp,
                                   char *documentElementTagName,
                                   char *uri);
+void           domSetDocumentElement (domDocument *doc);
 
 domDocument *  domReadDocument   (XML_Parser parser,
                                   char *xml,

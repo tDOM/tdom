@@ -413,7 +413,7 @@ XML_SimpleParse (
     register char *x, *start, *piSep;
     int            saved;
     int            hasContent;
-    domNode       *node, *toplevel, *rootNode;
+    domNode       *node;
     domNode       *parent_node = NULL;
     domTextNode   *tnode;
     domAttrNode   *attrnode, *lastAttr, *attrList;
@@ -525,20 +525,7 @@ XML_SimpleParse (
             } 
 #endif                                   
             if (parent_node == NULL) {
-                /* we return to main node and so finished parsing
-                   create the root node now
-                 */
-                rootNode = doc->rootNode;
-                rootNode->firstChild = doc->documentElement;
-                while (rootNode->firstChild->previousSibling) {
-                    rootNode->firstChild = rootNode->firstChild->previousSibling;
-                }
-                rootNode->lastChild = doc->documentElement;
-                while (rootNode->lastChild->nextSibling) {
-                    rootNode->lastChild = rootNode->lastChild->nextSibling;
-                }
-                doc->rootNode = rootNode;
-
+                /* we return to main node and so finished parsing */
 #ifdef TDOM_NS
                 FREE ((char *) activeNS);
 #endif                
@@ -576,16 +563,15 @@ XML_SimpleParse (
                         memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
-                            if (doc->documentElement) {
-                                toplevel = doc->documentElement;
-                                while (toplevel->nextSibling) {
-                                    toplevel = toplevel->nextSibling;
-                                }
-                                toplevel->nextSibling   = (domNode*)tnode;
-                                tnode->previousSibling = (domNode*)toplevel;
+                            if (doc->rootNode->lastChild) {
+                                tnode->previousSibling = 
+                                    doc->rootNode->lastChild;
+                                doc->rootNode->lastChild->nextSibling 
+                                    = (domNode*)tnode;
                             } else {
-                                doc->documentElement = (domNode*)tnode;
+                                doc->rootNode->firstChild = (domNode*) tnode;
                             }
+                            doc->rootNode->lastChild = (domNode*) tnode;
                         } else {
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
@@ -724,16 +710,14 @@ XML_SimpleParse (
                     memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
-                        if (doc->documentElement) {
-                            toplevel = doc->documentElement;
-                            while (toplevel->nextSibling) {
-                                toplevel = toplevel->nextSibling;
-                            }
-                            toplevel->nextSibling   = (domNode*)pinode;
-                            pinode->previousSibling = (domNode*)toplevel;
+                        if (doc->rootNode->lastChild) {
+                            pinode->previousSibling = doc->rootNode->lastChild;
+                            doc->rootNode->lastChild->nextSibling 
+                                = (domNode*) pinode;
                         } else {
-                            doc->documentElement = (domNode*)pinode;
+                            doc->rootNode->firstChild = (domNode*) pinode;
                         }
+                        doc->rootNode->lastChild = (domNode*) pinode;
                     } else {
                         if (parent_node->firstChild)  {
                             parent_node->lastChild->nextSibling = (domNode*)pinode;
@@ -782,15 +766,13 @@ XML_SimpleParse (
             node->ownerDocument = doc;
 
             if (parent_node == NULL) {
-                if (doc->documentElement) {
-                    toplevel = doc->documentElement;
-                    while (toplevel->nextSibling) {
-                        toplevel = toplevel->nextSibling;
-                    }
-                    toplevel->nextSibling = node;
-                    node->previousSibling = toplevel;
+                if (doc->rootNode->lastChild) {
+                    node->previousSibling = doc->rootNode->lastChild;
+                    doc->rootNode->lastChild->nextSibling = node;
+                } else {
+                    doc->rootNode->firstChild = node;
                 }
-                doc->documentElement = node;
+                doc->rootNode->lastChild = node;
             } else {
                 node->parentNode = parent_node;
                 if (parent_node->firstChild)  {
@@ -1046,18 +1028,6 @@ XML_SimpleParse (
                 }
             }
             if (x[1] == 0) {
-
-                rootNode = doc->rootNode;
-                rootNode->firstChild = doc->documentElement;
-                while (rootNode->firstChild->previousSibling) {
-                    rootNode->firstChild = rootNode->firstChild->previousSibling;
-                }
-                rootNode->lastChild = doc->documentElement;
-                while (rootNode->lastChild->nextSibling) {
-                    rootNode->lastChild = rootNode->lastChild->nextSibling;
-                }
-                doc->rootNode = rootNode;
-
 #ifdef TDOM_NS
                 FREE ((char *) activeNS);
 #endif                
@@ -1107,6 +1077,7 @@ XML_SimpleParseDocument (
     
     *pos = 0;
     XML_SimpleParse (xml, pos, doc, NULL, ignoreWhiteSpaces, errStr);
+    domSetDocumentElement (doc);
 
     return doc;
 

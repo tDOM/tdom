@@ -724,7 +724,7 @@ HTML_SimpleParse (
     register char *x, *start, *piSep;
     int            saved;
     int            hasContent;
-    domNode       *pnode, *toplevel;
+    domNode       *pnode;
     domNode       *node = NULL, *parent_node = NULL;
     domTextNode   *tnode;
     domAttrNode   *attrnode, *lastAttr;
@@ -980,16 +980,15 @@ HTML_SimpleParse (
                         memmove(tnode->nodeValue, start+4, tnode->valueLength);
                         *(tnode->nodeValue + tnode->valueLength) = 0;
                         if (parent_node == NULL) {
-                            if (doc->documentElement) {
-                                toplevel = doc->documentElement;
-                                while (toplevel->nextSibling) {
-                                    toplevel = toplevel->nextSibling;
-                                }
-                                toplevel->nextSibling   = (domNode*)tnode;
-                                tnode->previousSibling = (domNode*)toplevel;
+                            if (doc->rootNode->lastChild) {
+                                tnode->previousSibling = 
+                                    doc->rootNode->lastChild;
+                                doc->rootNode->lastChild->nextSibling 
+                                    = (domNode *) tnode;
                             } else {
-                                doc->documentElement = (domNode*)tnode;
+                                doc->rootNode->firstChild = (domNode*) tnode;
                             }
+                            doc->rootNode->lastChild = (domNode*) tnode;
                         } else {
                             if (parent_node->firstChild)  {
                                 parent_node->lastChild->nextSibling = (domNode*)tnode;
@@ -1128,16 +1127,14 @@ HTML_SimpleParse (
                     memmove(pinode->dataValue, piSep, pinode->dataLength);
 
                     if (parent_node == NULL) {
-                        if (doc->documentElement) {
-                            toplevel = doc->documentElement;
-                            while (toplevel->nextSibling) {
-                                toplevel = toplevel->nextSibling;
-                            }
-                            toplevel->nextSibling   = (domNode*)pinode;
-                            pinode->previousSibling = (domNode*)toplevel;
+                        if (doc->rootNode->lastChild) {
+                            pinode->previousSibling = doc->rootNode->lastChild;
+                            doc->rootNode->lastChild->nextSibling 
+                                = (domNode*) pinode;
                         } else {
-                            doc->documentElement = (domNode*)pinode;
+                            doc->rootNode->firstChild = (domNode*) pinode;
                         }
+                        doc->rootNode->lastChild = (domNode*) pinode;
                     } else {
                         if (parent_node->firstChild)  {
                             parent_node->lastChild->nextSibling = (domNode*)pinode;
@@ -1212,15 +1209,13 @@ HTML_SimpleParse (
             node->nodeNumber    = NODE_NO(doc);
 
             if (parent_node == NULL) {
-                if (doc->documentElement) {
-                    toplevel = doc->documentElement;
-                    while (toplevel->nextSibling) {
-                        toplevel = toplevel->nextSibling;
-                    }
-                    toplevel->nextSibling = node;
-                    node->previousSibling = toplevel;
+                if (doc->rootNode->lastChild) {
+                    node->previousSibling = doc->rootNode->lastChild;
+                    doc->rootNode->lastChild->nextSibling = node;
+                } else {
+                    doc->rootNode->firstChild = node;
                 }
-                doc->documentElement = node;
+                doc->rootNode->lastChild = node;
             } else {
                 node->parentNode = parent_node;
                 if (parent_node->firstChild)  {
@@ -1486,9 +1481,7 @@ HTML_SimpleParseDocument (
     *pos = 0;
     HTML_SimpleParse (html, pos, doc, NULL, ignoreWhiteSpaces, errStr);
 
-    doc->rootNode->firstChild 
-        = doc->rootNode->lastChild
-        = doc->documentElement;
+    domSetDocumentElement (doc);
     return doc;
 
 } /* HTML_SimpleParseDocument */
