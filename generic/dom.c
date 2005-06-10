@@ -1005,7 +1005,7 @@ startElement(
 )
 {
     domReadInfo   *info = userData;
-    domNode       *node, *parentNode, *toplevel;
+    domNode       *node, *parentNode;
     domLineColumn *lc;
     domAttrNode   *attrnode, *lastAttr;
     const char   **atPtr, **idAttPtr;
@@ -1075,15 +1075,13 @@ startElement(
     }
 
     if (info->depth == 0) {
-        if (info->document->documentElement) {
-            toplevel = info->document->documentElement;
-            while (toplevel->nextSibling) {
-                toplevel = toplevel->nextSibling;
-            }
-            toplevel->nextSibling = node;
-            node->previousSibling = toplevel;
+        if (info->document->rootNode->lastChild) {
+            info->document->rootNode->lastChild->nextSibling = node;
+            node->previousSibling = info->document->rootNode->lastChild;
+        } else {
+            info->document->rootNode->firstChild = node;
         }
-        info->document->documentElement = node;
+        info->document->rootNode->lastChild = node;
     } else {
         parentNode = info->currentNode;
         node->parentNode = parentNode;
@@ -1438,11 +1436,10 @@ DispatchPCDATA (
             if (parentNode->firstChild)  {
                 parentNode->lastChild->nextSibling = (domNode*)node;
                 node->previousSibling = parentNode->lastChild;
-                parentNode->lastChild = (domNode*)node;
             } else {
-                parentNode->firstChild = parentNode->lastChild = 
-                    (domNode*)node;
+                parentNode->firstChild = (domNode*)node;
             }
+            parentNode->lastChild = (domNode*)node;
         }
 
         if (info->baseURIstack[info->baseURIstackPos].baseURI 
@@ -1477,7 +1474,7 @@ commentHandler (
 {
     domReadInfo   *info = userData;
     domTextNode   *node;
-    domNode       *parentNode, *toplevel;
+    domNode       *parentNode;
     domLineColumn *lc;
     int            len, hnew;
     Tcl_HashEntry *h;
@@ -1513,16 +1510,13 @@ commentHandler (
     node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
-        if (info->document->documentElement) {
-            toplevel = info->document->documentElement;
-            while (toplevel->nextSibling) {
-                toplevel = toplevel->nextSibling;
-            }
-            toplevel->nextSibling = (domNode*)node;
-            node->previousSibling = (domNode*)toplevel;
+        if (info->document->rootNode->lastChild) {
+            info->document->rootNode->lastChild->nextSibling = (domNode*)node;
+            node->previousSibling = info->document->rootNode->lastChild;
         } else {
-            info->document->documentElement = (domNode*)node;
+            info->document->rootNode->firstChild = (domNode*)node;
         }
+        info->document->rootNode->lastChild = (domNode*)node;
     } else if(parentNode->nodeType == ELEMENT_NODE) {
         if (parentNode->firstChild)  {
             parentNode->lastChild->nextSibling = (domNode*)node;
@@ -1564,7 +1558,7 @@ processingInstructionHandler(
 {
     domProcessingInstructionNode *node;
     domReadInfo                  *info = userData;
-    domNode                      *parentNode, *toplevel;
+    domNode                      *parentNode;
     domLineColumn                *lc;
     int                           len,hnew;
     Tcl_HashEntry                *h;
@@ -1621,16 +1615,13 @@ processingInstructionHandler(
     node->ownerDocument = info->document;
     node->parentNode = parentNode;
     if (parentNode == NULL) {
-        if (info->document->documentElement) {
-            toplevel = info->document->documentElement;
-            while (toplevel->nextSibling) {
-                toplevel = toplevel->nextSibling;
-            }
-            toplevel->nextSibling = (domNode*)node;
-            node->previousSibling = (domNode*)toplevel;
+        if (info->document->rootNode->lastChild) {
+            info->document->rootNode->lastChild->nextSibling = (domNode*)node;
+            node->previousSibling = info->document->rootNode->lastChild;
         } else {
-            info->document->documentElement = (domNode*)node;
+            info->document->rootNode->firstChild = (domNode*)node;
         }
+        info->document->rootNode->lastChild = (domNode*)node;
     } else if(parentNode->nodeType == ELEMENT_NODE) {
         if (parentNode->firstChild)  {
             parentNode->lastChild->nextSibling = (domNode*)node;
@@ -1897,8 +1888,10 @@ externalEntityRefHandler (
   if (oldparser) {
       info->parser = oldparser;
   }
-  Tcl_AppendResult (info->interp, "The -externalentitycommand script has to return a Tcl list with 3 elements.\n",
-                    "Syntax: {string|channel|filename, <baseurl>, <data>}\n", NULL);
+  Tcl_AppendResult (info->interp, "The -externalentitycommand script "
+                    "has to return a Tcl list with 3 elements.\n"
+                    "Syntax: {string|channel|filename, <baseurl>, <data>}\n",
+                    NULL);
   return 0;
 }
 
@@ -1965,7 +1958,6 @@ domReadDocument (
     Tcl_Interp *interp
 )
 {
-    domNode       *rootNode;
     int            done, len;
     domReadInfo    info;
     char           buf[8192];
@@ -2096,15 +2088,7 @@ domReadDocument (
     Tcl_DStringFree (info.cdata);
     FREE ( info.cdata);
 
-    rootNode = doc->rootNode;
-    rootNode->firstChild = doc->documentElement;
-    while (rootNode->firstChild->previousSibling) {
-        rootNode->firstChild = rootNode->firstChild->previousSibling;
-    }
-    rootNode->lastChild = doc->documentElement;
-    while (rootNode->lastChild->nextSibling) {
-        rootNode->lastChild = rootNode->lastChild->nextSibling;
-    }
+    domSetDocumentElement (doc);
 
     return doc;
 }
@@ -2195,7 +2179,7 @@ domCreateXMLNamespaceNode (
     attr->nodeName      = (char *)&(h->key);
     attr->parentNode    = parent;
     attr->valueLength   = strlen (XML_NAMESPACE);
-    attr->nodeValue     = XML_NAMESPACE;
+    attr->nodeValue     = tdomstrdup (XML_NAMESPACE);
     return attr;
 }
 #endif /* TDOM_NS */
@@ -2357,6 +2341,31 @@ domCreateDocument (
 
 
 /*---------------------------------------------------------------------------
+|   domSetDocumentElement
+|
+\--------------------------------------------------------------------------*/
+void
+domSetDocumentElement (
+    domDocument     *doc
+    )
+{
+    domNode *node;
+    
+    doc->documentElement = NULL;
+    node = doc->rootNode->firstChild;
+    while (node) {
+        if (node->nodeType == ELEMENT_NODE) {
+            doc->documentElement = node;
+            break;
+        }
+        node = node->nextSibling;
+    }
+    if (!doc->documentElement) {
+        doc->documentElement = doc->rootNode->firstChild;
+    }
+}
+
+/*---------------------------------------------------------------------------
 |   domFreeNode
 |
 \--------------------------------------------------------------------------*/
@@ -2465,7 +2474,7 @@ domDeleteNode (
     void            * clientData
 )
 {
-    int shared = 0;
+    TDomThreaded(int shared = 0;)
     domDocument *doc;
 
     if (node->nodeType == ATTRIBUTE_NODE) {
@@ -2475,18 +2484,6 @@ domDeleteNode (
         shared = node->ownerDocument->refCount > 1;
     )
     doc = node->ownerDocument;
-    if (node->parentNode == node->ownerDocument->rootNode) {
-        MutationEvent3(DOMNodeRemoved, childToRemove, node);
-        MutationEvent2(DOMSubtreeModified, node);
-        if (freeCB) {
-            freeCB(node, clientData);
-        }
-        if (shared == 0) {
-            domFreeNode(node, freeCB, clientData, 0);
-        }
-        doc->rootNode->firstChild = NULL;
-        return OK;
-    }
 
     /*----------------------------------------------------------------
     |   unlink node from child or fragment list
@@ -2496,6 +2493,11 @@ domDeleteNode (
     } else {
         if (node->parentNode) {
             node->parentNode->firstChild = node->nextSibling;
+        } else {
+            /* Node may be a top level node */
+            if (doc->rootNode->firstChild == node) {
+                doc->rootNode->firstChild = node->nextSibling;
+            }
         }
     }
     if (node->nextSibling) {
@@ -2503,10 +2505,18 @@ domDeleteNode (
     } else {
         if (node->parentNode) {
             node->parentNode->lastChild = node->previousSibling;
+        } else {
+            /* Node may be a top level node */
+            if (doc->rootNode->lastChild == node) {
+                doc->rootNode->lastChild = node->previousSibling;
+            }
         }
     }
     if (doc->fragments == node) {
         doc->fragments = node->nextSibling;
+    }
+    if (!node->parentNode) {
+        domSetDocumentElement (doc);
     }
 
     /*----------------------------------------------------------------
@@ -2559,21 +2569,12 @@ domFreeDocument (
     /*-----------------------------------------------------------
     |   delete main trees, including top level PIs, etc.
     \-----------------------------------------------------------*/
-    node = doc->documentElement;
-    while (node && node->previousSibling) {
-        /*  move to the very first node (top level PIs),
-         *  since documentElement could point to the documents
-         *  ELEMENT_NODE
-         */
-        node = node->previousSibling;
-    }
-    while (node) {
-        next = node->nextSibling;
+    node = doc->rootNode;
+    if (node) {
         if (freeCB) {
             freeCB(node, clientData);
         }
         domFreeNode (node, freeCB, clientData, dontfree);
-        node = next;
     }
 
     /*-----------------------------------------------------------
@@ -2680,12 +2681,6 @@ domFreeDocument (
 
     if (doc->extResolver) {
         FREE (doc->extResolver);
-    }
-
-    if (doc->rootNode) {
-        if (doc->rootNode->firstAttr)
-            domFree ((void*)doc->rootNode->firstAttr);
-        domFree ((void*)doc->rootNode);
     }
 
     /*-----------------------------------------------------------
@@ -3914,8 +3909,6 @@ domAppendNewElementNode(
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = ELEMENT_NODE;
-    node->nodeFlags     = 0;
-    node->namespace     = 0;
     node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->nodeName      = (char *)&(h->key);
@@ -4247,8 +4240,6 @@ domAppendLiteralNode(
     node = (domNode*) domAlloc(sizeof(domNode));
     memset(node, 0, sizeof(domNode));
     node->nodeType      = ELEMENT_NODE;
-    node->nodeFlags     = 0;
-    node->namespace     = 0;
     node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->nodeName      = (char *)&(h->key);
@@ -5065,7 +5056,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     char            *method, *encodingName;
     CHandlerSet     *handlerSet;
     int              methodIndex, result, bool;
-    domNode         *rootNode;
     tdomCmdReadInfo *info;
     TclGenExpatInfo *expat;
     Tcl_Obj         *newObjName = NULL;
@@ -5169,17 +5159,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
             Tcl_SetResult (interp, "No DOM tree avaliable.", NULL);
             return TCL_ERROR;
         }
-        rootNode = info->document->rootNode;
-        if (info->document->documentElement) {
-            rootNode->firstChild = info->document->documentElement;
-            while (rootNode->firstChild->previousSibling) {
-                rootNode->firstChild = rootNode->firstChild->previousSibling;
-            }
-            rootNode->lastChild = info->document->documentElement;
-            while (rootNode->lastChild->nextSibling) {
-                rootNode->lastChild = rootNode->lastChild->nextSibling;
-            }
-        }
+        domSetDocumentElement (info->document);
         result = tcldom_returnDocumentObj (interp, info->document, 0,
                                            newObjName, 1);
         info->document = NULL;

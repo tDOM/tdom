@@ -4881,7 +4881,7 @@ static int ExecAction (
                 CHECK_RC;
                 if (!domIsPINAME (str2) || !domIsNCNAME(str2)) {
                     reportError (actionNode, "xsl:processing-instruction: "
-                                 " Processing instruction name is invalid.",
+                                 "Processing instruction name is invalid.",
                                  errMsg);
                     FREE(str2);
                     return -1;
@@ -4904,7 +4904,7 @@ static int ExecAction (
                 if (child->nodeType != TEXT_NODE) {
                     domDeleteNode (fragmentNode, NULL, NULL);
                     reportError (actionNode, "xsl:processing-instruction must "
-                                 " not create nodes other than text nodes.",
+                                 "not create nodes other than text nodes.",
                                  errMsg);
                     FREE(str2);
                     return -1;
@@ -4914,7 +4914,7 @@ static int ExecAction (
             str = xpathGetStringValue (fragmentNode, &len);
             if (!domIsPIValue (str)) {
                 reportError (actionNode, "Invalide processing instruction "
-                             " value", errMsg);
+                             "value", errMsg);
                 domDeleteNode (fragmentNode, NULL, NULL);
                 FREE(str);
                 FREE(str2);
@@ -7558,18 +7558,8 @@ int xsltProcess (
        be text, comment or PI nodes before the first element node.
        If the root node doesn't have an element node under it's childs,
        fall back to the firstChild as documentElement. */
-    xs->resultDoc->documentElement = NULL;
-    node = xs->resultDoc->rootNode->firstChild;
-    while (node) {
-        if (node->nodeType == ELEMENT_NODE) {
-            xs->resultDoc->documentElement = node;
-            break;
-        }
-        node = node->nextSibling;
-    }
-    if (!xs->resultDoc->documentElement) {
-        xs->resultDoc->documentElement = xs->resultDoc->rootNode->firstChild;
-    }
+    domSetDocumentElement (xs->resultDoc);
+
     *resultDoc = xs->resultDoc;
 
     xsltPopVarFrame (xs);
@@ -7584,11 +7574,6 @@ int xsltProcess (
  error:
     xsltPopVarFrame (xs);
     xpathRSFree( &nodeList );
-    /* domFreeDocument() needs a set resultDoc->documentElement to
-       work properly */
-    if (!xs->resultDoc->documentElement) {
-        xs->resultDoc->documentElement = xs->resultDoc->rootNode->firstChild;
-    }
     domFreeDocument (xs->resultDoc, NULL, NULL);
     if (xsltCmdData) {
         xsltResetState (xs);
