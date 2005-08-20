@@ -989,6 +989,56 @@ domGetAttributeNodeNS (
     return NULL;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * domPreviousSibling --
+ *
+ *      Returns the previous node to the given node or NULL, if there
+ *      is no previous node. This function is needed in situations,
+ *      where the given node may also be an domAttrNode. Namespace
+ *      declaring attributes are treated as any other
+ *      attributes. Since the domAttrNode struct doesn't has an
+ *      element for the previous attribute, we need a function for the
+ *      relatively rare cases, the 'previous attribute' is
+ *      needed. Remeber, that the XML rec say, that there is no
+ *      specific order of the attributes of a node.
+ *
+ * Results: 
+ *      A pointer to the previous node of the given one
+ *      or NULL, if there isn't a previous node.
+ *
+ * Side effects:
+ *      None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+domNode *
+domPreviousSibling (
+    domNode *node      /* The reference attribute */
+    )
+{
+    domAttrNode *attr, *attr1;
+    
+    if (node->nodeType != ATTRIBUTE_NODE) {
+        return node->previousSibling;
+    }
+
+    attr = (domAttrNode*) node;
+    if (attr->parentNode->firstAttr == attr) {
+        return NULL;
+    }
+    attr1 = attr->parentNode->firstAttr;
+    while (attr1) {
+        if (attr1->nextSibling == attr) {
+            return (domNode*)attr1;
+        }
+        attr1 = attr1->nextSibling;
+    }
+    /* Not reached */
+    return NULL;
+}
 
 #ifndef  TDOM_NO_EXPAT
 
