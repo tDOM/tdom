@@ -1,3 +1,12 @@
+2005-08-20  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * generic/dom.h: Added function domPreviousSibling().
+
+        * generic/domxslt.c: Bug fix: Use domPreviousSibling() in
+          xsltNumber() to prevent erroneous results, if attribute
+          nodes are involved in the numbering.
+
 2005-06-10  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
