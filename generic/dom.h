@@ -454,7 +454,7 @@ typedef enum {
 } domException;
 
 /*--------------------------------------------------------------------------
-|   domDoctype
+|   domDocInfo
 |
 \-------------------------------------------------------------------------*/
 typedef struct domDocInfo {
@@ -749,6 +749,7 @@ domAttrNode *  domGetAttributeNodeNS (domNode *node, char *uri,
 
 int            domRemoveAttribute (domNode *node, char *attributeName);
 int            domRemoveAttributeNS (domNode *node, char *uri, char *localName);
+domNode *      domPreviousSibling (domNode *attr);
 domException   domDeleteNode   (domNode *node, domFreeCallback freeCB, void *clientData);
 domException   domRemoveChild  (domNode *node, domNode *childToRemove);
 domException   domAppendChild  (domNode *node, domNode *childToAppend);
