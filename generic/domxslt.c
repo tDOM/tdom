@@ -1584,7 +1584,9 @@ static int xsltFormatNumber (
         DBG(
             Tcl_DStringInit(&dbStr);
             fprintf (stderr, "'%s' ---> ..\n", stmp);
-            fprintf(stderr,"s='%s' isNeg=%d'\n", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen(s), &dbStr), isNeg);
+            fprintf(stderr,"s='%s' isNeg=%d'\n", 
+                    Tcl_UniCharToUtfDString (s, Tcl_UniCharLen(s), &dbStr), 
+                    isNeg);
             Tcl_DStringFree (&dbStr);
         )
         zl = l + ((l-1) / gLen);
@@ -1602,10 +1604,12 @@ static int xsltFormatNumber (
         }
         DBG(
             Tcl_DStringInit (&dbStr);
-            fprintf(stderr,"s='%s' --> ", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+            fprintf(stderr,"s='%s' --> ", 
+                    Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
             Tcl_DStringFree (&dbStr); 
             Tcl_DStringInit (&dbStr);
-            fprintf(stderr,"n='%s'\n", Tcl_UniCharToUtfDString (n, Tcl_UniCharLen (n), &dbStr));
+            fprintf(stderr,"n='%s'\n", 
+                    Tcl_UniCharToUtfDString (n, Tcl_UniCharLen (n), &dbStr));
             Tcl_DStringFree (&dbStr); 
         )
     } else {
@@ -1617,11 +1621,13 @@ static int xsltFormatNumber (
         n[l] = '\0';
         DBG(
             Tcl_DStringInit (&dbStr);
-            fprintf(stderr,"n='%s'\n", Tcl_UniCharToUtfDString(n, Tcl_UniCharLen (n), &dbStr));
+            fprintf(stderr,"n='%s'\n", 
+                    Tcl_UniCharToUtfDString(n, Tcl_UniCharLen (n), &dbStr));
             Tcl_DStringFree (&dbStr);
         )
     }
-    DBG(fprintf(stderr, "number=%f fHash=%d fZero=%d \n", number, fHash, fZero);)
+    DBG(fprintf(stderr, "number=%f fHash=%d fZero=%d \n", number, fHash, 
+                fZero);)
     if ((fHash+fZero) > 0) {
         i = (int) number;
         /* format fraction part */
@@ -1683,7 +1689,8 @@ static int xsltFormatNumber (
     }
     DBG(
         Tcl_DStringInit (&dbStr);
-        fprintf(stderr, "returning s='%s' \n\n", Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+        fprintf(stderr, "returning s='%s' \n\n", 
+                Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
         Tcl_DStringFree (&dbStr);
     )
     Tcl_DStringFree (&dStr);
@@ -3730,13 +3737,13 @@ static int xsltNumber (
             } else {
                 vVals = 1;
                 v[0] = 1;
-                node = node->previousSibling;
+                node = domPreviousSibling (node);
                 while (node) {
                     rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
                                        errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) v[0]++;
-                    node = node->previousSibling;
+                    node = domPreviousSibling (node);
                 }
             }
         } else
@@ -3765,14 +3772,14 @@ static int xsltNumber (
             vVals = rs.nr_nodes;
             v[0] = 0;
             for (i = 0;  i < rs.nr_nodes; i++) {
-                node = rs.nodes[i]->previousSibling;
+                node = domPreviousSibling (rs.nodes[i]);
                 v[i] = 1;
                 while (node) {
                     rc = xpathMatches (t_count, actionNode, node, &(xs->cbs),
                                        errMsg);
                     if (rc < 0) goto xsltNumberError;
                     if (rc) v[i]++;
-                    node = node->previousSibling;
+                    node = domPreviousSibling (node);
                 }
             }
             xpathRSFree (&rs);
@@ -3792,16 +3799,19 @@ static int xsltNumber (
                                    errMsg);
                 if (rc < 0) goto xsltNumberError;
                 if (rc) v[0]++;
-
-                if (node->previousSibling) {
-                    node = node->previousSibling;
+                if (domPreviousSibling (node)) {
+                    node = domPreviousSibling (node);
                     while ((node->nodeType == ELEMENT_NODE)
                            && node->lastChild) {
                         node = node->lastChild;
                     }
                     continue;
                 }
-                node = node->parentNode;
+                if (node->nodeType == ATTRIBUTE_NODE) {
+                    node = ((domAttrNode *)node)->parentNode;
+                } else {
+                    node = node->parentNode;
+                }
             }
         } else {
             reportError (actionNode, "xsl:number: Wrong \"level\" attribute"
