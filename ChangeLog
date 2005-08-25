@@ -1,3 +1,21 @@
+2005-08-26  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tdominit.c: Removed tests about mt-ness of
+          tclsh/tdom, due to popular demand. Mt compiled tDOM now will
+          load into non-mt tclsh, as will a non-mt compiled tDOM into
+          a mt tclsh.
+          NOTES: 
+          Using a non-mt tDOM within only one thread of a mt
+          tclsh should work just fine. But never ever use a non-mt
+          tDOM in several threads of a mt tclsh. That may crash
+          randomly. Use, how surprising, an mt-enabled tDOM for
+          that. This will work fine.
+          Using a mt aware tDOM within a non-tm tclsh is little bit
+          slower and memory demanding. It will also have a few
+          methods, that are superfluous with the non-tm tcl
+          context. It should always work, but for best results use a
+          non-mt tDOM with non-mt tclsh.
+
 2005-08-20  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c
