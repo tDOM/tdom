@@ -12,7 +12,7 @@
           that. This will work fine.
           Using a mt aware tDOM within a non-tm tclsh is little bit
           slower and memory demanding. It will also have a few
-          methods, that are superfluous with the non-tm tcl
+          methods, that are superfluous within the non-tm tcl
           context. It should always work, but for best results use a
           non-mt tDOM with non-mt tclsh.
 
