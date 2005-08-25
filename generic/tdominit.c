@@ -65,35 +65,15 @@ int
 Tdom_Init (interp)
      Tcl_Interp *interp; /* Interpreter to initialize. */
 {
-    char *bool = NULL;
-    int   threaded = 0;
 
 #ifdef USE_TCL_STUBS
     Tcl_InitStubs(interp, "8", 0);
 #endif
 
-    bool = (char*)Tcl_GetVar2(interp, "::tcl_platform", "threaded", 0);
-    if (bool) {
-        threaded = atoi(bool);
-    } else {
-        threaded = 0;
-    }
-    
+    domModuleInitialize();
+
 #ifdef TCL_THREADS
-    if (!threaded) {
-        char *err = "Tcl core wasn't compiled for multithreading.";
-        Tcl_SetObjResult(interp, Tcl_NewStringObj(err, -1));
-        return TCL_ERROR;
-    }
-    domModuleInitialize();
     tcldom_initialize();
-#else
-    if (threaded) {
-        char *err = "tDOM wasn't compiled for multithreading.";
-        Tcl_SetObjResult(interp, Tcl_NewStringObj(err, -1));
-        return TCL_ERROR;
-    }
-    domModuleInitialize();
 #endif /* TCL_THREADS */
 
 #ifndef TDOM_NO_UNKNOWN_CMD
