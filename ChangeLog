@@ -1,4 +1,7 @@
 2005-09-13  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/domxpath.c: Bug fix: The namespace axis will be
+          emtpy unless the context node is an element.
 
         * aclocal.m4
         * configure
