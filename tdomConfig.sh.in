@@ -21,10 +21,13 @@
 #
 TDOM_VERSION='@PACKAGE_VERSION@'
 
+# The name of the TDOM library (may be either a .a file or a shared library):
+TDOM_LIB_FILE=@PKG_LIB_FILE@
+
 #
 # The name of the tDOM stub library file
 #
-TDOM_STUB_FILE=@PKG_STUB_LIB_FILE@
+TDOM_STUB_LIB_FILE=@PKG_STUB_LIB_FILE@
 
 #
 # String to pass to linker to pick up the tDOM library from
@@ -38,6 +41,16 @@ TDOM_BUILD_STUB_LIB_SPEC='@PKG_BUILD_STUB_LIB_SPEC@'
 #
 TDOM_STUB_LIB_SPEC='@PKG_STUB_LIB_SPEC@'
 
+# String to pass to linker to pick up the TDOM stub library from its
+# build directory.
+#
+TDOM_BUILD_STUB_LIB_PATH='@PKG_BUILD_STUB_LIB_PATH@'
+
+# String to pass to linker to pick up the TDOM stub library from its
+# installed directory.
+#
+TDOM_STUB_LIB_PATH='@PKG_STUB_LIB_PATH@'
+
 #
 # Location of the top-level source directories from which tDOM
 # was built.  This is the directory that contains generic, unix,
@@ -48,4 +61,3 @@ TDOM_STUB_LIB_SPEC='@PKG_STUB_LIB_SPEC@'
 TDOM_SRC_DIR='@srcdir@'
 
 # EOF
-
