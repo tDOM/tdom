@@ -4197,12 +4197,13 @@ static int xpathEvalStep (
 
     case AxisNamespace:
         *docOrder = 1;
-        if (ctxNode->nodeType == ELEMENT_NODE) {
-            node = ctxNode;
-        } else
-        if (ctxNode->nodeType == ATTRIBUTE_NODE) {
-            node = ((domAttrNode*) ctxNode)->parentNode;
-        } else return XPATH_OK;
+        /* XPath rec 2.2: "the namespace axis contains the namespace
+         * nodes of the context node; the axis will be empty unless
+         * the context node is an element */
+        if (ctxNode->nodeType != ELEMENT_NODE) {
+            return XPATH_OK;
+        }
+        node = ctxNode;
 
         while (node) {
             attr = node->firstAttr;
