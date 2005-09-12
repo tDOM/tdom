@@ -1,3 +1,14 @@
+2005-09-13  Rolf Ade  <rolf@pointsman.de>
+
+        * aclocal.m4
+        * configure
+        * tdom.m4
+        * tdomConfig.sh.in
+        * extensions/tnc/configure
+        * extensions/tnc/configure.in: Improvement of the build
+          system. Now works also with the tool combination
+          cygwin/TEA/VC++. Thanks to Andreas Kupries for his patch.
+    
 2005-08-26  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tdominit.c: Removed tests about mt-ness of
