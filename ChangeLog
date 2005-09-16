@@ -1,3 +1,9 @@
+2005-09-16  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Fixed memory fault in case of external
+          documents resolved based on the base URI of a node of the
+          source element.
+
 2005-09-13  Rolf Ade  <rolf@pointsman.de>
         
         * generic/domxpath.c: Bug fix: The namespace axis will be
