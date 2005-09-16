@@ -7149,12 +7149,31 @@ xsltResetState (
     Tcl_HashSearch     search, search1;
     Tcl_HashTable     *htable;
     
-    /*--- free sub documents ---*/
+
+
+
+    /* Free the sub documents, which are resolved relative to nodes in
+     * the xml source. */
+    /* XML documents don't have excludeNS and extensionNS information
+       and the already parsed XSLT documents information is
+       preserved, therefor we don't touch excludeNS and extensionNS
+       information */
+    /* This loop works only as coded, because, the first subdoc will
+     * always be the primary xslt doc, so xs->subDocs will not
+     * change. Crusty stuff, this code. */
     sd = xs->subDocs;
     while (sd)  {
         sdsave = sd;
         sd = sd->next;
-        if (!sdsave->isStylesheet) {
+        if (sdsave->isStylesheet || sdsave->fixedXMLSource) {
+            if (lastSubDoc) {
+                lastSubDoc->next = sdsave;
+            } else {
+                xs->subDocs = sdsave;
+            }
+            lastSubDoc = sdsave;
+            sdsave->next = NULL;
+        } else {
             for (entryPtr = Tcl_FirstHashEntry (&sdsave->keyData, &search);
                  entryPtr != (Tcl_HashEntry*) NULL;
                  entryPtr = Tcl_NextHashEntry (&search)) {
@@ -7170,21 +7189,7 @@ xsltResetState (
                 FREE(htable);
             }
             Tcl_DeleteHashTable (&sdsave->keyData);
-        }
-        /* XML documents don't have excludeNS and extensionNS information
-           and the already parsed XSLT documents information is
-           preserved, therefor we don't touch extensionNS and extensionNS
-           information */
-        if (sdsave->isStylesheet || sdsave->fixedXMLSource) {
-            
-            if (lastSubDoc) {
-                lastSubDoc->next = sdsave;
-            } else {
-                xs->subDocs = sdsave;
-            }
-            lastSubDoc = sdsave;
-            sdsave->next = NULL;
-        } else {
+
             if (sdsave->mustFree) {
                 domFreeDocument (sdsave->doc, NULL, NULL);
             }
