@@ -2982,8 +2982,8 @@ xpathEvalFunction (
             rsPrint(&leftResult);
             )
         if (leftResult.type == EmptyResult) {
-            *errMsg = tdomstrdup ("id() requires an argument!");
-            return XPATH_EVAL_ERR;
+            xpathRSFree (&leftResult);
+            return XPATH_OK;
         }
         if (leftResult.type == xNodeSetResult) {
             for (i=0; i < leftResult.nr_nodes; i++) {
@@ -3234,7 +3234,10 @@ xpathEvalFunction (
             savedDocOrder = *docOrder;
             rc = xpathEvalStep( nextStep, ctxNode, exprContext, position,
                                 nodeList, cbs, &leftResult, docOrder, errMsg);
-            CHECK_RC;
+            if (rc) {
+                FREE (pto);
+                return rc;
+            }
             *docOrder = savedDocOrder;
 
             leftStr  = xpathFuncString( &leftResult  );
