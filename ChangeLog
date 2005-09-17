@@ -1,3 +1,18 @@
+2005-09-17  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c: id() on an empty node set should return
+          an empty string, according to the rec, not raise an error,
+          as it did up to now. Fixed a memory leak in concat() in the
+          case of xpath expressions as arguments, which raise
+          error. Normally, XPath expressions doens't raise error at
+          all; that's how XPath is designed. That is unfortunately not
+          completely true with current tDOM, because of a few buggy
+          returns in the tDOM XPath function implementations (to be
+          fixed quickly), because, tDOM doesn't do an as rigoros as
+          possible argument check at XPath expression parsing time
+          (that will change) and because of user defined XPath
+          extension functions.
+
 2005-09-16  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Fixed memory fault in case of external
