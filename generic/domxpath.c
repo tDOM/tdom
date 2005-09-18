@@ -676,7 +676,7 @@ static XPathTokens xpathLexer (
 {
     int  l, allocated;
     int  i, k, start;
-    char delim, *ps, save, *uri;
+    char delim, *ps, save, *uri, tmpErr[80];
     XPathTokens tokens;
     int token = EOS;
 
@@ -1055,7 +1055,11 @@ static XPathTokens xpathLexer (
                            }
                            tokens[l].realvalue = (double)atof(ps);
                            xpath[i--] = save;
-                       };
+                       } else {
+                           sprintf (tmpErr, "Unexpected character '%c' at position %d", xpath[i], i);
+                           *errMsg = tdomstrdup (tmpErr);
+                           return tokens;
+                       }
                        break;
 
         } /* switch */
@@ -1918,15 +1922,19 @@ Production(RelativePathPattern)
         if (LA==SLASH) {
             Consume(SLASH);
             b = Recurse(StepPattern);
-            Append(b, New(ToParent) );
-            Append(b, a);
-            a = b;
+            if (b) {
+                Append(b, New(ToParent) );
+                Append(b, a);
+                a = b;
+            }
         } else {
             Consume(SLASHSLASH);
             b = Recurse(StepPattern);
-            Append(b, New(ToAncestors) );
-            Append(b, a);
-            a = b;
+            if (b) {
+                Append(b, New(ToAncestors) );
+                Append(b, a);
+                a = b;
+            }
         }
     }
 
