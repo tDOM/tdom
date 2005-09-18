@@ -1,3 +1,9 @@
+2005-09-19  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c: Improved detection/reporting of XPath
+          syntax errors. Fixed two memory leaks in the XPath parser in
+          case of kind of erroneous XPath expressions.
+
 2005-09-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c: id() on an empty node set should return
