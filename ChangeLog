@@ -2,7 +2,7 @@
 
         * generic/domxpath.c: Improved detection/reporting of XPath
           syntax errors. Fixed two memory leaks in the XPath parser in
-          case of kind of erroneous XPath expressions.
+          case of some kind of erroneous XPath expressions.
 
 2005-09-17  Rolf Ade  <rolf@pointsman.de>
 
