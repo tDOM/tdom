@@ -3617,6 +3617,7 @@ static int xsltNumber (
                    and wrong (<= 0) integer value. */
                 reportError (actionNode, "The value of \"grouping-size\" must"
                              " evaluate to a positiv integer.", errMsg);
+                goto xsltNumberError;
             }
         }
     }
@@ -3816,7 +3817,7 @@ static int xsltNumber (
         } else {
             reportError (actionNode, "xsl:number: Wrong \"level\" attribute"
                          " value!", errMsg);
-            return -1;
+            goto xsltNumberError;
         }
     }
 
@@ -6014,6 +6015,7 @@ getExternalDocument (
     if (isStylesheet) {
         if (addExclExtNS (sdoc, doc->documentElement, errMsg) < 0) {
             Tcl_DeleteHashTable (&(sdoc->keyData));
+            domFreeDocument (sdoc->doc, NULL, NULL);
             FREE (sdoc->baseURI);
             FREE (sdoc);
             Tcl_DecrRefCount (resultObj);
@@ -6154,6 +6156,7 @@ static int processTopLevelVars (
         xs->currentXSLTNode = topLevelVar->node;
         select = getAttr (topLevelVar->node, "select", a_select);
         if (select && topLevelVar->node->firstChild) {
+            xpathRSFree (&nodeList);
             reportError (topLevelVar->node, "xsl:variable and xsl:param"
                          " elements with a select attribute must be empty",
                          errMsg);
@@ -6597,6 +6600,7 @@ static int processTopLevel (
                                  &(keyInfo->useAst), errMsg);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
+                    xpathFreeAst (keyInfo->matchAst);
                     free ((char*)keyInfo);
                     return rc;
                 }
@@ -6607,6 +6611,8 @@ static int processTopLevel (
                     if (!ns) {
                         reportError (node, "There isn't a namespace bound"
                                      " to the prefix.", errMsg);
+                        xpathFreeAst (keyInfo->matchAst);
+                        xpathFreeAst (keyInfo->useAst);
                         FREE((char*)keyInfo);
                         return -1;
                     }
