@@ -1,4 +1,17 @@
-2005-09-19  Rolf Ade  <rolf@pointsman.de>
+2005-09-24  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Doh! The code detected ill grouping-size
+          values and set errMsg accordingly, but didn't propagate the
+          error. Fixed. Do memory cleanup after detecting wrong
+          xsl:number level attribute value. Fixed memory leak in case
+          of incorrect xslt attributes of included or imported
+          xsl:stylesheet elements. Fixed memory leak in case of
+          syntactically wrong xsl:key use attribute XPath
+          expression. Fixed memory leak in case of toplevel
+          parameter or variables which are syntactically incorrect,
+          because they have both a select attribute and content.
+
+2005-09-19 Rolf Ade   <rolf@pointsman.de>
 
         * generic/domxpath.c: Improved detection/reporting of XPath
           syntax errors. Fixed two memory leaks in the XPath parser in
