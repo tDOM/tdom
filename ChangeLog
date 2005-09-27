@@ -1,3 +1,9 @@
+2005-09-27  Rolf Ade  <rolf@pointsman.de>
+ 
+        * tests/htmlreader.test: Added a test case, reported by
+          Richard Suchenwirth, which crashes 0.8.0, but raises error
+          with current cvs head, without any mem problems.
+
 2005-09-24  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Doh! The code detected ill grouping-size
