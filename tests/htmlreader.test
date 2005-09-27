@@ -97,6 +97,9 @@ line 10 column 17 - Warning: <script> lacks "type" attribute
     catch {set doc [dom parse -html $data]}
 } 1
 
+test html-3.2 {Bad data} {
+     catch {set doc [dom parse -html {<a>}]}
+} 1
         
 
 # cleanup
