@@ -99,6 +99,30 @@ test xpath-2.1 {non ASCII chars in element names} {
 set doc [dom createDocument foo]
 set root [$doc documentElement]
 
+test xpath-2.2 {non ASCII chars in string-length() call} {
+    $root selectNodes "string-length('\u20AC')"
+} 1
+
+test xpath-2.3 {non ASCII chars in substring() call} {
+    $root selectNodes "substring('ab\u20ACde',3,3)"
+} \u20ACde
+
+test xpath-2.4 {non ASCII chars in substring() call} {
+    $root selectNodes "substring('ab\u20ACde',4,3)"
+} de
+
+test xpath-2.5 {non ASCII chars in substring() call} {
+    $root selectNodes "substring('ab\u20ACde',2,3)"
+} b\u20ACd
+
+test xpath-2.6 {non ASCII chars in substring-after() call} {
+    $root selectNodes "substring-after('ab\u20ACde', '\u20AC')"
+} de
+
+test xpath-2.7 {non ASCII chars in substring-before() call} {
+    $root selectNodes "substring-before('ab\u20ACde', '\u20AC')"
+} ab
+
 test xpath-3.1 {positive number mod by 0} {
     $root selectNodes {4 mod 0}
 } {NaN}

@@ -52,6 +52,7 @@
 #define XPATH_SYNTAX_ERR    -2
 #define XPATH_EVAL_ERR      -3
 #define XPATH_VAR_NOT_FOUND -4
+#define XPATH_I18N_ERR      -5
 
 /*
  * Macros for testing floating-point values for certain special cases. Test
