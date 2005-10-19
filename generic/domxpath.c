@@ -2917,11 +2917,30 @@ xpathEvalFunction (
         }
 
         leftStr = xpathFuncString (&leftResult );
+        xpathRSFree( &leftResult );
         DBG(fprintf(stderr, "leftStr='%s'\n", leftStr);)
         if      (step->intvalue == f_string)
             rsSetString (result, leftStr);
-        else if (step->intvalue == f_stringLength)
+        else if (step->intvalue == f_stringLength) {
+#if TclOnly8Bits            
             rsSetInt (result, strlen(leftStr));
+#else
+            pto = leftStr;
+            len = 0;
+            while (*pto) {
+                len++;
+                i = UTF8_CHAR_LEN (*pto);
+                if (!i) {
+                    FREE (leftStr);
+                    *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
+                                         "to 3 bytes length");
+                    return XPATH_I18N_ERR;
+                }
+                pto += i;
+            }
+            rsSetInt (result, len);
+#endif
+        }
         else {
             pwhite = 1;
             pfrom = pto = leftStr;
@@ -2946,7 +2965,6 @@ xpathEvalFunction (
             *pto = '\0';
             rsSetString (result, leftStr);
         }
-        xpathRSFree( &leftResult );
         FREE(leftStr);
         break;
 
@@ -3323,9 +3341,14 @@ xpathEvalFunction (
             }
         } else {
             if (from < 0) from = 0;
+#if TclOnly8Bits
             len = strlen(leftStr) - from;
+#else
+            len = INT_MAX;
+#endif
         }
 
+#if TclOnly8Bits
         if (from >= (int) strlen(leftStr)) {
             rsSetString (result, "");
             FREE(leftStr);
@@ -3341,6 +3364,36 @@ xpathEvalFunction (
 
             *(leftStr+from+len) = '\0';
         rsSetString (result, (leftStr+from));
+#else 
+        pfrom = leftStr;
+        while (*pfrom && (from > 0)) {
+            i = UTF8_CHAR_LEN (*pfrom);
+            if (!i) {
+                FREE (leftStr);
+                *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
+                                     "to 3 bytes length");
+                return XPATH_I18N_ERR;
+            }
+            pfrom += i;
+            from--;
+        }
+        if (len < INT_MAX) {
+            pto = pfrom;
+            while (*pto && (len > 0)) {
+                i = UTF8_CHAR_LEN (*pto);
+                if (!i) {
+                    FREE (leftStr);
+                    *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
+                                         "to 3 bytes length");
+                    return XPATH_I18N_ERR;
+                }
+                pto += i;
+                len--;
+            }
+            *pto = '\0';
+        }
+        rsSetString (result, pfrom);
+#endif
         FREE(leftStr);
         break;
 
