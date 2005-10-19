@@ -1,3 +1,10 @@
+2005-10-19  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * generic/domxpath.h
+          tests/xpath.test: Fixed string-length() and substring() to
+          work on chars, as they should, not on bytes.
+
 2005-09-27  Rolf Ade  <rolf@pointsman.de>
  
         * tests/htmlreader.test: Added a test case, reported by
@@ -45,7 +52,7 @@
 2005-09-13  Rolf Ade  <rolf@pointsman.de>
         
         * generic/domxpath.c: Bug fix: The namespace axis will be
-          emtpy unless the context node is an element.
+          empty unless the context node is an element.
 
         * aclocal.m4
         * configure
