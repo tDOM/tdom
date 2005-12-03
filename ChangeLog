@@ -1,8 +1,19 @@
+2005-12-03  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.c
+        * tests/domNode.test: Fix of the cloneNode method: if the node
+          to clone (or, in case of -deep, a node within the subtree to
+          clone) had a namespace declaration attribute then the result
+          was wrong.
+
+        * tests/domDoc.test: Added a test for the special handling of
+          the content of script/style tags in case of asHTML.
+
 2005-10-19  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
         * generic/domxpath.h
-          tests/xpath.test: Fixed string-length() and substring() to
+        * tests/xpath.test: Fixed string-length() and substring() to
           work on chars, as they should, not on bytes.
 
 2005-09-27  Rolf Ade  <rolf@pointsman.de>
