@@ -45,7 +45,7 @@
 #    domNode-39.*: text
 #    domNode-999.* Misc Tests 
 #
-# Copyright (c) 2002, 2003, 2004 Rolf Ade.
+# Copyright (c) 2002 - 2005 Rolf Ade.
 #
 # RCS: @(#) $Id$
 
@@ -162,6 +162,16 @@ test domNode-2.10 {selectNodes - -cache option} {
     }
     string equal $nodes $otherNodes
 } {1}
+
+test domNode-2.11 {selectNodes - -cache option} {
+    set r1 [catch {$root selectNodes}]
+    set r2 [catch {$root selectNodes -cache 1}]
+    set r3 [catch {$root selectNodes -cache 0}]
+    set r4 [catch {$root selectNodes ""}]
+    set r5 [catch {$root selectNodes -cache 1 ""}]
+    set r6 [catch {$root selectNodes -cache 0 ""}]
+    list $r1 $r2 $r3 $r4 $r5 $r6
+} {1 1 1 1 1 1}
 
 $doc delete
 
@@ -581,6 +591,32 @@ test domNode-6.15 {appendChild} -setup {
     removeFile a
     removeFile b
 } -result {<new_report><existing_report_one>...</existing_report_one><existing_report_two>...</existing_report_two></new_report>}
+
+test domNode-6.16 {appendChild} -setup {
+    dom parse {<a/>} doc1
+    $doc1 documentElement root1
+    dom parse {<b xmlns="http://www.w3.org/2000/svg"></b>} doc2
+    $doc2 documentElement root2
+} -body {
+    $root1 appendChild [$root2 cloneNode -deep]
+    $root1 asXML -indent none
+} -cleanup {
+    $doc1 delete
+    $doc2 delete
+} -result {<a><b xmlns="http://www.w3.org/2000/svg"/></a>}
+
+test domNode-6.17 {appendChild} -setup {
+    dom parse {<a/>} doc1
+    $doc1 documentElement root1
+    dom parse {<b><c xmlns="http://www.w3.org/2000/svg"/></b>} doc2
+    $doc2 documentElement root2
+} -body {
+    $root1 appendChild [$root2 cloneNode -deep]
+    $root1 asXML -indent none
+} -cleanup {
+    $doc1 delete
+    $doc2 delete
+} -result {<a><b><c xmlns="http://www.w3.org/2000/svg"/></b></a>}
 
 set doc [dom parse {<root><foobar/><barfoo/><foobaz/><a/><b/><a/><c/></root>}]
 set root [$doc documentElement]

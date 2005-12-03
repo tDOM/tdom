@@ -1741,7 +1741,8 @@ externalEntityRefHandler (
 
     Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj *channelIdObj;
-    int result, len, mode, done, byteIndex, i;
+    int result, mode, done, byteIndex, i;
+    size_t len;
     XML_Parser extparser, oldparser = NULL;
     char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
@@ -2008,7 +2009,8 @@ domReadDocument (
     Tcl_Interp *interp
 )
 {
-    int            done, len;
+    int            done;
+    size_t         len;
     domReadInfo    info;
     char           buf[8192];
 #if !TclOnly8Bits
@@ -2923,7 +2925,7 @@ domSetAttributeNS (
         attr = attr->nextSibling;
     }
     if (attr) {
-        DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old valure: %s\n", attr->nodeName, attr->nodeValue);)
+        DBG(fprintf (stderr, "domSetAttributeNS: reseting existing attribute %s ; old value: %s\n", attr->nodeName, attr->nodeValue);)
         if (attr->nodeFlags & IS_ID_ATTRIBUTE) {
             h = Tcl_FindHashEntry (node->ownerDocument->ids, attr->nodeValue);
             if (h) {
@@ -4478,6 +4480,9 @@ domCloneNode (
     while (attr != NULL) {
         nattr = domSetAttribute (n, attr->nodeName, attr->nodeValue );
         nattr->namespace = attr->namespace;
+        if (attr->nodeFlags & IS_NS_NODE) {
+            nattr->nodeFlags |= IS_NS_NODE;
+        }
         attr = attr->nextSibling;
     }
 
