@@ -169,6 +169,17 @@ test domDoc-1.16 {asXML - processing-instruction without pi value} {
     set result
 } {<doc><?p ?></doc>}
 
+test domDoc-1.17 {asHTML - content of script/style tags} {
+    set doc [dom parse {
+        <html><script>a &amp; b</script><style>foo &lt; bar</style></html>
+    }]
+    set result [$doc asHTML]
+    $doc delete
+    set result
+} {<html>
+<script>a & b</script><style>foo < bar</style>
+</html>}
+
 set doc [dom parse <root/>]
 
 test domDoc-2.1 {publicId - no publicId there} {
