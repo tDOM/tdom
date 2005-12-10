@@ -4518,6 +4518,56 @@ domCloneNode (
     return n;
 }
 
+/*----------------------------------------------------------------------------
+|   domCopyNS
+|
+\---------------------------------------------------------------------------*/
+void
+domCopyNS (
+    domNode *from,
+    domNode *to
+    )
+{
+    domNode     *n, *n1;
+    domNS       *ns, *ns1;
+    domAttrNode *attr, *attr1;
+    int          skip;
+
+    n = from;
+    while (n) {
+        attr = n->firstAttr;
+        while (attr && (attr->nodeFlags & IS_NS_NODE)) {
+            ns = n->ownerDocument->namespaces[attr->namespace-1];
+            skip = 0;
+            n1 = from;
+            while (n1 != n) {
+                attr1 = n1->firstAttr;
+                while (attr1 && (attr1->nodeFlags & IS_NS_NODE)) {
+                    ns1 = n1->ownerDocument->namespaces[attr1->namespace-1];
+                    if ((ns1->prefix == NULL && ns->prefix == NULL) 
+                         || (strcmp (ns1->prefix, ns->prefix)==0)) {
+                        skip = 1;
+                        break;
+                    }
+                    attr1 = attr1->nextSibling;
+                }
+                if (skip) break;
+                n1 = n1->parentNode;
+            }
+            if (!skip) {
+                /* Add this prefix/uri combination only to the
+                   destination, if it isn't already in scope */
+                ns1 = domLookupPrefix (to, ns->prefix);
+                if (!ns1 || (strcmp (ns->uri, ns1->uri)!=0)) {
+                    domAddNSToNode (to, ns);
+                }
+            }
+            attr = attr->nextSibling;
+        }
+        n = n->parentNode;
+    }
+}
+
 
 /*---------------------------------------------------------------------------
 |   domCopyTo
@@ -4531,7 +4581,7 @@ domCopyTo (
 )
 {
     domAttrNode *attr, *nattr;
-    domNode     *n, *n1, *child;
+    domNode     *n, *child;
     domNS       *ns, *ns1;
 
     /*------------------------------------------------------------------
@@ -4559,38 +4609,23 @@ domCopyTo (
 
     n = domAppendLiteralNode (parent, node);
     if (copyNS) {
-        n1 = node;
-        while (n1) {
-            attr = n1->firstAttr;
-            while (attr && (attr->nodeFlags & IS_NS_NODE)) {
-                ns = node->ownerDocument->namespaces[attr->namespace-1];
-                ns1 = domLookupPrefix (n, ns->prefix);
-                if (!ns1 || (strcmp (ns->uri, ns1->uri)!=0)) {
-                    ns1 = domNewNamespace (n->ownerDocument, ns->prefix,
-                                           ns->uri);
-                    domAddNSToNode (n, ns1);
-                }
-                attr = attr->nextSibling;
-            }
-            n1 = n1->parentNode;
-        }
+        domCopyNS (node, n);
     }
-
-    if (node->namespace) {
-        ns = node->ownerDocument->namespaces[node->namespace-1];
-        ns1 = domAddNSToNode (n, ns);
-        if (ns1) {
-            n->namespace = ns1->index;
-        }
-    }
-
-
+    
     /*------------------------------------------------------------------
     |   copy attributes (if any)
     \-----------------------------------------------------------------*/
     attr = node->firstAttr;
     while (attr != NULL) {
         if (attr->nodeFlags & IS_NS_NODE) {
+            if (copyNS) {
+                /* If copyNS is true, then all namespaces in scope
+                 * (including the one declared with the node to copy)
+                 * are allready copied over. */
+                attr = attr->nextSibling;
+                continue;
+                
+            }
             ns = node->ownerDocument->namespaces[attr->namespace-1];
             ns1 = domLookupPrefix (n, ns->prefix);
             if (ns1 && strcmp (ns->uri, ns1->uri)==0) {
@@ -4615,6 +4650,15 @@ domCopyTo (
             }
         }
         attr = attr->nextSibling;
+    }
+
+    /* We have to set the node namespace index after copying the
+       attribute nodes over, because the node may be in a namespace,
+       which is declared just at the node. */
+    if (node->namespace) {
+        ns = node->ownerDocument->namespaces[node->namespace-1];
+        ns1 = domLookupPrefix (n, ns->prefix);
+        n->namespace = ns1->index;
     }
 
     child = node->firstChild;
