@@ -807,6 +807,7 @@ int            domIsComment (char *str);
 int            domIsCDATA (char *str);
 int            domIsPIValue (char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
+void           domCopyNS (domNode *from, domNode *to);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);
 void           domRenumberTree (domNode *node);
 int            domPrecedes (domNode *node, domNode *other);

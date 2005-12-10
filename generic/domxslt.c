@@ -3855,50 +3855,6 @@ static int xsltNumber (
     return -1;
 }
 
-
-/*----------------------------------------------------------------------------
-|   CopyNS
-|
-\---------------------------------------------------------------------------*/
-static void
-copyNS (
-    domNode *from,
-    domNode *to
-    )
-{
-    domNode     *n, *n1;
-    domNS       *ns, *ns1;
-    domAttrNode *attr, *attr1;
-    int          skip;
-
-    n = from;
-    while (n) {
-        attr = n->firstAttr;
-        while (attr && (attr->nodeFlags & IS_NS_NODE)) {
-            ns = n->ownerDocument->namespaces[attr->namespace-1];
-            skip = 0;
-            n1 = from;
-            while (n1 != n) {
-                attr1 = n1->firstAttr;
-                while (attr1 && (attr1->nodeFlags & IS_NS_NODE)) {
-                    ns1 = n1->ownerDocument->namespaces[attr1->namespace-1];
-                    if (strcmp (ns1->prefix, ns->prefix)==0) {
-                        skip = 1;
-                        break;
-                    }
-                    attr1 = attr1->nextSibling;
-                }
-                if (skip) break;
-                n1 = n1->parentNode;
-            }
-            if (!skip) domAddNSToNode (to, ns);
-            attr = attr->nextSibling;
-        }
-        n = n->parentNode;
-    }
-}
-
-
 /*----------------------------------------------------------------------------
 |   ExecAction
 |
@@ -4477,7 +4433,7 @@ static int ExecAction (
                     xs->lastNode = n;
                     str = getAttr(actionNode, "use-attribute-sets",
                               a_useAttributeSets);
-                    copyNS (currentNode, xs->lastNode);
+                    domCopyNS (currentNode, xs->lastNode);
                     if (str) {
                         rc = ExecUseAttributeSets (xs, context, currentNode,
                                                    currentPos, actionNode,
