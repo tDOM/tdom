@@ -170,7 +170,7 @@ value.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>internalSubset <m>?internalSubset?</m></method>
+        <command><method>internalSubset <m>?internalSubset?</m></method></command>
         <desc>Returns the internal subset of the doctype declaration of the
 document, if there is one, otherwise the empty string. If there is a value
 given to the method, the internal subset of the document is set to this
@@ -178,12 +178,11 @@ value. Note, that none of the parsing methods preserve the internal subset
 of a document; a freshly parsed document will always have an empty internal
 subset. Also note, that the method doesen't do any syntactical check on a
 given internal subset.</desc>
-        </command>
       </commanddef>
 
       <commanddef>
-        <command><method>cdataSectionElements (?URI:?localname|*) ?&lt;boolean&gt;?</method>
-        <desc> This method allows to control, for which element nodes
+        <command><method>cdataSectionElements</method> <m>(?URI:?localname|*) ?&lt;boolean&gt;?</m></command>
+        <desc>This method allows to control, for which element nodes
 the text node childs will be serialized as CDATA sections (this affects only
 serialization with the asXML method, no text node is altered in any
 way by this method). IF the method is called with an element name as
@@ -203,12 +202,11 @@ method is called with only one argument and that argument is an
 asterisk ('*'), then the method returns an unordered list of all
 element names of the document, for which the text node childs will be
 serialized as CDATA section nodes.</desc>
-        </command>
       </commanddef>
 
       <commanddef>
-        <command><method>selectNodesNamespaces</method> <option>?prefixUriList?</option>
-        <desc> This method allows to control a document global prefix
+        <command><method>selectNodesNamespaces</method> <option>?prefixUriList?</option></command>
+        <desc>This method allows to control a document global prefix
 to namespace URI mapping, which will be used for selectNodes method
 calls (on document as well as on all nodes, which belongs to the
 document), if it is not overwritten by using the -namespaces option of
@@ -222,7 +220,6 @@ optional argument <m>prefixUriList</m> is given, then the global prefix /
 namespace list is set to this list and returns it. Without
 the optional argument the method returns the current list. The
 default is the empty list.</desc>
-        </command>
       </commanddef>
 
       <commanddef>
