@@ -1109,7 +1109,7 @@ static int xsltFormatNumber (
     char             ** errMsg
 )
 {
-    char *p, prefix[80], suffix[80], s[240], n[80], f[80];
+    char *p, prefix[800], suffix[800], s[2400], n[800], f[800];
     char *negformat = NULL, save = '\0', save1;
     int i, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
 /*      struct lconv *lc = NULL;  */
@@ -1354,17 +1354,28 @@ static int xsltFormatNumber (
     char             ** errMsg
 )
 {
-    Tcl_UniChar prefix1[80], prefix2[80], suffix1[80], suffix2[80], s[240];
-    Tcl_UniChar save = '\0', save1, *prefix, *suffix, n[80], f[80];
+    Tcl_UniChar prefix1[800], prefix2[800], suffix1[800], suffix2[800];
+    Tcl_UniChar save = '\0', save1, t, *prefix, *suffix, n[800], f[800];
+    Tcl_UniChar uniCharNull = '\0';
     char stmp[240], ftmp[80];
     char wrongFormat[] = "Unable to interpret format pattern.";
     int i, j, k, l, zl, g, nHash, nZero, fHash, fZero, gLen, isNeg;
     int prefixMinux, percentMul = 0, perMilleMul = 0;
-    Tcl_DString  dStr;
+    Tcl_DString  dStr, s;
     Tcl_UniChar *format, *negformat = NULL, *p, *p1;
     DBG(Tcl_DString dbStr;)
 
     DBG(fprintf(stderr, "number: '%f'\nformatStr='%s' \n", number, formatStr);)
+    prefix1[0] = '\0';
+    prefix2[0] = '\0';
+    suffix1[0] = '\0';
+    suffix2[0] = '\0';
+    n[0] = '\0';
+    f[0] = '\n';
+    prefix = NULL;
+    suffix = NULL;
+    Tcl_DStringInit (&s);
+    Tcl_DStringInit (&dStr);
     if (number < 0.0) {
         isNeg = 1;
         number *= -1.0;
@@ -1375,7 +1386,6 @@ static int xsltFormatNumber (
     } else {
         isNeg = 0;
     }
-    Tcl_DStringInit (&dStr);
     format = Tcl_UtfToUniCharDString (formatStr, -1, &dStr);
     p = format;
     while (*p) {
@@ -1392,7 +1402,7 @@ static int xsltFormatNumber (
         if (*p == df->patternSeparator) {
             *errMsg = 
                 tdomstrdup("More than one patternSeparator in the pattern");
-            return -1;
+            goto xsltFormatNumberError;
         }
         p++;
     }
@@ -1419,9 +1429,13 @@ static int xsltFormatNumber (
     nHash = nZero = fHash = fZero = 0;
     gLen = -2222;
     while (*p) {
-             if (*p==df->digit) {
-                 if (nZero) {*errMsg = tdomstrdup(wrongFormat); return -1;}
-                 nHash++; }
+        if (*p==df->digit) {
+            if (nZero) {
+                *errMsg = tdomstrdup(wrongFormat);
+                goto xsltFormatNumberError;
+            }
+            nHash++; 
+        }
         else if (*p==df->zeroDigit) { nZero++; }
         else if (*p==df->groupingSeparator) { gLen=-1; }
         else break;
@@ -1438,12 +1452,12 @@ static int xsltFormatNumber (
         if (*p == df->decimalSeparator) {
             *errMsg = 
                 tdomstrdup("More than one decimalSeparator in subpattern");
-            return -1;
+            goto xsltFormatNumberError;
         }
         /* Check for groupingSeparator after decimalSeparator */
         if (*p == df->groupingSeparator) {
             *errMsg = tdomstrdup("GroupingSeparator after decimalSeparator");
-            return -1;
+            goto xsltFormatNumberError;
         }
         if (*p == df->percent) (percentMul = 1);
         else if (*p == df->perMille) (perMilleMul = 1);
@@ -1571,28 +1585,40 @@ static int xsltFormatNumber (
         i = (int) (number+0.5);
     } else {
         i = (int) number;
+        /* format fraction part */
+        DBG(fprintf(stderr, "formating fraction part: '%f', fZero+fHash: '%d'\n",
+                    number - i, fZero+fHash);)
+        sprintf(ftmp,"%.*f", fZero+fHash, number -i);
+        DBG(fprintf(stderr, "raw formated fraction part: '%s'\n", ftmp);)
+        if (ftmp[0] == '1') {
+            i++;
+        }
     }
+    
     DBG(fprintf(stderr,"normal part nZero=%d i=%d glen=%d\n", nZero, i, gLen);)
     /* fill in grouping char */
     if (gLen > 0) {
         sprintf(stmp,"%0*d", nZero, i);
         l = strlen (stmp);
         for (j = 0; j < l; j++) {
-            s[j] = df->zeroDigit + stmp[j] - 48;
+            t = df->zeroDigit + stmp[j] - 48;
+            Tcl_DStringAppend (&s, (char*)&t, sizeof (Tcl_UniChar));
         }
-        s[l] = '\0';
         DBG(
             Tcl_DStringInit(&dbStr);
             fprintf (stderr, "'%s' ---> ..\n", stmp);
             fprintf(stderr,"s='%s' isNeg=%d'\n", 
-                    Tcl_UniCharToUtfDString (s, Tcl_UniCharLen(s), &dbStr), 
+                    Tcl_UniCharToUtfDString (
+                        (Tcl_UniChar*)Tcl_DStringValue (&s),
+                        Tcl_UniCharLen((Tcl_UniChar*)Tcl_DStringValue(&s)), &dStr
+                        ), 
                     isNeg);
             Tcl_DStringFree (&dbStr);
         )
         zl = l + ((l-1) / gLen);
         DBG(fprintf(stderr, "l=%d zl=%d \n", l, zl);)
         n[zl--] = '\0';
-        p = s + l -1;
+        p = (Tcl_UniChar*)Tcl_DStringValue (&s) + l - 1;
         g = 0;
         while (zl>=0) {
             g++;
@@ -1602,10 +1628,14 @@ static int xsltFormatNumber (
                 g = 0;
             }
         }
+        Tcl_DStringSetLength (&s, 0);
         DBG(
             Tcl_DStringInit (&dbStr);
             fprintf(stderr,"s='%s' --> ", 
-                    Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+                    Tcl_UniCharToUtfDString (
+                        (Tcl_UniChar*)Tcl_DStringValue (&s),
+                        Tcl_UniCharLen((Tcl_UniChar*)Tcl_DStringValue(&s)),
+                        &dStr));
             Tcl_DStringFree (&dbStr); 
             Tcl_DStringInit (&dbStr);
             fprintf(stderr,"n='%s'\n", 
@@ -1629,9 +1659,6 @@ static int xsltFormatNumber (
     DBG(fprintf(stderr, "number=%f fHash=%d fZero=%d \n", number, fHash, 
                 fZero);)
     if ((fHash+fZero) > 0) {
-        i = (int) number;
-        /* format fraction part */
-        sprintf(ftmp,"%0.*f", fZero+fHash, number -i);
         l = strlen(ftmp);
         while (l>0 && fHash>0) {   /* strip not need 0's */
             if (ftmp[l-1] == '0') {
@@ -1650,56 +1677,62 @@ static int xsltFormatNumber (
             f[l] = '\0';
         }
         DBG(fprintf(stderr, "f='%s'\n", f);)
-        j = 0;
-        p = prefix;
-        while (*p) {
-            s[j] = *p; p++; j++;
+
+        if (prefix) {
+            Tcl_DStringAppend (&s, (char*) prefix,
+                               Tcl_UniCharLen (prefix) * sizeof(Tcl_UniChar));
         }
-        p = n;
-        while (*p) {
-            s[j] = *p; p++; j++;
-        }
+        Tcl_DStringAppend (&s, (char*) n,
+                           Tcl_UniCharLen (n) * sizeof(Tcl_UniChar));
         if (k) {
-            s[j] = df->decimalSeparator;  j++;
-            p = &(f[k]);
-            while (*p) {
-                s[j] = *p; p++; j++;
-            }
+            Tcl_DStringAppend (&s, (char*)&df->decimalSeparator,
+                               sizeof (Tcl_UniChar));
+            Tcl_DStringAppend (&s, (char*)&(f[k]),
+                               Tcl_UniCharLen (&(f[k])) * sizeof(Tcl_UniChar));
         }
-        p = suffix;
-        while (*p) {
-            s[j] = *p; p++; j++;
+        if (suffix) {
+            Tcl_DStringAppend (&s, (char *) suffix,
+                               Tcl_UniCharLen (suffix) * sizeof(Tcl_UniChar));
         }
-        s[j] = '\0';
+        Tcl_DStringAppend (&s, (char *)&uniCharNull, sizeof (Tcl_UniChar));
     } else {
-        j = 0;
-        p = prefix;
-        while (*p) {
-            s[j] = *p; p++; j++;
+        if (prefix) {
+            Tcl_DStringAppend (&s, (char*) prefix,
+                               Tcl_UniCharLen (prefix) * sizeof(Tcl_UniChar));
         }
-        p = n;
-        while (*p) {
-            s[j] = *p; p++; j++;
+        Tcl_DStringAppend (&s, (char*) n,
+                           Tcl_UniCharLen (n) * sizeof(Tcl_UniChar));
+        if (suffix) {
+            Tcl_DStringAppend (&s, (char *) suffix,
+                               Tcl_UniCharLen (suffix) * sizeof(Tcl_UniChar));
         }
-        p = suffix;
-        while (*p) {
-            s[j] = *p; p++; j++;
-        }
-        s[j] = '\0';
+        Tcl_DStringAppend (&s, (char *)&uniCharNull, sizeof (Tcl_UniChar));
     }
     DBG(
         Tcl_DStringInit (&dbStr);
         fprintf(stderr, "returning s='%s' \n\n", 
-                Tcl_UniCharToUtfDString (s, Tcl_UniCharLen (s), &dbStr));
+                Tcl_UniCharToUtfDString(
+                    (Tcl_UniChar*)Tcl_DStringValue (&s),
+                    Tcl_UniCharLen((Tcl_UniChar*)Tcl_DStringValue(&s)), &dStr
+                    ));
         Tcl_DStringFree (&dbStr);
     )
+    Tcl_DStringSetLength (&dStr, 0);
+    *resultStr = tdomstrdup(
+        Tcl_UniCharToUtfDString(
+            (Tcl_UniChar*)Tcl_DStringValue (&s),
+            Tcl_UniCharLen((Tcl_UniChar*)Tcl_DStringValue(&s)), &dStr
+            )
+        );
     Tcl_DStringFree (&dStr);
-    Tcl_DStringInit (&dStr);
-    *resultStr = tdomstrdup(Tcl_UniCharToUtfDString(s, Tcl_UniCharLen(s),
-                                                    &dStr));
-    Tcl_DStringFree (&dStr);
+    Tcl_DStringFree (&s);
     *resultLen = strlen(*resultStr);
     return 0;
+
+ xsltFormatNumberError:
+    Tcl_DStringFree (&dStr);
+    Tcl_DStringFree (&s);
+    return -1;
 }
 
 #endif /* TclOnly8Bits */
