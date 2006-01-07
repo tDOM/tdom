@@ -1,3 +1,8 @@
+2006-01-08  Rolf Ade  <rolf@pointsman.de>
+
+       * generic/domxslt.c: Fixed a rounding bug of format-number()
+         (http://groups.yahoo.com/group/tdom/message/1217).
+
 2006-01-06  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domDoc.*: Fixed markup errors.
