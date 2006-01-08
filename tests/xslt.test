@@ -1098,6 +1098,36 @@ test xslt-8.2 {namespace handling of copy-of} {
     set result
 } ${xslt-8.2.output}
 
+test xslt-8.3 {format-number() runding} {
+    set xml {<Sample>
+  <Value>1.999</Value>
+  <Value>1.998</Value>
+  <Value>1.997</Value>
+  <Value>1.996</Value>
+  <Value>1.995</Value>
+  <Value>1.994</Value>
+  <Value>1.99</Value>
+  <Value>1.9</Value>
+  <Value>1.</Value>
+</Sample>}
+    set xslt {<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:output method="text"/>
+  <xsl:template match="/">
+    <xsl:for-each select="/Sample/Value">
+      <xsl:value-of select="format-number(.,'#0.00')"/>
+      <xsl:text> </xsl:text>
+    </xsl:for-each>
+  </xsl:template>
+</xsl:stylesheet>}
+    dom parse -keepEmpties $xml xmldoc
+    dom parse -keepEmpties $xslt xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    $xmldoc delete
+    $xsltdoc delete
+    set result [$resultDoc asXML -indent none]
+    $resultDoc delete
+    set result
+} {2.00 2.00 2.00 2.00 2.00 1.99 1.99 1.90 1.00 }
 
 # Below is code, which replaces the dom cmd with a version, which parses
 # the xml into a dom tree, then transformations this dom tree with the
