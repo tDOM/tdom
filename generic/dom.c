@@ -305,7 +305,8 @@ domIsQNAME (
         else {
             if (*p == ':') {
                 p += 1;
-                if (!*p) return 0;
+                if (!isNCNameStart(p)) return 0;
+                p += UTF8_CHAR_LEN(*p);
                 break;
             }
             else return 0;
