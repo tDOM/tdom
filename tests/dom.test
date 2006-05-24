@@ -734,6 +734,14 @@ test dom-3.26 {isQName} {
     dom isQName "woozbiz:"
 } {0}
 
+test dom-3.26.1 {isQName} {
+     dom isQName foo:1
+} {0}
+
+test dom-3.26.2 {isQName} {
+     dom isQName 1:foo
+} {0}
+
 set XMLChars {
     0x9 0xA 0xD {0x20 0xD7FF} {0xE000 0xFFFD} {0x10000 0x10FFFF}
 }
