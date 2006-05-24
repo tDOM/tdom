@@ -1,6 +1,13 @@
+2006-05-24  Rolf Ade  <rolf@pointsman.de>
+
+       * generic/dom.c
+       * tests/dom.test: Fix of the isQName method: Strings with valid
+         prefix and non-NCNameStart char as first char after the ':'
+         wasn't detected as invalid QName.
+
 2006-01-08  Rolf Ade  <rolf@pointsman.de>
 
-       * generic/domxslt.c:
+       * generic/domxslt.c
        * tests/xslt.test: Fixed a rounding bug of format-number()
          (http://groups.yahoo.com/group/tdom/message/1217).
 
