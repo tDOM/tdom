@@ -1,4 +1,9 @@
 2005-03-18  Rolf Ade  <rolf@pointsman.de>
+
+        Updated the TEA build system to 3.5, to fix build problems
+        with newer bash shells.
+
+2005-03-18  Rolf Ade  <rolf@pointsman.de>
         
         Added the 'selectNodesNamespace' to documents, to provide a
         global XPath prefix / namespace mapping. See the user
