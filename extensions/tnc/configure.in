@@ -27,7 +27,7 @@ AC_INIT([tnc], [0.3.0])
 # as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
 #--------------------------------------------------------------------
 
-TEA_INIT([3.2])
+TEA_INIT([3.5])
 
 AC_CONFIG_AUX_DIR(../../tclconfig)
 
@@ -82,6 +82,7 @@ TEA_ADD_SOURCES([tnc.c])
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([-I${srcdir}/../../generic -I${srcdir}/../../expat])
 TEA_ADD_CFLAGS([-DUSE_TDOM_STUBS=1])
+TEA_ADD_LIBS([${TDOM_STUB_LIB_SPEC}])
 TEA_ADD_STUB_SOURCES([])
 TEA_ADD_TCL_SOURCES([])
 
@@ -100,7 +101,7 @@ TEA_ADD_TCL_SOURCES([])
 #--------------------------------------------------------------------
 
 if test "${TEA_PLATFORM}" = "windows" ; then
-    AC_DEFINE(BUILD_tnc)
+    AC_DEFINE(BUILD_sample, 1, [Build windows export dll])
     CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
     #TEA_ADD_SOURCES([win/winFile.c])
     #TEA_ADD_INCLUDES([-I\"$(${CYGPATH} ${srcdir}/win)\"])
@@ -162,8 +163,8 @@ TEA_ENABLE_SYMBOLS
 # link against the non-stubbed Tcl library.  Add Tk too if necessary.
 #--------------------------------------------------------------------
 
-AC_DEFINE(USE_TCL_STUBS)
-#AC_DEFINE(USE_TK_STUBS)
+AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
+#AC_DEFINE(USE_TK_STUBS, 1, [Use Tk stubs])
 
 #--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
@@ -174,23 +175,11 @@ AC_DEFINE(USE_TCL_STUBS)
 TEA_MAKE_LIB
 
 #--------------------------------------------------------------------
-# __CHANGE__
-# Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
-#--------------------------------------------------------------------
-
-if test "${TEA_PLATFORM}" = "windows" -a "$GCC" != "yes" ; then
-    TEA_ADD_LIBS([\"`${CYGPATH} ${TDOM_STUB_LIB_PATH}`\"])
-else
-    TEA_ADD_LIBS([${TDOM_STUB_LIB_SPEC}])
-fi
-
-#--------------------------------------------------------------------
-# Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
-# file during the install process.  Don't run the TCLSH_PROG through
-# ${CYGPATH} because it's being used directly by make.
-# Require that we use a tclsh shell version 8.2 or later since earlier
-# versions have bugs in the pkg_mkIndex routine.
-# Add WISH as well if this is a Tk extension.
+# Determine the name of the tclsh and/or wish executables in the
+# Tcl and Tk build directories or the location they were installed
+# into. These paths are used to support running test cases only,
+# the Makefile should not be making use of these paths to generate
+# a pkgIndex.tcl file or anything else at extension build time.
 #--------------------------------------------------------------------
 
 TEA_PROG_TCLSH
@@ -202,4 +191,4 @@ TEA_PROG_TCLSH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([Makefile pkgIndex.tcl])
