@@ -504,6 +504,21 @@ test xpath-5.7 {using 'xslt variable' in expr} {
 } {0 {}}
 
 
+test xpath-5.7 {Illegal axis name with //} {
+    set xml {
+        <doc>
+        <foo>
+        <bar>boo</bar>
+        <bar>boo</bar>
+        <bar>boo</bar>
+        </foo>
+        </doc>}
+    set doc [dom parse $xml]
+    set result [catch {$doc selectNodes //bar::text()}]
+    $doc delete
+    set result
+} {1}
+
 set doc [dom parse {
 <root>
   <asub>asub2</asub>
