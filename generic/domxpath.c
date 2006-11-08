@@ -1677,6 +1677,10 @@ Production(AbsoluteLocationPath)
         a = New(SelectRoot);
 
         b = Recurse(RelativeLocationPath);
+        if (!b) {
+            freeAst (a);
+            return NULL;
+        }
         if (b->type == AxisChild) {
             b->type = AxisDescendant;
         } else {
