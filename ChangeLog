@@ -1,3 +1,9 @@
+2006-11-22  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domhtml.c: Normalize case of attribute also (not
+          only elements). Accept space on both sides of the = of
+          attribute values.
+
 2006-11-08  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
