@@ -1243,15 +1243,21 @@ HTML_SimpleParse (
                 int nArgVal = 0;
 
                 while ((c=*x)!=0 && c!='=' && c!='>' && !SPACE(c) ) {
+                    *x = tolower(c);
                     x++;
                 }
                 nArgName = x - ArgName;
-                
+                while (SPACE(*x)) {
+                    x++;
+                }
                 if (*x == '=') {
                 
                     /* attribute with value, like width="1234" */
                     
                     x++;
+                    while (SPACE(*x)) {
+                        x++;
+                    }
                     saved = *(ArgName + nArgName);
                     *(ArgName + nArgName) = '\0'; /* terminate arg name */
 
