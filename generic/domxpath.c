@@ -708,6 +708,7 @@ static XPathTokens xpathLexer (
             case ']':  token = RBRACKET; break;
 
             case '@':  i++;
+                       while (xpath[i] && IS_XML_WHITESPACE(xpath[i])) i++;
                        if ( isNCNameStart (&xpath[i]) ) {
                            ps = &(xpath[i]);
                            i += UTF8_CHAR_LEN (xpath[i]);
