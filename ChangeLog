@@ -1,3 +1,10 @@
+2007-01-09  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: Did not install tdomConfig.sh anymore,
+          which causes trouble building tDOM extensions (including
+          tnc). Thanks to Andreas Kupries for reporting the problem
+          with analysis.
+
 2007-01-05  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c: In XPath expressions: Whitespace between
