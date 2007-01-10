@@ -1,3 +1,15 @@
+2007-01-10  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: More corrections: Did not install the tDOM
+          stubs library. Minor other corrections related to
+          distclean. Again thanks to Andreas Kupries.
+
+        * extensions/tnc/Makefile.in: Don't call target install-doc
+          while installing - the tnc doc is in the top level doc dir.
+
+        * extensions/tnc/pkgIndex.tcl.in: Fixed the name of the shared
+          lib.
+    
 2007-01-09  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Did not install tdomConfig.sh anymore,
