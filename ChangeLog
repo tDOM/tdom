@@ -8,7 +8,7 @@
           while installing - the tnc doc is in the top level doc dir.
 
         * extensions/tnc/pkgIndex.tcl.in: Fixed the name of the shared
-          lib.
+          lib. Now uses @PKG_LIB_FILE@ for the dll name.
     
 2007-01-09  Rolf Ade  <rolf@pointsman.de>
 
