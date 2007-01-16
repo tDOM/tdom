@@ -1,3 +1,8 @@
+2007-01-16  Rolf Ade  <rolf@pointsman.de>
+
+        * extensions/tnc/configure.in: The build tool combination
+          TEA/cygwin/VC++ needs a crude hack.
+
 2007-01-10  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: More corrections: Did not install the tDOM
