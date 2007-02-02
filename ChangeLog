@@ -1,3 +1,9 @@
+2007-02-02  Rolf Ade  <rolf@pointsman.de>
+
+        * tdom.m4
+        * configure: Corrected spelling error in tdom.m4, re-generated
+          configure. Thanks to Larry Virden for reporting.
+
 2007-01-16  Rolf Ade  <rolf@pointsman.de>
 
         * extensions/tnc/configure.in: The build tool combination
