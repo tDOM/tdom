@@ -19,7 +19,7 @@
 #------------------------------------------------------------------------
 
 AC_DEFUN(TDOM_ENABLE_DTD, [
-    AC_MSG_CHECKING([wether to enable dtd support])
+    AC_MSG_CHECKING([whether to enable dtd support])
     AC_ARG_ENABLE(dtd,
     [  --enable-dtd            build with the dtd support [--enable-dtd]],
     [tcl_ok=$enableval], [tcl_ok=yes])
@@ -59,7 +59,7 @@ AC_DEFUN(TDOM_ENABLE_DTD, [
 #------------------------------------------------------------------------
 
 AC_DEFUN(TDOM_ENABLE_NS, [
-    AC_MSG_CHECKING([wether to enable namespace support])
+    AC_MSG_CHECKING([whether to enable namespace support])
     AC_ARG_ENABLE(ns,
     [  --enable-ns             build with the namespace support [--enable-ns]],
     [tcl_ok=$enableval], [tcl_ok=yes])
@@ -99,7 +99,7 @@ AC_DEFUN(TDOM_ENABLE_NS, [
 #------------------------------------------------------------------------
 
 AC_DEFUN(TDOM_ENABLE_UNKNOWN, [
-    AC_MSG_CHECKING([wether to enable built-in unknown command])
+    AC_MSG_CHECKING([whether to enable built-in unknown command])
     AC_ARG_ENABLE(ucmd,
     [  --enable-unknown        enable built-in unknown command [--disable-unknown]],
     [tcl_ok=$enableval], [tcl_ok=no])
@@ -138,7 +138,7 @@ AC_DEFUN(TDOM_ENABLE_UNKNOWN, [
 #------------------------------------------------------------------------
 
 AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
-    AC_MSG_CHECKING([wether to enable tDOMs block allocator])
+    AC_MSG_CHECKING([whether to enable tDOMs block allocator])
     AC_ARG_ENABLE(tdomalloc,
     [  --enable-tdomalloc      build with the tDOM allocator [--enable-tdomalloc]],
     [tcl_ok=$enableval], [tcl_ok=yes])
