@@ -9881,8 +9881,8 @@ echo "${ECHO_T}${TCLSH_PROG}" >&6
 #--------------------------------------------------------------------
 
 
-    echo "$as_me:$LINENO: checking wether to enable dtd support" >&5
-echo $ECHO_N "checking wether to enable dtd support... $ECHO_C" >&6
+    echo "$as_me:$LINENO: checking whether to enable dtd support" >&5
+echo $ECHO_N "checking whether to enable dtd support... $ECHO_C" >&6
     # Check whether --enable-dtd or --disable-dtd was given.
 if test "${enable_dtd+set}" = set; then
   enableval="$enable_dtd"
@@ -9911,8 +9911,8 @@ echo "${ECHO_T}no" >&6
     fi
 
 
-    echo "$as_me:$LINENO: checking wether to enable namespace support" >&5
-echo $ECHO_N "checking wether to enable namespace support... $ECHO_C" >&6
+    echo "$as_me:$LINENO: checking whether to enable namespace support" >&5
+echo $ECHO_N "checking whether to enable namespace support... $ECHO_C" >&6
     # Check whether --enable-ns or --disable-ns was given.
 if test "${enable_ns+set}" = set; then
   enableval="$enable_ns"
@@ -9941,8 +9941,8 @@ echo "${ECHO_T}no" >&6
     fi
 
 
-    echo "$as_me:$LINENO: checking wether to enable built-in unknown command" >&5
-echo $ECHO_N "checking wether to enable built-in unknown command... $ECHO_C" >&6
+    echo "$as_me:$LINENO: checking whether to enable built-in unknown command" >&5
+echo $ECHO_N "checking whether to enable built-in unknown command... $ECHO_C" >&6
     # Check whether --enable-ucmd or --disable-ucmd was given.
 if test "${enable_ucmd+set}" = set; then
   enableval="$enable_ucmd"
@@ -9971,8 +9971,8 @@ echo "${ECHO_T}yes" >&6
     fi
 
 
-    echo "$as_me:$LINENO: checking wether to enable tDOMs block allocator" >&5
-echo $ECHO_N "checking wether to enable tDOMs block allocator... $ECHO_C" >&6
+    echo "$as_me:$LINENO: checking whether to enable tDOMs block allocator" >&5
+echo $ECHO_N "checking whether to enable tDOMs block allocator... $ECHO_C" >&6
     # Check whether --enable-tdomalloc or --disable-tdomalloc was given.
 if test "${enable_tdomalloc+set}" = set; then
   enableval="$enable_tdomalloc"
