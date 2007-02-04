@@ -4,6 +4,53 @@
 # compile tdom on different platforms. Just uncomment the line(s)
 # you need and run this script with "sh CONFIG".
 #
+# With the exception of the --enable-tdomalloc option it's best, to
+# leave the tDOM specfic configuration options alone (that is: use the
+# defaults, do nothing).
+# 
+# --enable-tdomalloc
+# Default: on
+# With this option on, a special memory allocator is used, which is
+# optimized for low memory allocation overhead. This allocator works
+# only on 32-bit plattforms. If you build for a 64-bit OS, you _must_
+# disable this.
+# 
+# --enable-dtd
+# Default: on
+# With this option on, the underlying XML parser expat will be build
+# with parsing support of XML DTDs. Leave this option at default. If 
+# you disable this option, then all the SAX handlers related to DTD
+# events won't work any more. It also affects the DOM interface:
+# without DTD support, the fetching of external entities with the
+# -externalentitycommand won't work. With this option off, the test
+# suite will report a lot of failure because of missing features.
+# 
+# --enable-ns
+# Default: on
+# With this option on, the underlying XML parser expat will be build
+# with parsing support of XML namespaces. This affects only the SAX
+# interface; the DOM interface always uses a non XML namespace expat
+# parser behind the scene and does the XML namespace handling by
+# its own.
+# 
+# --enable-unknown
+# Default: off
+# With this option on, tDOM replaces the standard unknown command with
+# its own version. This allows a special shortcut syntax together with
+# the deprecated XPointer methods. It's there for backward 
+# compatibility reasons. It is known, that it cause trouble together
+# with itcl.
+# 
+# --with-aolserver
+# If building tDOM as module for AOLserver, this points to the 
+# directory with the AOLserver source distribution. See below
+# for examples.
+# 
+# --with-tdom
+# Useful (and avaliable) only for building extensions to tDOM (as
+# tnc). Use it to point to the tdomConfig.sh file.
+#
+# 
 #
 # Comment-out next line if building with GCC compiler.
 # CC=gcc; export CC
