@@ -155,8 +155,6 @@ typedef struct TNC_entityInfo
 
 typedef Tcl_HashEntry TNC_NameId;
 
-static const int zero = 0;
-static const int one = 1;
 static char tnc_usage[] =
                "Usage tnc <expat parser obj> <subCommand>, where subCommand can be: \n"
                "        enable    \n"
@@ -1639,7 +1637,7 @@ TncProbeAttribute (userData, elemAtts, attrName, attrValue, nrOfreq)
 
     case TNC_ATTTYPE_ENTITIES:
         /* Normalized by exapt; for type see comment to
-           TNC_ATTTYPE_ENTITIE */
+           TNC_ATTTYPE_ENTITY */
         copy = tdomstrdup (attrValue);
         start = i = 0;
         while (1) {
