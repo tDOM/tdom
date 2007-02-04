@@ -21,10 +21,11 @@
 AC_DEFUN(TDOM_ENABLE_DTD, [
     AC_MSG_CHECKING([whether to enable dtd support])
     AC_ARG_ENABLE(dtd,
-    [  --enable-dtd            build with the dtd support [--enable-dtd]],
-    [tcl_ok=$enableval], [tcl_ok=yes])
+        AC_HELP_STRING([--enable-dtd],
+            [build with dtd support (default: on)]),
+        [tcl_ok=$enableval], [tcl_ok=yes])
 
-    if test "${enable_dt+set}" = set; then
+    if test "${enable_dtd+set}" = set; then
         enableval="$enable_dtd"
         tcl_ok=$enableval
     else
@@ -61,8 +62,9 @@ AC_DEFUN(TDOM_ENABLE_DTD, [
 AC_DEFUN(TDOM_ENABLE_NS, [
     AC_MSG_CHECKING([whether to enable namespace support])
     AC_ARG_ENABLE(ns,
-    [  --enable-ns             build with the namespace support [--enable-ns]],
-    [tcl_ok=$enableval], [tcl_ok=yes])
+        AC_HELP_STRING([--enable-ns],
+            [build with XML namespace support (default: on)]),
+        [tcl_ok=$enableval], [tcl_ok=yes])
 
     if test "${enable_ns+set}" = set; then
         enableval="$enable_ns"
@@ -101,8 +103,9 @@ AC_DEFUN(TDOM_ENABLE_NS, [
 AC_DEFUN(TDOM_ENABLE_UNKNOWN, [
     AC_MSG_CHECKING([whether to enable built-in unknown command])
     AC_ARG_ENABLE(ucmd,
-    [  --enable-unknown        enable built-in unknown command [--disable-unknown]],
-    [tcl_ok=$enableval], [tcl_ok=no])
+        AC_HELP_STRING([--enable-unknown],
+            [enable built-in unknown command (default: off)]),
+        [tcl_ok=$enableval], [tcl_ok=no])
 
     if test "${enable_unknown+set}" = set; then
         enableval="$enable_unknown"
@@ -140,8 +143,9 @@ AC_DEFUN(TDOM_ENABLE_UNKNOWN, [
 AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
     AC_MSG_CHECKING([whether to enable tDOMs block allocator])
     AC_ARG_ENABLE(tdomalloc,
-    [  --enable-tdomalloc      build with the tDOM allocator [--enable-tdomalloc]],
-    [tcl_ok=$enableval], [tcl_ok=yes])
+        AC_HELP_STRING([--enable-tdomalloc],
+            [build with the tDOM allocator (default: on)]),
+        [tcl_ok=$enableval], [tcl_ok=yes])
 
     if test "${enable_tdomalloc+set}" = set; then
         enableval="$enable_tdomalloc"
@@ -181,8 +185,9 @@ AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
 AC_DEFUN(TDOM_PATH_AOLSERVER, [
     AC_MSG_CHECKING([for AOLserver configuration])
     AC_ARG_WITH(aol, 
-    [  --with-aolserver        directory with AOLserver distribution],\
-    with_aolserver=${withval})
+        AC_HELP_STRING([--with-aolserver],
+            [directory with AOLserver distribution]),
+        with_aolserver=${withval})
 
     AC_CACHE_VAL(ac_cv_c_aolserver,[
     if test x"${with_aolserver}" != x ; then
@@ -231,8 +236,9 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
     if test x"${no_tdom}" = x ; then
 	    AC_MSG_CHECKING([for tDOM configuration])
 	    AC_ARG_WITH(tdom, 
-        [  --with-tdom             directory with tDOM tdomConfig.sh],\
-        with_tdomconfig=${withval})
+                AC_HELP_STRING([--with-tdom],
+                    [directory containig tDOM configuration (tdomConfig.sh)]),
+                with_tdomconfig=${withval})
 
 	    no_tdom=true
         if test "${TEA_PLATFORM}" = "windows" ; then
@@ -371,4 +377,7 @@ AC_DEFUN(TDOM_EXPORT_CONFIG, [
     AC_SUBST(PKG_STUB_LIB_PATH)
 ])
 
+# Local Variables:
+# mode: autoconf
+# End:
 # EOF

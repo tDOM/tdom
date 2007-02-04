@@ -66,11 +66,13 @@ COMPILING/USING tDOM
     You might also want to do "../configure --help" to get list of all
     supported options of the configure script. In the "unix" directory
     there is a "CONFIG" file containing some examples on how to invoke
-    the "configure" script for some common cases. You can peek there. 
+    the "configure" script for some common cases. You can peek
+    there. This file also includes a short description of the tDOM
+    specific configure options.
 
-    Since tDOM is TEA-compatible so you should be able to build it 
-    using the MinGW build environment for Windows. There is also the
-    MSVC nmake file so you can compile the package with Microsoft tools.
+    Since tDOM is TEA-compatible you should be able to build it using
+    the MinGW build environment for Windows. There is also the MSVC
+    nmake file so you can compile the package with Microsoft tools.
 
     The compile process will build the tDOM shared library suitable for
     loading into the Tcl shell using standard "package require" mechanism.
