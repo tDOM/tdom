@@ -16,6 +16,8 @@
         * extensions/tnc/test.tcl: Fixed the loading of the tDOM
           scripted library in case of run with tcldomsh. 
 
+        * generic/domxslt.c: Fixed bug in xsl:fallback handling.
+
 2007-02-02  Rolf Ade  <rolf@pointsman.de>
 
         * tdom.m4
