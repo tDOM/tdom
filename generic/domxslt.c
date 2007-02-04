@@ -5035,7 +5035,7 @@ static int ExecAction (
                     /* An extension element; process fallback */
                     child = actionNode->firstChild;
                     while (child) {
-                        if (child->info = fallback) {
+                        if (child->info == fallback) {
                             xsltPushVarFrame (xs);
                             rc = ExecActions (xs, context, currentNode,
                                               currentPos, child->firstChild,
