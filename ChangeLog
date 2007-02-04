@@ -1,3 +1,21 @@
+2007-02-04  Rolf Ade  <rolf@pointsman.de>
+
+        * tdom.m4
+        * configure
+        * extensions/tnc/configure
+        * README
+        * unix/CONFIG: Modified the tdom.m4 configure macros to use
+          the current documentation style of TEA in case of configure
+          --help. Fixed a bug in the TDOM_ENABLE_DTD. Re-generated
+          configure and tnc configure. Added some explanations about
+          the tDOM specific configure options to unix/CONFIG and a
+          pointer to that to README.
+
+        * extensions/tnc/tnc.c: Minor editorial changes.
+
+        * extensions/tnc/test.tcl: Fixed the loading of the tDOM
+          scripted library in case of run with tcldomsh. 
+
 2007-02-02  Rolf Ade  <rolf@pointsman.de>
 
         * tdom.m4
