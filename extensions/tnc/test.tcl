@@ -7,7 +7,7 @@ if {[catch {package require tnc 0.3} errMsg]} {
 }
 if {[lsearch [namespace children] ::tDOM] == -1} {
     # tcldomsh without the script library. Source the lib.
-    source [file join [file dir [info script]] ../lib tdom.tcl]
+    source [file join [file dir [info script]] ../../lib tdom.tcl]
 }
 
 if {[llength $argv] != 1} {
