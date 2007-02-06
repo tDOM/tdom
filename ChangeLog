@@ -9,7 +9,7 @@
           --help. Fixed a bug in the TDOM_ENABLE_DTD. Re-generated
           configure and tnc configure. Added some explanations about
           the tDOM specific configure options to unix/CONFIG and a
-          pointer to that to README.
+          pointer to that information to README.
 
         * extensions/tnc/tnc.c: Minor editorial changes.
 
