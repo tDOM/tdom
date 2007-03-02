@@ -1,3 +1,8 @@
+2007-03-03  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: Fixed (at least for most of the cases) bug in
+          test target, in case the user builds in a dir elsewhere. 
+
 2007-02-04  Rolf Ade  <rolf@pointsman.de>
 
         * tdom.m4
