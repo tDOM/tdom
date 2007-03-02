@@ -250,7 +250,7 @@ install-doc: doc
 	done
 
 test: binaries libraries
-	cp ../lib/tdom.tcl .
+	@cp $(srcdir)/lib/tdom.tcl .
 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
 
 shell: binaries libraries
