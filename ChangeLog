@@ -1,3 +1,7 @@
+2007-04-18  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domNode.*: Emendation.
+
 2007-03-03  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Fixed (at least for most of the cases) bug in
