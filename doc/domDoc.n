@@ -544,7 +544,7 @@ Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is
 tried to be executed. This allows quick method additions on Tcl level.
 .PP
-Newly created nodes are appended to a hidden fragment list. If there
+Newly created nodes are appended to a hidden fragment list. If they
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.
 .SH "SEE ALSO"
