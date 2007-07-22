@@ -1184,6 +1184,7 @@ HTML_SimpleParse (
                           break;
                 case 'b': if(!strcmp(e,"b")&&!strcmp(pn,"b")) autoclose=1;
                           break;
+                case 'o': if (!strcmp(e,"option")&&!strcmp(pn,"option")) autoclose = 1; break;
                 case 'p': if((!strcmp(e,"pre")&&!strcmp(pn,"pre")) 
                              ||(!strcmp(e,"p")&&!strcmp(pn,"p"))) autoclose=1;
                           break;
@@ -1347,7 +1348,6 @@ HTML_SimpleParse (
                                !strcmp(node->nodeName,"input") ||
                                !strcmp(node->nodeName,"isindex"))  hasContent = 0; break;
                 case 'l':  if (!strcmp(node->nodeName,"link"))     hasContent = 0; break;
-                case 'o':  if (!strcmp(node->nodeName,"option"))   hasContent = 0; break;
                 case 'm':  if (!strcmp(node->nodeName,"meta"))     hasContent = 0; break;
                 case 'p':  if (!strcmp(node->nodeName,"param"))    hasContent = 0; break;
                 case 's':  if (!strcmp(node->nodeName,"spacer"))   hasContent = 0; break; /*ext*/
