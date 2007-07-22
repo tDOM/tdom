@@ -1,3 +1,9 @@
+2207-07-23  Rolf Ade  <rolf@pointsman.de>
+
+        * domhtml.c
+        * tests/htmlreader.test: Fix for problem reported by
+          http://tech.groups.yahoo.com/group/tdom/message/1666 
+
 2007-04-18  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domDoc.*: Emendation.
