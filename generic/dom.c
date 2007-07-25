@@ -1744,6 +1744,7 @@ externalEntityRefHandler (
     Tcl_Obj *channelIdObj;
     int result, mode, done, byteIndex, i;
     size_t len;
+    int tclLen;
     XML_Parser extparser, oldparser = NULL;
     char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
@@ -1814,8 +1815,8 @@ externalEntityRefHandler (
     resultObj = Tcl_GetObjResult (info->interp);
     Tcl_IncrRefCount (resultObj);
 
-    result = Tcl_ListObjLength (info->interp, resultObj, &len);
-    if ((result != TCL_OK) || (len != 3)) {
+    result = Tcl_ListObjLength (info->interp, resultObj, &tclLen);
+    if ((result != TCL_OK) || (tclLen != 3)) {
         goto wrongScriptResult;
     }
     result = Tcl_ListObjIndex (info->interp, resultObj, 0, &resultTypeObj);
