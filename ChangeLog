@@ -1,4 +1,10 @@
-2207-07-23  Rolf Ade  <rolf@pointsman.de>
+
+2007-07-25  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/xpath.test: Added a few tests related to white-space
+          in XPath expressions.
+
+2007-07-23  Rolf Ade  <rolf@pointsman.de>
 
         * domhtml.c
         * tests/htmlreader.test: Fix for problem reported by
