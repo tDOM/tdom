@@ -1,6 +1,9 @@
 
 2007-07-25  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/dom.c: Fix for the -externalentitycommand problems
+          on (some) 64-bit plattforms.
+
         * tests/xpath.test: Added a few tests related to white-space
           in XPath expressions.
 
