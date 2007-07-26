@@ -1,4 +1,11 @@
 
+2007-07-27  Rolf Ade  <rolf@pointsman.de>
+
+        * tclconfig/tcl.m4
+        * tclconfig/README.txt
+        * configure.in
+        * configure: Updated to TEA 3.6. Rebuild configure.
+
 2007-07-25  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.c: Fix for the -externalentitycommand problems
