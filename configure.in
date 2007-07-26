@@ -27,7 +27,7 @@ AC_INIT([tdom], [0.8.1])
 # as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
 #--------------------------------------------------------------------
 
-TEA_INIT([3.5])
+TEA_INIT([3.6])
 
 AC_CONFIG_AUX_DIR(tclconfig)
 

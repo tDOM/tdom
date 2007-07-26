@@ -8,4 +8,4 @@ of:
 
 http://cvs.sourceforge.net/viewcvs.py/tcl/sampleextension/
 
-from 2006-08-26 (TEA 3.5).
+from 2007-07-26 (TEA 3.6).
