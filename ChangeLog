@@ -4,7 +4,9 @@
         * tclconfig/tcl.m4
         * tclconfig/README.txt
         * configure.in
-        * configure: Updated to TEA 3.6. Rebuild configure.
+        * configure
+        * extensions/tnc/configure.in
+        * extensions/tnc/configure: Updated to TEA 3.6. Rebuild configure.
 
 2007-07-25  Rolf Ade  <rolf@pointsman.de>
 
