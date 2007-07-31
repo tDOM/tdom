@@ -1,4 +1,17 @@
 
+2007-07-31  Rolf Ade  <rolf@pointsman.de>
+
+        * expat/*
+        * extensions/tnc/tnc.c
+        * generic/dom.c
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * generic/tclexpat.c
+        * generic/tdom.decls
+        * generic/tdom.h
+        * generic/tdomDecls.h: Update to expat 2.0.1; minor build
+          cosmetic.
+
 2007-07-27  Rolf Ade  <rolf@pointsman.de>
 
         * tclconfig/tcl.m4
