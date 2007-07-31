@@ -30,7 +30,7 @@
 |   Portions created by Zoran Vasiljevic are Copyright (C) 2000-2002
 |   Zoran Vasiljevic. All Rights Reserved.
 |
-|   Portions created by Rolf Ade are Copyright (C) 1999-2002
+|   Portions created by Rolf Ade are Copyright (C) 1999-2007
 |   Rolf Ade. All Rights Reserved.
 |
 |   Contributor(s):
@@ -1045,6 +1045,13 @@ static XPathTokens xpathLexer (
                            ps = &(xpath[i++]);
                            while (xpath[i] && isdigit(xpath[i]))  i++;
                            if (xpath[i]=='.') {
+                               if (token == REALNUMBER) {
+                                   sprintf (tmpErr, "Unexpected character "
+                                            "'%c' at position %d", xpath[i],
+                                            i);
+                                   *errMsg = tdomstrdup (tmpErr);
+                                   return tokens;
+                               }                                    
                                token = REALNUMBER;
                                i++;
                                while (xpath[i] && isdigit(xpath[i]))  i++;
@@ -1057,7 +1064,8 @@ static XPathTokens xpathLexer (
                            tokens[l].realvalue = (double)atof(ps);
                            xpath[i--] = save;
                        } else {
-                           sprintf (tmpErr, "Unexpected character '%c' at position %d", xpath[i], i);
+                           sprintf (tmpErr, "Unexpected character '%c' at "
+                                    "position %d", xpath[i], i);
                            *errMsg = tdomstrdup (tmpErr);
                            return tokens;
                        }

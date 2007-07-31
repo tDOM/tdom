@@ -544,6 +544,21 @@ test xpath-5.11 {White space between steps is allowed} {
     set result
 } {e2}
 
+test xpath-5.12 {Parsing of floats} {
+    set doc [dom createDocumentNode]
+    set result [$doc selectNodes "1 + .2"]
+    set result [expr {$result + [$doc selectNodes "1.0 + 0.2"]}]
+    $doc delete
+    set result
+} {2.4}
+
+test xpath-5.13 {Parsing of floats} {
+    set doc [dom createDocumentNode]
+    set result [catch {$doc selectNodes "1 + .2.2"}]
+    $doc delete
+    set result
+} {1}
+
 set doc [dom parse {
 <root>
   <asub>asub2</asub>
