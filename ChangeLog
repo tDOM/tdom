@@ -1,5 +1,10 @@
 
 2007-07-31  Rolf Ade  <rolf@pointsman.de>
+ 
+        * generic/domxpath.c
+        * tests/xpath.test: Bug fix: floats in xpath expressions
+          starting with . could have an additional (erroneous) dot in
+          it without detection.
 
         * expat/*
         * extensions/tnc/tnc.c
