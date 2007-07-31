@@ -280,7 +280,7 @@ signalNotValid (userData, code)
 
     if (tncdata->expatObj) {
         expat = GetExpatInfo (tncdata->interp, tncdata->expatObj);
-        sprintf (s, "Validation error at line %d, character %d: %s",
+        sprintf (s, "Validation error at line %ld, character %ld: %s",
                  XML_GetCurrentLineNumber (expat->parser),
                  XML_GetCurrentColumnNumber (expat->parser),
                  TNC_ErrorString (code));
@@ -380,7 +380,7 @@ static void
 TncFreeTncModel (tmodel)
     TNC_Content *tmodel;
 {
-    int i;
+    unsigned int i;
 
     if (tmodel->children) {
         for (i = 0; i < tmodel->numchildren; i++) {
@@ -415,7 +415,7 @@ TncRewriteModel (emodel, tmodel, tagNames)
     Tcl_HashTable *tagNames;
 {
     Tcl_HashEntry *entryPtr;
-    int i;
+    unsigned int i;
 
     tmodel->type = emodel->type;
     tmodel->quant = emodel->quant;
@@ -681,7 +681,8 @@ TncElementDeclCommand (userData, name, model)
 {
     TNC_Data *tncdata = (TNC_Data *) userData;
     Tcl_HashEntry *entryPtr;
-    int newPtr, i, j;
+    int newPtr;
+    unsigned int i, j;
 
     entryPtr = Tcl_CreateHashEntry (tncdata->tagNames, name, &newPtr);
     /* "No element type may be declared more than once." (rec. 3.2) */
@@ -1155,7 +1156,8 @@ TncProbeElement (nameId, tncdata)
 {
     TNC_ContentStack *stackelm;
     TNC_Content *activeModel;
-    int i, seqstartindex, myStackPtr, zeroMatchPossible, result;
+    int myStackPtr, zeroMatchPossible, result;
+    unsigned int i, seqstartindex;
 
 #ifdef TNC_DEBUG
     printf ("TncProbeElement start\n");
@@ -1938,7 +1940,8 @@ TncProbeElementEnd (tncdata)
     TNC_Data *tncdata;
 {
     TNC_ContentStack stackelm;
-    int i, zeroMatchPossible, seqstartindex;
+    unsigned int i;
+    int zeroMatchPossible, seqstartindex;
 
     stackelm = tncdata->contentStack[tncdata->contentStackPtr - 1];
     switch (stackelm.model->type) {
@@ -2047,10 +2050,11 @@ TncProbeElementEnd (tncdata)
         /* NAME type dosen't occur at top level of a content model and is
            handled in some "shotcut" way directly in the CHOICE and SEQ cases.
            It's only here to pacify gcc -Wall. */
-        fprintf (stderr, "error!!! - in TncProbeElementEnd: XML_CTYPE_NAME shouldn't be reached in any case.\n");
+        fprintf (stderr, "error!!! - in TncProbeElementEnd: XML_CTYPE_NAME "
+                 "shouldn't be reached in any case.\n");
     default:
-        fprintf (stderr, "error!!! - in TncProbeElementEnd: unknown content type: %d\n",
-                 stackelm.model->type);
+        fprintf (stderr, "error!!! - in TncProbeElementEnd: unknown content "
+                 "type: %d\n", stackelm.model->type);
         return 1;
     }
 }

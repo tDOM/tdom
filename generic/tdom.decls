@@ -41,13 +41,13 @@ declare 7 generic {
                                      Tcl_Obj *CONST expatObj)
 }
 declare 8 generic {
-     int XML_GetCurrentLineNumber(XML_Parser parser)
+     XML_Size XML_GetCurrentLineNumber(XML_Parser parser)
 }
 declare 9 generic {
-     int XML_GetCurrentColumnNumber(XML_Parser parser)
+     XML_Size XML_GetCurrentColumnNumber(XML_Parser parser)
 }
 declare 10 generic {
-     long XML_GetCurrentByteIndex(XML_Parser parser)
+     XML_Index XML_GetCurrentByteIndex(XML_Parser parser)
 }
 declare 11 generic {
      int XML_GetCurrentByteCount(XML_Parser parser)
