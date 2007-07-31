@@ -1872,12 +1872,12 @@ externalEntityRefHandler (
     if (chan == NULL) {
         if (!XML_Parse(extparser, xmlstring, strlen (xmlstring), 1)) {
             Tcl_ResetResult (info->interp);
-            sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
+            sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
             Tcl_AppendResult(info->interp, "error \"",
                              XML_ErrorString(XML_GetErrorCode(extparser)),
                              "\" in entity \"", systemId,
                              "\" at line ", s, " character ", NULL);
-            sprintf(s, "%d", XML_GetCurrentColumnNumber(extparser));
+            sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
             Tcl_AppendResult(info->interp, s, NULL);
             byteIndex = XML_GetCurrentByteIndex(extparser);
             if (byteIndex != -1) {
@@ -1910,12 +1910,12 @@ externalEntityRefHandler (
             done = len < sizeof(buf);
             if (!XML_Parse (extparser, buf, len, done)) {
                 Tcl_ResetResult (info->interp);
-                sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
+                sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
                 Tcl_AppendResult(info->interp, "error \"",
                                  XML_ErrorString(XML_GetErrorCode(extparser)),
                                  "\" in entity \"", systemId,
                                  "\" at line ", s, " character ", NULL);
-                sprintf(s, "%d", XML_GetCurrentColumnNumber(extparser));
+                sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
                 Tcl_AppendResult(info->interp, s, NULL);
                 Tcl_DecrRefCount (resultObj);
                 XML_ParserFree (extparser);

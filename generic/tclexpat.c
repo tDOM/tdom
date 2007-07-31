@@ -25,6 +25,8 @@
  * all claims, expenses, losses, damages and costs any user may incur
  * as a result of using, copying or modifying the software.
  *
+ * 2001-2007  Rolf Ade          All changes and enhancements.
+ *
  */
 
 
@@ -821,7 +823,8 @@ TclExpatParse (interp, expat, data, len, type)
      int len;
      TclExpat_InputType type;
 {
-  int result, mode, bytesread, done;
+  int result, mode, done;
+  size_t bytesread;
   char s[255], buf[8*1024];
   int fd;
   XML_Parser  parser;
@@ -939,7 +942,7 @@ TclExpatParse (interp, expat, data, len, type)
               }
           }
       } while (!done);
-#endif
+#endif /* !TclOnly8Bits */
       expat->parsingState = 1;
       break;
 
@@ -992,11 +995,11 @@ TclExpatParse (interp, expat, data, len, type)
       }
       else {
           Tcl_ResetResult(interp);
-          sprintf(s, "%d", XML_GetCurrentLineNumber(expat->parser));
+          sprintf(s, "%ld", XML_GetCurrentLineNumber(expat->parser));
           Tcl_AppendResult(interp, "error \"",
                            XML_ErrorString(XML_GetErrorCode(expat->parser)),
                            "\" at line ", s, " character ", NULL);
-          sprintf(s, "%d", XML_GetCurrentColumnNumber(expat->parser));
+          sprintf(s, "%ld", XML_GetCurrentColumnNumber(expat->parser));
           Tcl_AppendResult(interp, s, NULL);
       }
 #if !TclOnly8Bits
@@ -1713,6 +1716,9 @@ TclExpatCget (interp, expat, objc, objv)
               Tcl_SetResult(interp, "0", NULL);
               return TCL_OK;
           }
+      default:
+          /* do nothing */
+          break;
     }
     
     /*
@@ -1917,6 +1923,9 @@ TclExpatCget (interp, expat, objc, objv)
         }
         return TCL_OK;
 
+      default:
+          /* do nothing */
+          break;
     }
   return TCL_ERROR;
 }
@@ -3206,7 +3215,8 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) XML_GetUserData(parser);
   Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *dataObj;
-  int result, len, mode, done, fd;
+  int result, mode, done, fd;
+  size_t len;
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
   XML_Parser extparser, oldparser = NULL;
@@ -3439,12 +3449,12 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
       Tcl_DecrRefCount (resultObj);
       if (!result) {
           Tcl_ResetResult (expat->interp);
-          sprintf(s, "%d", XML_GetCurrentLineNumber(extparser));
+          sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
           Tcl_AppendResult(expat->interp, "Not wellformed error \"",
                            XML_ErrorString(XML_GetErrorCode(extparser)),
                            "\" while parsing external entity: \n\t",
                            systemId, "\nat line ", s, " character ", NULL);
-          sprintf(s, "%d", XML_GetCurrentColumnNumber(extparser));
+          sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
           Tcl_AppendResult(expat->interp, s, NULL);
           XML_ParserFree (extparser);
           expat->parser = oldparser;

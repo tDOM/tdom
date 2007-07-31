@@ -38,19 +38,19 @@ EXTERN void *		CHandlerSetGetUserData _ANSI_ARGS_((
 EXTERN TclGenExpatInfo * GetExpatInfo _ANSI_ARGS_((Tcl_Interp * interp, 
 				Tcl_Obj *CONST expatObj));
 /* 8 */
-EXTERN int		XML_GetCurrentLineNumber _ANSI_ARGS_((
+EXTERN XML_Size		XML_GetCurrentLineNumber _ANSI_ARGS_((
 				XML_Parser parser));
 /* 9 */
-EXTERN int		XML_GetCurrentColumnNumber _ANSI_ARGS_((
+EXTERN XML_Size		XML_GetCurrentColumnNumber _ANSI_ARGS_((
 				XML_Parser parser));
 /* 10 */
-EXTERN long		XML_GetCurrentByteIndex _ANSI_ARGS_((
+EXTERN XML_Index	XML_GetCurrentByteIndex _ANSI_ARGS_((
 				XML_Parser parser));
 /* 11 */
 EXTERN int		XML_GetCurrentByteCount _ANSI_ARGS_((
 				XML_Parser parser));
 /* 12 */
-EXTERN enum XML_Status		XML_SetBase _ANSI_ARGS_((XML_Parser parser, 
+EXTERN enum XML_Status	XML_SetBase _ANSI_ARGS_((XML_Parser parser, 
 				const XML_Char * base));
 /* 13 */
 EXTERN const XML_Char *	 XML_GetBase _ANSI_ARGS_((XML_Parser parser));
@@ -81,9 +81,9 @@ typedef struct TdomStubs {
     CHandlerSet * (*cHandlerSetGet) _ANSI_ARGS_((Tcl_Interp * interp, Tcl_Obj *CONST expatObj, char * handlerSetName)); /* 5 */
     void * (*cHandlerSetGetUserData) _ANSI_ARGS_((Tcl_Interp * interp, Tcl_Obj *CONST expatObj, char * handlerSetName)); /* 6 */
     TclGenExpatInfo * (*getExpatInfo) _ANSI_ARGS_((Tcl_Interp * interp, Tcl_Obj *CONST expatObj)); /* 7 */
-    int (*xML_GetCurrentLineNumber) _ANSI_ARGS_((XML_Parser parser)); /* 8 */
-    int (*xML_GetCurrentColumnNumber) _ANSI_ARGS_((XML_Parser parser)); /* 9 */
-    long (*xML_GetCurrentByteIndex) _ANSI_ARGS_((XML_Parser parser)); /* 10 */
+    XML_Size (*xML_GetCurrentLineNumber) _ANSI_ARGS_((XML_Parser parser)); /* 8 */
+    XML_Size (*xML_GetCurrentColumnNumber) _ANSI_ARGS_((XML_Parser parser)); /* 9 */
+    XML_Index (*xML_GetCurrentByteIndex) _ANSI_ARGS_((XML_Parser parser)); /* 10 */
     int (*xML_GetCurrentByteCount) _ANSI_ARGS_((XML_Parser parser)); /* 11 */
     int (*xML_SetBase) _ANSI_ARGS_((XML_Parser parser, const XML_Char * base)); /* 12 */
     const XML_Char * (*xML_GetBase) _ANSI_ARGS_((XML_Parser parser)); /* 13 */
