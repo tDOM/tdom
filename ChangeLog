@@ -1,4 +1,12 @@
 
+2007-08-03  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c: Added doc method renameNode, without XML
+          namespace awareness. There will be a final (XML namespace
+          aware) method implementation after 0.8.2, therefore, this
+          will slip in as hidden or 'unsupported' and at least
+          undocumented method. 
+
 2007-07-31  Rolf Ade  <rolf@pointsman.de>
  
         * generic/domxpath.c
