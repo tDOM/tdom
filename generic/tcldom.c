@@ -269,6 +269,7 @@ static char doc_usage[] =
     "    appendXML xmlString                     \n"
     "    selectNodesNamespaces ?prefixUriList?   \n" 
     "    selectNodes ?-namespaces prefixUriList? ?-cache <boolean>? xpathQuery ?typeVar? \n"
+    "    renameNode <nodelist> <newName>         \n"
     TDomThreaded(
     "    readlock                                \n"
     "    writelock                               \n"
@@ -3209,6 +3210,45 @@ static int selectNodesNamespaces (
 }
 
 /*----------------------------------------------------------------------------
+|   renameNodes
+|
+\---------------------------------------------------------------------------*/
+static int renameNodes (
+    domDocument *doc,
+    Tcl_Interp  *interp,
+    int          objc,
+    Tcl_Obj     *CONST objv[] 
+    )
+{
+    int      len, i, hnew;
+    char    *errMsg;
+    Tcl_HashEntry *h;
+    Tcl_Obj *objPtr;
+    domNode     *node;
+    
+    CheckArgs (4,4,0, "<domDoc> renameNode nodeList name");
+    if (Tcl_ListObjLength (interp, objv[2], &len) != TCL_OK) {
+        SetResult ("The first argument to the renameNode method"
+                   " must be a list of element nodes.");
+        return TCL_ERROR;
+    }
+    h = Tcl_CreateHashEntry(&HASHTAB(doc,tdom_tagNames), 
+                            Tcl_GetString(objv[3]), &hnew);
+    for (i = 0; i < len; i++) {
+        Tcl_ListObjIndex (interp, objv[2], i, &objPtr);
+        node = tcldom_getNodeFromName (interp, Tcl_GetString (objPtr),
+                                       &errMsg);
+        if (node == NULL) {
+            SetResult (errMsg);
+            if (errMsg) FREE (errMsg);
+            return TCL_ERROR;
+        }
+        node->nodeName = (char *)&(h->key);
+    }
+    return TCL_OK;
+}
+
+/*----------------------------------------------------------------------------
 |   applyXSLT
 |
 \---------------------------------------------------------------------------*/
@@ -4518,6 +4558,8 @@ int tcldom_DocObjCmd (
         "standalone",      "mediaType",                  "nodeType",
         "cdataSectionElements",
         "selectNodesNamespaces",
+        "renameNode",
+        /* The following methods will be dispatched to tcldom_NodeObjCmd */
         "getElementById",  "firstChild",                 "lastChild",
         "appendChild",     "removeChild",                "hasChildNodes",
         "childNodes",      "ownerDocument",              "insertBefore",
@@ -4541,6 +4583,7 @@ int tcldom_DocObjCmd (
         m_standalone,       m_mediaType,                  m_nodeType,
         m_cdataSectionElements,
         m_selectNodesNamespaces,
+        m_renameNode,
         /* The following methods will be dispatched to tcldom_NodeObjCmd */
         m_getElementById,   m_firstChild,                 m_lastChild,
         m_appendChild,      m_removeChild,                m_hasChildNodes,
@@ -4944,7 +4987,10 @@ int tcldom_DocObjCmd (
 
         case m_selectNodesNamespaces:
             return selectNodesNamespaces (doc, interp, objc, objv);
-                
+
+        case m_renameNode:
+            return renameNodes (doc, interp, objc, objv);
+            
         case m_appendChild:
         case m_removeChild:
         case m_insertBefore:
