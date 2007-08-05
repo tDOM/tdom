@@ -110,23 +110,25 @@ usually a result of a XSLT transformation.</desc>
         </commanddef>
 
       <commanddef>
-        <command><method>asXML</method> <option>?-indent none/1..8?</option> <option>?-channel channelId?</option> <option>?-escapeNonASCII?</option> <option>-doctypeDeclaration &lt;boolean&gt;</option></command>
-        <desc>Returns the DOM tree as an (optional indented) XML string or
-sends the output directly to the given channelId. If the option
-<m>-escapeNonASCII</m> is given, every non 7 bit ASCII character in attribute
-values or element PCDATA content will be escaped as character reference in
-decimal representation. The flag <m>-doctypeDeclaration</m> determines, whether
-there will be a DOCTYPE declaration emitted before the first node of the
-document. The default is, to do not. The DOCTYPE name will always be the
-element name of the document element. An external entity declaration of the
-external subset is only emitted, if the document has a system identifier.
-</desc>
+        <command><method>asXML</method> <option>?-indent none/1..8?</option> <option>?-channel channelId?</option> <option>?-escapeNonASCII?</option> <option>?-doctypeDeclaration &lt;boolean&gt;?</option> <option>?-escapeAllQuot?</option></command>
+        <desc>Returns the DOM tree as an (optional indented) XML
+string or sends the output directly to the given channelId. If the
+option <m>-escapeNonASCII</m> is given, every non 7 bit ASCII
+character in attribute values or element PCDATA content will be
+escaped as character reference in decimal representation. The flag
+<m>-doctypeDeclaration</m> determines, whether there will be a DOCTYPE
+declaration emitted before the first node of the document. The default
+is, to do not. The DOCTYPE name will always be the element name of the
+document element. An external entity declaration of the external
+subset is only emitted, if the document has a system identifier. If
+the option <m>-escapeAllQuot</m> is given, quotation marks will be
+escaped with &amp;quot; even in text content of elements.</desc>
 
       </commanddef>
 
       <commanddef>
         <command><method>asHTML</method> <option>?-channel
-channelId?</option> <option>?-escapeNonASCII?</option> <option>?-htmlEntities?</option> <option>-doctypeDeclaration &lt;boolean&gt;</option></command> 
+channelId?</option> <option>?-escapeNonASCII?</option> <option>?-htmlEntities?</option> <option>?-doctypeDeclaration &lt;boolean&gt;?</option></command> 
         <desc>Returns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
@@ -407,6 +409,15 @@ of attribute name / value pairs. If <m>typeVar</m> is given
 the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).</p>
 
+<p>The argument <m>xpathQuery</m> has to be a valid XPath
+expression. However, there is one exception to that rule. Tcl variable
+names can appear in the XPath statement at any position where it is
+legal according to the rules of the XPath syntax to put an XPath
+variable. The value of the variable is substituted for the variable
+name. Ignoring the syntax rules of XPath the Tcl variable name may be
+any legal Tcl var name: local variables, global variables, array
+entries and so on.</p>
+
 <p>The option <m>-namespaces</m> expects a tcl list with prefix /
 namespace pairs as argument. If this option is not given, then any
 namespace prefix within the xpath expression will be first resolved
@@ -471,6 +482,15 @@ functions, which have been built using <m>dom
 createNodeCmd</m>, before the <m>refChild</m> into to the list
 of top level nodes of the document. If <m>refChild</m> is the
 empty string, the new nodes will be appended.</desc>
+      </commanddef>
+
+      <commanddef>
+        <command><method>deleteXPathCache</method> <m>?xpathQuery?</m></command>
+        <desc>If called without the optional argument, all cached XPath
+expressions of the document are freed. If called with the optional
+argument <m>xpathQuery</m>, this single XPath query will be removed
+from the cache, if it is there. The method always returns an
+empty string.</desc>
       </commanddef>
 
   </commandlist>

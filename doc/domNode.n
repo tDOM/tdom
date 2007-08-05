@@ -174,6 +174,8 @@ should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html)
 as well to parts of the W3C draft "XML Pointer Language (XPointer)"
 (http://www.w3.org/TR/1998/WD-xptr-19980303).
+Please note, that the XPointer methods are deprecated. Use DOM methods
+or XPath expressions instead of them.
 .PP
 The selectNodes method implements the "XML Path
 Language (XPath) Version 1.0" W3C recommendation 16 November 1999 (http://www.w3.org/TR/1999/REC-xpath-19991116). Look
@@ -416,6 +418,15 @@ of attribute name / value pairs. If \fItypeVar\fR is given
 the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).
 .PP
+The argument \fIxpathQuery\fR has to be a valid XPath
+expression. However, there is one exception to that rule. Tcl variable
+names can appear in the XPath statement at any position where it is
+legal according to the rules of the XPath syntax to put an XPath
+variable. The value of the variable is substituted for the variable
+name. Ignoring the syntax rules of XPath the Tcl variable name may be
+any legal Tcl var name: local variables, global variables, array
+entries and so on.
+.PP
 The option \fI-namespaces\fR expects a tcl list with prefix /
 namespace pairs as argument. If this option is not given, then any
 namespace prefix within the xpath expression will be first resolved
@@ -474,13 +485,15 @@ XML.
 \&\fRReturns the DOM substree starting form the current node as a
 nested Tcl list.
 .TP
-\&\fB\fBasXML\fP \fB?-indent none/1..8?\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP
-\&\fRReturns the DOM substree starting from the current node as the
-root node of the result as an (optional indented) XML string or sends the
-output directly to the given channelId. If the option \fI-escapeNonASCII\fR is
-given, every non 7 bit ASCII character in attribute values or element PCDATA
-content will be escaped as character reference in decimal
-representation.
+\&\fB\fBasXML\fP \fB?-indent none/1..8?\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP\fB?-escapeAllQuot?\fP
+\&\fRReturns the DOM substree starting from the current node
+as the root node of the result as an (optional indented) XML string or
+sends the output directly to the given channelId. If the option
+\&\fI-escapeNonASCII\fR is given, every non 7 bit ASCII character in
+attribute values or element PCDATA content will be escaped as
+character reference in decimal representation. If the option
+\&\fI-escapeAllQuot\fR is given, quotation marks will be escaped with
+&quot; even in text content of elements.
 .TP
 \&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP  \fB?-htmlEntities?\fP
 \&\fRReturns the DOM substree starting from the current node as the
@@ -525,7 +538,7 @@ variable \fIoutputVar\fR . The translation is very similar to Cost Simple
 mode.
 .TP
 \&\fB\fBtoXPath\fP
-\&\fRReturns a XPath, which exactly addresses the given
+\&\fRReturns an XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one.
 .TP
