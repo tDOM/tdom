@@ -2713,19 +2713,19 @@ void tcldom_treeAsXML (
         return;
     }
 
+    if ((indent != -1) && doIndent) {
+        for(i=0; i<level; i++) {
+            writeChars(xmlString, chan, "        ", indent);
+        }
+    }
+
     if (node->nodeType == COMMENT_NODE) {
         writeChars(xmlString, chan, "<!--", 4);
         writeChars(xmlString, chan, ((domTextNode*)node)->nodeValue,
                                     ((domTextNode*)node)->valueLength);
         writeChars(xmlString, chan, "-->", 3);
+        if (indent != -1) writeChars (xmlString, chan, "\n", 1);
         return;
-
-    }
-
-    if ((indent != -1) && doIndent) {
-        for(i=0; i<level; i++) {
-            writeChars(xmlString, chan, "        ", indent);
-        }
     }
 
     if (node->nodeType == PROCESSING_INSTRUCTION_NODE) {
@@ -2788,7 +2788,8 @@ void tcldom_treeAsXML (
         while (child != NULL) {
 
             if (  (child->nodeType == ELEMENT_NODE)
-                ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )
+                ||(child->nodeType == PROCESSING_INSTRUCTION_NODE)
+                ||(child->nodeType == COMMENT_NODE) )
             {
                 hasElements = 1;
             }
@@ -2804,7 +2805,8 @@ void tcldom_treeAsXML (
                              cdataChild, escapeAllQuot);
             doIndent = 0;
             if (  (child->nodeType == ELEMENT_NODE)
-                ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )
+                ||(child->nodeType == PROCESSING_INSTRUCTION_NODE)
+                ||(child->nodeType == COMMENT_NODE) )
             {
                doIndent = 1;
             }
