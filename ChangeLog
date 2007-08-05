@@ -1,6 +1,10 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/tcldom.c: Fixed a mem leak introduced by
+          deleteXPathCache. Added option -escapeAllQuot to the asXML
+          method. 
+
         * generic/tcldom.c
         * tests/domDoc.test: Added method deleteXPathCache: basic
           control over the xpath expression cache.
