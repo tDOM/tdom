@@ -2038,7 +2038,8 @@ void tcldom_AppendEscaped (
     int         value_length,
     int         forAttr,
     int         escapeNonASCII,
-    int         htmlEntities
+    int         htmlEntities,
+    int         escapeAllQuot
 )
 {
 #define APESC_BUF_SIZE 512
@@ -2060,7 +2061,7 @@ void tcldom_AppendEscaped (
     while (   (value_length == -1 && *pc)
            || (value_length != -1 && pc != pEnd)
     ) {
-        if (forAttr && (*pc == '"')) { 
+        if ((forAttr || escapeAllQuot) && (*pc == '"')) { 
             AP('&') AP('q') AP('u') AP('o') AP('t') AP(';')
         } else
         if (*pc == '&') { AP('&') AP('a') AP('m') AP('p') AP(';')
@@ -2497,7 +2498,7 @@ void tcldom_treeAsHTML (
             tcldom_AppendEscaped(htmlString, chan,
                                  ((domTextNode*)node)->nodeValue,
                                  ((domTextNode*)node)->valueLength, 0,
-                                 escapeNonASCII, htmlEntities);
+                                 escapeNonASCII, htmlEntities, 0);
         }
         return;
     }
@@ -2510,7 +2511,7 @@ void tcldom_treeAsHTML (
             tcldom_AppendEscaped(htmlString, chan,
                                  ((domTextNode*)node)->nodeValue,
                                  ((domTextNode*)node)->valueLength, 0,
-                                 escapeNonASCII, htmlEntities);
+                                 escapeNonASCII, htmlEntities, 0);
         }
     }
 
@@ -2562,7 +2563,7 @@ void tcldom_treeAsHTML (
         writeChars (htmlString, chan, attrName, -1);
         writeChars(htmlString, chan, "=\"", 2);
         tcldom_AppendEscaped(htmlString, chan, attrs->nodeValue, -1, 1,
-                             escapeNonASCII, htmlEntities);
+                             escapeNonASCII, htmlEntities, 0);
         writeChars(htmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -2616,7 +2617,8 @@ void tcldom_treeAsXML (
     Tcl_Channel chan,
     int         escapeNonASCII,
     int         doctypeDeclaration,
-    int         cdataChild
+    int         cdataChild,
+    int         escapeAllQuot
 )
 {
     domAttrNode   *attrs;
@@ -2659,7 +2661,8 @@ void tcldom_treeAsXML (
         child = doc->rootNode->firstChild;
         while (child) {
             tcldom_treeAsXML(xmlString, child, indent, level, doIndent, chan,
-                             escapeNonASCII, doctypeDeclaration, 0);
+                             escapeNonASCII, doctypeDeclaration, 0,
+                             escapeAllQuot);
             child = child->nextSibling;
         }
         return;
@@ -2696,7 +2699,7 @@ void tcldom_treeAsXML (
                 tcldom_AppendEscaped(xmlString, chan,
                                      ((domTextNode*)node)->nodeValue,
                                      ((domTextNode*)node)->valueLength, 0,
-                                     escapeNonASCII, 0);
+                                     escapeNonASCII, 0, escapeAllQuot);
             }
         }
         return;
@@ -2748,7 +2751,8 @@ void tcldom_treeAsXML (
         writeChars(xmlString, chan, attrs->nodeName, -1);
         writeChars(xmlString, chan, "=\"", 2);
         tcldom_AppendEscaped(xmlString, chan, attrs->nodeValue, 
-                             attrs->valueLength, 1, escapeNonASCII, 0);
+                             attrs->valueLength, 1, escapeNonASCII, 0,
+                             escapeAllQuot);
         writeChars(xmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -2797,7 +2801,7 @@ void tcldom_treeAsXML (
             first = 0;
             tcldom_treeAsXML(xmlString, child, indent, level+1, doIndent,
                              chan, escapeNonASCII, doctypeDeclaration,
-                             cdataChild);
+                             cdataChild, escapeAllQuot);
             doIndent = 0;
             if (  (child->nodeType == ELEMENT_NODE)
                 ||(child->nodeType == PROCESSING_INSTRUCTION_NODE) )
@@ -2877,7 +2881,7 @@ static int serializeAsXML (
 {
     char          *channelId, prefix[MAX_PREFIX_LEN], *localName;
     int            indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
-    int            optionIndex, cdataChild;
+    int            optionIndex, cdataChild, escapeAllQuot = 0;
     Tcl_Obj       *resultPtr;
     Tcl_Channel    chan = (Tcl_Channel) NULL;
     Tcl_HashEntry *h;
@@ -2885,13 +2889,15 @@ static int serializeAsXML (
 
     static CONST84 char *asXMLOptions[] = {
         "-indent", "-channel", "-escapeNonASCII", "-doctypeDeclaration",
+        "-escapeAllQuot", 
         NULL
     };
     enum asXMLOption {
-        m_indent, m_channel, m_escapeNonASCII, m_doctypeDeclaration
+        m_indent, m_channel, m_escapeNonASCII, m_doctypeDeclaration,
+        m_escapeAllQuot
     };
     
-    if (objc > 9) {
+    if (objc > 10) {
         Tcl_WrongNumArgs(interp, 2, objv,
                          "?-indent <0..8>? ?-channel <channelID>? "
                          "?-escapeNonASCII? -?doctypeDeclaration <boolean>?");
@@ -2969,6 +2975,12 @@ static int serializeAsXML (
             objc -= 2;
             objv += 2;
             break;
+
+        case m_escapeAllQuot:
+            escapeAllQuot = 1;
+            objc -= 1;
+            objv += 1;
+            break;
         }
     }
     if (indent > 8)  indent = 8;
@@ -2999,7 +3011,7 @@ static int serializeAsXML (
         }
     }
     tcldom_treeAsXML(resultPtr, node, indent, 0, 1, chan, escapeNonASCII,
-                     doctypeDeclaration, cdataChild);
+                     doctypeDeclaration, cdataChild, escapeAllQuot);
     Tcl_SetObjResult(interp, resultPtr);
     return TCL_OK;
 }
@@ -3306,6 +3318,7 @@ static int deleteXPathCache (
         }
         h = Tcl_FindHashEntry (doc->xpathCache, Tcl_GetString(objv[2]));
         if (h) {
+            xpathFreeAst((ast)Tcl_GetHashValue (h));
             Tcl_DeleteHashEntry (h);
         }
         return TCL_OK;
