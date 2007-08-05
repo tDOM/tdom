@@ -1,5 +1,9 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tcldom.c
+        * tests/domDoc.test: Added method deleteXPathCache: basic
+          control over the xpath expression cache.
         
         * generic/tcldom.c
         * generic/domxpath.c
