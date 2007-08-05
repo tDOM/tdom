@@ -27,7 +27,9 @@ should closely conform to the W3C recommendation &quot;Document Object Model
 href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</ref>)
 as well to parts of the W3C draft &quot;XML Pointer Language (XPointer)&quot;
 (<ref
-href="http://www.w3.org/TR/1998/WD-xptr-19980303">http://www.w3.org/TR/1998/WD-xptr-19980303</ref>).</p>
+href="http://www.w3.org/TR/1998/WD-xptr-19980303">http://www.w3.org/TR/1998/WD-xptr-19980303</ref>).
+Please note, that the XPointer methods are deprecated. Use DOM methods
+or XPath expressions instead of them.</p>
 
     <p>The selectNodes method implements the &quot;XML Path
 Language (XPath) Version 1.0&quot; W3C recommendation 16 November 1999 (<ref
@@ -352,6 +354,15 @@ of attribute name / value pairs. If <m>typeVar</m> is given
 the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).</p>
 
+<p>The argument <m>xpathQuery</m> has to be a valid XPath
+expression. However, there is one exception to that rule. Tcl variable
+names can appear in the XPath statement at any position where it is
+legal according to the rules of the XPath syntax to put an XPath
+variable. The value of the variable is substituted for the variable
+name. Ignoring the syntax rules of XPath the Tcl variable name may be
+any legal Tcl var name: local variables, global variables, array
+entries and so on.</p>
+
 <p>The option <m>-namespaces</m> expects a tcl list with prefix /
 namespace pairs as argument. If this option is not given, then any
 namespace prefix within the xpath expression will be first resolved
@@ -416,13 +427,16 @@ nested Tcl list.</desc>
 
       <commanddef>
         <command><method>asXML</method> <option>?-indent none/1..8?</option>
-<option>?-channel channelId?</option> <option>?-escapeNonASCII?</option></command>
-        <desc>Returns the DOM substree starting from the current node as the
-root node of the result as an (optional indented) XML string or sends the
-output directly to the given channelId. If the option <m>-escapeNonASCII</m> is
-given, every non 7 bit ASCII character in attribute values or element PCDATA
-content will be escaped as character reference in decimal
-representation.</desc>
+<option>?-channel channelId?</option> <option>?-escapeNonASCII?</option><option>?-escapeAllQuot?</option></command>
+
+        <desc>Returns the DOM substree starting from the current node
+as the root node of the result as an (optional indented) XML string or
+sends the output directly to the given channelId. If the option
+<m>-escapeNonASCII</m> is given, every non 7 bit ASCII character in
+attribute values or element PCDATA content will be escaped as
+character reference in decimal representation. If the option
+<m>-escapeAllQuot</m> is given, quotation marks will be escaped with
+&amp;quot; even in text content of elements.</desc>
       </commanddef>
 
       <commanddef>
@@ -485,7 +499,7 @@ mode.</desc>
 
       <commanddef>
         <command><method>toXPath</method></command>
-        <desc>Returns a XPath, which exactly addresses the given
+        <desc>Returns an XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one.</desc>
       </commanddef>

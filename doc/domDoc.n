@@ -234,18 +234,21 @@ and the underlying DOM tree.
 \&\fRReturns the default output method of the document. This is
 usually a result of a XSLT transformation.
 .TP
-\&\fB\fBasXML\fP \fB?-indent none/1..8?\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP \fB-doctypeDeclaration <boolean>\fP
-\&\fRReturns the DOM tree as an (optional indented) XML string or
-sends the output directly to the given channelId. If the option
-\&\fI-escapeNonASCII\fR is given, every non 7 bit ASCII character in attribute
-values or element PCDATA content will be escaped as character reference in
-decimal representation. The flag \fI-doctypeDeclaration\fR determines, whether
-there will be a DOCTYPE declaration emitted before the first node of the
-document. The default is, to do not. The DOCTYPE name will always be the
-element name of the document element. An external entity declaration of the
-external subset is only emitted, if the document has a system identifier.
+\&\fB\fBasXML\fP \fB?-indent none/1..8?\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP \fB?-doctypeDeclaration <boolean>?\fP \fB?-escapeAllQuot?\fP
+\&\fRReturns the DOM tree as an (optional indented) XML
+string or sends the output directly to the given channelId. If the
+option \fI-escapeNonASCII\fR is given, every non 7 bit ASCII
+character in attribute values or element PCDATA content will be
+escaped as character reference in decimal representation. The flag
+\&\fI-doctypeDeclaration\fR determines, whether there will be a DOCTYPE
+declaration emitted before the first node of the document. The default
+is, to do not. The DOCTYPE name will always be the element name of the
+document element. An external entity declaration of the external
+subset is only emitted, if the document has a system identifier. If
+the option \fI-escapeAllQuot\fR is given, quotation marks will be
+escaped with &quot; even in text content of elements.
 .TP
-\&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP \fB?-htmlEntities?\fP \fB-doctypeDeclaration <boolean>\fP
+\&\fB\fBasHTML\fP \fB?-channel channelId?\fP \fB?-escapeNonASCII?\fP \fB?-htmlEntities?\fP \fB?-doctypeDeclaration <boolean>?\fP
 \&\fRReturns the DOM tree serialized acording to HTML rules (HTML
 elements are recognized regardless of case, without end tags for emtpy HTML
 elements etc.), as string or sends the output directly to the given
@@ -478,6 +481,15 @@ of attribute name / value pairs. If \fItypeVar\fR is given
 the result type name is stored into that variable (empty,
 bool, number, string, nodes, attrnodes or mixed).
 .PP
+The argument \fIxpathQuery\fR has to be a valid XPath
+expression. However, there is one exception to that rule. Tcl variable
+names can appear in the XPath statement at any position where it is
+legal according to the rules of the XPath syntax to put an XPath
+variable. The value of the variable is substituted for the variable
+name. Ignoring the syntax rules of XPath the Tcl variable name may be
+any legal Tcl var name: local variables, global variables, array
+entries and so on.
+.PP
 The option \fI-namespaces\fR expects a tcl list with prefix /
 namespace pairs as argument. If this option is not given, then any
 namespace prefix within the xpath expression will be first resolved
@@ -539,6 +551,13 @@ functions, which have been built using \fIdom
 createNodeCmd\fR, before the \fIrefChild\fR into to the list
 of top level nodes of the document. If \fIrefChild\fR is the
 empty string, the new nodes will be appended.
+.TP
+\&\fB\fBdeleteXPathCache\fP \fI?xpathQuery?\fB
+\&\fRIf called without the optional argument, all cached XPath
+expressions of the document are freed. If called with the optional
+argument \fIxpathQuery\fR, this single XPath query will be removed
+from the cache, if it is there. The method always returns an
+empty string.
 .PP
 Otherwise, if an unknown method name is given, the command with the
 same name as the given metho within the namespace \fB::dom::domDoc\fR is
