@@ -1,9 +1,15 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
 
+        * doc/domNode.*
+        * doc/domDoc.*: Added documentation to the new variable
+          references feature of the selectNodes method, for the
+          deleteXPathCache method and the -escapeAllQuot option of the
+          asXML method.
+
         * generic/tcldom.c: Fixed a mem leak introduced by
           deleteXPathCache. Added option -escapeAllQuot to the asXML
-          method. 
+          method.
 
         * generic/tcldom.c
         * tests/domDoc.test: Added method deleteXPathCache: basic
