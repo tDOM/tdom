@@ -148,6 +148,14 @@ typedef struct xpathCBs {               /* all xpath callbacks + clientData */
 
 } xpathCBs;
 
+typedef char * (*xpathParseVarCallback)
+    (void *clientData, char *strToParse, int *offset, char **errMsg);
+
+typedef struct xpathParseVarCB {
+    xpathParseVarCallback parseVarCB;
+    void                * parseVarClientData;
+} xpathParseVarCB;
+
 /* XPath expr/pattern types */
 typedef enum {
     XPATH_EXPR, XPATH_FORMAT_PATTERN, XPATH_TEMPMATCH_PATTERN, 
@@ -159,13 +167,14 @@ typedef enum {
 |
 \---------------------------------------------------------------------------*/
 int    xpathParse   (char *xpath, domNode *exprContext, xpathExprType type, 
-                     char **prefixMappings, ast *t, char **errMsg);
+                     char **prefixMappings, xpathParseVarCB *varParseCB,
+                     ast *t, char **errMsg);
 void   xpathFreeAst (ast t);
 double xpathGetPrio (ast t);
 int    xpathEval    (domNode *node, domNode *exprContext, char *xpath, 
                      char **prefixMappings, xpathCBs *cbs,
-                     Tcl_HashTable *catch, char **errMsg, xpathResultSet *rs
-                     );
+                     xpathParseVarCB *parseVarCB, Tcl_HashTable *catch, 
+                     char **errMsg, xpathResultSet *rs);
 int    xpathMatches (ast steps, domNode * exprContext, domNode *nodeToMatch,
                      xpathCBs *cbs, char **errMsg 
                     );

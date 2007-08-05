@@ -504,15 +504,7 @@ test xpath-5.7 {White space after @ is allowed} {
 
 $doc delete
 
-test xpath-5.8 {using 'xslt variable' in expr} {
-    set doc [dom parse {<root><elem id="foo"/></root>}]
-    set root [$doc documentElement]
-    set result [catch {$root selectNodes {elem[@id='$var']}} errMsg]
-    $doc delete
-    lappend result $errMsg
-} {0 {}}
-
-test xpath-5.9 {xpath namespace axis} {
+test xpath-5.8 {xpath namespace axis} {
      set doc [dom parse {<doc xmlns="foo"/>}]
      $doc selectNodesNamespaces {bar foo}
      set result [$doc selectNodes //namespace::*]
@@ -520,7 +512,7 @@ test xpath-5.9 {xpath namespace axis} {
      set result
 } {{xmlns:xml http://www.w3.org/XML/1998/namespace} {xmlns foo}}
 
-test xpath-5.10 {Illegal axis name with //} {
+test xpath-5.9 {Illegal axis name with //} {
     set xml {
         <doc>
         <foo>
@@ -535,7 +527,7 @@ test xpath-5.10 {Illegal axis name with //} {
     set result
 } {1}
 
-test xpath-5.11 {White space between steps is allowed} {
+test xpath-5.10 {White space between steps is allowed} {
     set xml {<doc><e1><e2/></e1></doc>}
     set doc [dom parse $xml]
     set node [$doc selectNodes "doc / e1 \n\r\t / e2"]
@@ -544,7 +536,7 @@ test xpath-5.11 {White space between steps is allowed} {
     set result
 } {e2}
 
-test xpath-5.12 {Parsing of floats} {
+test xpath-5.11 {Parsing of floats} {
     set doc [dom createDocumentNode]
     set result [$doc selectNodes "1 + .2"]
     set result [expr {$result + [$doc selectNodes "1.0 + 0.2"]}]
@@ -552,12 +544,167 @@ test xpath-5.12 {Parsing of floats} {
     set result
 } {2.4}
 
-test xpath-5.13 {Parsing of floats} {
+test xpath-5.12 {Parsing of floats} {
     set doc [dom createDocumentNode]
     set result [catch {$doc selectNodes "1 + .2.2"}]
     $doc delete
     set result
 } {1}
+
+test xpath-5.13 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set var "foo"
+    set resultNode [$root selectNodes {elem[@id=$var]}]
+    set result [$resultNode text]
+    $doc delete
+    set result
+} {footext}
+
+test xpath-5.14 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set resultNode [$root selectNodes {elem[@id='foo']}]
+    set result [$resultNode text]
+    $doc delete
+    set result
+} {footext}
+
+
+test xpath-5.15 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    catch {unset dontExists} 
+    set result [catch {[$root selectNodes {elem[@id=$dontExists]}]} errMsg]
+    $doc delete
+    lappend result $errMsg
+} {1 {can't read "dontExists": no such variable}}
+
+proc xpath-5.16 {doc} {
+    set root [$doc documentElement]
+    set var "foo"
+    set resultNode [$root selectNodes {elem[@id=$var]}]
+    return [$resultNode text]
+}
+
+test xpath-5.16 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    catch {unset var}
+    set result [xpath-5.16 $doc]
+    $doc delete
+    set result
+} {footext}
+
+proc xpath-5.17 {doc} {
+    set root [$doc documentElement]
+    set resultNode [$root selectNodes {elem[@id=$::var]}]
+    return [$resultNode text]
+}
+
+test xpath-5.17 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set var "foo"
+    set result [xpath-5.17 $doc]
+    $doc delete
+    set result
+} {footext}
+
+proc xpath-5.18 {doc} {
+    set root [$doc documentElement]
+    set resultNode [$root selectNodes {elem[@id=${::uncommon varname}]}]
+    return [$resultNode text]
+}
+
+test xpath-5.18 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set {uncommon varname} "foo"
+    set result [xpath-5.18 $doc]
+    $doc delete
+    set result
+} {footext}
+
+test xpath-5.19 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set array(key) "foo"
+    set resultNode [$root selectNodes {elem[@id=$array(key)]}]
+    set result [$resultNode text]
+    $doc delete
+    set result
+} {footext}
+
+test xpath-5.20 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set array(key) "foo"
+    set var "key"
+    set resultNode [$root selectNodes {elem[@id=$array($var)]}]
+    set result [$resultNode text]
+    $doc delete
+    set result
+} {footext}
+
+proc xpath-5.21 {doc} {
+    set root [$doc documentElement]
+    set var "foo"
+    set resultNode [$root selectNodes {elem[@id=$var]}]
+    return [$resultNode text]
+}
+
+test xpath-5.21 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set var "bar"
+    set result [xpath-5.21 $doc]
+    $doc delete
+    set result
+} {footext}
+
+proc xpath-5.22 {doc} {
+    set root [$doc documentElement]
+    set var "bar"
+    return [$root selectNodes {elem[@id=$var]}]
+}
+
+test xpath-5.22 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set var "foo"
+    set result [xpath-5.22 $doc]
+    $doc delete
+    set result
+} {}
+
+proc xpath-5.23 {doc} {
+    set root [$doc documentElement]
+    set result [catch {$root selectNodes {elem[@id=$var]}} errMsg]
+    return [list $result $errMsg]
+}
+
+test xpath-5.23 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set var "foo"
+    set result [xpath-5.23 $doc]
+    $doc delete
+    set result
+} {1 {can't read "var": no such variable}}
+
+test xpath-5.24 {tcl var resolution in expr} {
+    set doc [dom parse {<root><elem id="foo">footext</elem></root>}]
+    set root [$doc documentElement]
+    set result [catch {$root selectNodes {elem[@id=$ or @id='bar']}} errMsg]
+    $doc delete
+    list $result $errMsg
+} {1 {Missing var name after '$'.}}
+
+test xpath-5.25 {tcl var resolution in expr} {
+    set doc [dom createDocument doc]
+    set a 2
+    set result [$doc selectNodes {2 + $a}]
+    $doc delete
+    set result
+} {4.0}
 
 set doc [dom parse {
 <root>

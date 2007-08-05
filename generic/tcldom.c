@@ -1466,6 +1466,41 @@ void tcldom_xsltMsgCB (
 }
 
 /*----------------------------------------------------------------------------
+|   tcldom_xpathResolveVar
+|
+\---------------------------------------------------------------------------*/
+static
+char * tcldom_xpathResolveVar (
+    void  *clientData,
+    char  *strToParse,
+    int   *offset,
+    char **errMsg
+    )
+{
+    CONST char *varValue;
+    CONST char *termPtr;
+    Tcl_Interp *interp = (Tcl_Interp *) clientData;
+    
+    *offset = 0;
+    varValue = Tcl_ParseVar(interp, strToParse, &termPtr);
+    if (varValue) {
+        *offset = termPtr - strToParse;
+        /* If strToParse start with a single '$' without a following
+         * var name (according to tcl var name rules), Tcl_ParseVar()
+         * doesn't report a parsing error but returns just a pointer
+         * to a static string "$". */ 
+        if (*offset == 1) {
+            *errMsg = tdomstrdup ("Missing var name after '$'.");
+            varValue = NULL;
+        }
+    } else {
+        *errMsg = tdomstrdup (Tcl_GetStringResult(interp));
+    }
+    Tcl_ResetResult (interp);
+    return (char*)varValue;
+}
+
+/*----------------------------------------------------------------------------
 |   tcldom_selectNodes
 |
 \---------------------------------------------------------------------------*/
@@ -1483,6 +1518,7 @@ int tcldom_selectNodes (
     xpathResultSet rs;
     Tcl_Obj       *type, *objPtr;
     xpathCBs       cbs;
+    xpathParseVarCB parseVarCB;
 
     static CONST84 char *selectNodesOptions[] = {
         "-namespaces", "-cache", NULL
@@ -1564,6 +1600,9 @@ int tcldom_selectNodes (
     cbs.varCB          = NULL;
     cbs.varClientData  = NULL;
 
+    parseVarCB.parseVarCB         = tcldom_xpathResolveVar;
+    parseVarCB.parseVarClientData = interp;
+    
     if (mappings == NULL) {
         mappings = node->ownerDocument->prefixNSMappings;
         localmapping = 0;
@@ -1576,11 +1615,11 @@ int tcldom_selectNodes (
             Tcl_InitHashTable (node->ownerDocument->xpathCache,
                                TCL_STRING_KEYS);
         }
-        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, 
+        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, &parseVarCB,
                         node->ownerDocument->xpathCache, &errMsg, &rs);
     } else {
-        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, NULL, &errMsg,
-                        &rs);
+        rc = xpathEval (node, node, xpathQuery, mappings, &cbs, &parseVarCB,
+                        NULL, &errMsg, &rs);
     }
 
     if (rc != XPATH_OK) {
@@ -2420,12 +2459,11 @@ void tcldom_treeAsHTML (
                     writeChars(htmlString, chan, doc->doctype->systemId, -1);
                     writeChars(htmlString, chan, "\"", 1);
                 }
-                if (doc->doctype->internalSubset) {
-                    writeChars(htmlString, chan, " [", 2);
-                    writeChars(htmlString, chan, doc->doctype->internalSubset,
-                                -1);
-                    writeChars(htmlString, chan, "]", 1);
-                }
+            }
+            if (doc->doctype && doc->doctype->internalSubset) {
+                writeChars(htmlString, chan, " [", 2);
+                writeChars(htmlString, chan, doc->doctype->internalSubset, -1);
+                writeChars(htmlString, chan, "]", 1);
             }
             writeChars(htmlString, chan, ">\n", 2);
         }
@@ -2708,8 +2746,8 @@ void tcldom_treeAsXML (
         writeChars(xmlString, chan, " ", 1);
         writeChars(xmlString, chan, attrs->nodeName, -1);
         writeChars(xmlString, chan, "=\"", 2);
-        tcldom_AppendEscaped(xmlString, chan, attrs->nodeValue, -1, 1,
-                              escapeNonASCII, 0);
+        tcldom_AppendEscaped(xmlString, chan, attrs->nodeValue, 
+                             attrs->valueLength, 1, escapeNonASCII, 0);
         writeChars(xmlString, chan, "\"", 1);
         attrs = attrs->nextSibling;
     }
@@ -3180,12 +3218,10 @@ static int selectNodesNamespaces (
             while (doc->prefixNSMappings[i]) {
                 FREE (doc->prefixNSMappings[i]);
                 i++;
-                FREE (doc->prefixNSMappings[i]);
-                i++;
             }
         }
         if (i < len + 1) {
-            FREE (doc->prefixNSMappings);
+            if (doc->prefixNSMappings) FREE (doc->prefixNSMappings);
             doc->prefixNSMappings = MALLOC (sizeof (char*)*(len+1));
         }
         for (i = 0; i < len; i++) {
@@ -3789,13 +3825,19 @@ int tcldom_NodeObjCmd (
                     if (attrs->namespace == 0) {
                         namePtr = Tcl_NewStringObj((char*)attrs->nodeName, -1);
                     } else {
-                        domSplitQName((char*)attrs->nodeName, prefix, &localName);
+                        domSplitQName((char*)attrs->nodeName, prefix, 
+                                      &localName);
                         mobjv[0] = Tcl_NewStringObj((char*)localName, -1);
-                        mobjv[1] = Tcl_NewStringObj(domNamespacePrefix((domNode*)attrs), -1);
-                        mobjv[2] = Tcl_NewStringObj(domNamespaceURI((domNode*)attrs), -1);
+                        mobjv[1] = Tcl_NewStringObj(
+                            domNamespacePrefix((domNode*)attrs), -1
+                            );
+                        mobjv[2] = Tcl_NewStringObj(
+                            domNamespaceURI((domNode*)attrs), -1
+                            );
                         namePtr  = Tcl_NewListObj(3, mobjv);
                     }
-                    result = Tcl_ListObjAppendElement(interp,resultPtr,namePtr);
+                    result = Tcl_ListObjAppendElement(interp, resultPtr, 
+                                                      namePtr);
                     if (result != TCL_OK) {
                         Tcl_DecrRefCount(namePtr);
                         return result;
