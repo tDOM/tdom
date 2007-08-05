@@ -1,4 +1,16 @@
 
+2007-08-05  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/tcldom.c
+        * generic/domxpath.c
+        * generic/domxpath.h
+        * generic/domxslt.c
+        * tests/xpath.test: Variable references (at the places allowed
+          by the XPath syntax) will now be resoved as Tcl variables,
+          relative to the scope of the expression. Ignoring the XPath
+          syntax rules at this point, any valid Tcl variable name will
+          work.
+
 2007-08-03  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tcldom.c: Added doc method renameNode, without XML
