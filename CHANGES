@@ -1,4 +1,36 @@
-2005-03-18  Rolf Ade  <rolf@pointsman.de>
+
+2007-08-05  Rolf Ade  <rolf@pointsman.de>
+
+        In case of asXML with indentation: indent XML comments as
+        well.
+
+        Added method deleteXPathCache: basic control over the xpath
+        expression cache.
+
+        Variable references in XPath queries (at the places allowed by
+        the XPath syntax) will now be resoved as Tcl variables,
+        relative to the scope of the expression. Ignoring the XPath
+        syntax rules at this point, any valid Tcl variable name will
+        work.
+
+2007-07-31  Rolf Ade  <rolf@pointsman.de>
+
+        Update to expat 2.0.1.
+
+2007-07-27  Rolf Ade  <rolf@pointsman.de>
+
+        Updated to TEA 3.6.
+
+2007-07-25  Rolf Ade  <rolf@pointsman.de>
+
+        Fix for the -externalentitycommand problems on (some) 64-bit
+        plattforms.
+
+2006-11-22  Rolf Ade  <rolf@pointsman.de>
+
+        Normalize case of attribute also (not only elements).
+
+2006-08-26  Rolf Ade  <rolf@pointsman.de>
 
         Updated the TEA build system to 3.5, to fix build problems
         with newer bash shells.
