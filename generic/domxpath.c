@@ -671,11 +671,12 @@ static XPathTokens xpathLexer (
     domNode  *exprContext,
     char    **prefixMappings,
     int      *useNamespaceAxis,
+    xpathParseVarCB *varParseCB,
     char    **errMsg
 )
 {
     int  l, allocated;
-    int  i, k, start;
+    int  i, k, start, offset;
     char delim, *ps, save, *uri, tmpErr[80];
     XPathTokens tokens;
     int token = EOS;
@@ -836,46 +837,61 @@ static XPathTokens xpathLexer (
                            tokens[l].strvalue = tdomstrdup("*");
                        }; break;
 
-            case '$':  i++;
-                       if ( isNCNameStart (&xpath[i])) {
-                           ps = &(xpath[i]);
-                           i += UTF8_CHAR_LEN (xpath[i]);
-                           while (xpath[i] && isNCNameChar(&xpath[i]))
-                               i +=  UTF8_CHAR_LEN(xpath[i]);
-                           if (xpath[i] == ':' && xpath[i+1] != ':') {
-                               token = FQVARIABLE;
+            case '$':  if (varParseCB) {
+                           ps = (varParseCB->parseVarCB) (
+                                    varParseCB->parseVarClientData, &xpath[i],
+                                    &offset, errMsg
+                                  );
+                           if (ps) {
+                               token = LITERAL;
+                               tokens[l].strvalue = tdomstrdup (ps);
+                               i += offset - 1;
+                           } else {
+                               return tokens;
+                           }
+                       } else {
+                           i++;
+                           if ( isNCNameStart (&xpath[i])) {
+                               ps = &(xpath[i]);
+                               i += UTF8_CHAR_LEN (xpath[i]);
+                               while (xpath[i] && isNCNameChar(&xpath[i]))
+                                   i +=  UTF8_CHAR_LEN(xpath[i]);
+                               if (xpath[i] == ':' && xpath[i+1] != ':') {
+                                   token = FQVARIABLE;
+                                   save = xpath[i];
+                                   xpath[i] = '\0';
+                                   uri = domLookupPrefixWithMappings (
+                                       exprContext, ps, prefixMappings);
+                                   if (!uri) {
+                                       xpath[i] = save;
+                                       *errMsg = tdomstrdup ("Prefix doesn't"
+                                                             " resolve");
+                                       return tokens;
+                                   }
+                                   tokens[l].strvalue = tdomstrdup (uri);
+                                   xpath[i] = save;
+                                   ADD_TOKEN (token);
+                                   ps = &(xpath[++i]);
+                                   if (!isNCNameStart (&xpath[i])) {
+                                       *errMsg = tdomstrdup ("Illegal variable"
+                                                             " name");
+                                       return tokens;
+                                   }
+                                   i += UTF8_CHAR_LEN (xpath[i]);
+                                   while (xpath[i] && isNCNameChar (&xpath[i]))
+                                       i += UTF8_CHAR_LEN (xpath[i]);
+                               }
+                               token = VARIABLE;
                                save = xpath[i];
                                xpath[i] = '\0';
-                               uri = domLookupPrefixWithMappings (
-                                   exprContext, ps, prefixMappings);
-                               if (!uri) {
-                                   xpath[i] = save;
-                                   *errMsg = tdomstrdup ("Prefix doesn't"
-                                                         " resolve");
-                                   return tokens;
-                               }
-                               tokens[l].strvalue = tdomstrdup (uri);
-                               xpath[i] = save;
-                               ADD_TOKEN (token);
-                               ps = &(xpath[++i]);
-                               if (!isNCNameStart (&xpath[i])) {
-                                   *errMsg = tdomstrdup ("Illegal variable"
-                                                         " name");
-                                   return tokens;
-                               }
-                               i += UTF8_CHAR_LEN (xpath[i]);
-                               while (xpath[i] && isNCNameChar (&xpath[i]))
-                                   i += UTF8_CHAR_LEN (xpath[i]);
+                               tokens[l].strvalue = tdomstrdup(ps);
+                               xpath[i--] = save;
+                           } else {
+                               *errMsg = tdomstrdup("Expected variable name");
+                               return tokens;
                            }
-                           token = VARIABLE;
-                           save = xpath[i];
-                           xpath[i] = '\0';
-                           tokens[l].strvalue = tdomstrdup(ps);
-                           xpath[i--] = save;
-                       } else {
-                           *errMsg = tdomstrdup("Expected variable name");
-                           return tokens;
-                       }; break;
+                       }
+                       break;
 
             case '.':  if (xpath[i+1] == '.') {
                            token = DOTDOT;
@@ -2111,45 +2127,49 @@ int xpathParsePostProcess (
                 t->child->strvalue = tdomstrdup (uri);
             }
         }
-        if (type != XPATH_KEY_USE_EXPR) {
-            /* 12.4: "It is an error to use the current function in a
-               pattern." */
-            if (t->type == ExecFunction 
-                && t->intvalue == f_unknown
-                && (strcmp (t->strvalue, "current")==0)) {
-                *errMsg = tdomstrdup(
-                    "The 'current' function is not allowed in Pattern."
-                    );
-                return 0;
+        if (type != XPATH_EXPR) {
+            if (type != XPATH_KEY_USE_EXPR) {
+                /* 12.4: "It is an error to use the current function in a
+                   pattern." */
+                if (t->type == ExecFunction 
+                    && t->intvalue == f_unknown
+                    && (strcmp (t->strvalue, "current")==0)) {
+                    *errMsg = tdomstrdup(
+                        "The 'current' function is not allowed in Pattern."
+                        );
+                    return 0;
+                }
             }
-        }
-        if (type == XPATH_KEY_MATCH_PATTERN || type == XPATH_KEY_USE_EXPR) {
-            /* 12.2: "It is an error for the value of either the use
-               attribute or the match attribute to contain a
-               VariableReference, or a call to the key function." */
-            if (t->type == ExecFunction 
-                && t->intvalue == f_unknown
-                && (strcmp (t->strvalue, "key")==0)) {
-                *errMsg = tdomstrdup("The 'key' function is not allowed "
-                                     "in the use and match attribute pattern "
-                                     "of xsl:key.");
-                return 0;
+            if (type == XPATH_KEY_MATCH_PATTERN 
+                || type == XPATH_KEY_USE_EXPR) {
+                /* 12.2: "It is an error for the value of either the use
+                   attribute or the match attribute to contain a
+                   VariableReference, or a call to the key function." */
+                if (t->type == ExecFunction 
+                    && t->intvalue == f_unknown
+                    && (strcmp (t->strvalue, "key")==0)) {
+                    *errMsg = tdomstrdup("The 'key' function is not allowed "
+                                         "in the use and match attribute "
+                                         "pattern of xsl:key.");
+                    return 0;
+                }
+                if (t->type == GetVar || t->type == GetFQVar) {
+                    *errMsg = tdomstrdup("Variable references are not allowed "
+                                         "in the use and match attribute of "
+                                         "xsl:key.");
+                    return 0;
+                }
             }
-            if (t->type == GetVar || t->type == GetFQVar) {
-                *errMsg = tdomstrdup("Variable references are not allowed "
-                                     "in the use and match attribute of "
-                                     "xsl:key.");
-                return 0;
-            }
-        }
-        if (type == XPATH_TEMPMATCH_PATTERN) {
-            /* 5.3: "It is an error for the value of the match
-               attribute to contain a VariableReference." */
-            if (t->type == GetVar || t->type == GetFQVar) {
-                *errMsg = tdomstrdup("Variable references are not allowed "
-                                     "in the match attribute of xsl:template."
-                    );
-                return 0;
+            if (type == XPATH_TEMPMATCH_PATTERN) {
+                /* 5.3: "It is an error for the value of the match
+                   attribute to contain a VariableReference." */
+                if (t->type == GetVar || t->type == GetFQVar) {
+                    *errMsg = tdomstrdup("Variable references are not allowed "
+                                         "in the match attribute of "
+                                         "xsl:template."
+                        );
+                    return 0;
+                }
             }
         }
         if (t->child) {
@@ -2166,12 +2186,13 @@ int xpathParsePostProcess (
 |
 \---------------------------------------------------------------------------*/
 int xpathParse (
-    char         *xpath,
-    domNode      *exprContext,
-    xpathExprType type,
-    char        **prefixMappings, 
-    ast          *t,
-    char        **errMsg
+    char            *xpath,
+    domNode         *exprContext,
+    xpathExprType    type,
+    char           **prefixMappings, 
+    xpathParseVarCB *varParseCB,
+    ast             *t,
+    char           **errMsg
 )
 {
     XPathTokens tokens;
@@ -2182,7 +2203,7 @@ int xpathParse (
     DDBG(fprintf(stderr, "\nLex output following tokens for '%s':\n", xpath);)
     *errMsg = NULL;
     tokens = xpathLexer(xpath, exprContext, prefixMappings, &useNamespaceAxis, 
-                        errMsg);
+                        varParseCB, errMsg);
     if (*errMsg != NULL) {
         if (tokens != NULL) xpathFreeTokens (tokens);
         return XPATH_LEX_ERR;
@@ -2210,7 +2231,7 @@ int xpathParse (
     if ((*errMsg == NULL) && (tokens[l].token != EOS)) {
         *errMsg = tdomstrdup("Unexpected tokens (beyond end)!");
     }
-    if (*errMsg == NULL && (type != XPATH_EXPR || useNamespaceAxis)) {
+    if (*errMsg == NULL && ((type != XPATH_EXPR) || useNamespaceAxis)) {
         xpathParsePostProcess (*t, type, exprContext, prefixMappings, errMsg);
     }
     if (*errMsg) {
@@ -5176,6 +5197,7 @@ int xpathEval (
     char             * xpath,
     char            ** prefixMappings,
     xpathCBs         * cbs,
+    xpathParseVarCB  * parseVarCB,
     Tcl_HashTable    * cache,
     char            ** errMsg,
     xpathResultSet   * result
@@ -5191,8 +5213,8 @@ int xpathEval (
         h = Tcl_CreateHashEntry (cache, xpath, &hnew);
     }
     if (hnew) {
-        rc = xpathParse(xpath, exprContext, XPATH_EXPR, prefixMappings, &t,
-                        errMsg);
+        rc = xpathParse(xpath, exprContext, XPATH_EXPR, prefixMappings,
+                        parseVarCB, &t, errMsg);
         CHECK_RC;
         if (cache) {
             Tcl_SetHashValue(h, t);

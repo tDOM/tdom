@@ -2467,8 +2467,8 @@ static int evalXPath (
     if (!hnew) {
         t = (ast)Tcl_GetHashValue(h);
     } else {
-        rc = xpathParse (xpath, xs->currentXSLTNode, XPATH_EXPR, NULL, &t,
-                         errMsg);
+        rc = xpathParse (xpath, xs->currentXSLTNode, XPATH_EXPR, NULL, NULL,
+                         &t, errMsg);
         if (rc < 0) {
             reportError (xs->currentXSLTNode, *errMsg, errMsg);
             return rc;
@@ -3205,7 +3205,7 @@ static int xsltAddTemplate (
     
     TRACE1("compiling XPATH '%s' ...\n", tpl->match);
     if (tpl->match) {
-        rc = xpathParse(tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL,
+        rc = xpathParse(tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL, NULL,
                         &(tpl->freeAst), errMsg);
         if (rc < 0) {
             reportError (node, *errMsg, errMsg);
@@ -3684,7 +3684,7 @@ static int xsltNumber (
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (count, actionNode, XPATH_FORMAT_PATTERN, NULL,
-                                 &t_count, errMsg);
+                                 NULL, &t_count, errMsg);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_count);
             }
@@ -3720,7 +3720,8 @@ static int xsltNumber (
                 t_count = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (Tcl_DStringValue (&dStr), actionNode, 
-                                 XPATH_FORMAT_PATTERN, NULL, &t_count, errMsg);
+                                 XPATH_FORMAT_PATTERN, NULL, NULL, &t_count,
+                                 errMsg);
                 if (rc < 0) {
                     Tcl_DStringFree (&dStr);
                     goto xsltNumberError;
@@ -3735,7 +3736,7 @@ static int xsltNumber (
                 t_from = (ast) Tcl_GetHashValue (h);
             } else {
                 rc = xpathParse (from, actionNode, XPATH_FORMAT_PATTERN, NULL,
-                                 &t_from, errMsg);
+                                 NULL, &t_from, errMsg);
                 if (rc < 0) goto xsltNumberError;
                 Tcl_SetHashValue (h, t_from);
             }
@@ -6579,7 +6580,7 @@ static int processTopLevel (
                 keyInfo = (xsltKeyInfo *)MALLOC(sizeof(xsltKeyInfo));
                 keyInfo->node = node;
                 rc = xpathParse (match, node, XPATH_KEY_MATCH_PATTERN, NULL,
-                                 &(keyInfo->matchAst), errMsg);
+                                 NULL, &(keyInfo->matchAst), errMsg);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     free ((char*)keyInfo);
@@ -6587,7 +6588,7 @@ static int processTopLevel (
                 }
                 keyInfo->use       = use;
                 rc = xpathParse (use, node, XPATH_KEY_USE_EXPR, NULL,
-                                 &(keyInfo->useAst), errMsg);
+                                 NULL, &(keyInfo->useAst), errMsg);
                 if (rc < 0) {
                     reportError (node, *errMsg, errMsg);
                     xpathFreeAst (keyInfo->matchAst);
@@ -7348,7 +7349,7 @@ xsltCompileStylesheet (
         tpl->precedence = 1.0;
         tpl->next       = NULL;
         tpl->sDoc       = sdoc;
-        rc = xpathParse (tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL,
+        rc = xpathParse (tpl->match, node, XPATH_TEMPMATCH_PATTERN, NULL, NULL,
                          &(tpl->freeAst), errMsg);
         tpl->ast        = tpl->freeAst;
         xs->templates = tpl;
