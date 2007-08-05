@@ -118,7 +118,7 @@ test domDoc-1.10 {asXML - unknown option} {
     catch {$doc asXML -fooOption 1} errMsg
     $doc delete
     set errMsg
-} {bad option "-fooOption": must be -indent, -channel, -escapeNonASCII, or -doctypeDeclaration}
+} {bad option "-fooOption": must be -indent, -channel, -escapeNonASCII, -doctypeDeclaration, or -escapeAllQuot}
 
 test domDoc-1.11 {asXML - non boolean value to -doctypeDeclaration} {
     set doc [dom parse {<!DOCTYPE root SYSTEM "file:///boo.baz"><root/>}]
@@ -180,6 +180,37 @@ test domDoc-1.17 {asHTML - content of script/style tags} {
 } {<html>
 <script>a & b</script><style>foo < bar</style>
 </html>}
+
+test domDoc-1.18 {asXML -escapeAllQuot} {
+    set doc [dom parse {<doc>This is "strange"</doc>}]
+    set result [$doc asXML -escapeAllQuot]
+    $doc delete
+    set result
+} {<doc>This is &quot;strange&quot;</doc>
+}
+
+test domDoc-1.19 {asXML -escapeAllQuot} {
+    set doc [dom parse {<doc>This is "strange"</doc>}]
+    set result [$doc asXML]
+    $doc delete
+    set result
+} {<doc>This is "strange"</doc>
+}
+
+test domDoc-1.20 {asXML - indentation of comments} {
+    set doc [dom parse {<doc>
+<!--Comment 1-->
+<e1/>
+<!--Comment 2--></doc>}]
+    set result [$doc asXML -indent 4]
+    $doc delete
+    set result
+} {<doc>
+    <!--Comment 1-->
+    <e1/>
+    <!--Comment 2-->
+</doc>
+}
 
 set doc [dom parse <root/>]
 
