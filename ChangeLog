@@ -1,6 +1,10 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
 
+        * win/makefile.vc
+        * win/makefile805.vc: Bumped version to 0.8.2. Missed that in
+          0.8.2rc1
+
         * README
         * README.AOL
         * configure
