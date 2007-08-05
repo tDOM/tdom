@@ -827,7 +827,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
             p += clen;
             continue;
         }
-        if (isalnum(*p)) break;
+        if (isalnum((unsigned char)*p)) break;
         format->prologLen++;
         p++;
     }
@@ -855,7 +855,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
             p += clen;                           \
             continue;                            \
         }                                        \
-        if (isalnum(*p)) break;                  \
+        if (isalnum((unsigned char)*p)) break;                  \
         format->tokens[nrOfTokens].sepLen++;     \
         p++;                                     \
     }                                            \
@@ -881,27 +881,27 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
             addSeperator;
         }
         if (*p == 'A') {
-            if (isalnum(*(p+1))) goto wrongSyntax;
+            if (isalnum((unsigned char)*(p+1))) goto wrongSyntax;
             format->tokens[nrOfTokens].type = latin_upper;
             addSeperator;
         }
         if (*p == 'a') {
-            if (isalnum(*(p+1))) goto wrongSyntax;
+            if (isalnum((unsigned char)*(p+1))) goto wrongSyntax;
             format->tokens[nrOfTokens].type = latin_lower;
             addSeperator;
         }
         if (*p == 'I') {
-            if (isalnum(*(p+1))) goto wrongSyntax;
+            if (isalnum((unsigned char)*(p+1))) goto wrongSyntax;
             format->tokens[nrOfTokens].type = roman_upper;
             addSeperator;
         }
         if (*p == 'i') {
-            if (isalnum(*(p+1))) goto wrongSyntax;
+            if (isalnum((unsigned char)*(p+1))) goto wrongSyntax;
             format->tokens[nrOfTokens].type = roman_lower;
             addSeperator;
         }
         format->tokens[nrOfTokens].type = latin_number;
-        while (isalnum(*(p+1))) {
+        while (isalnum((unsigned char)*(p+1))) {
             p++;
         }
         addSeperator;

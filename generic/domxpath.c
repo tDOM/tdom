@@ -897,7 +897,7 @@ static XPathTokens xpathLexer (
                            token = DOTDOT;
                            i++;
                            break;
-                       } else if (!isdigit(xpath[i+1])) {
+                       } else if (!isdigit((unsigned char)xpath[i+1])) {
                            token = DOT;
                            break;
                        }
@@ -1052,14 +1052,16 @@ static XPathTokens xpathLexer (
                                xpath[i] = save;
                            }
                            i--;
-                       } else if (isdigit(xpath[i]) || (xpath[i] == '.')) {
+                       } else if (isdigit((unsigned char)xpath[i]) 
+                                  || (xpath[i] == '.')) {
                            if (xpath[i] == '.') {
                                token = REALNUMBER;
                            } else {
                                token = INTNUMBER;
                            }
                            ps = &(xpath[i++]);
-                           while (xpath[i] && isdigit(xpath[i]))  i++;
+                           while (xpath[i] && isdigit((unsigned char)xpath[i]))
+                               i++;
                            if (xpath[i]=='.') {
                                if (token == REALNUMBER) {
                                    sprintf (tmpErr, "Unexpected character "
@@ -1070,7 +1072,8 @@ static XPathTokens xpathLexer (
                                }                                    
                                token = REALNUMBER;
                                i++;
-                               while (xpath[i] && isdigit(xpath[i]))  i++;
+                               while (xpath[i] 
+                                      && isdigit((unsigned char)xpath[i])) i++;
                            }
                            save = xpath[i];
                            xpath[i] = '\0';
@@ -2407,9 +2410,9 @@ xpathIsNumber (
         str++;
         if (!*str) return 0;
     }
-    if (!isdigit(*str)) return 0;
+    if (!isdigit((unsigned char)*str)) return 0;
     while (*str) {
-        if (isdigit(*str)) {
+        if (isdigit((unsigned char)*str)) {
             str++;
             continue;
         }
