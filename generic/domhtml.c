@@ -80,7 +80,7 @@
 #define RetError(m,p)   *errStr = tdomstrdup(m); *pos = p; return TCL_ERROR;
 #define SPACE(c)        ((c)==' ' || (c)=='\n' || (c)=='\t' || (c)=='\r')
 #define IsLetter(c)     ( ((c)>='A' && (c)<='Z') || ((c)>='a' && (c)<='z') || ((c) >= '0' && (c) <= '9') )
-#define TU(c)           toupper(c)
+#define TU(c)           toupper((unsigned char)c)
 
 
 
@@ -544,7 +544,7 @@ static Er er_sequences[] = {
 \---------------------------------------------------------------------------*/
 static void ErInit (void)
 {
-    int i;  /* For looping thru the list of entity references */
+    size_t i;  /* For looping thru the list of entity references */
     int h;  /* The hash on a entity */
 
     for(i=0; i<sizeof(er_sequences)/sizeof(er_sequences[0]); i++){
@@ -652,7 +652,7 @@ static void TranslateEntityRefs (
                 }
 #endif
             } else {
-                while (z[i] && isalpha(z[i])) {
+                while (z[i] && isalpha((unsigned char)z[i])) {
                    i++;
                 }
                 c = z[i];

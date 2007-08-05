@@ -208,7 +208,7 @@ static Er er_sequences[] = {
 \---------------------------------------------------------------------------*/
 static void ErInit (void)
 {
-    int i;  /* For looping thru the list of entity references */
+    size_t i;  /* For looping thru the list of entity references */
     int h;  /* The hash on a entity */
 
     for(i=0; i<sizeof(er_sequences)/sizeof(er_sequences[0]); i++){
@@ -324,7 +324,7 @@ static int TranslateEntityRefs (
                 }
 #endif
             } else {
-                while (z[i] && isalpha(z[i])) {
+                while (z[i] && isalpha((unsigned char)z[i])) {
                    i++;
                 }
                 if (!z[i] || (z[i]!=';')) {

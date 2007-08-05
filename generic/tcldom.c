@@ -2413,7 +2413,7 @@ void tcldom_tolower (
 
     len--; i = 0; p = str_out;
     while (*str && (i < len)) {
-        *p++ = tolower(*str++);
+        *p++ = tolower((unsigned char)*str++);
         i++;
     }
     *p++ = '\0';
