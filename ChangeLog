@@ -1,6 +1,15 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
 
+        * README
+        * README.AOL
+        * configure
+        * configure-tcl8.0.5
+        * configure.in
+        * tests/loadtdom.tcl
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h: Bumped version to 0.8.2.
+
         * generic/domhtml.c
         * generic/domxpath.c
         * generic/domxslt.c
