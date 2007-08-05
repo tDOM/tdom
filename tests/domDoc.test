@@ -30,8 +30,9 @@
 #    domDoc-24.*: cdataSectionElements
 #    domDoc-25.*: selectNodesNamespaces
 #    domDoc-26.*: fragments list
+#    domDoc-27.*: deleteXPathCache
 #
-# Copyright (c) 2004, 2005 Rolf Ade.
+# Copyright (c) 2004 - 2007 Rolf Ade.
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
@@ -1318,6 +1319,18 @@ test domDoc-26.1 {Fragment list} {
     set result
 } {<root>text3text1</root>}
 
+test domDoc-27.1 {deleteXPathCache} {
+    set doc [dom createDocument doc]
+    set result [list]
+    lappend result [$doc deleteXPathCache foo/bar]
+    $doc selectNodes -cache 1 2+2
+    lappend result [$doc deleteXPathCache foo/bar]
+    lappend result [$doc deleteXPathCache 2+2]
+    lappend result [$doc deleteXPathCache]
+    $doc selectNodes -cache 1 2+2
+    $doc delete
+    set result
+} {{} {} {} {}}
 
 # cleanup
 ::tcltest::cleanupTests

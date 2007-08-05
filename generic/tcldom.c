@@ -270,6 +270,7 @@ static char doc_usage[] =
     "    selectNodesNamespaces ?prefixUriList?   \n" 
     "    selectNodes ?-namespaces prefixUriList? ?-cache <boolean>? xpathQuery ?typeVar? \n"
     "    renameNode <nodelist> <newName>         \n"
+    "    deleteXPathCache ?xpathQuery?           \n"
     TDomThreaded(
     "    readlock                                \n"
     "    writelock                               \n"
@@ -3285,6 +3286,46 @@ static int renameNodes (
 }
 
 /*----------------------------------------------------------------------------
+|   deleteXPathCache
+|
+\---------------------------------------------------------------------------*/
+static int deleteXPathCache (
+    domDocument *doc,
+    Tcl_Interp  *interp,
+    int          objc,
+    Tcl_Obj     *CONST objv[] 
+    )
+{
+    Tcl_HashEntry *h;
+    Tcl_HashSearch search;
+    
+    CheckArgs (2,3,0, "<domDoc> deleteXPathCache ?xpathQuery?");
+    if (objc == 3) {
+        if (!doc->xpathCache) {
+            return TCL_OK;
+        }
+        h = Tcl_FindHashEntry (doc->xpathCache, Tcl_GetString(objv[2]));
+        if (h) {
+            Tcl_DeleteHashEntry (h);
+        }
+        return TCL_OK;
+    }
+    if (!doc->xpathCache) {
+        return TCL_OK;
+    }
+    h = Tcl_FirstHashEntry (doc->xpathCache, &search);
+    while (h) {
+        xpathFreeAst((ast)Tcl_GetHashValue (h));
+        h = Tcl_NextHashEntry (&search);
+    }
+    Tcl_DeleteHashTable (doc->xpathCache);
+    FREE (doc->xpathCache);
+    doc->xpathCache = NULL;
+    return TCL_OK;
+}
+
+
+/*----------------------------------------------------------------------------
 |   applyXSLT
 |
 \---------------------------------------------------------------------------*/
@@ -4600,7 +4641,7 @@ int tcldom_DocObjCmd (
         "standalone",      "mediaType",                  "nodeType",
         "cdataSectionElements",
         "selectNodesNamespaces",
-        "renameNode",
+        "renameNode",      "deleteXPathCache", 
         /* The following methods will be dispatched to tcldom_NodeObjCmd */
         "getElementById",  "firstChild",                 "lastChild",
         "appendChild",     "removeChild",                "hasChildNodes",
@@ -4625,7 +4666,7 @@ int tcldom_DocObjCmd (
         m_standalone,       m_mediaType,                  m_nodeType,
         m_cdataSectionElements,
         m_selectNodesNamespaces,
-        m_renameNode,
+        m_renameNode,       m_deleteXPathCache,
         /* The following methods will be dispatched to tcldom_NodeObjCmd */
         m_getElementById,   m_firstChild,                 m_lastChild,
         m_appendChild,      m_removeChild,                m_hasChildNodes,
@@ -5033,6 +5074,9 @@ int tcldom_DocObjCmd (
         case m_renameNode:
             return renameNodes (doc, interp, objc, objv);
             
+        case m_deleteXPathCache:
+            return deleteXPathCache (doc, interp, objc, objv);
+
         case m_appendChild:
         case m_removeChild:
         case m_insertBefore:
