@@ -1,6 +1,18 @@
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/domhtml.c
+        * generic/domxpath.c
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * generic/xmlsimple.c: Casted arg of ctype.h is*
+          macros/function calles to unsigned char to reduce compiler
+          warning noise.
+
+        * generic/tcldom.c:
+        * tests/domDoc.test: In case of asXML with indentation: indent
+          XML comments as well.
+
         * doc/domNode.*
         * doc/domDoc.*: Added documentation to the new variable
           references feature of the selectNodes method, for the
