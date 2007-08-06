@@ -3215,8 +3215,7 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) XML_GetUserData(parser);
   Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *dataObj;
-  int result, mode, done, fd;
-  size_t len;
+  int result, mode, done, fd, len;
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
   XML_Parser extparser, oldparser = NULL;
