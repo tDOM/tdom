@@ -1935,17 +1935,17 @@ externalEntityRefHandler (
     return 1;
 
  wrongScriptResult:
-  Tcl_DecrRefCount (resultObj);
-  Tcl_ResetResult (info->interp);
-  XML_ParserFree (extparser);
-  if (oldparser) {
-      info->parser = oldparser;
-  }
-  Tcl_AppendResult (info->interp, "The -externalentitycommand script "
-                    "has to return a Tcl list with 3 elements.\n"
-                    "Syntax: {string|channel|filename, <baseurl>, <data>}\n",
-                    NULL);
-  return 0;
+    Tcl_DecrRefCount (resultObj);
+    Tcl_ResetResult (info->interp);
+    XML_ParserFree (extparser);
+    if (oldparser) {
+        info->parser = oldparser;
+    }
+    Tcl_AppendResult (info->interp, "The -externalentitycommand script "
+                      "has to return a Tcl list with 3 elements.\n"
+                      "Syntax: {string|channel|filename <baseurl> <data>}\n",
+                      NULL);
+    return 0;
 }
 
 /*---------------------------------------------------------------------------
