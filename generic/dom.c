@@ -2011,7 +2011,7 @@ domReadDocument (
     Tcl_Interp *interp
 )
 {
-    int            done;
+    int            done, tclLen;
     size_t         len;
     domReadInfo    info;
     char           buf[8192];
@@ -2109,8 +2109,8 @@ domReadDocument (
             do {
                 len = Tcl_ReadChars (channel, bufObj, 1024, 0);
                 done = (len < 1024);
-                str = Tcl_GetStringFromObj(bufObj, &len);
-                if (!XML_Parse (parser, str, len, done)) {
+                str = Tcl_GetStringFromObj(bufObj, &tclLen);
+                if (!XML_Parse (parser, str, tclLen, done)) {
                     FREE ( info.activeNS );
                     FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
