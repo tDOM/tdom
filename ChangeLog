@@ -1,11 +1,14 @@
 
 2007-08-07  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/dom.c: Correction for 64 bit systems.
+
         * generic/dom.c
         * generic/dom.h
         * generic/tcldom.c: Changed domDoc->documentNumber,
           domUniqueNodeNr and domUniqueDocNr to unsigned long, to
-          prevent hard to debug / reproduce problems on 64 systems.
+          prevent hard to debug / reproduce problems on 64 bit
+          systems.
 
         * win/makefile.vc: Don't use precompiled headers.
 
