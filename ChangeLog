@@ -1,6 +1,14 @@
 
 2007-08-07  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/dom.c
+        * generic/dom.h
+        * generic/tcldom.c: Changed domDoc->documentNumber,
+          domUniqueNodeNr and domUniqueDocNr to unsigned long, to
+          prevent hard to debug / reproduce problems on 64 systems.
+
+        * win/makefile.vc: Don't use precompiled headers.
+
         * extensions/tnc/makefile.vc: Brought in sync with tdom core.
 
         * generic/tclexpat.c: Compiler pacifying.
