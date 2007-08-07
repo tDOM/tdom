@@ -3,7 +3,7 @@
 
         * generic/dom.c: Corrected an error msg.
 
-        * generic/tclexpat.c: Still problems on 64bit /w
+        * generic/tclexpat.c: Still problems on 64bit w/
           -externalentitycommand. This health the biggest pain.
 
 2007-08-05  Rolf Ade  <rolf@pointsman.de>
