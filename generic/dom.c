@@ -84,8 +84,8 @@
 \--------------------------------------------------------------------------*/
 
 #ifndef TCL_THREADS
-  unsigned int domUniqueNodeNr = 0;
-  unsigned int domUniqueDocNr  = 0;
+  unsigned long domUniqueNodeNr = 0;
+  unsigned long domUniqueDocNr  = 0;
   Tcl_HashTable tdom_tagNames;
   Tcl_HashTable tdom_attrNames;
 #endif

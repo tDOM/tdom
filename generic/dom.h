@@ -111,8 +111,8 @@
  * way we name Tcl object accessor commands.
  */
 #ifndef TCL_THREADS
-  extern unsigned int domUniqueNodeNr;
-  extern unsigned int domUniqueDocNr;
+  extern unsigned long domUniqueNodeNr;
+  extern unsigned long domUniqueDocNr;
   extern Tcl_HashTable tdom_tagNames;
   extern Tcl_HashTable tdom_attrNames;
 # define TDomNotThreaded(x) x
@@ -120,18 +120,17 @@
 # define HASHTAB(doc,tab)   tab
 # define NODE_NO(doc)       ++domUniqueNodeNr
 # define DOC_NO(doc)        ++domUniqueDocNr
-# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd%d",(doc)->documentNumber)
 #else
 # define TDomNotThreaded(x)
 # define TDomThreaded(x)    x
 # define HASHTAB(doc,tab)   (doc)->tab
 # define NODE_NO(doc)       ((doc)->nodeCounter)++
 # define DOC_NO(doc)        (unsigned int)(doc)
-# define XSLT_CMD(s,doc)    sprintf((s), "XSLTcmd0x%x", (doc)->documentNumber)
 #endif /* TCL_THREADS */
 
 #define DOC_CMD(s,doc)      sprintf((s), "domDoc%p", (doc))
 #define NODE_CMD(s,node)    sprintf((s), "domNode%p", (node))
+#define XSLT_CMD(s,doc)     sprintf((s), "XSLTcmd%p", (doc))
 
 #define XML_NAMESPACE "http://www.w3.org/XML/1998/namespace"
 #define XMLNS_NAMESPACE "http://www.w3.org/2000/xmlns"
@@ -486,7 +485,7 @@ typedef struct domDocument {
     domNodeType       nodeType  : 8;
     domDocFlags       nodeFlags : 8;
     domNameSpaceIndex dummy     : 16;
-    unsigned int      documentNumber;
+    unsigned long     documentNumber;
     struct domNode   *documentElement;
     struct domNode   *fragments;
 #ifdef TCL_THREADS
