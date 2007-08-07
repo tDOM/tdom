@@ -428,7 +428,7 @@ tcldom_deleteNode (
 )
 {
     Tcl_Interp *interp = clientData;
-    char        objCmdName[40];
+    char        objCmdName[80];
 
     /* Try to delete the node object commands, ignore errors */
     if (node->nodeFlags & VISIBLE_IN_TCL) {
@@ -529,7 +529,7 @@ char * tcldom_docTrace (
 {
     domDeleteInfo *dinfo = (domDeleteInfo*) clientData;
     domDocument   *doc   = dinfo->document;
-    char           objCmdName[40];
+    char           objCmdName[80];
 
     DBG(fprintf(stderr, "--> tcldom_docTrace %x %p\n", flags, doc));
 
@@ -564,7 +564,7 @@ char * tcldom_nodeTrace (
 {
     domDeleteInfo *dinfo = (domDeleteInfo*)clientData;
     domNode       *node = dinfo->node;
-    char           objCmdName[40];
+    char           objCmdName[80];
 
     DBG(fprintf(stderr, "--> tcldom_nodeTrace %x %p\n", flags, node));
 
@@ -624,7 +624,7 @@ int tcldom_returnNodeObj (
     Tcl_Obj    *var_name
 )
 {
-    char            objCmdName[40], *objVar;
+    char            objCmdName[80], *objVar;
     domDeleteInfo * dinfo;
     Tcl_CmdInfo     cmdInfo;
 
@@ -687,7 +687,7 @@ int tcldom_returnDocumentObj (
     int          trace
 )
 {
-    char           objCmdName[40], *objVar;
+    char           objCmdName[80], *objVar;
     domDeleteInfo *dinfo;
     Tcl_CmdInfo    cmd_info;
 
@@ -792,7 +792,7 @@ tcldom_getElementsByTagName (
             if (Tcl_StringMatch(localName, namePattern)) {
                 Tcl_Obj *namePtr;
                 Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-                char    objCmdName[40];
+                char    objCmdName[80];
             
                 tcldom_createNodeObj(interp, node, objCmdName);
                 namePtr = Tcl_NewStringObj(objCmdName, -1);
@@ -871,7 +871,7 @@ int tcldom_xpointerAddCallback (
     Tcl_Interp * interp = (Tcl_Interp*)clientData;
     Tcl_Obj    * resultPtr = Tcl_GetObjResult(interp);
     Tcl_Obj    * namePtr;
-    char         objCmdName[40];
+    char         objCmdName[80];
     int          result;
 
 
@@ -1170,7 +1170,7 @@ int tcldom_xpathResultSet (
 {
     int          rc, i;
     Tcl_Obj     *namePtr, *objv[2];
-    char         objCmdName[40];
+    char         objCmdName[80];
     domAttrNode *attr;
     domNodeType  startType;
     int          mixedNodeSet;
@@ -1272,7 +1272,7 @@ int tcldom_xpathFuncCallBack (
 )
 {
     Tcl_Interp  *interp = (Tcl_Interp*) clientData;
-    char         tclxpathFuncName[200], objCmdName[40];
+    char         tclxpathFuncName[200], objCmdName[80];
     char         *errStr, *typeStr, *nodeName;
     Tcl_Obj     *resultPtr, *objv[MAX_REWRITE_ARGS], *type, *value, *nodeObj;
     Tcl_CmdInfo  cmdInfo;
@@ -3564,7 +3564,7 @@ static int convertToXSLTCmd (
     Tcl_Obj     *var_name
     )
 {
-    char *errMsg, *objVar, objCmdName[40];
+    char *errMsg, *objVar, objCmdName[80];
     ClientData *clientData;
 
     doc->nodeFlags |= DONT_FREE;
@@ -3612,7 +3612,7 @@ int tcldom_NodeObjCmd (
     domNS       *ns;
     domAttrNode *attrs;
     domException exception;
-    char         tmp[200], objCmdName[40], prefix[MAX_PREFIX_LEN],
+    char         tmp[200], objCmdName[80], prefix[MAX_PREFIX_LEN],
                 *method, *nodeName, *str, *localName,
                 *attr_name, *attr_val, *filter, *errMsg, *uri;
     int          result, length, methodIndex, i, line, column;
@@ -5759,7 +5759,7 @@ int tcldom_DomObjCmd (
             break;
         case m_detachDocument:
             {
-                char objCmdName[40], *cmdName, *errMsg;
+                char objCmdName[80], *cmdName, *errMsg;
                 Tcl_CmdInfo cmdInfo;
                 domDocument *doc;
                 if (objc < 3) {
