@@ -3215,7 +3215,8 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
 {
   TclGenExpatInfo *expat = (TclGenExpatInfo *) XML_GetUserData(parser);
   Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *dataObj;
-  int result, mode, done, fd, len;
+  int result, mode, done, fd, tclLen;
+  size_t len;
   TclHandlerSet *activeTclHandlerSet;
   CHandlerSet *activeCHandlerSet;
   XML_Parser extparser, oldparser = NULL;
@@ -3307,8 +3308,8 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
       resultObj = Tcl_GetObjResult (expat->interp);
       Tcl_IncrRefCount (resultObj);
 
-      result = Tcl_ListObjLength (expat->interp, resultObj, &len);
-      if ((result != TCL_OK) || (len != 3)) {
+      result = Tcl_ListObjLength (expat->interp, resultObj, &tclLen);
+      if ((result != TCL_OK) || (tclLen != 3)) {
           goto wrongScriptResult;
       }
       result = Tcl_ListObjIndex (expat->interp, resultObj, 0, &resultTypeObj);
@@ -3360,10 +3361,10 @@ TclGenExpatExternalEntityRefHandler(parser, openEntityNames, base, systemId,
           activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
       }
 
-      dataStr = Tcl_GetStringFromObj (dataObj, &len);
+      dataStr = Tcl_GetStringFromObj (dataObj, &tclLen);
       switch (inputType) {
       case EXPAT_INPUT_STRING:
-          result = XML_Parse (extparser, dataStr, len, 1);
+          result = XML_Parse (extparser, dataStr, tclLen, 1);
           break;
 
       case EXPAT_INPUT_CHANNEL:
