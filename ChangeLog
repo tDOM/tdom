@@ -1,6 +1,8 @@
 
 2007-08-07  Rolf Ade  <rolf@pointsman.de>
 
+        * extensions/tnc/makefile.vc: Brought in sync with tdom core.
+
         * generic/tclexpat.c: Compiler pacifying.
 
         * generic/tdomDecls.h: Fixed a wrong function signature.
