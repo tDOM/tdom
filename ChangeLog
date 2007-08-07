@@ -1,7 +1,7 @@
 
 2007-08-07  Rolf Ade  <rolf@pointsman.de>
 
-        * generic/dom.c: Correction for 64 bit systems.
+        * generic/dom.c: Type gymnastic for 64 bit systems.
 
         * generic/dom.c
         * generic/dom.h
