@@ -59,12 +59,14 @@ CONST char *
 Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact)
 {
     CONST char *actualVersion;
+    ClientData clientData;
 
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 0)
     actualVersion = Tcl_PkgRequire(interp, "tdom", version, exact);
 #else
     actualVersion = Tcl_PkgRequireEx(interp, "tdom", version, exact,
-                                     (ClientData *) &tdomStubsPtr);
+                                     (ClientData*) &clientData);
+    tdomStubsPtr = (TdomStubs*)clientData;
 #endif
 
     if (!actualVersion) {
