@@ -85,7 +85,7 @@ typedef struct TdomStubs {
     XML_Size (*xML_GetCurrentColumnNumber) _ANSI_ARGS_((XML_Parser parser)); /* 9 */
     XML_Index (*xML_GetCurrentByteIndex) _ANSI_ARGS_((XML_Parser parser)); /* 10 */
     int (*xML_GetCurrentByteCount) _ANSI_ARGS_((XML_Parser parser)); /* 11 */
-    int (*xML_SetBase) _ANSI_ARGS_((XML_Parser parser, const XML_Char * base)); /* 12 */
+    enum XML_Status (*xML_SetBase) _ANSI_ARGS_((XML_Parser parser, const XML_Char * base)); /* 12 */
     const XML_Char * (*xML_GetBase) _ANSI_ARGS_((XML_Parser parser)); /* 13 */
     int (*xML_GetSpecifiedAttributeCount) _ANSI_ARGS_((XML_Parser parser)); /* 14 */
     int (*xML_GetIdAttributeIndex) _ANSI_ARGS_((XML_Parser parser)); /* 15 */
