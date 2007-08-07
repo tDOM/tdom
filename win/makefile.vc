@@ -235,7 +235,7 @@ cdebug	= -Z7 -Od -GZ
 !endif
 
 ### Declarations common to all compiler options
-cflags = -nologo -c -W3 -YX -Fp$(TMP_DIR)^\
+cflags = -nologo -c -W3
 
 !if $(PENT_0F_ERRATA)
 cflags = $(cflags) -QI0f
