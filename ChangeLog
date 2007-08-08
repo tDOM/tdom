@@ -1,6 +1,11 @@
 
 2007-08-07  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/dom.h: Another change needed, to complete the new
+          type of domDoc->documentNumber.
+
+2007-08-07  Rolf Ade  <rolf@pointsman.de>
+
         * generic/dom.c: Type gymnastic for 64 bit systems.
 
         * generic/dom.c
