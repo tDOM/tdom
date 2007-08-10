@@ -1,75 +1,62 @@
-/* 
- * tclAppInit.c --
- *
- *	Provides a default version of the main program and Tcl_AppInit
- *	procedure for Tcl applications (without Tk).
- *
- * Copyright (c) 1993 The Regents of the University of California.
- * Copyright (c) 1994-1997 Sun Microsystems, Inc.
- *
- * See the file "license.terms" for information on usage and redistribution
- * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
- *
- * RCS: @(#) $Id$
- */
-
-#ifdef TCL_XT_TEST
-#include <X11/Intrinsic.h>
-#endif
+/*----------------------------------------------------------------------------
+|   Copyright (c) 2007 Rolf Ade (rolf@pointsman.de)
++-----------------------------------------------------------------------------
+|
+|   $Id$
+|
+|
+|   Main file for a standalone tclsh with tDOM build in ('big tclsh'). |
+|
+|   The contents of this file are subject to the Mozilla Public License
+|   Version 1.1 (the "License"); you may not use this file except in
+|   compliance with the License. You may obtain a copy of the License at
+|   http://www.mozilla.org/MPL/
+|
+|   Software distributed under the License is distributed on an "AS IS"
+|   basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+|   License for the specific language governing rights and limitations
+|   under the License.
+|
+|   The Original Code is tDOM.
+|
+|   The Initial Developer of the Original Code is Jochen Loewer
+|   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
+|   Jochen Loewer. All Rights Reserved.
+|
+|   Contributor(s):
+|
+|
+|   written by Rolf Ade
+|   August, 2007
+|
+\---------------------------------------------------------------------------*/
 
 #include "tcl.h"
  
 extern int Tdom_Init _ANSI_ARGS_((Tcl_Interp *interp));
 extern int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
 
-/*
- *----------------------------------------------------------------------
- *
- * main --
- *
- *	This is the main program for the application.
- *
- * Results:
- *	None: Tcl_Main never returns here, so this procedure never
- *	returns either.
- *
- * Side effects:
- *	Whatever the application does.
- *
- *----------------------------------------------------------------------
- */
-
+/*----------------------------------------------------------------------------
+|   main
+|
+\---------------------------------------------------------------------------*/
 int
-main(argc, argv)
-    int argc;			/* Number of command-line arguments. */
-    char **argv;		/* Values of command-line arguments. */
+main(
+    int    argc,
+    char **argv
+    )
 {
-    Tcl_Main(argc, argv, Tcl_AppInit);
-    return 0;			/* Needed only to prevent compiler warning. */
+    Tcl_Main (argc, argv, Tcl_AppInit);
+    return 0;
 }
-
-/*
- *----------------------------------------------------------------------
- *
- * Tcl_AppInit --
- *
- *	This procedure performs application-specific initialization.
- *	Most applications, especially those that incorporate additional
- *	packages, will have their own version of this procedure.
- *
- * Results:
- *	Returns a standard Tcl completion code, and leaves an error
- *	message in interp->result if an error occurs.
- *
- * Side effects:
- *	Depends on the startup script.
- *
- *----------------------------------------------------------------------
- */
 
+/*----------------------------------------------------------------------------
+|   Tcl_AppInit
+|
+\---------------------------------------------------------------------------*/
 int
 Tcl_AppInit(interp)
-    Tcl_Interp *interp;		/* Interpreter for application. */
+    Tcl_Interp *interp;
 {
     if (Tcl_Init(interp) == TCL_ERROR) {
         return TCL_ERROR;
@@ -77,32 +64,7 @@ Tcl_AppInit(interp)
     if (Tdom_Init(interp) == TCL_ERROR) {
         return TCL_ERROR;
     }
-
     Tcl_StaticPackage(interp, "tdom", Tdom_Init, Tdom_SafeInit);
-
-    /*
-     * Call the init procedures for included packages.  Each call should
-     * look like this:
-     *
-     * if (Mod_Init(interp) == TCL_ERROR) {
-     *     return TCL_ERROR;
-     * }
-     *
-     * where "Mod" is the name of the module.
-     */
-
-    /*
-     * Call Tcl_CreateCommand for application-specific commands, if
-     * they weren't already created by the init procedures called above.
-     */
-
-    /*
-     * Specify a user-specific startup file to invoke if the application
-     * is run interactively.  Typically the startup file is "~/.apprc"
-     * where "app" is the name of the application.  If this line is deleted
-     * then no user-specific startup file will be run under any conditions.
-     */
-
-    Tcl_SetVar(interp, "tcl_rcFileName", "~/.tclshrc", TCL_GLOBAL_ONLY);
+    Tcl_SetVar(interp, "tcl_rcFileName", "~/.tcldomshrc", TCL_GLOBAL_ONLY);
     return TCL_OK;
 }
