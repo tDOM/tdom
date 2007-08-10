@@ -1,5 +1,7 @@
 
 2007-08-11  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/aolstub.cpp: Fixed editorial mistake in comment.
 
         * unix/tclAppInit.c: Rewritten from the scratch. New feature:
           tcldomsh will read ~/.tcldomshrc at start up.
