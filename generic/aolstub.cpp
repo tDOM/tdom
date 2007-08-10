@@ -3,7 +3,7 @@
  *
  * Adds interface for loading the extension into the AOLserver.
  *
- * See the file "license.terms" for information on usage and redistribution
+ * See the file "LICENSE" for information on usage and redistribution
  * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  * Rcsid: @(#)$Id$
