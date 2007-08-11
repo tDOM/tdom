@@ -3312,7 +3312,7 @@ static int evalAttrTemplates (
 {
     xpathResultSet  rs;
     char           *tplStart = NULL, *tplResult, *pc, literalChar;
-    int             rc, aLen, inTpl = 0, p = 0, inLiteral;
+    int             rc, aLen, inTpl = 0, p = 0, inLiteral = 0;
 
     aLen = 500;
     *out = MALLOC(aLen);
