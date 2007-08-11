@@ -1,6 +1,13 @@
 
 2007-08-12  Rolf Ade  <rolf@pointsman.de>
 
+        * extensions/tnc/configure
+        * extensions/tnc/configure.in
+        * extensions/tnc/tnc.c: Tweaks to build tnc with
+          win/msys/mingw.
+
+        * tdom.m4: Removed irritating breaks in TDOM_PATH_CONFIG.
+
         * unix/tclAppInit.c: Editorial fix.
 
         * generic/tdomStubLib.c: Rewritten from the scratch.
