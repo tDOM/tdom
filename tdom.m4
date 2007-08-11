@@ -265,7 +265,6 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 			    ../../../tdom `ls -dr ../../../tdom-* 2>/dev/null` ; do
 		        if test -f "$i/$tdom_bindir/tdomConfig.sh" ; then
 			        ac_cv_c_tdomconfig=`(cd $i/$tdom_bindir; pwd)`
-			        break
 		        fi
 		    done
 	    fi
@@ -273,7 +272,6 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 	    if test x"${ac_cv_c_tdomconfig}" = x ; then
                     if test -f "../../$tdom_bindir/tdomConfig.sh" ; then 
 		        ac_cv_c_tdomconfig=`(cd ../../$tdom_bindir; pwd)`
-		        break
  	            fi
             fi
 	    # Check in a few common install locations
@@ -283,7 +281,6 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
 			    `ls -d /usr/local/lib 2>/dev/null` ; do
 		        if test -f "$i/tdomConfig.sh" ; then
 			        ac_cv_c_tdomconfig=`(cd $i; pwd)`
-			        break
 		        fi
 		    done
 	    fi
@@ -294,7 +291,6 @@ AC_DEFUN(TDOM_PATH_CONFIG, [
             `ls -dr ${srcdir}/../tdom[[0-9]].[[0-9]]* 2>/dev/null` ; do
 		        if test -f "$i/$tdom_bindir/tdomConfig.sh" ; then
 		            ac_cv_c_tdomconfig=`(cd $i/$tdom_bindir; pwd)`
-		            break
 		        fi
 		    done
 	    fi
