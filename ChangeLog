@@ -1,5 +1,9 @@
 
 2007-08-11  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tdom.h
+        * generic/tclexpat.h: Fixed build problem with the build
+          environment win/msys/mingw.
         
         * generic/aolstub.cpp: Fixed editorial mistake in comment.
 
