@@ -126,6 +126,11 @@ typedef struct TclGenExpatInfo {
     CHandlerSet *firstCHandlerSet;
 } TclGenExpatInfo;
 
+#ifdef BUILD_tdom
+# undef TCL_STORAGE_CLASS
+# define TCL_STORAGE_CLASS DLLEXPORT
+#endif
+
 #include "dom.h"
 #include "tdomDecls.h"
 
