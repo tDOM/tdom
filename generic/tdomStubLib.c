@@ -1,30 +1,41 @@
-/* 
- * tdomStubLib.c --
- *
- *	Stub object that will be statically linked into extensions that wish
- *	to access Tdom.
- *
- * Copyright (c) 1998-1999 by Scriptics Corporation.
- * Copyright (c) 1998 Paul Duffin.
- *
- * See the file "license.terms" for information on usage and redistribution
- * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
- *
- */
-
-/*
- * We need to ensure that we use the stub macros so that this file contains
- * no references to any of the stub functions.  This will make it possible
- * to build an extension that references Tdom_InitStubs but doesn't end up
- * including the rest of the stub functions.
- */
+/*----------------------------------------------------------------------------
+|   Copyright (c) 2007 Rolf Ade (rolf@pointsman.de)
++-----------------------------------------------------------------------------
+|
+|   $Id$
+|
+|   Implements entry point, which has to be called by C coded extensions
+|   to tDOM. Following http://wiki.tcl.tk/3358.
+|
+|   The contents of this file are subject to the Mozilla Public License
+|   Version 1.1 (the "License"); you may not use this file except in
+|   compliance with the License. You may obtain a copy of the License at
+|   http://www.mozilla.org/MPL/
+|
+|   Software distributed under the License is distributed on an "AS IS"
+|   basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+|   License for the specific language governing rights and limitations
+|   under the License.
+|
+|   The Original Code is tDOM.
+|
+|   The Initial Developer of the Original Code is Jochen Loewer
+|   Portions created by Jochen Loewer are Copyright (C) 1998, 1999
+|   Jochen Loewer. All Rights Reserved.
+|
+|   Contributor(s):
+|
+|
+|   written by Rolf Ade
+|   August, 2007
+|
+\---------------------------------------------------------------------------*/
 
 #ifndef USE_TCL_STUBS
-#define USE_TCL_STUBS
+#  define USE_TCL_STUBS
 #endif
 #undef USE_TCL_STUB_PROCS
 
-#include <dom.h>
 #include <tdom.h>
 
 /*
@@ -37,45 +48,37 @@
 
 TdomStubs *tdomStubsPtr;
 
-/*
- *----------------------------------------------------------------------
- *
- * Tdom_InitStubs --
- *
- *	Checks that the correct version of Tdom is loaded and that it
- *	supports stubs. It then initialises the stub table pointers.
- *
- * Results:
- *	The actual version of Tdom that satisfies the request, or
- *	NULL to indicate that an error occurred.
- *
- * Side effects:
- *	Sets the stub table pointers.
- *
- *----------------------------------------------------------------------
- */
+/*----------------------------------------------------------------------------
+|   Tdom_InitStubs
+|
+\---------------------------------------------------------------------------*/
 
 CONST char *
-Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact)
+Tdom_InitStubs (
+    Tcl_Interp *interp, 
+    char *version, 
+    int exact
+    )
 {
     CONST char *actualVersion;
-    ClientData clientData;
+    ClientData clientData = NULL;
 
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 0)
-    actualVersion = Tcl_PkgRequire(interp, "tdom", version, exact);
-#else
+    Tcl_SetResult(interp, "Too old Tcl version. Binary extensions "
+                  "to tDOM are not possible, with a that outdated "
+                  "Tcl version.", TCL_STATIC);
+    return NULL;
+#endif
     actualVersion = Tcl_PkgRequireEx(interp, "tdom", version, exact,
                                      (ClientData*) &clientData);
     tdomStubsPtr = (TdomStubs*)clientData;
-#endif
 
     if (!actualVersion) {
         return NULL;
     }
     if (!tdomStubsPtr) {
-        Tcl_SetResult(interp,
-                      "This implementation of Tdom does not support stubs",
-                      TCL_STATIC);
+        Tcl_SetResult(interp, "This implementation of Tdom does not "
+                      "support stubs", TCL_STATIC);
         return NULL;
     }
   
