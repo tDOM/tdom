@@ -1,4 +1,8 @@
 
+2007-08-12  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tdomStubLib.c: Rewritten from the scratch.
+
 2007-08-11  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Code cosmetic.
