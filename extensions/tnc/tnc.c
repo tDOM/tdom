@@ -2932,6 +2932,12 @@ TclTncObjCmd(dummy, interp, objc, objv)
 
 }
 
+#ifdef BUILD_tnc
+# undef TCL_STORAGE_CLASS
+# define TCL_STORAGE_CLASS DLLEXPORT
+#endif
+
+
 /*
  *----------------------------------------------------------------------------
  *
