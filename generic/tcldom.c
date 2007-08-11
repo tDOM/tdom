@@ -2902,7 +2902,8 @@ static int serializeAsXML (
     if (objc > 10) {
         Tcl_WrongNumArgs(interp, 2, objv,
                          "?-indent <0..8>? ?-channel <channelID>? "
-                         "?-escapeNonASCII? -?doctypeDeclaration <boolean>?");
+                         "?-escapeNonASCII? ?-escapeAllQuot? "
+                         "-?doctypeDeclaration <boolean>?");
         return TCL_ERROR;
     }
     indent = 4;
