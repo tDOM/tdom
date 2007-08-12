@@ -68,7 +68,7 @@ Tdom_InitStubs (
                   "to tDOM are not possible, with a that outdated "
                   "Tcl version.", TCL_STATIC);
     return NULL;
-#endif
+#else
     actualVersion = Tcl_PkgRequireEx(interp, "tdom", version, exact,
                                      (ClientData*) &clientData);
     tdomStubsPtr = (TdomStubs*)clientData;
@@ -81,6 +81,7 @@ Tdom_InitStubs (
                       "support stubs", TCL_STATIC);
         return NULL;
     }
-  
+    
     return actualVersion;
+#endif
 }
