@@ -1,6 +1,10 @@
 
 2007-08-12  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/tdomStubLib.c: Ensure that the new code build also
+          with tcl8.0.x (although that old versions doesn't have
+          extension stubs tables.)
+
         * extensions/tnc/configure
         * extensions/tnc/configure.in
         * extensions/tnc/tnc.c: Tweaks to build tnc with
