@@ -234,9 +234,9 @@ static char doc_usage[] =
     "    createTextNode text ?objVar?            \n"
     "    createComment text ?objVar?             \n"
     "    createProcessingInstruction target data ?objVar? \n"
-    "    asXML ?-indent <none,0..8>? ?-channel <channelId>? ?-escapeNonASCII?\n" 
+    "    asXML ?-indent <none,0..8>? ?-channel <channel>? ?-escapeNonASCII? ?-escapeAllQuot? ?-doctypeDeclaration <boolean>?\n"
     "    asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
-    "    asTexT                                  \n"
+    "    asText                                  \n"
     "    getDefaultOutputMethod                  \n"
     "    publicId ?publicId?                     \n"
     "    systemId ?systemId?                     \n"
@@ -329,7 +329,7 @@ static char node_usage[] =
     "    getColumn                    \n"
     "    @<attrName> ?defaultValue?   \n"
     "    asList                       \n"
-    "    asXML ?-indent <none,0..8>? ?-channel <channel>? ?-escapeNonASCII?\n"
+    "    asXML ?-indent <none,0..8>? ?-channel <channel>? ?-escapeNonASCII? ?-escapeAllQuot? ?-doctypeDeclaration <boolean>?\n"
     "    asHTML ?-channel <channelId>? ?-escapeNonASCII? ?-htmlEntities?\n"
     "    asText                       \n"
     "    appendFromList nestedList    \n"
@@ -2903,7 +2903,7 @@ static int serializeAsXML (
         Tcl_WrongNumArgs(interp, 2, objv,
                          "?-indent <0..8>? ?-channel <channelID>? "
                          "?-escapeNonASCII? ?-escapeAllQuot? "
-                         "-?doctypeDeclaration <boolean>?");
+                         "?-doctypeDeclaration <boolean>?");
         return TCL_ERROR;
     }
     indent = 4;
