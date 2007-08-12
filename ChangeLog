@@ -1,6 +1,11 @@
 
 2007-08-12  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/tcldom.c: Corrected a typo in the doc cmd usage
+          message. Updated the asXML related parts of the doc and node
+          cmd usage msg. Corrected a typo in the error msg in case of
+          wrong # of args to asXML.
+
         * generic/tdomStubLib.c: Ensure that the new code build also
           with tcl8.0.x (although that old versions doesn't have
           extension stubs tables.)
