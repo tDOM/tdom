@@ -156,7 +156,7 @@ Please `cd` to its location first.
 PROJECT = tdom
 !include "rules.vc"
 
-DOTVERSION      = 0.8.2
+DOTVERSION      = 0.8.3
 VERSION         = $(DOTVERSION:.=)
 STUBPREFIX      = $(PROJECT)stub
 
