@@ -144,18 +144,19 @@ AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
     AC_MSG_CHECKING([whether to enable tDOMs block allocator])
     AC_ARG_ENABLE(tdomalloc,
         AC_HELP_STRING([--enable-tdomalloc],
-            [build with the tDOM allocator (default: on)]),
-        [tcl_ok=$enableval], [tcl_ok=yes])
+            [build with the tDOM allocator (default: off)]),
+        [tcl_ok=$enableval], [tcl_ok=no])
 
     if test "${enable_tdomalloc+set}" = set; then
         enableval="$enable_tdomalloc"
         tcl_ok=$enableval
     else
-        tcl_ok=yes
+        tcl_ok=no
     fi
 
     if test "$tcl_ok" = "yes" ; then
         AC_MSG_RESULT([yes])
+        TEA_ADD_SOURCES([generic/domalloc.c])
     else
         AC_MSG_RESULT([no])
         AC_DEFINE(USE_NORMAL_ALLOCATOR)

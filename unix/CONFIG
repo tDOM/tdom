@@ -4,16 +4,15 @@
 # compile tdom on different platforms. Just uncomment the line(s)
 # you need and run this script with "sh CONFIG".
 #
-# With the exception of the --enable-tdomalloc option it's best, to
-# leave the tDOM specfic configuration options alone (that is: use the
-# defaults, do nothing).
+# It's best, to leave the tDOM specfic configuration options alone
+# (that is: use the defaults, do nothing).
 # 
 # --enable-tdomalloc
-# Default: on
+# Default: off
 # With this option on, a special memory allocator is used, which is
 # optimized for low memory allocation overhead. This allocator works
 # only on 32-bit plattforms. If you build for a 64-bit OS, you _must_
-# disable this.
+# disable this (and it's disabled by default).
 # 
 # --enable-dtd
 # Default: on

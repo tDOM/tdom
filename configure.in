@@ -89,7 +89,6 @@ TEA_ADD_SOURCES([expat/xmlrole.c     \
                  generic/xmlsimple.c \
                  generic/utf8conv.c  \
                  generic/dom.c       \
-                 generic/domalloc.c  \
                  generic/domhtml.c   \
                  generic/domxpath.c  \
                  generic/domxslt.c   \

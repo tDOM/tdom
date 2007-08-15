@@ -852,7 +852,7 @@ Optional Features:
   --enable-dtd            build with dtd support (default: on)
   --enable-ns             build with XML namespace support (default: on)
   --enable-unknown        enable built-in unknown command (default: off)
-  --enable-tdomalloc      build with the tDOM allocator (default: on)
+  --enable-tdomalloc      build with the tDOM allocator (default: off)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -6304,7 +6304,6 @@ _ACEOF
                  generic/xmlsimple.c \
                  generic/utf8conv.c  \
                  generic/dom.c       \
-                 generic/domalloc.c  \
                  generic/domhtml.c   \
                  generic/domxpath.c  \
                  generic/domxslt.c   \
@@ -10184,19 +10183,53 @@ if test "${enable_tdomalloc+set}" = set; then
   enableval="$enable_tdomalloc"
   tcl_ok=$enableval
 else
-  tcl_ok=yes
+  tcl_ok=no
 fi;
 
     if test "${enable_tdomalloc+set}" = set; then
         enableval="$enable_tdomalloc"
         tcl_ok=$enableval
     else
-        tcl_ok=yes
+        tcl_ok=no
     fi
 
     if test "$tcl_ok" = "yes" ; then
         echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
+
+    vars="generic/domalloc.c"
+    for i in $vars; do
+	case $i in
+	    \$*)
+		# allow $-var names
+		PKG_SOURCES="$PKG_SOURCES $i"
+		PKG_OBJECTS="$PKG_OBJECTS $i"
+		;;
+	    *)
+		# check for existence - allows for generic/win/unix VPATH
+		if test ! -f "${srcdir}/$i" -a ! -f "${srcdir}/generic/$i" \
+		    -a ! -f "${srcdir}/win/$i" -a ! -f "${srcdir}/unix/$i" \
+		    ; then
+		    { { echo "$as_me:$LINENO: error: could not find source file '$i'" >&5
+echo "$as_me: error: could not find source file '$i'" >&2;}
+   { (exit 1); exit 1; }; }
+		fi
+		PKG_SOURCES="$PKG_SOURCES $i"
+		# this assumes it is in a VPATH dir
+		i=`basename $i`
+		# handle user calling this before or after TEA_SETUP_COMPILER
+		if test x"${OBJEXT}" != x ; then
+		    j="`echo $i | sed -e 's/\.[^.]*$//'`.${OBJEXT}"
+		else
+		    j="`echo $i | sed -e 's/\.[^.]*$//'`.\${OBJEXT}"
+		fi
+		PKG_OBJECTS="$PKG_OBJECTS $j"
+		;;
+	esac
+    done
+
+
+
     else
         echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
