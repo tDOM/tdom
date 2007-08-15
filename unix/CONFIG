@@ -4,8 +4,9 @@
 # compile tdom on different platforms. Just uncomment the line(s)
 # you need and run this script with "sh CONFIG".
 #
-# It's best, to leave the tDOM specfic configuration options alone
-# (that is: use the defaults, do nothing).
+# With the exception of the --enable-tdomalloc option it's best, to
+# leave the tDOM specfic configuration options alone (that is: use the
+# defaults, do nothing).
 # 
 # --enable-tdomalloc
 # Default: off
