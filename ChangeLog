@@ -1,4 +1,20 @@
 
+2007-08-16  Rolf Ade  <rolf@pointsman.de>
+
+        * README
+        * README.AOL
+        * configure
+        * configure-tcl8.0.5
+        * configure.in
+        * tests/loadtdom.tcl
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h
+        * win/makefile.vc
+        * win/makefile805.vc:
+        * win/pkgIndex.tcl: Bumped version to 0.8.3.
+
+--- Release 0.8.2, 14. Aug. 2007 ---
+
 2007-08-13  Rolf Ade  <rolf@pointsman.de>
 
         * win/pkgIndex.tcl: Bumped version to 0.8.2
