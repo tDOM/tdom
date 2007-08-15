@@ -1,4 +1,6 @@
 
+--- Release 0.8.2, 15. Aug. 2007 --- See ChangeLog for details ---
+
 2007-08-11  Rolf Ade  <rolf@pointsman.de>
 
         Now tcldomsh will source ~/.tcldomshrc at start up.
