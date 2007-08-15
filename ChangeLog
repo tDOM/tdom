@@ -3,6 +3,7 @@
         
         * configure
         * configure.in
+        * unix/CONFIG
         * tdom.m4: New default build: --disable-tdomalloc.
 
         * CHANGES: Updated.
