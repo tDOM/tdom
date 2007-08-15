@@ -17,8 +17,8 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
     }
 }
 
-if {[catch {package present -exact tdom 0.8.2}]} {
-    package require -exact tdom 0.8.2
+if {[catch {package present -exact tdom 0.8.3}]} {
+    package require -exact tdom 0.8.3
 } else {
     if {[lsearch [namespace children] ::tDOM] == -1} {
         # tcldomsh without the script library. Source the lib.
