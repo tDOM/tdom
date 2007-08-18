@@ -1,6 +1,9 @@
 
 2007-08-18  Rolf Ade  <rolf@pointsman.de>
 
+        * generic/domxslt.c: Code cleanup in document()
+          implementation.
+
         * generic/dom.c
         * generic/dom.h
         * generic/domxslt.c
