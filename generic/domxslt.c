@@ -4265,9 +4265,9 @@ static int ExecAction (
                 return rc;
             }
             pc = xpathGetStringValue (xs->lastNode, &len);
-            DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, nsStr);)
+            DBG(fprintf (stderr, "xsl:attribute: create attribute \"%s\" with value \"%s\" in namespace \"%s\"\n", Tcl_DStringValue (&dStr), pc, out);)
             domSetAttributeNS (savedLastNode, Tcl_DStringValue (&dStr), pc,
-                               nsStr, 1);
+                               out, 1);
             FREE(pc);
             Tcl_DStringFree (&dStr);
             domDeleteNode (xs->lastNode, NULL, NULL);
