@@ -370,8 +370,8 @@ static int
 domIsNamespaceInScope (
     domActiveNS *NSstack,
     int          NSstackPos,
-    char        *prefix,
-    char        *namespaceURI
+    const char  *prefix,
+    const char  *namespaceURI
 )
 {
     int    i;
@@ -429,7 +429,7 @@ XML_SimpleParse (
     int            activeNSpos  = -1;
     int            activeNSsize = 8;
     domActiveNS   *activeNS     = (domActiveNS*) MALLOC (sizeof(domActiveNS) * activeNSsize);
-    char          *xmlns, *localname;
+    const char    *xmlns, *localname;
     domNS         *ns;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];
@@ -962,7 +962,7 @@ XML_SimpleParse (
             /*----------------------------------------------------------
             |   look for namespace of element
             \---------------------------------------------------------*/
-            domSplitQName ((char*)node->nodeName, tagPrefix,
+            domSplitQName (node->nodeName, tagPrefix,
                            &localname);
             for (nspos = activeNSpos; nspos >= 0; nspos--) {
                 if (  ((tagPrefix[0] == '\0') && (activeNS[nspos].namespace->prefix[0] == '\0'))

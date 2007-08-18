@@ -173,11 +173,11 @@ typedef struct xsltSubDoc
 typedef struct xsltTemplate {
 
     char       * match;
-    char       * name;
-    char       * nameURI;
+    const char * name;
+    const char * nameURI;
     ast          ast;
-    char       * mode;
-    char       * modeURI;
+    const char * mode;
+    const char * modeURI;
     double       prio;
     domNode    * content;
     double       precedence;
@@ -195,9 +195,9 @@ typedef struct xsltTemplate {
 \-------------------------------------------------------------------------*/
 typedef struct xsltAttrSet {
 
-    char    * name;
-    char    * uri;
-    domNode * content;
+    const char * name;
+    const char * uri;
+    domNode    * content;
 
     struct xsltAttrSet *next;
 
@@ -237,8 +237,8 @@ typedef struct xsltKeyInfo {
 \-------------------------------------------------------------------------*/
 typedef struct xsltVariable {
 
-    char           * name;
-    char           * uri;
+    const char           * name;
+    const char           * uri;
     domNode        * node;
     xpathResultSet   rs;
     int              active;
@@ -442,20 +442,22 @@ typedef struct {
 static int ApplyTemplates ( xsltState *xs, xpathResultSet *context,
                             domNode *currentNode, int currentPos,
                             domNode *actionNode, xpathResultSet *nodeList,
-                            char *mode, char *modeURI, char **errMsg);
+                            const char *mode, const char *modeURI, 
+                            char **errMsg);
 
 static int ApplyTemplate (  xsltState *xs, xpathResultSet *context,
                             domNode *currentNode, domNode *exprContext,
-                            int currentPos, char *mode, char *modeURI,
-                            char **errMsg);
+                            int currentPos, const char *mode, 
+                            const char *modeURI, char **errMsg);
 
 static int ExecActions (xsltState *xs, xpathResultSet *context,
                         domNode *currentNode, int currentPos,
                         domNode *actionNode,  char **errMsg);
 
 static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
-                                          domDocument *xsltDoc, char *baseURI,
-                                          char *href, int isStylesheet,
+                                          domDocument *xsltDoc, 
+                                          const char *baseURI,
+                                          const char *href, int isStylesheet,
                                           int fixedXMLSource, char **errMsg);
 
 
@@ -544,7 +546,8 @@ reportError (
     char   ** errMsg)
 {
     Tcl_DString dStr;
-    char *baseURI, buffer[1024];
+    char buffer[1024];
+    const char *baseURI;
     int  line, column;
 
     Tcl_DStringInit (&dStr);
@@ -604,7 +607,7 @@ static xsltTag getTag (
     domNode  *node
 )
 {
-    char *name;
+    const char *name;
 
     if (node->nodeType != ELEMENT_NODE) {
         node->info = (int)unknown;
@@ -734,8 +737,8 @@ static void xsltPushVarFrame (
 \---------------------------------------------------------------------------*/
 static int xsltAddExternalDocument (
     xsltState       * xs,
-    char            * baseURI,
-    char            * str,
+    const char      * baseURI,
+    const char      * str,
     int               fixedXMLSource,
     xpathResultSet  * result,
     char           ** errMsg
@@ -1974,7 +1977,8 @@ static void StripXMLSpace (
 {
     domNode       *child, *newChild, *parent;
     int            i, len, onlySpace, found, strip;
-    char          *p, *localName, prefix[MAX_PREFIX_LEN];
+    char          *p, prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     double        *f;
     domNS         *ns;
     Tcl_HashEntry *h;
@@ -2100,8 +2104,9 @@ static int xsltXPathFuncs (
 )
 {
     xsltState         * xs = clientData;
-    char              * keyId, *filterValue, *str, *baseURI;
-    char              * localName, prefix[MAX_PREFIX_LEN];
+    char              * keyId, *filterValue, *str;
+    char                prefix[MAX_PREFIX_LEN];
+    const char        * localName, *baseURI, *nsStr;
     int                 rc, i, len, NaN, freeStr, x;
     double              n;
     xsltNodeSet       * keyValues;
@@ -2318,22 +2323,23 @@ static int xsltXPathFuncs (
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
                     freeStr = 0;
                     if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
-                        str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
+                        nsStr = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                         baseURI = findBaseURI (((domAttrNode*)argv[0]->nodes[i])->parentNode);
                     } else {
                         str = xpathGetStringValue (argv[0]->nodes[i], &len);
+                        nsStr = str;
                         freeStr = 1;
                         baseURI = findBaseURI (argv[0]->nodes[i]);
                     }
                     /* the case document('') */
-                    if (*str == '\0') {
+                    if (*nsStr == '\0') {
                         if (freeStr) {
                             FREE(str);
                             freeStr = 0;
                         }
-                        str = baseURI;
+                        nsStr = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                    if (xsltAddExternalDocument(xs, baseURI, nsStr, 0,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2347,6 +2353,7 @@ static int xsltXPathFuncs (
             else {
                 freeStr = 1;
                 str = xpathFuncString (argv[0]);
+                nsStr = str;
                 if (xs->currentXSLTNode) {
                     baseURI = findBaseURI (xs->currentXSLTNode);
                 } else
@@ -2355,13 +2362,13 @@ static int xsltXPathFuncs (
                 } else {
                     baseURI = findBaseURI (xs->xsltDoc->rootNode);
                 }
-                if (*str == '\0') {
+                if (*nsStr == '\0') {
                     FREE(str);
                     freeStr = 0;
-                    str = baseURI;
+                    nsStr = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
-                if (xsltAddExternalDocument(xs, baseURI, str, 1,
+                if (xsltAddExternalDocument(xs, baseURI, nsStr, 1,
                                             result, errMsg) < 0) {
                     if (freeStr) FREE(str);
                     return -1;
@@ -2387,17 +2394,18 @@ static int xsltXPathFuncs (
                 for (i = 0; i < argv[0]->nr_nodes; i++) {
                     freeStr = 0;
                     if (argv[0]->nodes[i]->nodeType == ATTRIBUTE_NODE) {
-                        str = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
+                        nsStr = ((domAttrNode*)argv[0]->nodes[i])->nodeValue;
                     } else {
                         str = xpathGetStringValue (argv[0]->nodes[i], &len);
                         freeStr = 1;
+                        nsStr = str;
                     }
-                    if (*str == '\0') {
+                    if (*nsStr == '\0') {
                         FREE(str);
                         freeStr = 0;
-                        str = baseURI;
+                        nsStr = baseURI;
                     }
-                    if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                    if (xsltAddExternalDocument(xs, baseURI, nsStr, 0,
                                                 result, errMsg) < 0) {
                         if (freeStr) FREE(str);
                         return -1;
@@ -2410,12 +2418,13 @@ static int xsltXPathFuncs (
             } else {
                 str = xpathFuncString (argv[0]);
                 freeStr = 1;
+                nsStr = str;
                 if (*str == '\0') {
                     FREE(str);
                     freeStr = 0;
-                    str = baseURI;
+                    nsStr = baseURI;
                 }
-                if (xsltAddExternalDocument(xs, baseURI, str, 0,
+                if (xsltAddExternalDocument(xs, baseURI, nsStr, 0,
                                             result, errMsg) < 0) {
                     if (freeStr) FREE(str);
                     return -1;
@@ -2737,7 +2746,8 @@ static int xsltSetVar (
     xpathResultSet   rs;
     xsltVarFrame    *tmpFrame = NULL;
     domNode         *fragmentNode, *savedLastNode;
-    char             prefix[MAX_PREFIX_LEN], *localName;
+    char             prefix[MAX_PREFIX_LEN];
+    const char      *localName;
     domNS           *ns;
 
     TRACE1("xsltSetVar variableName='%s' \n", variableName);
@@ -2813,7 +2823,8 @@ static int xsltVarExists (
 )
 {
     int           i, frameIndex, found = 0;
-    char          prefix[MAX_PREFIX_LEN], *localName, *uri, *varName;
+    char          prefix[MAX_PREFIX_LEN];
+    const char   *localName, *uri, *varName;
     domNS        *ns;
     xsltVarFrame *frame;
 
@@ -3087,7 +3098,8 @@ static int xsltAddTemplate (
 )
 {
     xsltTemplate  *tpl, *t;
-    char          *prioStr, *str, *localName, prefix[MAX_PREFIX_LEN];
+    char          *prioStr, *str, prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     int            rc, hnew;
     domNS         *ns;
     Tcl_HashEntry *h;
@@ -3245,7 +3257,8 @@ static int ExecUseAttributeSets (
 )
 {
     xsltAttrSet *attrSet;
-    char        *pc, *aSet, save, *str, prefix[MAX_PREFIX_LEN], *localName;
+    char        *pc, *aSet, save, *str, prefix[MAX_PREFIX_LEN];
+    const char  *localName;
     int          rc;
     domNS       *ns;
 
@@ -3466,7 +3479,8 @@ static int doSortActions (
     domNode       *child;
     char          *str, *evStr, *select, *lang;
     char         **vs = NULL;
-    char          *localName, prefix[MAX_PREFIX_LEN];
+    char           prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     double        *vd = NULL;
     int            rc = 0, typeText, ascending, upperFirst, *pos = NULL, i, NaN;
     xpathResultSet rs;
@@ -3914,9 +3928,9 @@ static int ExecAction (
     Tcl_DString     dStr;
     domProcessingInstructionNode *pi;
     xpathResultSet  rs, nodeList;
-    char           *str, *str2, *mode, *modeURI, *select, *pc;
-    char           *nsAT, *nsStr;
-    char           *uri, *localName, prefix[MAX_PREFIX_LEN];
+    char           *str, *str2, *select, *pc, *nsAT, *out;
+    const char     *mode, *modeURI, *localName, *uri, *nsStr;
+    char            prefix[MAX_PREFIX_LEN];
     int             rc, b, i, len, terminate, chooseState, disableEsc = 0;
     double          currentPrio, currentPrec;
     Tcl_HashEntry  *h;
@@ -4177,7 +4191,6 @@ static int ExecAction (
             rc = evalAttrTemplates( xs, context, currentNode, currentPos,
                                     str, &str2, errMsg);
             CHECK_RC;
-            nsStr = NULL;
             domSplitQName (str2, prefix, &localName);
             if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
                  || !domIsNCNAME (localName)) {
@@ -4186,10 +4199,10 @@ static int ExecAction (
                 FREE(str2);
                 return -1;
             }
-            nsStr = NULL;
+            out = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        nsAT, &nsStr, errMsg);
+                                        nsAT, &out, errMsg);
                 CHECK_RC1(str2);
             }
 
@@ -4206,18 +4219,18 @@ static int ExecAction (
                 Tcl_DStringAppend (&dStr, ":", 1);
                 Tcl_DStringAppend (&dStr, localName, -1);
             } else {
-                if (nsStr) {
-                    if (nsStr[0] == '\0') {
+                if (out) {
+                    if (out[0] == '\0') {
                         if (prefix[0] != '\0') {
                             Tcl_DStringAppend (&dStr, localName, -1);
                         } else {
                             Tcl_DStringAppend (&dStr, str2, -1);
                         }
-                        FREE(nsStr);
-                        nsStr = NULL;
+                        FREE(out);
+                        out = NULL;
                     } else {
                         if (prefix[0] == '\0') {
-                            ns = domLookupURI (xs->lastNode, nsStr);
+                            ns = domLookupURI (xs->lastNode, out);
                             if (ns && (ns->prefix[0] != '\0')) {
                                 Tcl_DStringAppend (&dStr, ns->prefix, -1);
                                 Tcl_DStringAppend (&dStr, ":", 1);
@@ -4232,7 +4245,7 @@ static int ExecAction (
                 } else {
                     if (prefix[0] != '\0') {
                         ns = domLookupPrefix (actionNode, prefix);
-                        if (ns) nsStr = tdomstrdup (ns->uri);
+                        if (ns) out = tdomstrdup (ns->uri);
                         else goto ignoreAttribute;
                     }
                     Tcl_DStringAppend (&dStr, str2, -1);
@@ -4247,7 +4260,7 @@ static int ExecAction (
                              actionNode->firstChild, errMsg);
             xsltPopVarFrame (xs);
             if (rc < 0) {
-                if (nsStr) FREE(nsStr);
+                if (out) FREE(out);
                 FREE(str2);
                 return rc;
             }
@@ -4260,7 +4273,7 @@ static int ExecAction (
             domDeleteNode (xs->lastNode, NULL, NULL);
             xs->lastNode = savedLastNode;
     ignoreAttribute:
-            if (nsStr) FREE(nsStr);
+            if (out) FREE(out);
             FREE(str2);
             break;
 
@@ -4289,8 +4302,6 @@ static int ExecAction (
                     return -1;
                 }
                 uri = ns->uri;
-
-                str = localName;
             }
             if (uri) {
                 Tcl_DStringInit (&dStr);
@@ -4311,7 +4322,7 @@ static int ExecAction (
             tplChoosen = (xsltTemplate *) Tcl_GetHashValue (h);
             xsltPushVarFrame (xs);
             SETPARAMDEF;
-            TRACE3("call template %s match='%s' name='%s' \n", str, 
+            TRACE3("call template %s match='%s' name='%s' \n", localName, 
                    tplChoosen->match, tplChoosen->name);
             DBG(printXML(xs->lastNode, 0, 2);)
             rc = setParamVars (xs, context, currentNode, currentPos,
@@ -4325,7 +4336,7 @@ static int ExecAction (
             SETSCOPESTART;
             rc = ExecActions(xs, context, currentNode, currentPos, 
                              tplChoosen->content->firstChild, errMsg);
-            TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", str, rc);
+            TRACE2("called template '%s': ApplyTemplate/ExecActions rc = %d \n", localName, rc);
             xsltPopVarFrame (xs);
             CHECK_RC;
             xs->currentSubDoc = currentSubDoc;
@@ -4626,11 +4637,13 @@ static int ExecAction (
                 FREE(str2);
                 return -1;
             }
+            out = NULL;
             nsStr = NULL;
             if (nsAT) {
                 rc = evalAttrTemplates( xs, context, currentNode, currentPos,
-                                        nsAT, &nsStr, errMsg);
+                                        nsAT, &out, errMsg);
                 CHECK_RC1(str2);
+                nsStr = out;
             } else {
                 domSplitQName (str2, prefix, &localName);
                 if ((prefix[0] != '\0' &&  !domIsNCNAME (prefix))
@@ -4655,7 +4668,7 @@ static int ExecAction (
             savedLastNode = xs->lastNode;
             xs->lastNode = domAppendNewElementNode (xs->lastNode, str2, nsStr);
             FREE(str2);
-            if (nsAT) FREE(nsStr);
+            if (nsAT) FREE(out);
             str = getAttr(actionNode, "use-attribute-sets", a_useAttributeSets);
             if (str) {
                 TRACE1("use-attribute-sets = '%s' \n", str);
@@ -5094,7 +5107,7 @@ static int ExecAction (
                         continue;
                     }
 
-                    uri = ns->uri;
+                    str = ns->uri;
                     nsAlias = xs->nsAliases;
                     while (nsAlias) {
                         if (strcmp (nsAlias->fromUri, ns->uri)==0) {
@@ -5126,7 +5139,7 @@ static int ExecAction (
                             domAddNSToNode (xs->lastNode, ns);
                         }
                     }
-                    ns->uri = uri;
+                    ns->uri = str;
                     attr = attr->nextSibling;
                 }
                 n = n->parentNode;
@@ -5139,7 +5152,7 @@ static int ExecAction (
                namespace recommendation. */
             if (actionNode->namespace) {
                 ns = actionNode->ownerDocument->namespaces[actionNode->namespace-1];
-                uri = ns->uri;
+                str = ns->uri;
                 nsAlias = xs->nsAliases;
                 while (nsAlias) {
                     if (strcmp (nsAlias->fromUri, ns->uri)==0) {
@@ -5152,7 +5165,7 @@ static int ExecAction (
                 if (ns1) {
                     xs->lastNode->namespace = ns1->index;
                 }
-                ns->uri = uri;
+                ns->uri = str;
             } else {
                 ns = domLookupPrefix (xs->lastNode, "");
                 if (ns) {
@@ -5265,8 +5278,8 @@ static int ApplyTemplate (
     domNode        * currentNode,
     domNode        * exprContext,
     int              currentPos,
-    char           * mode,
-    char           * modeURI,
+    const char     * mode,
+    const char     * modeURI,
     char          ** errMsg
 )
 {
@@ -5276,7 +5289,8 @@ static int ApplyTemplate (
     xpathResultSet  rs;
     int             rc;
     double          currentPrio, currentPrec;
-    char           *localName, prefix[MAX_PREFIX_LEN];
+    char            prefix[MAX_PREFIX_LEN];
+    const char     *localName;
     Tcl_HashEntry  *h;
     Tcl_DString     dStr;
     xsltSubDoc     *currentSubDoc;
@@ -5444,8 +5458,8 @@ static int ApplyTemplates (
     int              currentPos,
     domNode        * actionNode,
     xpathResultSet * nodeList,
-    char           * mode,
-    char           * modeURI,
+    const char     * mode,
+    const char     * modeURI,
     char          ** errMsg
 )
 {
@@ -5506,7 +5520,8 @@ static int fillElementList (
 )
 {
     char *pc, *start, save;
-    char *localName, prefix[MAX_PREFIX_LEN];
+    char prefix[MAX_PREFIX_LEN];
+    const char *localName;
     double *f;
     int   hnew;
     Tcl_HashEntry *h;
@@ -5602,7 +5617,8 @@ getCdataSectionElements (
     char          ** errMsg
     )
 {
-    char *pc, *start, save, *localName, prefix[MAX_PREFIX_LEN];
+    char *pc, *start, save, prefix[MAX_PREFIX_LEN];
+    const char *localName;
     int hnew;
     Tcl_HashEntry *h;
 
@@ -5836,8 +5852,8 @@ getExternalDocument (
     Tcl_Interp  *interp,
     xsltState   *xs,
     domDocument *xsltDoc,
-    char        *baseURI,
-    char        *href,
+    const char  *baseURI,
+    const char  *href,
     int          isStylesheet,
     int          fixedXMLSource,
     char       **errMsg
@@ -6039,8 +6055,8 @@ static int processTopLevelVars (
     )
 {
     int                rc, i;
-    char              *select;
-    char              *localName, prefix[MAX_PREFIX_LEN];
+    char              *select, prefix[MAX_PREFIX_LEN];
+    const char        *localName;
     xpathResultSet     nodeList, rs;
     Tcl_HashEntry     *entryPtr;
     Tcl_HashSearch     search;
@@ -6184,8 +6200,9 @@ static int processTopLevel (
     int                rc, hnew, clen, newdf = 0, nonImportElemSeen = 0;
     int                ignore;
     double             childPrecedence, childLowBound;
-    char              *str, *name, *match, *use, *baseURI, *href;
-    char              *localName, prefix[MAX_PREFIX_LEN];
+    char              *str, *name, *match, *use, *href;
+    char               prefix[MAX_PREFIX_LEN];
+    const char        *localName, *baseURI;
     xsltTag            tag;
     xsltAttrSet       *attrSet;
     xsltKeyInfo       *keyInfo;
@@ -7218,7 +7235,8 @@ xsltCompileStylesheet (
 {
     domNode        *node;
     int             rc;
-    char           *baseURI, *tailptr;
+    char           *tailptr;
+    const char     *baseURI;
     double          d, precedence, precedenceLowBound;
     xsltState      *xs;
     xsltSubDoc     *sdoc;
@@ -7395,7 +7413,7 @@ int xsltProcess (
     xpathResultSet  nodeList;
     domNode        *node;
     int             rc, hnew;
-    char           *baseURI;
+    const char     *baseURI;
     xsltState      *xs;
     xsltSubDoc     *sdoc;
     Tcl_HashEntry  *entryPtr;
