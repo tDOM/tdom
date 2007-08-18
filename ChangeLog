@@ -3,6 +3,11 @@
 
         * generic/dom.c
         * generic/dom.h
+        * generic/domxslt.c
+        * generic/tcldom.c: More constification and clean up.
+
+        * generic/dom.c
+        * generic/dom.h
         * generic/domalloc.c
         * generic/domxpath.c
         * generic/domxpath.h
