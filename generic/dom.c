@@ -251,10 +251,10 @@ domProcessingInstructionNode * coerceToProcessingInstructionNode( domNode *n ) {
 \--------------------------------------------------------------------------*/
 int
 domIsNAME (
-    char *name
+    const char *name
     )
 {
-    char *p;
+    const char *p;
 
     p = name;
     if (!isNameStart(p)) return 0;
@@ -273,7 +273,7 @@ domIsNAME (
 \--------------------------------------------------------------------------*/
 int
 domIsPINAME (
-    char *name
+    const char *name
     )
 {
     if (strlen (name) == 3
@@ -291,10 +291,10 @@ domIsPINAME (
 \--------------------------------------------------------------------------*/
 int
 domIsQNAME (
-    char *name
+    const char *name
     )
 {
-    char *p;
+    const char *p;
     
     p = name;
     if (!isNCNameStart(p)) return 0;
@@ -326,10 +326,10 @@ domIsQNAME (
 \--------------------------------------------------------------------------*/
 int
 domIsNCNAME (
-    char *name
+    const char *name
     )
 {
-    char *p;
+    const char *p;
 
     p = name;
     if (!isNCNameStart(p)) return 0;
@@ -348,16 +348,16 @@ domIsNCNAME (
 \--------------------------------------------------------------------------*/
 int
 domIsChar (
-    char *str
+    const char *str
     )
 {
-    char *p;
+    const char *p;
     int   clen;
     
     p = str;
     while (*p) {
         clen = UTF8_CHAR_LEN(*p);
-        if (UTF8_XMLCHAR((unsigned char *)p,clen))
+        if (UTF8_XMLCHAR((unsigned const char *)p,clen))
             p += clen;
         else return 0;
     }
@@ -370,10 +370,10 @@ domIsChar (
 \--------------------------------------------------------------------------*/
 int
 domIsComment (
-    char *str
+    const char *str
     )
 {
-    char *p;
+    const char *p;
     int   len, i = 0;
     
     p = str;
@@ -395,10 +395,10 @@ domIsComment (
 \--------------------------------------------------------------------------*/
 int
 domIsCDATA (
-    char *str
+    const char *str
     )
 {
-    char *p;
+    const char *p;
     int   len, i = 0;
 
     p = str;
@@ -418,10 +418,10 @@ domIsCDATA (
 \--------------------------------------------------------------------------*/
 int
 domIsPIValue (
-    char *str
+    const char *str
     )
 {
-    char *p;
+    const char *p;
     int   len, i = 0;
 
     p = str;
@@ -440,8 +440,8 @@ domIsPIValue (
 domNS *
 domLookupNamespace (
     domDocument *doc,
-    char        *prefix,
-    char        *namespaceURI
+    const char  *prefix,
+    const char  *namespaceURI
 )
 {
     domNS *ns;
@@ -614,11 +614,11 @@ domRenumberTree (
 |   domLookupPrefixWithMappings
 |
 \--------------------------------------------------------------------------*/
-char *
+const char *
 domLookupPrefixWithMappings (
-    domNode *node,
-    char    *prefix,
-    char   **prefixMappings 
+    domNode    *node,
+    const char *prefix,
+    char      **prefixMappings 
     )
 {
     int    i;
@@ -645,7 +645,7 @@ domLookupPrefixWithMappings (
 domNS *
 domLookupPrefix (
     domNode *node,
-    char    *prefix
+    const char    *prefix
     )
 {
     domAttrNode   *NSattr;
@@ -696,8 +696,8 @@ static int
 domIsNamespaceInScope (
     domActiveNS *NSstack,
     int          NSstackPos,
-    char        *prefix,
-    char        *namespaceURI
+    const char  *prefix,
+    const char  *namespaceURI
 )
 {
     int    i;
@@ -788,8 +788,8 @@ domGetNamespaceByIndex (
 \--------------------------------------------------------------------------*/
 domNS* domNewNamespace (
     domDocument *doc,
-    char        *prefix,
-    char        *namespaceURI
+    const char  *prefix,
+    const char  *namespaceURI
 )
 {
     domNS *ns = NULL;
@@ -834,12 +834,13 @@ domNS* domNewNamespace (
 \--------------------------------------------------------------------------*/
 int
 domSplitQName (
-    char   *name,
-    char   *prefix,
-    char  **localName
+    const char  *name,
+    char        *prefix,
+    const char **localName
 )
 {
-    char  *s, *p, *prefixEnd;
+    const char  *s;
+    char        *p, *prefixEnd;
 
     s = name;
     p = prefix;
@@ -866,7 +867,7 @@ domSplitQName (
 |   domNamespaceURI
 |
 \--------------------------------------------------------------------------*/
-char *
+const char *
 domNamespaceURI (
     domNode *node
 )
@@ -893,7 +894,7 @@ domNamespaceURI (
 |   domNamespacePrefix
 |
 \--------------------------------------------------------------------------*/
-char *
+const char *
 domNamespacePrefix (
     domNode *node
 )
@@ -920,12 +921,13 @@ domNamespacePrefix (
 |   domGetLocalName
 |
 \--------------------------------------------------------------------------*/
-char *
+const char *
 domGetLocalName (
-    char *nodeName
+    const char *nodeName
 )
 {
-    char prefix[MAX_PREFIX_LEN], *localName;
+    char prefix[MAX_PREFIX_LEN];
+    const char *localName;
 
     domSplitQName (nodeName, prefix, &localName);
     return localName;
@@ -951,16 +953,17 @@ domGetLocalName (
 
 domAttrNode *
 domGetAttributeNodeNS (
-    domNode *node,         /* The attributes of this node are searched for a
-                              matching attribute; the node must exist */
-    char    *uri,          /* The namespace of the demanded attribute */
-    char    *localname     /* The localname of the demanded attribute */
+    domNode    *node,         /* The attributes of this node are searched for a
+                                 matching attribute; the node must exist */
+    const char *uri,          /* The namespace of the demanded attribute */
+    const char *localname     /* The localname of the demanded attribute */
     )
 {
     domAttrNode *attr;
     domNS       *ns;
     int          noNS;
-    char         prefix[MAX_PREFIX_LEN], *attrLocalName;
+    char         prefix[MAX_PREFIX_LEN];
+    const char  *attrLocalName;
 
     if (uri[0] == '\0') noNS = 1;
     else                noNS = 0;
@@ -1062,7 +1065,7 @@ startElement(
     const char   **atPtr, **idAttPtr;
     Tcl_HashEntry *h;
     int            hnew, len, pos, idatt, newNS;
-    char          *xmlns, *localname;
+    const char    *xmlns, *localname;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];
     domNS         *ns;
@@ -1161,22 +1164,20 @@ startElement(
 #ifdef TDOM_NS
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
-        if (strncmp((char *)atPtr[0], "xmlns", 5) == 0) {
-            xmlns = (char *)atPtr[0];
+        if (strncmp(atPtr[0], "xmlns", 5) == 0) {
+            xmlns = atPtr[0];
             newNS = 1;
             if (xmlns[5] == ':') {
                 if (domIsNamespaceInScope (info->activeNS, info->activeNSpos,
-                                           &(xmlns[6]), (char *)atPtr[1])) {
+                                           &(xmlns[6]), atPtr[1])) {
                     ns = domLookupPrefix (info->currentNode, &(xmlns[6]));
                     newNS = 0;
                 }
                 else {
-                    ns = domNewNamespace(info->document, &(xmlns[6]),
-                                         (char *)atPtr[1]);
+                    ns = domNewNamespace(info->document, &xmlns[6], atPtr[1]);
                 }
             } else {
-                ns = domNewNamespace(info->document, "",
-                                          (char *)atPtr[1]);
+                ns = domNewNamespace(info->document, "", atPtr[1]);
             }
             if (newNS) {
                 /* push active namespace */
@@ -1192,7 +1193,7 @@ startElement(
             }
 
             h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
-                                     (char *)atPtr[0], &hnew);
+                                    atPtr[0], &hnew);
             attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
             memset(attrnode, 0, sizeof(domAttrNode));
             attrnode->nodeType    = ATTRIBUTE_NODE;
@@ -1200,13 +1201,13 @@ startElement(
             attrnode->namespace   = ns->index;
             attrnode->nodeName    = (char *)&(h->key);
             attrnode->parentNode  = node;
-            len = strlen((char *)atPtr[1]);
+            len = strlen(atPtr[1]);
             if (TclOnly8Bits && info->encoding_8bit) {
-                tdom_Utf8to8Bit(info->encoding_8bit, (char *)atPtr[1], &len);
+                tdom_Utf8to8Bit(info->encoding_8bit, atPtr[1], &len);
             }
             attrnode->valueLength = len;
             attrnode->nodeValue   = (char*)MALLOC(len+1);
-            strcpy(attrnode->nodeValue, (char *)atPtr[1]);
+            strcpy(attrnode->nodeValue, atPtr[1]);
             if (node->firstAttr) {
                 lastAttr->nextSibling = attrnode;
             } else {
@@ -1220,7 +1221,7 @@ startElement(
     /*----------------------------------------------------------
     |   look for namespace of element
     \---------------------------------------------------------*/
-    domSplitQName ((char*)name, tagPrefix, &localname);
+    domSplitQName (name, tagPrefix, &localname);
     for (pos = info->activeNSpos; pos >= 0; pos--) {
         if (  ((tagPrefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0'))
            || ((tagPrefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
@@ -1265,7 +1266,7 @@ startElement(
             Tcl_InitHashTable (info->document->ids, TCL_STRING_KEYS);
         }
         h = Tcl_CreateHashEntry (info->document->ids,
-                                 (char *)atts[idatt+1],
+                                 atts[idatt+1],
                                  &hnew);
         /* if hnew isn't 1 this is a validation error. Hm, no clear way
            to report this. And more, xslt and xpath can process not
@@ -1286,12 +1287,12 @@ startElement(
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
 #ifdef TDOM_NS
-        if (strncmp((char *)atPtr[0], "xmlns", 5) == 0) {
+        if (strncmp(atPtr[0], "xmlns", 5) == 0) {
             continue;
         }
 #endif
         h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
-                                 (char *)atPtr[0], &hnew);
+                                atPtr[0], &hnew);
         attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
         memset(attrnode, 0, sizeof(domAttrNode));
         attrnode->nodeType = ATTRIBUTE_NODE;
@@ -1303,9 +1304,9 @@ startElement(
         attrnode->namespace   = 0;
         attrnode->nodeName    = (char *)&(h->key);
         attrnode->parentNode  = node;
-        len = strlen((char *)atPtr[1]);
+        len = strlen(atPtr[1]);
         if (TclOnly8Bits && info->encoding_8bit) {
-            tdom_Utf8to8Bit(info->encoding_8bit, (char *)atPtr[1], &len);
+            tdom_Utf8to8Bit(info->encoding_8bit, atPtr[1], &len);
         }
         attrnode->valueLength = len;
         attrnode->nodeValue   = (char*)MALLOC(len+1);
@@ -1322,7 +1323,7 @@ startElement(
         /*----------------------------------------------------------
         |   look for attribute namespace
         \---------------------------------------------------------*/
-        domSplitQName ((char*)attrnode->nodeName, prefix, &localname);
+        domSplitQName (attrnode->nodeName, prefix, &localname);
         if (prefix[0] != '\0') {
             for (pos = info->activeNSpos; pos >= 0; pos--) {
                 if (  ((prefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0'))
@@ -2338,7 +2339,8 @@ domCreateDocument (
     int            hnew;
     domNode       *node;
     domDocument   *doc;
-    char           prefix[MAX_PREFIX_LEN], *localName;
+    char           prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     domNS         *ns = NULL;
 
     if (uri) {
@@ -2847,17 +2849,18 @@ domSetAttribute (
 domAttrNode *
 domSetAttributeNS (
     domNode *node,
-    char    *attributeName,
-    char    *attributeValue,
-    char    *uri,
-    int      createNSIfNeeded
+    const char *attributeName,
+    const char *attributeValue,
+    const char *uri,
+    int         createNSIfNeeded
 )
 {
     domAttrNode   *attr, *lastAttr;
     Tcl_HashEntry *h;
     int            hnew, hasUri = 1, isNSAttr = 0, isDftNS = 0;
     domNS         *ns;
-    char          *localName, prefix[MAX_PREFIX_LEN], *newLocalName;
+    char           prefix[MAX_PREFIX_LEN];
+    const char    *localName, *newLocalName;
     Tcl_DString    dStr;
     
     DBG(fprintf (stderr, "domSetAttributeNS: attributeName %s, attributeValue %s, uri %s\n", attributeName, attributeValue, uri);)
@@ -3075,14 +3078,15 @@ domRemoveAttribute (
 \--------------------------------------------------------------------------*/
 int
 domRemoveAttributeNS (
-    domNode *node,
-    char    *uri,
-    char    *localName
+    domNode    *node,
+    const char *uri,
+    const char *localName
 )
 {
     domAttrNode *attr, *previous = NULL;
-    domNS *ns = NULL;
-    char  *str, prefix[MAX_PREFIX_LEN];
+    domNS       *ns = NULL;
+    char         prefix[MAX_PREFIX_LEN];
+    const char  *str;
     Tcl_HashEntry *h;
 
     if (!node || node->nodeType != ELEMENT_NODE) {
@@ -3941,17 +3945,18 @@ domAppendNewTextNode(
 domNode *
 domAppendNewElementNode(
     domNode     *parent,
-    char        *tagName,
-    char        *uri
+    const char  *tagName,
+    const char  *uri
 )
 {
     Tcl_HashEntry *h;
     domNode       *node;
     domNS         *ns;
     domAttrNode   *NSattr;
-    int           hnew;
-    char         *localname, prefix[MAX_PREFIX_LEN];
-    Tcl_DString   dStr;
+    int            hnew;
+    char           prefix[MAX_PREFIX_LEN];
+    const char    *localname;
+    Tcl_DString    dStr;
 
     if (parent == NULL) { 
         DBG(fprintf(stderr, "dom.c: Error parent == NULL!\n");)
@@ -4411,7 +4416,8 @@ domNewElementNodeNS (
     domNode       *node;
     Tcl_HashEntry *h;
     int            hnew;
-    char           prefix[MAX_PREFIX_LEN], *localname;
+    char           prefix[MAX_PREFIX_LEN];
+    const char    *localname;
     domNS         *ns;
 
     h = Tcl_CreateHashEntry(&HASHTAB(doc, tdom_tagNames), tagName, &hnew);

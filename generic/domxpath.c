@@ -365,7 +365,7 @@ void rsSetBool ( xpathResultSet *rs, int i) {
     rs->type = BoolResult;
     rs->intvalue = (i ? 1 : 0);
 }
-void rsSetString ( xpathResultSet *rs, char *s) {
+void rsSetString ( xpathResultSet *rs, const char *s) {
 
     rs->type = StringResult;
     if (s) {
@@ -677,7 +677,8 @@ static XPathTokens xpathLexer (
 {
     int  l, allocated;
     int  i, k, start, offset;
-    char delim, *ps, save, *uri, tmpErr[80];
+    char delim, *ps, save, tmpErr[80];
+    const char *uri;
     XPathTokens tokens;
     int token = EOS;
 
@@ -2109,7 +2110,7 @@ int xpathParsePostProcess (
     char        **errMsg
     )
 {
-    char *uri;
+    const char *uri;
     
     DBG(
         fprintf(stderr, "xpathParsePostProcess start:\n");
@@ -2296,7 +2297,7 @@ int xpathNodeTest (
     ast             step
 )
 {
-    char   *localName, *nodeUri;
+    const char *localName, *nodeUri;
 
     if (!(step->child)) return 1;
     if (step->child->type == IsElement) {
@@ -2829,6 +2830,7 @@ xpathEvalFunction (
     int              left = 0, useFastAdd;
     double           dRight = 0.0;
     char            *leftStr = NULL, *rightStr = NULL;
+    const char      *str;
     Tcl_DString      dStr;
 #if TclOnly8Bits
     char            *fStr;
@@ -3650,11 +3652,11 @@ xpathEvalFunction (
                 }
             } else
             if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                leftStr = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
-                if (leftStr[0] == 'x' && strcmp(leftStr, "xmlns")==0) {
+                str = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
+                if (str[0] == 'x' && strcmp(str, "xmlns")==0) {
                     rsSetString (result, "");
                 } else {
-                    rsSetString (result, leftStr);
+                    rsSetString (result, str);
                 }
             } else
             if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
@@ -5258,7 +5260,7 @@ int xpathMatches (
     ast             childSteps;
     int             rc, i, j, currentPos = 0, nodeMatches, docOrder = 1;
     int             useFastAdd;
-    char           *localName = NULL, *nodeUri;
+    const char     *localName = NULL, *nodeUri;
     domAttrNode    *attr;
     domNode        *child;
 

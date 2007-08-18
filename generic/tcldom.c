@@ -753,11 +753,14 @@ tcldom_getElementsByTagName (
     char       *namePattern,
     domNode    *node,
     int         nsIndex,
-    char       *uri
+    const char *uri
 )
 {
-    int      result;
-    domNode *child;
+    int         result;
+    domNode    *child;
+    char        prefix[MAX_PREFIX_LEN], objCmdName[80];
+    const char *localName;
+    Tcl_Obj    *namePtr, *resultPtr;
 
     /* nsIndex == -1 ==> DOM 1 no NS i.e getElementsByTagName
        nsIndex != -1 are the NS aware cases
@@ -783,17 +786,13 @@ tcldom_getElementsByTagName (
                  && (!node->namespace 
                      || strcmp ("", domNamespaceURI (node))==0)) )
         {
-            char prefix[MAX_PREFIX_LEN], *localName;
             if (nsIndex == -1) {
                 localName = node->nodeName;
             } else {
                 domSplitQName(node->nodeName, prefix, &localName);
             }
             if (Tcl_StringMatch(localName, namePattern)) {
-                Tcl_Obj *namePtr;
-                Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-                char    objCmdName[80];
-            
+                resultPtr = Tcl_GetObjResult(interp);
                 tcldom_createNodeObj(interp, node, objCmdName);
                 namePtr = Tcl_NewStringObj(objCmdName, -1);
                 result = Tcl_ListObjAppendElement(interp, resultPtr, namePtr);
@@ -2403,7 +2402,7 @@ void tcldom_AppendEscaped (
 |
 \---------------------------------------------------------------------------*/
 void tcldom_tolower (
-    char *str,
+    const char *str,
     char *str_out,
     int  len
 )
@@ -2625,7 +2624,8 @@ void tcldom_treeAsXML (
     domNode       *child;
     domDocument   *doc;
     int            first, hasElements, i;
-    char           prefix[MAX_PREFIX_LEN], *localName, *start, *p;
+    char           prefix[MAX_PREFIX_LEN], *start, *p;
+    const char    *localName;
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
 
@@ -2840,7 +2840,7 @@ void tcldom_treeAsXML (
 |   findBaseURI
 |
 \---------------------------------------------------------------------------*/
-char *findBaseURI (
+const char *findBaseURI (
     domNode *node
 )
 {
@@ -2881,7 +2881,8 @@ static int serializeAsXML (
     Tcl_Obj    *CONST objv[]
 )
 {
-    char          *channelId, prefix[MAX_PREFIX_LEN], *localName;
+    char          *channelId, prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     int            indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
     int            optionIndex, cdataChild, escapeAllQuot = 0;
     Tcl_Obj       *resultPtr;
@@ -3614,8 +3615,9 @@ int tcldom_NodeObjCmd (
     domAttrNode *attrs;
     domException exception;
     char         tmp[200], objCmdName[80], prefix[MAX_PREFIX_LEN],
-                *method, *nodeName, *str, *localName,
-                *attr_name, *attr_val, *filter, *errMsg, *uri;
+                *method, *nodeName, *str, *attr_name, *attr_val, *filter,
+                *errMsg;
+    const char  *localName, *uri, *nsStr;
     int          result, length, methodIndex, i, line, column;
     int          nsIndex, bool, hnew;
     Tcl_Obj     *namePtr, *resultPtr;
@@ -4042,8 +4044,8 @@ int tcldom_NodeObjCmd (
             localName = Tcl_GetString(objv[3]);
             attrs = node->firstAttr;
             while (attrs) {
-                domSplitQName(attrs->nodeName, prefix, &str);
-                if (!strcmp(localName,str)) {
+                domSplitQName(attrs->nodeName, prefix, &nsStr);
+                if (!strcmp(localName,nsStr)) {
                     ns = domGetNamespaceByIndex(node->ownerDocument, 
                                                 attrs->namespace);
                     if (ns && !strcmp(ns->uri, uri)) {
@@ -4418,9 +4420,9 @@ int tcldom_NodeObjCmd (
 
         case m_prefix:
             CheckArgs(2,2,2,"");
-            str = domNamespacePrefix(node);
-            if (str) {
-                SetResult(str);
+            nsStr = domNamespacePrefix(node);
+            if (nsStr) {
+                SetResult(nsStr);
             } else {
                 SetResult("");
             }
@@ -4428,9 +4430,9 @@ int tcldom_NodeObjCmd (
 
         case m_namespaceURI:
             CheckArgs(2,2,2,"");
-            str = domNamespaceURI(node);
-            if (str) {
-                SetResult(str);
+            nsStr = domNamespaceURI(node);
+            if (nsStr) {
+                SetResult(nsStr);
             } else {
                 SetResult("");
             }
@@ -4529,11 +4531,11 @@ int tcldom_NodeObjCmd (
                 node->nodeFlags |= HAS_BASEURI;
                 SetResult (Tcl_GetString (objv[2]));
             } else {
-                str = findBaseURI(node);
-                if (!str) {
+                nsStr = findBaseURI(node);
+                if (!nsStr) {
                     SetResult("");
                 } else {
-                    SetResult(str);
+                    SetResult(nsStr);
                 }
             }
             break;
