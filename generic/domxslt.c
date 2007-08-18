@@ -2104,7 +2104,7 @@ static int xsltXPathFuncs (
 )
 {
     xsltState         * xs = clientData;
-    char              * keyId, *filterValue, *str;
+    char              * keyId, *filterValue, *str = NULL;
     char                prefix[MAX_PREFIX_LEN];
     const char        * localName, *baseURI, *nsStr;
     int                 rc, i, len, NaN, freeStr, x;
@@ -2349,9 +2349,7 @@ static int xsltXPathFuncs (
                     }
                     if (freeStr) FREE(str);
                 }
-            }
-            else {
-                freeStr = 1;
+            } else {
                 str = xpathFuncString (argv[0]);
                 nsStr = str;
                 if (xs->currentXSLTNode) {
@@ -2363,22 +2361,20 @@ static int xsltXPathFuncs (
                     baseURI = findBaseURI (xs->xsltDoc->rootNode);
                 }
                 if (*nsStr == '\0') {
-                    FREE(str);
-                    freeStr = 0;
                     nsStr = baseURI;
                 }
                 DBG (fprintf (stderr, "document() call, with 1 string arg = '%s'\n", str);)
                 if (xsltAddExternalDocument(xs, baseURI, nsStr, 1,
                                             result, errMsg) < 0) {
-                    if (freeStr) FREE(str);
+                    FREE(str);
                     return -1;
                 }
                 if (xs->wsInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
-                if (freeStr) FREE(str);
+                FREE(str);
             }
-        } else
+        } else 
         if (argc == 2) {
             if (argv[1]->type != xNodeSetResult) {
                 reportError (exprContext, "second arg of document() has to be"
@@ -2417,22 +2413,19 @@ static int xsltXPathFuncs (
                 }
             } else {
                 str = xpathFuncString (argv[0]);
-                freeStr = 1;
                 nsStr = str;
                 if (*str == '\0') {
-                    FREE(str);
-                    freeStr = 0;
                     nsStr = baseURI;
                 }
                 if (xsltAddExternalDocument(xs, baseURI, nsStr, 0,
                                             result, errMsg) < 0) {
-                    if (freeStr) FREE(str);
+                    FREE(str);
                     return -1;
                 }
                 if (xs->wsInfo.hasData) {
                     StripXMLSpace (xs, xs->subDocs->doc->documentElement);
                 }
-                if (freeStr) FREE(str);
+                FREE(str);
             }
         } else {
             reportError (exprContext, "wrong # of args in document() call!",
