@@ -2844,7 +2844,7 @@ const char *findBaseURI (
     domNode *node
 )
 {
-    char *baseURI = NULL;
+    const char *baseURI = NULL;
     Tcl_HashEntry *entryPtr;
     domNode       *orgNode;
     
@@ -2853,7 +2853,7 @@ const char *findBaseURI (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                          (char*)node);
-            baseURI = (char *)Tcl_GetHashValue(entryPtr);
+            baseURI = (const char *)Tcl_GetHashValue(entryPtr);
             break;
         } else {
             node = node->parentNode;
@@ -2864,7 +2864,7 @@ const char *findBaseURI (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                           (char*)node);
-            baseURI = (char *)Tcl_GetHashValue(entryPtr);
+            baseURI = (const char *)Tcl_GetHashValue(entryPtr);
         }
     }
     return baseURI;

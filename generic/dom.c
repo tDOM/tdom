@@ -1452,7 +1452,7 @@ DispatchPCDATA (
             int   i, only_whites;
 
             only_whites = 1;
-            for (i=0, pc = (char*)s; i < len; i++, pc++) {
+            for (i=0, pc = s; i < len; i++, pc++) {
                 if ( (*pc != ' ')  &&
                      (*pc != '\t') &&
                      (*pc != '\n') &&
@@ -1753,7 +1753,7 @@ externalEntityRefHandler (
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
                           systemId, "\": No -externalentitycommand given",
-                          (char *) NULL);
+                          NULL);
         return 0;
     }
 
@@ -1767,8 +1767,7 @@ externalEntityRefHandler (
 
     if (base) {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj((char *)base,
-                                                  strlen(base)));
+                                 Tcl_NewStringObj(base, strlen(base)));
     } else {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
                                  Tcl_NewObj());
@@ -1781,8 +1780,7 @@ externalEntityRefHandler (
        == NULL. */
     if (systemId) {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj((char *)systemId,
-                                                  strlen(systemId)));
+                                 Tcl_NewStringObj(systemId, strlen(systemId)));
     } else {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
                                  Tcl_NewObj());
@@ -1790,8 +1788,7 @@ externalEntityRefHandler (
 
     if (publicId) {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
-                                 Tcl_NewStringObj((char *)publicId,
-                                                  strlen(publicId)));
+                                 Tcl_NewStringObj(publicId, strlen(publicId)));
     } else {
         Tcl_ListObjAppendElement(info->interp, cmdPtr,
                                  Tcl_NewObj());
@@ -2005,7 +2002,7 @@ domReadDocument (
     int         storeLineColumn,
     int         feedbackAfter,
     Tcl_Channel channel,
-    char       *baseurl,
+    const char *baseurl,
     char       *extResolver,
     int         useForeignDTD,
     int         paramEntityParsing,
@@ -2157,7 +2154,7 @@ domReadDocument (
 |   domException2String
 |
 \--------------------------------------------------------------------------*/
-char *
+const char *
 domException2String (
     domException exception
 )
@@ -2260,8 +2257,8 @@ domCreateXMLNamespaceNode (
 
 domDocument *
 domCreateDoc (
-    char * baseURI,
-    int    storeLineColumn
+    const char * baseURI,
+    int          storeLineColumn
     )
 {
     Tcl_HashEntry *h;
@@ -2331,7 +2328,7 @@ domCreateDoc (
 domDocument *
 domCreateDocument (
     Tcl_Interp *interp,
-    char       *uri,
+    const char *uri,
     char       *documentElementTagName
 )
 {
@@ -2777,9 +2774,9 @@ domFreeDocument (
 \--------------------------------------------------------------------------*/
 domAttrNode *
 domSetAttribute (
-    domNode *node,
-    char    *attributeName,
-    char    *attributeValue
+    domNode    *node,
+    const char *attributeName,
+    const char *attributeValue
 )
 {
     domAttrNode   *attr, *lastAttr;
@@ -3032,8 +3029,8 @@ domSetAttributeNS (
 \--------------------------------------------------------------------------*/
 int
 domRemoveAttribute (
-    domNode *node,
-    char    *attributeName
+    domNode    *node,
+    const char *attributeName
 )
 {
     domAttrNode *attr, *previous = NULL;
@@ -3226,9 +3223,9 @@ domSetDocument (
 \--------------------------------------------------------------------------*/
 domException
 domSetNodeValue (
-    domNode *node,
-    char    *nodeValue,
-    int      valueLen
+    domNode    *node,
+    const char *nodeValue,
+    int         valueLen
 )
 {
     domTextNode   *textnode;
@@ -3808,9 +3805,9 @@ domReplaceChild (
 domTextNode *
 domNewTextNode(
     domDocument *doc,
-    char        *value,
+    const char  *value,
     int          length,
-    domNodeType nodeType	
+    domNodeType  nodeType	
 )
 {
     domTextNode   *node;
@@ -4328,9 +4325,9 @@ domAppendLiteralNode(
 domProcessingInstructionNode *
 domNewProcessingInstructionNode(
     domDocument *doc,
-    char        *targetValue,
+    const char  *targetValue,
     int          targetLength,
-    char        *dataValue,
+    const char  *dataValue,
     int          dataLength
 )
 {
@@ -4371,8 +4368,8 @@ domNewProcessingInstructionNode(
 domNode *
 domNewElementNode(
     domDocument *doc,
-    char        *tagName,
-    domNodeType nodeType		
+    const char  *tagName,
+    domNodeType  nodeType		
 )
 {
     domNode       *node;
@@ -4408,9 +4405,9 @@ domNewElementNode(
 domNode *
 domNewElementNodeNS (
     domDocument *doc,
-    char        *tagName,
-    char        *uri,
-    domNodeType nodeType		
+    const char  *tagName,
+    const char  *uri,
+    domNodeType  nodeType		
 )
 {
     domNode       *node;
@@ -5127,7 +5124,7 @@ tdom_initParseProc (
 {
     tdomCmdReadInfo *info = (tdomCmdReadInfo *) userData;
 
-    info->document   = domCreateDoc((char *)XML_GetBase (info->parser), 
+    info->document   = domCreateDoc(XML_GetBase (info->parser), 
                                     info->storeLineColumn);
     if (info->extResolver) {
         info->document->extResolver = 

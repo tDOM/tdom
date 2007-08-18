@@ -682,14 +682,13 @@ typedef void (*domFreeCallback) (domNode * node, void * clientData);
 |   Function prototypes
 |
 \-------------------------------------------------------------------------*/
-char *         domException2String (domException expection);
+const char *   domException2String (domException expection);
 
 
 void           domModuleInitialize (void);
-domDocument *  domCreateDoc (char *baseURI, int storeLineColumn);
-domDocument *  domCreateDocument (Tcl_Interp *interp,
-                                  char *documentElementTagName,
-                                  char *uri);
+domDocument *  domCreateDoc (const char *baseURI, int storeLineColumn);
+domDocument *  domCreateDocument (Tcl_Interp *interp, const char *uri,
+                                  char *documentElementTagName);
 void           domSetDocumentElement (domDocument *doc);
 
 domDocument *  domReadDocument   (XML_Parser parser,
@@ -700,7 +699,7 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   int   storeLineColumn,
                                   int   feedbackAfter,
                                   Tcl_Channel channel,
-                                  char *baseurl,
+                                  const char *baseurl,
                                   char *extResolver,
                                   int   useForeignDTD,
                                   int   paramEntityParsing,
@@ -716,28 +715,28 @@ void           domFreeNode       (domNode *node,
                                   int dontfree);
 
 domTextNode *  domNewTextNode    (domDocument *doc,
-                                  char        *value,
+                                  const char  *value,
                                   int          length,
                                   domNodeType  nodeType);
 
 domNode *      domNewElementNode (domDocument *doc,
-                                  char        *tagName,
+                                  const char  *tagName,
                                   domNodeType  nodeType);
 		
 domNode *      domNewElementNodeNS (domDocument *doc,
-                                    char        *tagName,
-                                    char        *uri,
+                                    const char  *tagName,
+                                    const char  *uri,
                                     domNodeType  nodeType);
 
 domProcessingInstructionNode * domNewProcessingInstructionNode (
                                   domDocument *doc,
-                                  char        *targetValue,
+                                  const char  *targetValue,
                                   int          targetLength,
-                                  char        *dataValue,
+                                  const char  *dataValue,
                                   int          dataLength);
 
-domAttrNode *  domSetAttribute (domNode *node, char *attributeName,
-                                               char *attributeValue);
+domAttrNode *  domSetAttribute (domNode *node, const char *attributeName,
+                                               const char *attributeValue);
 
 domAttrNode *  domSetAttributeNS (domNode *node, const char *attributeName,
                                                  const char *attributeValue,
@@ -746,7 +745,7 @@ domAttrNode *  domSetAttributeNS (domNode *node, const char *attributeName,
 domAttrNode *  domGetAttributeNodeNS (domNode *node, const char *uri, 
                                                      const char *localname);
 
-int            domRemoveAttribute (domNode *node, char *attributeName);
+int            domRemoveAttribute (domNode *node, const char *attributeName);
 int            domRemoveAttributeNS (domNode *node, const char *uri,
                                      const char *localName);
 domNode *      domPreviousSibling (domNode *attr);
@@ -755,7 +754,8 @@ domException   domRemoveChild  (domNode *node, domNode *childToRemove);
 domException   domAppendChild  (domNode *node, domNode *childToAppend);
 domException   domInsertBefore (domNode *node, domNode *childToInsert, domNode *refChild);
 domException   domReplaceChild (domNode *node, domNode *newChild, domNode *oldChild);
-domException   domSetNodeValue (domNode *node, char *nodeValue, int valueLen);
+domException   domSetNodeValue (domNode *node, const char *nodeValue,
+                                int valueLen);
 domNode *      domCloneNode (domNode *node, int deep);
 
 domTextNode *  domAppendNewTextNode (domNode *parent, char *value, int length, domNodeType nodeType, int disableOutputEscaping);
