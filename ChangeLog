@@ -1,4 +1,16 @@
 
+2007-08-23  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * tests/dom.test
+        * tests/xmlsimple.test
+        * tests/xpath.test
+        * tests/xslt.test: Fixed bug triggered by invalid XSLT XPath
+          pattern (normal XPath expr (via selectNodes) wasn't
+          infected). Checked the code for similar spots and fixed a
+          few. Replaced a fprintf(stderr, ..) called in an
+          'impossible' case with a more appropriate domPanic call.
+
 2007-08-18  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxslt.c: Code cleanup in document()
