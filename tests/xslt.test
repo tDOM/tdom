@@ -1129,6 +1129,25 @@ test xslt-8.3 {format-number() runding} {
     set result
 } {2.00 2.00 2.00 2.00 2.00 1.99 1.99 1.90 1.00 }
 
+test xslt-8.4 {Erroneous XPath expr as match attribute of a template} {
+    set xmlDoc [dom parse {<!--yes-->  <doc><e1/></doc><?foo bar?>}]
+    set xslt {<?xml version="1.0" encoding="ISO-8859-1"?>
+<xsl:transform version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:template match="/[position()=1]">
+     <xsl:for-each select="table/row">
+     </xsl:for-each>
+</xsl:template>
+</xsl:transform>
+}
+
+    set xsltDoc [dom parse $xslt]
+    set result [catch {$xmlDoc xslt $xsltDoc} errMsg]
+    $xmlDoc delete
+    $xsltDoc delete
+    set result
+} {1}
+    
 # Below is code, which replaces the dom cmd with a version, which parses
 # the xml into a dom tree, then transformations this dom tree with the
 # xslt identity transformation and returns the result tree of that
