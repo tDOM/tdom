@@ -83,6 +83,12 @@ test simple-1.10 {simple parser - not wellformed input} {
     catch {[dom parse -simple {<doc><chi}]}
 } 1
 
+test simple-1.11 {simple doesn't catch all not wellformed input} {
+     catch {dom parse -simple {<xsl:transform 
+         xmlns:xsl="http://www.w3.org/1999/XSL/Transform
+                    <http://www.w3.org/1999/XSL/Transform> "/>}}
+} 0
+
 test simple-2.1 {XML build in entities} {
     set doc [dom parse -simple {<doc>&lt;&gt;&amp;&apos;&quot;</doc>}]
     set root [$doc documentElement]
