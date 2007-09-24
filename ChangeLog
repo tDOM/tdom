@@ -1,9 +1,14 @@
 
 2007-09-25  Rolf Ade  <rolf@pointsman.de>
+        
+        * win/makefile.vc
+        * win/nmakehlp.c
+        * win/rules.vc
+        * win/tdom.rc: Updated. (Thanks to Pat Thoyts.)
 
         * tdom.m4
         * extensions/tnc/configure: Fixes tnc building against
-          uninstalled tdom (Thanks to Daniel A. Steffen.)
+          uninstalled tdom. (Thanks to Daniel A. Steffen.)
 
 2007-08-23  Rolf Ade  <rolf@pointsman.de>
 
