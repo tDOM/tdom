@@ -332,8 +332,10 @@ AC_DEFUN(TDOM_LOAD_CONFIG, [
     else
         AC_MSG_RESULT([file not found])
     fi
+    if test -f "${TDOM_BIN_DIR}/Makefile" ; then
+        TDOM_STUB_LIB_SPEC=${TDOM_BUILD_STUB_LIB_SPEC}
+    fi
     AC_SUBST(TDOM_VERSION)
-    AC_SUBST(TDOM_BUILD_STUB_LIB_SPEC)
     AC_SUBST(TDOM_STUB_LIB_SPEC)
     AC_SUBST(TDOM_SRC_DIR)
 ])
