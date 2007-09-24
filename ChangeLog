@@ -1,4 +1,10 @@
 
+2007-09-25  Rolf Ade  <rolf@pointsman.de>
+
+        * tdom.m4
+        * extensions/tnc/configure: Fixes tnc building against
+          uninstalled tdom (Thanks to Daniel A. Steffen.)
+
 2007-08-23  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domxpath.c
