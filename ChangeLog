@@ -1,4 +1,11 @@
 
+2007-09-28  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/all-bench.tcl
+        * tests/domNode.bench
+        * tests/xpath.bench: Added this files: Start of a benchmark
+          suite.
+
 2007-09-25  Rolf Ade  <rolf@pointsman.de>
         
         * win/makefile.vc
