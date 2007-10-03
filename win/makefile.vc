@@ -471,9 +471,9 @@ install-libraries:
         @echo Installing package index in '$(SCRIPT_INSTALL_DIR)'
         @type << >"$(SCRIPT_INSTALL_DIR)\pkgIndex.tcl"
 if {[info exists ::tcl_platform(debug)]} {
-    package ifneeded $(PROJECT) $(DOTVERSION) "[list load [file join $$dir $(PROJECT)$(VERSION)g.$(EXT)] tdom]; source [file join $$dir tdom.tcl]"
+    package ifneeded $(PROJECT) $(DOTVERSION) "[list load [file join $$dir $(PROJECT)$(VERSION)g.$(EXT)] tdom]; [list source [file join $$dir tdom.tcl]]"
 } else {
-    package ifneeded $(PROJECT) $(DOTVERSION) "[list load [file join $$dir $(PROJECT)$(VERSION).$(EXT)] tdom]; source [file join $$dir tdom.tcl]"
+    package ifneeded $(PROJECT) $(DOTVERSION) "[list load [file join $$dir $(PROJECT)$(VERSION).$(EXT)] tdom]; [list source [file join $$dir tdom.tcl]]"
 }
 <<
 
