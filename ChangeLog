@@ -1,4 +1,10 @@
 
+2007-10-03  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc: makefile.vc generated a pkgIndex.tcl file,
+          that didn't work in case of spaces in the install
+          path. Thanks to Koen Danckaert.
+
 2007-09-28  Rolf Ade  <rolf@pointsman.de>
 
         * tests/all-bench.tcl
