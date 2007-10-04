@@ -1,4 +1,9 @@
 
+2007-10-04  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/domDoc.test: Fixed test domDoc-1.2: Test was broken in
+          case of locale != ISO-8859-1 (or -15).
+
 2007-10-03  Rolf Ade  <rolf@pointsman.de>
 
         * win/makefile.vc: makefile.vc generated a pkgIndex.tcl file,
