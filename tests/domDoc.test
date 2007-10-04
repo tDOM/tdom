@@ -51,9 +51,9 @@ test domDoc-1.2 {asXML -escapeNonASCII; comments and PI's are not altered} {need
     set result [$doc asXML -indent none -escapeNonASCII]
     $doc delete
     set result
-} {<root withUmlauts="&#228;&#246;&#252;&#223;"><!-- A comment with german umlauts: äöüß --><?äöüß A processing node with german umlauts?>
+} "<root withUmlauts=\"&#228;&#246;&#252;&#223;\"><!-- A comment with german umlauts: \u00E4\u00F6\u00FC\u00DF --><?\u00E4\u00F6\u00FC\u00DF A processing node with german umlauts?>
 german umlauts: &#228;&#246;&#252;&#223;
-</root>}
+</root>"
 
 test domDoc-1.3 {asHTML -escapeNonASCII -htmlEntities} {need_i18n} {
     set doc [dom parse {<html><body>&#228;&#xfc;&#8222;&#8223;&#8224;</body></html>}]
