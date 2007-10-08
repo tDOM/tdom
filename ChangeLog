@@ -1,4 +1,11 @@
 
+2007-10-08  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domhtml.c
+        * tests/htmlreader.test: Fixed handling of attributes without
+          value. Now, an attribute without value gets the attribute
+          name as value.
+
 2007-10-04  Rolf Ade  <rolf@pointsman.de>
 
         * tests/domDoc.test: Fixed test domDoc-1.2: Test was broken in
