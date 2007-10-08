@@ -1293,11 +1293,10 @@ HTML_SimpleParse (
                     }
                 } else {
                     /* attribute without value, like 'nowrap' */
-                    x++;
                     saved = *(ArgName + nArgName);
                     *(ArgName + nArgName) = '\0'; /* terminate arg name */
-                    ArgVal = "1"; /* current hack */
-                    nArgVal = 1;                
+                    ArgVal = ArgName;
+                    nArgVal = nArgName;
                 }
 
                 /*--------------------------------------------------
