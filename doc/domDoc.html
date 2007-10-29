@@ -4,16 +4,16 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0x80b6834">NAME</a> · <a href="#SECTid0x80b68b8">SYNOPSIS</a> · <a href="#SECTid0x80b6994">DESCRIPTION </a> · <a href="#SECTid0x80d5f40">SEE ALSO</a> · <a href="#SECTid0x80d5fc4">KEYWORDS</a>
+<a href="#SECTid0x80a9a60">NAME</a> · <a href="#SECTid0x80a7380">SYNOPSIS</a> · <a href="#SECTid0x80967e0">DESCRIPTION </a> · <a href="#SECTid0x80cf590">SEE ALSO</a> · <a href="#SECTid0x80cf7b0">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0x80b6834">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0x80a9a60">NAME</a></h2><p class="namesection">
 <b class="names">domDoc - </b><br>Manipulates an instance of a DOM document object</p>
   
-  <h2><a name="SECTid0x80b68b8">SYNOPSIS</a></h2><pre class="syntax">
+  <h2><a name="SECTid0x80a7380">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">domDocObjCmd</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid0x80b6994">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
+  <h2><a name="SECTid0x80967e0">DESCRIPTION </a></h2><p>This command manipulates one particular instance of a document
 object. <i class="m">method</i> indicates a specific method of the document class. These
 methods should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>). Look
@@ -418,9 +418,9 @@ top level nodes of the document. If <i class="m">refChild</i> is the empty strin
         <dt>
 <b class="method">replaceChild</b> <i class="m">newChild</i>  <i class="m">oldChild</i>
 </dt>
-        <dd>Replace <i class="m">newChild</i> with <i class="m">oldChild</i> in list of top level
-nodes of the document. <i class="m">oldChild</i> will be part of the document fragment
-list after this operation.</dd>
+        <dd>Replace <i class="m">oldChild</i> with <i class="m">newChild</i> in the list of
+children of that node. The <i class="m">oldChild</i> node will be part of the
+document fragment list after this operation.</dd>
       
 
       
@@ -549,9 +549,9 @@ tried to be executed. This allows quick method additions on Tcl level.</p><p>New
 are not moved into the tree they are automaticaly deleted, when the whole
 document gets deleted.</p>
 
-    <h2><a name="SECTid0x80d5f40">SEE ALSO</a></h2><p class="seealso">dom, domNode</p>
+    <h2><a name="SECTid0x80cf590">SEE ALSO</a></h2><p class="seealso">dom, domNode</p>
 
-    <h2><a name="SECTid0x80d5fc4">KEYWORDS</a></h2><p class="keywords">
+    <h2><a name="SECTid0x80cf7b0">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOMnodecreation">DOM node creation</a>, <a class="keyword" href="keyword-index.html#KW-documentelement">document element</a>
 </p>
 

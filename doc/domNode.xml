@@ -237,9 +237,9 @@ children of node. If <m>refChild</m> is the empty string, insert
 
       <commanddef>
         <command><method>replaceChild</method> <m>newChild</m>  <m>oldChild</m></command>
-        <desc>Replace <m>newChild</m> with <m>oldChild</m> in list of children
-of that node. <m>oldChild</m> will be part of the document fragment list after this
-operation.</desc>
+        <desc>Replace <m>oldChild</m> with <m>newChild</m> in the list of
+children of that node. The <m>oldChild</m> node will be part of the
+document fragment list after this operation.</desc>
       </commanddef>
 
       <commanddef>
