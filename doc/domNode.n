@@ -340,9 +340,9 @@ children of node. If \fIrefChild\fR is the empty string, insert
 \&\fInewChild\fR at the end of the child nodes list of that node.
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
-\&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of children
-of that node. \fIoldChild\fR will be part of the document fragment list after this
-operation.
+\&\fRReplace \fIoldChild\fR with \fInewChild\fR in the list of
+children of that node. The \fIoldChild\fR node will be part of the
+document fragment list after this operation.
 .TP
 \&\fB\fBremoveChild\fP \fIchild\fB
 \&\fRRemoves \fIchild\fR from the list of children of that node

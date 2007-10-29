@@ -457,9 +457,9 @@ top level nodes of the document. If \fIrefChild\fR is the empty string, insert
 \&\fInewChild\fR at the end of the top level nodes.
 .TP
 \&\fB\fBreplaceChild\fP \fInewChild\fB  \fIoldChild\fB
-\&\fRReplace \fInewChild\fR with \fIoldChild\fR in list of top level
-nodes of the document. \fIoldChild\fR will be part of the document fragment
-list after this operation.
+\&\fRReplace \fIoldChild\fR with \fInewChild\fR in the list of
+children of that node. The \fIoldChild\fR node will be part of the
+document fragment list after this operation.
 .TP
 \&\fB\fBappendFromList\fP \fIlist\fB
 \&\fRParses \fIlist\fR , creates an according DOM subtree and
