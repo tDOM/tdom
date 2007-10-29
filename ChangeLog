@@ -1,4 +1,10 @@
 
+2007-10-29  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domNode.*
+        * doc/domDoc.*: Fixed documentation error in the documentation
+          of the replaceChild method.
+
 2007-10-08  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domhtml.c
