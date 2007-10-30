@@ -5,8 +5,9 @@
 #    html-1.*: Character encoding
 #    html-2.*: Parsing tests
 #    html-3.*: Bad data
+#    html-4.*: DOM building
 #
-# Copyright (c) 2002 Rolf Ade.
+# Copyright (c) 2002-2007 Rolf Ade.
 #
 # RCS: @(#) $Id$
 
@@ -185,6 +186,34 @@ test html-3.2 {Bad data} {
      catch {set doc [dom parse -html {<a>}]}
 } 1
         
+test html-4.1 {Tag name case normalization} {
+    set doc [dom parse -html {<HtmL><boDY></BODy></HTml>}]
+    set result [$doc asHTML]
+    $doc delete
+    set result
+} {<html><body></body></html>}
+
+test html-4.2 {Tag name case normalization} {knownBug} {
+    set doc [dom parse -html {<HtmL><NotaHTML_Tag/></HTml>}]
+    set result [$doc asHTML]
+    $doc delete
+    set result
+} {<html><body></body></html>}
+
+test html-4.3 {Attribute name case normalization} {
+    set doc [dom parse -html {<HtmL><Body Id=3 FOO=Bar GriLL></body></html>}]
+    set result [$doc asHTML]
+    $doc delete
+    set result
+} {<html><body id="3" foo="Bar" grill="grill"></body></html>}
+
+test html-4.4 {ID Attribute handling} {
+    set doc [dom parse -html {<HtmL><p ID=1 f00=bar/><p id="2"/><p/></html>}]
+    set result [[$doc getElementById 1] getAttribute id]
+    $doc delete
+    set result
+} {1}
+
 
 # cleanup
 ::tcltest::cleanupTests
