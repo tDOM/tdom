@@ -1,4 +1,11 @@
 
+2007-10-30  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domhtml.c: 
+        * tests/htmlreader.test: ID Attributes in HTML documents
+          parsed with -html do what you expect: you find it with
+          getElementById.
+
 2007-10-29  Rolf Ade  <rolf@pointsman.de>
 
         * doc/domNode.*
