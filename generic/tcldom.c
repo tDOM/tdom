@@ -220,7 +220,6 @@ static char dom_usage[] =
     "    isQName string                                   \n"
     "    isNCName string                                  \n"
     "    isPIName string                                  \n"
-
 ;
 
 static char doc_usage[] =
@@ -470,7 +469,6 @@ void tcldom_docCmdDeleteProc(
     char          *var   = dinfo->traceVarName;
     
     DBG(fprintf(stderr, "--> tcldom_docCmdDeleteProc doc %p\n", doc));
-
     if (var) {
         DBG(fprintf(stderr, "--> tcldom_docCmdDeleteProc calls "
                     "Tcl_UntraceVar for \"%s\"\n", var));
@@ -684,7 +682,8 @@ int tcldom_returnDocumentObj (
     domDocument *document,
     int          setVariable,
     Tcl_Obj     *var_name,
-    int          trace
+    int          trace,
+    int          forOwnerDocument
 )
 {
     char           objCmdName[80], *objVar;
@@ -735,8 +734,10 @@ int tcldom_returnDocumentObj (
             }
         }
     }
-
-    TDomThreaded(tcldom_RegisterDocShared(document));
+    
+    if (!forOwnerDocument) {
+        TDomThreaded(tcldom_RegisterDocShared(document));
+    }
     SetResult(objCmdName);
 
     return TCL_OK;
@@ -3482,7 +3483,7 @@ static int applyXSLT (
         Tcl_DecrRefCount(xsltMsgInfo.msgcmd);
     }
     return tcldom_returnDocumentObj(interp, resultDoc, (objc == 2),
-                                     (objc == 2) ? objv[1] : NULL, 1);
+                                     (objc == 2) ? objv[1] : NULL, 1, 0);
             
  applyXSLTCleanUP:
     if (localListPtr) {
@@ -4453,7 +4454,8 @@ int tcldom_NodeObjCmd (
             CheckArgs(2,3,2,"?docObjVar?");
             return tcldom_returnDocumentObj(interp, node->ownerDocument,
                                             (objc == 3),
-                                            (objc == 3) ? objv[2] : NULL, 0);
+                                            (objc == 3) ? objv[2] : NULL, 0, 
+                                            1);
         case m_target:
             CheckArgs(2,2,2,"");
             if (node->nodeType != PROCESSING_INSTRUCTION_NODE) {
@@ -5198,7 +5200,8 @@ int tcldom_createDocument (
         return TCL_ERROR;
     }
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 /*----------------------------------------------------------------------------
@@ -5227,7 +5230,8 @@ int tcldom_createDocumentNode (
 
     doc = domCreateDoc(NULL, 0);
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 /*----------------------------------------------------------------------------
@@ -5260,7 +5264,8 @@ int tcldom_createDocumentNS (
         return TCL_ERROR;
     }
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 
@@ -5566,7 +5571,8 @@ int tcldom_parse (
             }
             return TCL_ERROR;
         }
-        return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName,1);
+        return tcldom_returnDocumentObj (interp, doc, setVariable, newObjName,
+                                         1, 0);
     }
 
 #ifdef TDOM_NO_EXPAT
@@ -5630,7 +5636,8 @@ int tcldom_parse (
     }
     XML_ParserFree(parser);
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj (interp, doc, setVariable, newObjName, 1,
+                                     0);
 #endif
 
 }
@@ -5757,7 +5764,8 @@ int tcldom_DomObjCmd (
                     return TCL_ERROR;
                 }
                 return tcldom_returnDocumentObj(interp, doc, (objc == 4),
-                                                (objc==4) ? objv[3] : NULL, 1);
+                                                (objc==4) ? objv[3] : NULL,
+                                                1, 0);
             }
             break;
         case m_detachDocument:

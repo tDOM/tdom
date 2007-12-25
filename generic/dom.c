@@ -5048,8 +5048,10 @@ typedef struct _tdomCmdReadInfo {
 
 } tdomCmdReadInfo;
 
-EXTERN int tcldom_returnDocumentObj (Tcl_Interp *interp, domDocument *document,
-                                int setVariable, Tcl_Obj *var_name, int trace);
+EXTERN int tcldom_returnDocumentObj (Tcl_Interp *interp, 
+                                     domDocument *document,
+                                     int setVariable, Tcl_Obj *var_name,
+                                     int trace, int forOwnerDocument);
 
 void
 tdom_freeProc (
@@ -5265,7 +5267,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         }
         domSetDocumentElement (info->document);
         result = tcldom_returnDocumentObj (interp, info->document, 0,
-                                           newObjName, 1);
+                                           newObjName, 0, 0);
         info->document = NULL;
         return result;
 
