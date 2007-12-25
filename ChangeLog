@@ -1,4 +1,10 @@
 
+2007-12-26  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/dom.c
+        * generic/tcldom.c: Fixed a memory leak in case of
+          --enable-threads.
+
 2007-10-30  Rolf Ade  <rolf@pointsman.de>
 
         * generic/domhtml.c: 
