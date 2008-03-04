@@ -6759,7 +6759,7 @@ static int processTopLevel (
                 if (str) {
                     if (!xs->doctype.cdataSectionElements) {
                         xs->doctype.cdataSectionElements = 
-                            MALLOC (sizeof (Tcl_HashTable));
+                            (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
                         Tcl_InitHashTable (xs->doctype.cdataSectionElements,
                                            TCL_STRING_KEYS);
                     }
@@ -7477,7 +7477,7 @@ int xsltProcess (
             memset (xs->resultDoc->doctype, 0, (sizeof (domDocInfo)));
         }
         xs->resultDoc->doctype->cdataSectionElements =
-            MALLOC (sizeof (Tcl_HashTable));
+            (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
         Tcl_InitHashTable (xs->resultDoc->doctype->cdataSectionElements,
                            TCL_STRING_KEYS);
         for (entryPtr = Tcl_FirstHashEntry (xs->doctype.cdataSectionElements,
