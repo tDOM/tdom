@@ -1320,7 +1320,8 @@ HTML_SimpleParse (
                 }
                 if (!strcmp(ArgName, "id")) {
                     if (!doc->ids) {
-                        doc->ids = MALLOC (sizeof (Tcl_HashTable));
+                        doc->ids = 
+                            (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
                         Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
                     }
                     h = Tcl_CreateHashEntry (doc->ids, attrnode->nodeValue,
