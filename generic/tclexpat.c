@@ -2163,7 +2163,9 @@ TclGenExpatElementStartHandler(userData, name, atts)
           Tcl_IncrRefCount (vector[0]);
           vector[1] = Tcl_NewStringObj((char *)name, -1);
           Tcl_IncrRefCount (vector[1]);
-          result = activeTclHandlerSet->elementstartObjProc(activeTclHandlerSet->elementstartclientData, expat->interp, 3, vector);
+          result = activeTclHandlerSet->elementstartObjProc(
+              activeTclHandlerSet->elementstartclientData, expat->interp,
+              3, vector);
           TclExpatHandlerResult(expat, activeTclHandlerSet, result);
           Tcl_DecrRefCount (vector[0]);
           Tcl_DecrRefCount (vector[1]);
@@ -2288,7 +2290,9 @@ TclGenExpatElementEndHandler(userData, name)
           vector[0] = activeTclHandlerSet->elementendcommand;
           vector[1] = ename;
           Tcl_Preserve((ClientData) expat->interp);
-          result = activeTclHandlerSet->elementendObjProc(activeTclHandlerSet->elementendclientData, expat->interp, 2, vector);
+          result = activeTclHandlerSet->elementendObjProc(
+              activeTclHandlerSet->elementendclientData, expat->interp,
+              2, vector);
           Tcl_Release((ClientData) expat->interp);
           TclExpatHandlerResult(expat, activeTclHandlerSet, result);
       } else {
