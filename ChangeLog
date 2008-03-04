@@ -2,7 +2,9 @@
 
         * generic/tclexpat.c: Editorial changes.
 
-        * generic/domhtml.c: Added a cast, to pacify picky compliers.
+        * generic/domhtml.c: 
+        * generic/domxslt.c: Added a few casts, to pacify picky
+          compliers.
 
 2007-12-26  Rolf Ade  <rolf@pointsman.de>
         
