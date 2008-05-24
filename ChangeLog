@@ -1,3 +1,10 @@
+2008-05-25  Rolf Ade  <rolf@pointsman.de>
+
+        * lib/tdom.tcl: The XPath function element-available() should,
+          aroding to the rec, return true "if and only if the
+          <argument> is the name of an instruction". That is, not for
+          all known XSLT elements.
+
 2008-03-04  Rolf Ade  <rolf@pointsman.de>
 
         * generic/tclexpat.c: Editorial changes.
