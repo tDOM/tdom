@@ -1,7 +1,13 @@
+2008-08-27  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: Added missing space in target
+          pkgIndex.tcl-hand. Thanks to Gustaf Neumann for reporting
+          the problem and providing a fix.
+
 2008-05-25  Rolf Ade  <rolf@pointsman.de>
 
         * lib/tdom.tcl: The XPath function element-available() should,
-          aroding to the rec, return true "if and only if the
+          according to the rec, return true "if and only if the
           <argument> is the name of an instruction". That is, not for
           all known XSLT elements.
 
