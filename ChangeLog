@@ -1,3 +1,9 @@
+2009-11-10  Rolf Ade  <rolf@pointsman.de>
+
+        * expat/xmltok_impl.c: Fix for possible DoS attack (see
+          CVE-2009-3720)
+
+
 2008-08-27  Rolf Ade  <rolf@pointsman.de>
 
         * Makefile.in: Added missing space in target
