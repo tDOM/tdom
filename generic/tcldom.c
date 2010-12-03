@@ -2428,6 +2428,7 @@ static
 void tcldom_treeAsHTML (
     Tcl_Obj     *htmlString,
     domNode     *node,
+    Tcl_Interp  *interp,
     Tcl_Channel  chan,
     int          escapeNonASCII,
     int          htmlEntities,
@@ -2471,7 +2472,7 @@ void tcldom_treeAsHTML (
         }
         child = doc->rootNode->firstChild;
         while (child) {
-            tcldom_treeAsHTML(htmlString, child, chan, escapeNonASCII,
+	    tcldom_treeAsHTML(htmlString, child, interp, chan, escapeNonASCII,
                               htmlEntities, doctypeDeclaration, 0);
             child = child->nextSibling;
         }
@@ -2558,13 +2559,120 @@ void tcldom_treeAsHTML (
 
     attrs = node->firstAttr;
     while (attrs) {
+        int writeAttrName = 1;
+        int writeAttrValue = 1;
         tcldom_tolower(attrs->nodeName, attrName, 80);
         writeChars(htmlString, chan, " ", 1);
-        writeChars (htmlString, chan, attrName, -1);
-        writeChars(htmlString, chan, "=\"", 2);
-        tcldom_AppendEscaped(htmlString, chan, attrs->nodeValue, -1, 1,
-                             escapeNonASCII, htmlEntities, 0);
-        writeChars(htmlString, chan, "\"", 1);
+
+	fprintf(stderr, "=== we have tag %s and attr %s\n",tag,attrName);
+
+	if (
+	    (tag[0] == 'b' && !strcmp(tag,"button")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"autofocus")) ||
+		(attrName[0] == 'd' && !strcmp(attrName,"disabled")) ||
+		(attrName[0] == 'f' && !strcmp(attrName,"formnovalidate"))
+		)) ||
+
+	    (tag[0] == 'c' && !strcmp(tag,"command")
+	    && ((attrName[0] == 'c' && !strcmp(attrName,"checked")) ||
+		(attrName[0] == 'd' && !strcmp(attrName,"disabled"))
+		)) ||
+
+	    (tag[0] == 'f' && !strcmp(tag,"form")
+	    && ((attrName[0] == 'n' && !strcmp(attrName,"novalidate"))
+		)) ||
+
+	    (tag[0] == 'i' && !strcmp(tag,"img")
+	    && ((attrName[0] == 'i' && !strcmp(attrName,"ismap"))
+		)) ||
+
+	    (tag[0] == 'i' && !strcmp(tag,"iframe")
+	    && ((attrName[0] == 's' && !strcmp(attrName,"seamless"))
+		)) ||
+
+	    (tag[0] == 'i' && !strcmp(tag,"input")
+	     && ((attrName[0] == 'a' && !strcmp(attrName,"autofocus")) ||
+		 (attrName[0] == 'c' && !strcmp(attrName,"checked")) ||
+		 (attrName[0] == 'd' && !strcmp(attrName,"disabled")) ||
+		 (attrName[0] == 'f' && !strcmp(attrName,"formnovalidate")) ||
+		 (attrName[0] == 'm' && !strcmp(attrName,"multiple")) ||
+		 (attrName[0] == 'r' && !strcmp(attrName,"readonly")) ||
+		 (attrName[0] == 'r' && !strcmp(attrName,"required"))
+		 )) ||
+
+	    (tag[0] == 'k' && !strcmp(tag,"keygen")
+	     && ((attrName[0] == 'a' && !strcmp(attrName,"autofocus")) ||
+		 (attrName[0] == 'd' && !strcmp(attrName,"disabled"))
+		 )) ||
+	    
+	    (tag[0] == 'o' && !strcmp(tag,"ol")
+	     && ((attrName[0] == 'r' && !strcmp(attrName,"reversed"))
+		 )) ||
+	    
+	    (tag[0] == 'o' && !strcmp(tag,"optgroup")
+	     && ((attrName[0] == 'd' && !strcmp(attrName,"disabled"))
+		 )) ||
+	    
+	    (tag[0] == 'o' && !strcmp(tag,"option")
+	     && ((attrName[0] == 'd' && !strcmp(attrName,"disabled")) ||
+		 (attrName[0] == 's' && !strcmp(attrName,"selected"))
+		 )) ||
+
+	    (tag[0] == 's' && !strcmp(tag,"script")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"async")) ||
+		(attrName[0] == 'd' && !strcmp(attrName,"defer"))
+		)) ||
+
+	    (tag[0] == 's' && !strcmp(tag,"select")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"autofocus")) ||
+		(attrName[0] == 'd' && !strcmp(attrName,"disabled")) ||
+		(attrName[0] == 'm' && !strcmp(attrName,"multiple")) ||
+		(attrName[0] == 'r' && !strcmp(attrName,"required"))
+		)) ||
+
+	    (tag[0] == 's' && !strcmp(tag,"style")
+	    && ((attrName[0] == 's' && !strcmp(attrName,"scoped"))
+		)) ||
+
+	    (tag[0] == 't' && !strcmp(tag,"textarea")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"autofocus")) ||
+		(attrName[0] == 'd' && !strcmp(attrName,"disabled")) ||
+		(attrName[0] == 'r' && !strcmp(attrName,"readonly")) ||
+		(attrName[0] == 'r' && !strcmp(attrName,"required"))
+		)) ||
+
+	    (tag[0] == 't' && !strcmp(tag,"time")
+	    && ((attrName[0] == 'p' && !strcmp(attrName,"pubdate"))
+		)) ||
+	    
+	    (tag[0] == 'a' && !strcmp(tag,"audio")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"autoplay")) ||
+		(attrName[0] == 'c' && !strcmp(attrName,"controls")) ||
+		(attrName[0] == 'l' && !strcmp(attrName,"loop"))
+		)) ||
+	    (tag[0] == 'v' && !strcmp(tag,"video")
+	    && ((attrName[0] == 'a' && !strcmp(attrName,"autoplay")) ||
+		(attrName[0] == 'c' && !strcmp(attrName,"controls")) ||
+		(attrName[0] == 'l' && !strcmp(attrName,"loop"))
+		))
+	    ) {
+	    /* we have a boolean attrubute */
+	    int boolValue = 0;
+	    Tcl_GetBooleanFromObj(interp, Tcl_NewStringObj(attrs->nodeValue, -1), &boolValue);
+	    writeAttrName = boolValue;
+	    writeAttrValue = 0;
+	    fprintf(stderr, "=== we have boolean attr %s %d %d\n",attrName, writeAttrName, writeAttrValue);
+
+	}
+        if (writeAttrName) {
+	    writeChars (htmlString, chan, attrName, -1);
+	}
+        if (writeAttrValue) {
+	    writeChars(htmlString, chan, "=\"", 2);
+            tcldom_AppendEscaped(htmlString, chan, attrs->nodeValue, -1, 1,
+				 escapeNonASCII, htmlEntities, 0);
+	    writeChars(htmlString, chan, "\"", 1);
+	}
         attrs = attrs->nextSibling;
     }
     writeChars(htmlString, chan, ">", 1);
@@ -2574,7 +2682,7 @@ void tcldom_treeAsHTML (
         /* strange ! should not happen ! */
         child = node->firstChild;
         while (child != NULL) {
-            tcldom_treeAsHTML(htmlString, child, chan, escapeNonASCII,
+	    tcldom_treeAsHTML(htmlString, child, interp, chan, escapeNonASCII,
                               htmlEntities, doctypeDeclaration, scriptTag);
             child = child->nextSibling;
         }
@@ -2588,7 +2696,7 @@ void tcldom_treeAsHTML (
             writeChars(htmlString, chan, "\n", 1);
         }
         while (child != NULL) {
-            tcldom_treeAsHTML(htmlString, child, chan, escapeNonASCII,
+	    tcldom_treeAsHTML(htmlString, child, interp, chan, escapeNonASCII,
                                htmlEntities, doctypeDeclaration, scriptTag);
             child = child->nextSibling;
         }
@@ -3112,7 +3220,7 @@ static int serializeAsHTML (
         }
     }
     resultPtr = Tcl_NewStringObj("", 0);
-    tcldom_treeAsHTML(resultPtr, node, chan, escapeNonASCII, htmlEntities,
+    tcldom_treeAsHTML(resultPtr, node, interp, chan, escapeNonASCII, htmlEntities,
                       doctypeDeclaration, 0);
     Tcl_AppendResult(interp, Tcl_GetString(resultPtr), NULL);
     Tcl_DecrRefCount(resultPtr);
