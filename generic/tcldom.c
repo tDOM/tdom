@@ -2663,19 +2663,34 @@ void tcldom_treeAsHTML (
         int writeAttrName, writeAttrValue;
 
         tcldom_tolower(attrs->nodeName, attrName, 80);
-        writeChars(htmlString, chan, " ", 1);
 
 	if (tcldom_isBooleanAttributeHTML(tag, attrName)) {
-	    /* we have a boolean attribute */
+	    /* We have a boolean attribute */
 	    int boolValue = 0;
-	    Tcl_GetBooleanFromObj(interp, Tcl_NewStringObj(attrs->nodeValue, -1), &boolValue);
+	    if (*attrs->nodeValue == '\0' ||
+		!strcmp(attrs->nodeValue,attrName)) {
+	      /* HTML 5 allows empty nodeValue or nodeValue eq attrName for true */
+	      boolValue = 1;
+	    } else {
+	      /*-----------------------------------------------------------
+	       | Check boolean value. If the boolean conversion
+	       | fails, Tcl leaves the error message in the interp
+	       | result, which has to be cleared.
+	       \----------------------------------------------------------*/
+	      int result = Tcl_GetBooleanFromObj(interp, Tcl_NewStringObj(attrs->nodeValue, -1), &boolValue);
+	      if (result != TCL_OK) {
+		Tcl_ResetResult(interp);
+	      }
+	    }
 	    writeAttrName = boolValue;
 	    writeAttrValue = 0;
 	} else {
 	    writeAttrName = 1;
 	    writeAttrValue = 1;
 	}
+
         if (writeAttrName) {
+	    writeChars(htmlString, chan, " ", 1);
 	    writeChars (htmlString, chan, attrName, -1);
 	}
         if (writeAttrValue) {
