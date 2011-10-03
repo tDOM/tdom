@@ -5933,8 +5933,13 @@ int tcldom_EvalLocked (
     ret = Tcl_EvalObj(interp, objv[2]);
     if (ret == TCL_ERROR) {
         char msg[64 + TCL_INTEGER_SPACE];
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 6)) || (TCL_MAJOR_VERSION > 8))
+        sprintf(msg, "\n    (\"%s %s\" body line %d)", Tcl_GetString(objv[0]),
+                Tcl_GetString(objv[1]), Tcl_GetErrorLine(interp));
+#else
         sprintf(msg, "\n    (\"%s %s\" body line %d)", Tcl_GetString(objv[0]),
                 Tcl_GetString(objv[1]), interp->errorLine);
+#endif
         Tcl_AddErrorInfo(interp, msg);
     }
 
