@@ -193,14 +193,14 @@ matching (glob style) \fIlocalname\fR and having the given namespace
 \&\fRCreates (allocates) a new element node with node name
 \&\fItagName\fR, append it to the hidden fragment list in the document
 object and returns the node object.  If \fIobjVar\fR is given the new
-node object store in this variable.
+node object is stored in this variable.
 .TP
 \&\fB\fBcreateElementNS\fP \fIurl\fB \fItagName\fB ?\fIobjVar\fB?
 \&\fRCreates (allocates) a new element node within a namespace
 having \fIuri\fR as the URI and node name \fItagName\fR, which
 could include the namespace prefix, append it to the hidden fragment list in
 the document object and returns the node object.  If \fIobjVar\fR is
-given the new node object store in this variable.
+given the new node object is stored in this variable.
 .TP
 \&\fB\fBcreateTextNode\fP \fItext\fB ?\fIobjVar\fB?
 \&\fRCreates (allocates) a new text node with node value

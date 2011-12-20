@@ -53,7 +53,7 @@ matching (glob style) <m>localname</m> and having the given namespace
           <desc>Creates (allocates) a new element node with node name
 <m>tagName</m>, append it to the hidden fragment list in the document
 object and returns the node object.  If <m>objVar</m> is given the new
-node object store in this variable.</desc>
+node object is stored in this variable.</desc>
         </commanddef>
 
         <commanddef>
@@ -62,7 +62,7 @@ node object store in this variable.</desc>
 having <m>uri</m> as the URI and node name <m>tagName</m>, which
 could include the namespace prefix, append it to the hidden fragment list in
 the document object and returns the node object.  If <m>objVar</m> is
-given the new node object store in this variable.</desc>
+given the new node object is stored in this variable.</desc>
         </commanddef>
 
         <commanddef>
