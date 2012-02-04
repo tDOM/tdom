@@ -72,6 +72,10 @@ Tcl_ObjCmdProc TclTdomObjCmd;
 EXTERN int Tdom_Init     _ANSI_ARGS_((Tcl_Interp *interp));
 EXTERN int Tdom_SafeInit _ANSI_ARGS_((Tcl_Interp *interp));
 
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION < 6) || (TCL_MAJOR_VERSION > 8)
+# define Tcl_GetErrorLine(interp) (interp)->errorLine
+#endif
+
 #endif
 
 
