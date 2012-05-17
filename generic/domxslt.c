@@ -2679,7 +2679,7 @@ static int fastMergeSort (
         }
     }
     memcpy(a,    b,     size*sizeof(domNode*));
-    memcpy(posa, posb,  size*sizeof(int*));
+    memcpy(posa, posb,  size*sizeof(int));
     memcpy(vs,   vstmp, size*sizeof(char*));
     memcpy(vd,   vdtmp, size*sizeof(double));
     return 0;
