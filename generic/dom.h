@@ -94,6 +94,14 @@
 #endif
 
 /*
+ * Beginning with 8.6, interp->errorLine isn't public visible anymore
+ * (TIP 330)
+ */
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION < 6)
+# define Tcl_GetErrorLine(interp) (interp)->errorLine
+#endif
+
+/*
  * Starting with Tcl 8.2 the Tcl_Panic() is defined properly
  * over the stubs table.
  * Also, we have a proper Tcl_GetString() shortcut afterwards.

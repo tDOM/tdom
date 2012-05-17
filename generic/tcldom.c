@@ -5934,7 +5934,7 @@ int tcldom_EvalLocked (
     if (ret == TCL_ERROR) {
         char msg[64 + TCL_INTEGER_SPACE];
         sprintf(msg, "\n    (\"%s %s\" body line %d)", Tcl_GetString(objv[0]),
-                Tcl_GetString(objv[1]), interp->errorLine);
+                Tcl_GetString(objv[1]), Tcl_GetErrorLine(interp));
         Tcl_AddErrorInfo(interp, msg);
     }
 
