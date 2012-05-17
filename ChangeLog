@@ -1,3 +1,13 @@
+2012-05-17  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/dom.h
+        * generic/tcldom.c: Compatibility with Tcl 8.6 - Beginning
+          with 8.6, interp->errorLine isn't public visible anymore
+          (TIP 330).
+
+        * generic/domxslt.c: Fixed wrong size on memcpy on 64 bit
+          (when sizeof(int)!=sizeof(int*))
+
 2009-11-10  Rolf Ade  <rolf@pointsman.de>
 
         * expat/xmltok_impl.c: Fix for possible DoS attack (see
