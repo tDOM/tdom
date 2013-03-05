@@ -5978,10 +5978,18 @@ getExternalDocument (
         str = Tcl_GetStringResult (interp);
         if (str[0] == '\0') {
             Tcl_DStringAppend (&dStr, "At line ", -1);
+            #ifdef EXPAT195
+            sprintf (s, "%d", XML_GetCurrentLineNumber (parser));
+            #else
             sprintf (s, "%ld", XML_GetCurrentLineNumber (parser));
+            #endif
             Tcl_DStringAppend (&dStr, s, -1);
             Tcl_DStringAppend (&dStr, " character ", -1);
+            #ifdef EXPAT195
+            sprintf (s, "%d", XML_GetCurrentColumnNumber (parser));
+            #else
             sprintf (s, "%ld", XML_GetCurrentColumnNumber (parser));
+            #endif
             Tcl_DStringAppend (&dStr, s, -1);
             Tcl_DStringAppend (&dStr, ": ", 2);
             Tcl_DStringAppend (&dStr, 
