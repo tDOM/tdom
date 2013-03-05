@@ -87,6 +87,13 @@
 #endif
 
 /*
+ * Providing for EXPAT 1.95.* compatibility
+ */
+#if (XML_MAJOR_VERSION == 1) && (XML_MINOR_VERSION == 95)
+#define EXPAT195
+#endif
+
+/*
  * Beginning with 8.4, Tcl API is CONST'ified
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)

@@ -1113,11 +1113,19 @@ int tcldom_appendXML (
         long byteIndex, i;
 
         Tcl_ResetResult(interp);
+        #ifdef EXPAT195
+        sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
+        #else
         sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
+        #endif
         Tcl_AppendResult(interp, "error \"",
                          XML_ErrorString(XML_GetErrorCode(parser)),
                          "\" at line ", s, " character ", NULL);
+        #ifdef EXPAT195
+        sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
+        #else
         sprintf(s, "%ld", XML_GetCurrentColumnNumber(parser));
+        #endif
         Tcl_AppendResult(interp, s, NULL);
         byteIndex = XML_GetCurrentByteIndex(parser);
         if (byteIndex != -1) {
@@ -5605,11 +5613,20 @@ int tcldom_parse (
                error msg. If we don't got a document, but interp result is
                empty, the error occured in the main document and we
                build the error msg as follows. */
+            #ifdef EXPAT195
+            sprintf(s, "%d", XML_GetCurrentLineNumber(parser));
+            #else
             sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
+            #endif
             Tcl_AppendResult(interp, "error \"", 
                              XML_ErrorString(XML_GetErrorCode(parser)),
                              "\" at line ", s, " character ", NULL);
+            #ifdef EXPAT195
+            sprintf(s, "%d", XML_GetCurrentColumnNumber(parser));
+            #else
             sprintf(s, "%ld", XML_GetCurrentColumnNumber(parser));
+            #endif
+
             Tcl_AppendResult(interp, s, NULL);
             byteIndex = XML_GetCurrentByteIndex(parser);
             if ((byteIndex != -1) && (chan == NULL)) {
