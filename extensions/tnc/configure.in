@@ -2,8 +2,6 @@
 dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
-#
-# RCS: @(#) $Id$
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.  The only places you should
@@ -27,7 +25,7 @@ AC_INIT([tnc], [0.3.0])
 # as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
 #--------------------------------------------------------------------
 
-TEA_INIT([3.6])
+TEA_INIT([3.9])
 
 AC_CONFIG_AUX_DIR(../../tclconfig)
 
@@ -112,7 +110,7 @@ if test "${TEA_PLATFORM}" = "windows" ; then
     #TEA_ADD_SOURCES([win/winFile.c])
     #TEA_ADD_INCLUDES([-I\"$(${CYGPATH} ${srcdir}/win)\"])
 else
-    CLEANFILES="pkgIndex.tcl tdom.tcl"
+    CLEANFILES="pkgIndex.tcl"
     #TEA_ADD_SOURCES([unix/unixFile.c])
     #TEA_ADD_LIBS([-lsuperfly])
 fi
