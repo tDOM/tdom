@@ -5431,6 +5431,17 @@ $as_echo "file not found" >&6; }
 
 
 
+    vars="${TDOM_STUB_LIB_SPEC}"
+    for i in $vars; do
+	if test "${TEA_PLATFORM}" = "windows" -a "$GCC" = "yes" ; then
+	    # Convert foo.lib to -lfoo for GCC.  No-op if not *.lib
+	    i=`echo "$i" | sed -e 's/^\([^-].*\)\.lib$/-l\1/i'`
+	fi
+	PKG_LIBS="$PKG_LIBS $i"
+    done
+
+
+
     PKG_CFLAGS="$PKG_CFLAGS -DUSE_TDOM_STUBS=1"
 
 
@@ -5469,33 +5480,6 @@ $as_echo "file not found" >&6; }
     done
 
 
-
-# See https://sourceforge.net/tracker/index.php?func=detail&aid=1636345&group_id=10894&atid=110894
-if test "${TEA_PLATFORM}" = "windows" -a "$GCC" != "yes" ; then
-
-    vars="\"`${CYGPATH} ${TDOM_STUB_LIB_PATH}`\""
-    for i in $vars; do
-	if test "${TEA_PLATFORM}" = "windows" -a "$GCC" = "yes" ; then
-	    # Convert foo.lib to -lfoo for GCC.  No-op if not *.lib
-	    i=`echo "$i" | sed -e 's/^\([^-].*\)\.lib$/-l\1/i'`
-	fi
-	PKG_LIBS="$PKG_LIBS $i"
-    done
-
-
-else
-
-    vars="${TDOM_STUB_LIB_SPEC}"
-    for i in $vars; do
-	if test "${TEA_PLATFORM}" = "windows" -a "$GCC" = "yes" ; then
-	    # Convert foo.lib to -lfoo for GCC.  No-op if not *.lib
-	    i=`echo "$i" | sed -e 's/^\([^-].*\)\.lib$/-l\1/i'`
-	fi
-	PKG_LIBS="$PKG_LIBS $i"
-    done
-
-
-fi
 
 #--------------------------------------------------------------------
 # __CHANGE__

@@ -11,6 +11,7 @@
 # define CONST84
 #endif
 
+extern char *Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact);
 
 typedef struct simpleCounter 
 {
@@ -235,8 +236,19 @@ int
 Example_Init (interp)
     Tcl_Interp *interp;
 {
-    Tcl_PkgRequire (interp, "expat", "2.0", 0);
+#ifdef USE_TCL_STUBS
+    if (Tcl_InitStubs(interp, "8", 0) == NULL) {
+        return TCL_ERROR;
+    }
+#endif
+#ifdef USE_TDOM_STUBS
+    if (Tdom_InitStubs(interp, "0.8", 0) == NULL) {
+        return TCL_ERROR;
+    }
+#endif
+    Tcl_PkgRequire (interp, "tdom", "0.8.0", 0);
     Tcl_CreateObjCommand (interp, "example", TclExampleObjCmd, NULL, NULL );
     Tcl_PkgProvide (interp, "example", "1.0");
+    return TCL_OK;
 }
 
