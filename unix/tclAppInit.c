@@ -64,7 +64,7 @@ int
 Tcl_AppInit(interp)
     Tcl_Interp *interp;
 {
-    if (Tcl_Init(interp) == TCL_ERROR) {
+    if ((Tcl_Init)(interp) == TCL_ERROR) {
         return TCL_ERROR;
     }
     if (Tdom_Init(interp) == TCL_ERROR) {
