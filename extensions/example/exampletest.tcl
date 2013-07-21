@@ -1,7 +1,7 @@
 #!tclsh
 
-load ../../unix/libtdom0.7.5.so
-load ./libexample1.0.0.so
+load ../../unix/libtdom0.8.3.so
+load ./libexample1.0.so
 
 set counter1 0
 set counter2 0
