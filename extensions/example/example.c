@@ -1,8 +1,6 @@
 
-#include <tcl.h>
+#include <tdom.h>
 #include <string.h>
-#include <expat.h>
-#include <tclexpat.h>
 
 /*
  * Beginning with 8.4, Tcl API is CONST'ified
