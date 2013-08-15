@@ -16,8 +16,9 @@
 #    xslt-7.*: tests related to the created result doc
 #    xslt-8.*: Additional xslt rec compliance tests (details not covered by
 #              by the external xslt compliance test suite).
+#    xslt-9.*: xslt transformations that are using scripted xpath functions
 #
-# Copyright (c) 2002 - 2005 Rolf Ade.
+# Copyright (c) 2002 - 2005, 2013 Rolf Ade.
 #
 # RCS: @(#) $Id$
 
@@ -1147,7 +1148,37 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     $xsltDoc delete
     set result
 } {1}
-    
+
+proc ::dom::xpathFunc::local_gmt {args} {
+    return {string "bar"}
+}
+
+test xslt-9.1 {xslt using scripted xpath function} -setup {
+    set xml {<a><b start="foo"><c/></b></a>}
+    set xsl {<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
+        version="1.0">
+  <xsl:template match="@* | node()">
+    <xsl:copy>
+      <xsl:apply-templates select="@* | node()"/>
+    </xsl:copy>
+  </xsl:template>         
+  <xsl:template match="@start">
+    <xsl:attribute name="start">
+      <xsl:value-of select="local_gmt(.)"/>
+    </xsl:attribute>
+  </xsl:template>
+</xsl:transform>}
+    set xsltDoc [dom parse -keepEmpties $xsl]
+    set xmlDoc [dom parse $xml]
+} -body {
+    $xmlDoc xslt $xsltDoc resultDoc
+    $resultDoc asXML -indent none
+} -cleanup {
+    $xsltDoc delete
+    $xmlDoc delete
+    $resultDoc delete
+} -result {<a><b start="foo"><c/></b></a>}
+
 # Below is code, which replaces the dom cmd with a version, which parses
 # the xml into a dom tree, then transformations this dom tree with the
 # xslt identity transformation and returns the result tree of that
