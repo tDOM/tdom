@@ -1149,7 +1149,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     set result
 } {1}
 
-proc ::dom::xpathFunc::local_gmt {args} {
+proc ::dom::xpathFunc::xslt-9.1 {ctxNode pos nodeListType nodeList args} {
+    if {[llength $ctxNode] != 2} {
+        error "::dom::xpathFunc::xslt-9.1: expected parent node / attribute \
+               name list as first argument."
+    }
     return {string "bar"}
 }
 
@@ -1164,7 +1168,7 @@ test xslt-9.1 {xslt using scripted xpath function} -setup {
   </xsl:template>         
   <xsl:template match="@start">
     <xsl:attribute name="start">
-      <xsl:value-of select="local_gmt(.)"/>
+      <xsl:value-of select="xslt-9.1(.)"/>
     </xsl:attribute>
   </xsl:template>
 </xsl:transform>}
@@ -1177,7 +1181,7 @@ test xslt-9.1 {xslt using scripted xpath function} -setup {
     $xsltDoc delete
     $xmlDoc delete
     $resultDoc delete
-} -result {<a><b start="foo"><c/></b></a>}
+} -result {<a><b start="bar"><c/></b></a>}
 
 # Below is code, which replaces the dom cmd with a version, which parses
 # the xml into a dom tree, then transformations this dom tree with the

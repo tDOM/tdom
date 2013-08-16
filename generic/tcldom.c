@@ -1274,7 +1274,8 @@ int tcldom_xpathFuncCallBack (
     Tcl_Interp  *interp = (Tcl_Interp*) clientData;
     char         tclxpathFuncName[200], objCmdName[80];
     char         *errStr, *typeStr, *nodeName;
-    Tcl_Obj     *resultPtr, *objv[MAX_REWRITE_ARGS], *type, *value, *nodeObj;
+    Tcl_Obj     *resultPtr, *objv[MAX_REWRITE_ARGS], *type, *value, *nodeObj,
+                *tmpObj;
     Tcl_CmdInfo  cmdInfo;
     int          objc, rc, i, errStrLen, listLen, intValue, res;
     double       doubleValue;
@@ -1304,8 +1305,20 @@ int tcldom_xpathFuncCallBack (
     objc = 0;
     objv[objc] = Tcl_NewStringObj(tclxpathFuncName, -1);
     Tcl_IncrRefCount(objv[objc++]);
-    tcldom_createNodeObj(interp, ctxNode, objCmdName);
-    objv[objc] = Tcl_NewStringObj(objCmdName, -1);
+    if (ctxNode->nodeType == ATTRIBUTE_NODE) {
+        tcldom_createNodeObj(interp, ((domAttrNode*)ctxNode)->parentNode,
+                             objCmdName);
+        tmpObj = Tcl_NewListObj(0, NULL);
+        Tcl_ListObjAppendElement(interp, tmpObj, 
+                                 Tcl_NewStringObj(objCmdName, -1));
+        Tcl_ListObjAppendElement(
+            interp, tmpObj,
+            Tcl_NewStringObj(((domAttrNode*)ctxNode)->nodeName, -1));
+    } else {
+        tcldom_createNodeObj(interp, ctxNode, objCmdName);
+        tmpObj = Tcl_NewStringObj(objCmdName, -1);
+    }
+    objv[objc] = tmpObj;
     Tcl_IncrRefCount(objv[objc++]);
 
     objv[objc] = Tcl_NewIntObj(position);
