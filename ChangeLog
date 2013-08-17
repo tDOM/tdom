@@ -1,3 +1,10 @@
+
+NOTICE: This file isn't kept up to date anymore. Look at the timeline
+of the leading fossil repository
+(https://46.163.78.80/cgi-bin/repros/tdom/timeline) or at the backup
+github repository at https://github.com/tDOM/tdom for detailed lists
+of code changes.
+
 2012-05-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.h
