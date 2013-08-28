@@ -584,8 +584,13 @@ typedef struct domNode {
 
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
+#ifdef TDOM_LESS_NS
     domNameSpaceIndex   namespace : 8;
     unsigned int        info      : 8;
+#else
+    unsigned int        dummy     : 8;
+    unsigned int        info      : 8;    
+#endif
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -593,6 +598,9 @@ typedef struct domNode {
     struct domNode     *nextSibling;
 
     domString           nodeName;  /* now the element node specific fields */
+#ifndef TDOM_LESS_NS
+    domNameSpaceIndex   namespace;
+#endif
     struct domNode     *firstChild;
     struct domNode     *lastChild;
 #ifdef TCL_THREADS
@@ -623,8 +631,13 @@ typedef struct domTextNode {
 
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
+#ifdef TDOM_LESS_NS
     domNameSpaceIndex   namespace : 8;
     unsigned int        info      : 8;
+#else
+    unsigned int        dummy     : 8;
+    unsigned int        info      : 8;    
+#endif
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -645,8 +658,13 @@ typedef struct domProcessingInstructionNode {
 
     domNodeType         nodeType  : 8;
     domNodeFlags        nodeFlags : 8;
+#ifdef TDOM_LESS_NS
     domNameSpaceIndex   namespace : 8;
     unsigned int        info      : 8;
+#else
+    unsigned int        dummy     : 8;
+    unsigned int        info      : 8;    
+#endif
     unsigned int        nodeNumber;
     domDocument        *ownerDocument;
     struct domNode     *parentNode;
@@ -655,6 +673,9 @@ typedef struct domProcessingInstructionNode {
 
     domString           targetValue;   /* now the pi specific fields */
     int                 targetLength;
+#ifndef TDOM_LESS_NS
+    domNameSpaceIndex   namespace;
+#endif
     domString           dataValue;
     int                 dataLength;
 
@@ -669,8 +690,14 @@ typedef struct domAttrNode {
 
     domNodeType         nodeType  : 8;
     domAttrFlags        nodeFlags : 8;
+#ifdef TDOM_LESS_NS
     domNameSpaceIndex   namespace : 8;
     unsigned int        info      : 8;
+#else
+    unsigned int        dummy     : 8;
+    unsigned int        info      : 8;    
+    domNameSpaceIndex   namespace;
+#endif
     domString           nodeName;
     domString           nodeValue;
     int                 valueLength;
