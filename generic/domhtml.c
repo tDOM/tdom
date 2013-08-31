@@ -744,7 +744,6 @@ HTML_SimpleParse (
                 memset(tnode, 0, sizeof(domTextNode));
                 tnode->nodeType    = TEXT_NODE;
                 tnode->nodeFlags   = 0;
-                tnode->namespace   = 0;
                 tnode->ownerDocument = doc;
                 tnode->nodeNumber  = NODE_NO(doc);
                 tnode->valueLength = (x - start);
@@ -952,7 +951,6 @@ HTML_SimpleParse (
                         memset(tnode, 0, sizeof(domTextNode));
                         tnode->nodeType      = COMMENT_NODE;
                         tnode->nodeFlags     = 0;
-                        tnode->namespace     = 0;
                         tnode->ownerDocument = doc;
                         tnode->nodeNumber    = NODE_NO(doc);
                         tnode->parentNode    = parent_node;
@@ -1032,7 +1030,6 @@ HTML_SimpleParse (
                             memset(tnode, 0, sizeof(domTextNode));
                             tnode->nodeType      = TEXT_NODE;
                             tnode->nodeFlags     = 0;
-                            tnode->namespace     = 0;
                             tnode->ownerDocument = doc;
                             tnode->nodeNumber    = NODE_NO(doc);
                             tnode->parentNode    = parent_node;
@@ -1398,7 +1395,6 @@ HTML_SimpleParse (
                     memset(tnode, 0, sizeof(domTextNode));
                     tnode->nodeType      = TEXT_NODE;
                     tnode->nodeFlags     = 0;
-                    tnode->namespace     = 0;
                     tnode->ownerDocument = doc;
                     tnode->nodeNumber    = NODE_NO(doc);
                     tnode->parentNode    = node;

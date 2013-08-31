@@ -799,10 +799,12 @@ domNS* domNewNamespace (
     ns = domLookupNamespace (doc, prefix, namespaceURI);
     if (ns != NULL) return ns;
     doc->nsptr++;
+#ifdef TDOM_LESS_NS
     if (doc->nsptr > 254) {
         DBG(fprintf (stderr, "maximum number of namespaces exceeded!!!\n");)
         domPanic("domNewNamespace: maximum number of namespaces exceeded!");
     }
+#endif
     if (doc->nsptr >= doc->nslen) {
         doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
                                              sizeof (domNS*) * 2 * doc->nslen);
@@ -875,13 +877,14 @@ domNamespaceURI (
     domAttrNode *attr;
     domNS       *ns;
 
-    if (!node->namespace) return NULL;
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
+        if (!attr->namespace) return NULL;
         if (attr->nodeFlags & IS_NS_NODE) return NULL;
         ns = attr->parentNode->ownerDocument->namespaces[attr->namespace-1];
     } else
     if (node->nodeType == ELEMENT_NODE) {
+        if (!node->namespace) return NULL;
         ns = node->ownerDocument->namespaces[node->namespace-1];
     } else {
         return NULL;
@@ -902,12 +905,13 @@ domNamespacePrefix (
     domAttrNode *attr;
     domNS *ns;
 
-    if (!node->namespace) return NULL;
     if (node->nodeType == ATTRIBUTE_NODE) {
         attr = (domAttrNode*)node;
+        if (!attr->namespace) return NULL;
         ns = attr->parentNode->ownerDocument->namespaces[attr->namespace-1];
     } else
     if (node->nodeType == ELEMENT_NODE) {
+        if (!node->namespace) return NULL;
         ns = node->ownerDocument->namespaces[node->namespace-1];
     } else {
         return NULL;
@@ -1476,7 +1480,6 @@ DispatchPCDATA (
         memset(node, 0, sizeof(domTextNode));
         node->nodeType    = TEXT_NODE;
         node->nodeFlags   = 0;
-        node->namespace   = 0;
         node->nodeNumber  = NODE_NO(info->document);
         node->valueLength = len;
         node->nodeValue   = (char*)MALLOC(len);
@@ -1553,7 +1556,6 @@ commentHandler (
     memset(node, 0, sizeof(domTextNode));
     node->nodeType    = COMMENT_NODE;
     node->nodeFlags   = 0;
-    node->namespace   = 0;
     node->nodeNumber  = NODE_NO(info->document);
     node->valueLength = len;
     node->nodeValue   = (char*)MALLOC(len);
@@ -3816,7 +3818,6 @@ domNewTextNode(
     memset(node, 0, sizeof(domTextNode));
     node->nodeType      = nodeType;
     node->nodeFlags     = 0;
-    node->namespace     = 0;
     node->nodeNumber    = NODE_NO(doc);
     node->ownerDocument = doc;
     node->valueLength   = length;
@@ -3910,7 +3911,6 @@ domAppendNewTextNode(
     if (disableOutputEscaping) {
         node->nodeFlags |= DISABLE_OUTPUT_ESCAPING;
     }
-    node->namespace     = 0;
     node->nodeNumber    = NODE_NO(parent->ownerDocument);
     node->ownerDocument = parent->ownerDocument;
     node->valueLength   = length;

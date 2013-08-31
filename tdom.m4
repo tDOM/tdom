@@ -164,6 +164,48 @@ AC_DEFUN(TDOM_ENABLE_TDOMALLOC, [
 ])
 
 #------------------------------------------------------------------------
+# TDOM_ENABLE_LESS_NS --
+#
+#   Building with lower limit of different XML namespace declarations
+#   per document.
+#
+# Arguments:
+#   None
+#   
+# Results:
+#
+#   Adds the following arguments to configure:
+#       --enable-lessns=yes|no
+#
+#   Defines the following vars:
+#
+#   Sets the following vars:
+#
+#------------------------------------------------------------------------
+
+AC_DEFUN(TDOM_ENABLE_LESS_NS, [
+    AC_MSG_CHECKING([whether to enable lower limit for XML ns declarations per document])
+    AC_ARG_ENABLE(lessns,
+        AC_HELP_STRING([--enable-lessns],
+            [build with lower limit for XML ns declarations (default: off)]),
+        [tcl_ok=$enableval], [tcl_ok=no])
+
+    if test "${enable_lessns+set}" = set; then
+        enableval="$enable_lessns"
+        tcl_ok=$enableval
+    else
+        tcl_ok=no
+    fi
+
+    if test "$tcl_ok" = "yes" ; then
+        AC_MSG_RESULT([yes])
+        AC_DEFINE(TDOM_LESS_NS)
+    else
+        AC_MSG_RESULT([no])
+    fi
+])
+
+#------------------------------------------------------------------------
 # TDOM_PATH_AOLSERVER
 #
 #   Allows the building with support for AOLserver 

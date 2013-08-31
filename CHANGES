@@ -1,3 +1,9 @@
+2013-08-31 Rolf Ade  <rolf@pointsman.de>
+
+        Raised the limit of maximum number of different XML
+        namespaceses within one DOM tree to 2^31. New configure switch
+        --enable-lessns restores old code.
+
 2013-07-21 Rolf Ade  <rolf@pointsman.de>
 
         Updated TEA build system of tdom itself and the extensions.
