@@ -3633,7 +3633,7 @@ int tcldom_NodeObjCmd (
                 *errMsg;
     const char  *localName, *uri, *nsStr;
     int          result, length, methodIndex, i, line, column;
-    int          nsIndex, bool, hnew;
+    int          nsIndex, bool, hnew, legacy;
     Tcl_Obj     *namePtr, *resultPtr;
     Tcl_Obj     *mobjv[MAX_REWRITE_ARGS];
     Tcl_CmdInfo  cmdInfo;
@@ -3806,8 +3806,17 @@ int tcldom_NodeObjCmd (
     switch ((enum nodeMethod)methodIndex) {
 
         case m_toXPath:
-            CheckArgs(2,2,2,"");
-            str = xpathNodeToXPath(node);
+            CheckArgs(2,3,2,"?-legacy?");
+            legacy = 0;
+            if (objc == 3) {
+                if (!strcmp(Tcl_GetString(objv[2]), "-legacy")) {
+                    legacy = 1;
+                } else {
+                    SetResult("unknown option! Options: ?-legacy?");
+                    return TCL_ERROR;
+                }
+            }
+            str = xpathNodeToXPath(node, legacy);
             SetResult (str);
             FREE (str);
             return TCL_OK;
