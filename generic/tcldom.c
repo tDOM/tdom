@@ -336,7 +336,7 @@ static char node_usage[] =
     "    insertBeforeFromScript script ref \n"
     "    appendXML xmlString          \n"
     "    selectNodes ?-namespaces prefixUriList? ?-cache <boolean>? xpathQuery ?typeVar? \n"
-    "    toXPath                      \n"
+    "    toXPath ?-legacy?            \n"
     "    disableOutputEscaping ?boolean? \n"
     "    precedes node                \n"
     "    normalize ?-forXPath?        \n"
