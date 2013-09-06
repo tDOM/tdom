@@ -3247,7 +3247,7 @@ test domNode0-38.6 {toXPath - xml namespace} -setup {
     $doc delete
 } -result 1
 
-test domNode0-38.7 {toXPath - phatological xml namespace} -setup {
+test domNode0-38.7 {toXPath - pathological xml namespace} -setup {
     set doc [dom parse {
 <root>
     <!-- comment -->
