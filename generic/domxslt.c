@@ -3988,9 +3988,9 @@ static int ExecAction (
                     for (tpl = (xsltTemplate *) Tcl_GetHashValue (h);
                          tpl != NULL;
                          tpl = tpl->next) {
-                        if (tpl->precedence > xs->currentTplRule->precedence
+                        if (tpl->precedence >= xs->currentTplRule->precedence
                             || tpl == xs->currentTplRule) continue;
-                        TRACE3("find element tpl match='%s' mode='%s' name='%s'\n",
+                        TRACE3("testing element tpl match='%s' mode='%s' name='%s'\n",
                                tpl->match, tpl->mode, tpl->name);
                         TRACE4("tpl has prio='%f' precedence='%f'\n", tpl->prio, tpl->precedence, currentPrio, currentPrec);
                         rc = xpathMatches ( tpl->ast, actionNode, currentNode,
@@ -4011,7 +4011,7 @@ static int ExecAction (
 
             TRACE2("apply-imports: current template precedence='%f' mode='%s'\n", xs->currentTplRule->precedence, xs->currentTplRule->mode);
             for (tpl = xs->templates; tpl != NULL; tpl = tpl->next) {
-                TRACE4("find tpl match='%s' mode='%s' modeURI='%s' name='%s'\n",
+                TRACE4("testing tpl match='%s' mode='%s' modeURI='%s' name='%s'\n",
                        tpl->match, tpl->mode, tpl->modeURI, tpl->name);
                 /* exclude those, which don't match the current mode
                    and the currentTplRule */
