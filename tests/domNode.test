@@ -3266,7 +3266,53 @@ test domNode0-38.7 {toXPath - pathological xml namespace} -setup {
 } -cleanup {
     $doc delete
 } -result 1
-    
+
+test domNode0-38.8 {toXPath - pathological xml namespace} -setup {
+    set doc [dom parse {
+<root>
+    <!-- comment -->
+    <foo:foo xmlns:foo="foo">
+        <bar/>
+        text
+        <bar xmlns=""/>
+    </foo:foo>
+    some text    
+    <foo:foo xmlns:foo="bar"/>
+    <?mypi data?>
+    <foo:foo xmlns:foo="bar"/>
+    <foo:foo xmlns:foo="foo">
+        <bar/>
+        <foo:foo xmlns:foo="bar"/>
+        text
+        <bar xmlns=""/>
+    </foo:foo>
+    <foo:foo xmlns:foo="foo"/>
+</root>}]
+} -body {
+    set result ""
+    foreach node [$doc selectNodes //node()] {
+        if {$node != [[$node ownerDocument] selectNodes [$node toXPath]]} {
+            set result [$node toXPath]
+            break
+        }
+    }
+    set result
+} -cleanup {
+    $doc delete
+} -result ""
+
+test domNode0-38.9 {toXPath - really long element name} -constraints {
+    knownBug
+} -setup {
+    set doc [dom parse "<doc><[string repeat abc 100]/></doc>"]
+    set root [$doc documentElement]
+    set firstChild [$root firstChild]
+} -body {
+    $firstChild toXPath
+} -cleanup {
+    $doc delete
+} -result "/doc/[string repeat abc 100]"
+
 test domNode-39.1 {text} {
      set doc [dom parse {<root>text <b>bold</b> more text</root>}]
      $doc documentElement root
