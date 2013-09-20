@@ -3187,6 +3187,132 @@ test domNode-38.2 {toXPath - top level comment} {
     set result
 } [list {/comment()[1]} {/comment()[2]} {/comment()[3]}]
 
+test domNode-38.3 {toXPath - syntax} -setup {
+    set doc [dom parse <doc/>]
+    set root [$doc documentElement]
+} -body {
+    catch {$root toXPath foo bar} errMsg
+    set errMsg
+} -cleanup {
+    $doc delete
+} -match regexp -result {wrong # args: should be "domNode0x[[:xdigit:]]+ toXPath \?-legacy\?"}
+
+test domNode0-38.4 {toXPath - default xml namespace} -setup {
+    set doc [dom parse {<root><foo xmlns="foo"/><foo/></root>}]
+    $doc selectNodesNamespaces {foo foo}
+    set root [$doc documentElement]
+    set foo1 [$root selectNodes foo:foo]
+    set xfo1 [$foo1 toXPath]
+} -body {
+    expr {$foo1 == [[$foo1 ownerDocument] selectNodes [$foo1 toXPath]]}
+} -cleanup {
+    $doc delete
+} -result 1
+
+test domNode0-38.5 {toXPath - default xml namespace} -setup {
+    set doc [dom parse {
+<root xmlns="foo">
+    <!-- comment -->
+    <foo/>
+    some text    
+    <foo/>
+    <?mypi data?>
+    <foo/>
+</root>}]
+    set root [$doc documentElement]
+    $doc selectNodesNamespaces {foo foo}
+    set foo2 [$root selectNodes {foo:foo[2]}]
+} -body {
+    expr {$foo2 == [[$foo2 ownerDocument] selectNodes [$foo2 toXPath]]}
+} -cleanup {
+    $doc delete
+} -result 1
+
+test domNode0-38.6 {toXPath - xml namespace} -setup {
+    set doc [dom parse {
+<root xmlns:foo="foo">
+    <!-- comment -->
+    <foo:foo/>
+    some text    
+    <foo:foo/>
+    <?mypi data?>
+    <foo:foo/>
+</root>}]
+    set root [$doc documentElement]
+    $doc selectNodesNamespaces {foo foo}
+    set foo2 [$root selectNodes {foo:foo[2]}]
+} -body {
+    expr {$foo2 == [[$foo2 ownerDocument] selectNodes [$foo2 toXPath]]}
+} -cleanup {
+    $doc delete
+} -result 1
+
+test domNode0-38.7 {toXPath - pathological xml namespace} -setup {
+    set doc [dom parse {
+<root>
+    <!-- comment -->
+    <foo:foo xmlns:foo="foo"/>
+    some text    
+    <foo:foo xmlns:foo="bar"/>
+    <?mypi data?>
+    <foo:foo xmlns:foo="bar"/>
+    <foo:foo xmlns:foo="foo"/>
+</root>}]
+    set root [$doc documentElement]
+    $doc selectNodesNamespaces {foo foo}
+    set foo2 [$root selectNodes {foo:foo[2]}]
+} -body {
+    expr {$foo2 == [[$foo2 ownerDocument] selectNodes [$foo2 toXPath]]}
+} -cleanup {
+    $doc delete
+} -result 1
+
+test domNode0-38.8 {toXPath - pathological xml namespace} -setup {
+    set doc [dom parse {
+<root>
+    <!-- comment -->
+    <foo:foo xmlns:foo="foo">
+        <bar/>
+        text
+        <bar xmlns=""/>
+    </foo:foo>
+    some text    
+    <foo:foo xmlns:foo="bar"/>
+    <?mypi data?>
+    <foo:foo xmlns:foo="bar"/>
+    <foo:foo xmlns:foo="foo">
+        <bar/>
+        <foo:foo xmlns:foo="bar"/>
+        text
+        <bar xmlns=""/>
+    </foo:foo>
+    <foo:foo xmlns:foo="foo"/>
+</root>}]
+} -body {
+    set result ""
+    foreach node [$doc selectNodes //node()] {
+        if {$node != [[$node ownerDocument] selectNodes [$node toXPath]]} {
+            set result [$node toXPath]
+            break
+        }
+    }
+    set result
+} -cleanup {
+    $doc delete
+} -result ""
+
+test domNode0-38.9 {toXPath - really long element name} -constraints {
+    knownBug
+} -setup {
+    set doc [dom parse "<doc><[string repeat abc 100]/></doc>"]
+    set root [$doc documentElement]
+    set firstChild [$root firstChild]
+} -body {
+    $firstChild toXPath
+} -cleanup {
+    $doc delete
+} -result "/doc/[string repeat abc 100]"
+
 test domNode-39.1 {text} {
      set doc [dom parse {<root>text <b>bold</b> more text</root>}]
      $doc documentElement root

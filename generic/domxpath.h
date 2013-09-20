@@ -198,7 +198,7 @@ int    xpathRound        (double r);
 
 char * xpathGetStringValue (domNode *node, int *strLen);
 
-char * xpathNodeToXPath  (domNode *node);
+char * xpathNodeToXPath  (domNode *node, int legacy);
     
 void rsSetBool      ( xpathResultSet *rs, int          i    );
 void rsSetInt       ( xpathResultSet *rs, int          i    );

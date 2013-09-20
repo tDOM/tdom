@@ -1,20 +1,20 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: domNode</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile: tmml-html.xsl,v $ $Revision: 1.11 $">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0x80a9a60">NAME</a> · <a href="#SECTid0x80a7378">SYNOPSIS</a> · <a href="#SECTid0x80967a8"> DESCRIPTION </a> · <a href="#SECTid0x80d2050">SEE ALSO</a> · <a href="#SECTid0x80d2270">KEYWORDS</a>
+<a href="#SECTid0xb3b870">NAME</a> · <a href="#SECTid0xb53db0">SYNOPSIS</a> · <a href="#SECTid0xb5e220"> DESCRIPTION </a> · <a href="#SECTid0xba0550">SEE ALSO</a> · <a href="#SECTid0xba0920">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0x80a9a60">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0xb3b870">NAME</a></h2><p class="namesection">
 <b class="names">domNode - </b><br>Manipulates an instance of a DOM node object</p>
 
 
 
-  <h2><a name="SECTid0x80a7378">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
+  <h2><a name="SECTid0xb53db0">SYNOPSIS</a></h2><pre class="syntax"> $nodeObject <i class="m">method</i>  <i class="m">arg arg ...</i>
 </pre>
-  <h2><a name="SECTid0x80967a8"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
+  <h2><a name="SECTid0xb5e220"> DESCRIPTION </a></h2><p>This command manipulates one particular instance of a DOM node object.
 <i class="m">method</i> indicates a specific method of the node class. These methods
 should closely conform to the W3C recommendation "Document Object Model
 (Core) Level 1" (<a href="http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html">http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html</a>)
@@ -562,10 +562,12 @@ mode.</dd>
       
 
       
-        <dt><b class="method">toXPath</b></dt>
+        <dt><b class="method">toXPath <i class="m">?-legacy?</i>
+</b></dt>
         <dd>Returns an XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
-tree made later one.</dd>
+tree made later one. With the -legacy option, other XPath expressions
+are returnd, which doesn't work in all cases.</dd>
       
 
       
@@ -665,9 +667,9 @@ name as the given method within the namespace <tt class="l">::dom::domNode</tt> 
 be executed. This allows quick method additions on Tcl level.</p>
 
 
-  <h2><a name="SECTid0x80d2050">SEE ALSO</a></h2><p class="seealso">dom, domDoc</p>
+  <h2><a name="SECTid0xba0550">SEE ALSO</a></h2><p class="seealso">dom, domDoc</p>
   
-  <h2><a name="SECTid0x80d2270">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid0xba0920">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
   

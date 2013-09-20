@@ -537,10 +537,11 @@ the specifications in \fIspecifications\fR and outputs the result in the
 variable \fIoutputVar\fR . The translation is very similar to Cost Simple
 mode.
 .TP
-\&\fB\fBtoXPath\fP
+\&\fB\fBtoXPath \fI?-legacy?\fB\fP
 \&\fRReturns an XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
-tree made later one.
+tree made later one. With the -legacy option, other XPath expressions
+are returnd, which doesn't work in all cases.
 .TP
 \&\fB\fBgetBaseURI\fP
 \&\fRReturns the baseURI of the node. This method is deprecated in

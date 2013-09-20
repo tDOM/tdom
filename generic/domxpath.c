@@ -5781,7 +5781,8 @@ static void nodeToXPath (
     domNode  * node,
     char    ** xpath,
     int      * xpathLen,
-    int      * xpathAllocated
+    int      * xpathAllocated,
+    int        legacy
 )
 {
     domNode *parent, *child;
@@ -5793,7 +5794,7 @@ static void nodeToXPath (
     if (parent == NULL) {
         parent = node->ownerDocument->rootNode;
     } else {
-        nodeToXPath (parent, xpath, xpathLen, xpathAllocated);
+        nodeToXPath (parent, xpath, xpathLen, xpathAllocated, legacy);
     }
 
     step[0] = '\0';
@@ -5803,18 +5804,36 @@ static void nodeToXPath (
         nodeIndex = 0;
         sameNodes = 0;
         child = parent->firstChild;
-        while (child) {
-            if (strcmp(child->nodeName, node->nodeName)==0) {
-                sameNodes++;
-                if (node == child) nodeIndex = sameNodes;
-                if ((nodeIndex != 0) && (sameNodes > 2)) break;
+        if (node->namespace && !legacy) {
+            while (child) {
+                if (child->nodeType == ELEMENT_NODE) {
+                    sameNodes++;
+                    if (node == child) {
+                        nodeIndex = sameNodes;
+                        if (sameNodes > 1) break;
+                    }
+                }
+                child = child->nextSibling;
             }
-            child = child->nextSibling;
-        }
-        if (sameNodes == 1) {
-            sprintf(step, "/%s", node->nodeName);
+            if (sameNodes == 1) {
+                sprintf(step, "/*");
+            } else {
+                sprintf(step, "/*[%d]", nodeIndex);
+            }
         } else {
-            sprintf(step, "/%s[%d]", node->nodeName, nodeIndex);
+            while (child) {
+                if (strcmp(child->nodeName, node->nodeName)==0) {
+                    sameNodes++;
+                    if (node == child) nodeIndex = sameNodes;
+                    if ((nodeIndex != 0) && (sameNodes > 2)) break;
+                }
+                child = child->nextSibling;
+            }
+            if (sameNodes == 1) {
+                sprintf(step, "/%s", node->nodeName);
+            } else {
+                sprintf(step, "/%s[%d]", node->nodeName, nodeIndex);
+            }
         }
         break;
 
@@ -5864,7 +5883,8 @@ static void nodeToXPath (
 |
 \---------------------------------------------------------------------------*/
 char * xpathNodeToXPath (
-    domNode *node
+    domNode *node,
+    int      legacy
 )
 {
     char  * xpath;
@@ -5875,7 +5895,7 @@ char * xpathNodeToXPath (
     xpathLen       = 0;
     xpath          = MALLOC(xpathAllocated + 1);
 
-    nodeToXPath (node, &xpath, &xpathLen, &xpathAllocated);
+    nodeToXPath (node, &xpath, &xpathLen, &xpathAllocated, legacy);
 
     return xpath;
 
