@@ -238,5 +238,4 @@ processArgs $argc $argv
 set catalogDoc [readCatalog $catalogfile]
 runTests [$catalogDoc documentElement]
 
-# See http://mini.net/tcl/3248 for an explanation.
 proc exit args {}

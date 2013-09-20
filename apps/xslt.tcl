@@ -117,3 +117,5 @@ switch $outputOpt {
         exit 1
     }
 }
+
+proc exit args {}
