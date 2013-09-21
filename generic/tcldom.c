@@ -220,6 +220,7 @@ static char dom_usage[] =
     "    isQName string                                   \n"
     "    isNCName string                                  \n"
     "    isPIName string                                  \n"
+    "    featureinfo feature                              \n"
 ;
 
 static char doc_usage[] =
@@ -5664,6 +5665,94 @@ int tcldom_parse (
 
 }
 
+/*----------------------------------------------------------------------------
+|   tcldom_featureinfo
+|
+\---------------------------------------------------------------------------*/
+static
+int tcldom_featureinfo (
+    ClientData  clientData,
+    Tcl_Interp *interp,
+    int         objc,
+    Tcl_Obj    * const objv[]
+)
+{
+    int featureIndex, result;
+    
+    static CONST84 char *features[] = {
+        "expatversion",      "expatmajorversion",  "expatminorversion",
+        "expatmicroversion", "dtd",                "ns",
+        "unknown",           "tdomalloc",          "lessns",
+        NULL
+    };
+    enum feature {
+        o_expatversion,      o_expatmajorversion,  o_expatminorversion,
+        o_expatmicroversion, o_dtd,                o_ns,
+        o_unknown,           o_tdomalloc,          o_lessns   
+    };
+
+    if (Tcl_GetIndexFromObj(interp, objv[1], features, "feature", 0,
+                            &featureIndex) != TCL_OK) {
+        return TCL_ERROR;
+    }
+
+    switch ((enum feature) featureIndex) {
+    case o_expatversion:
+        SetResult(XML_ExpatVersion());
+        break;
+    case o_expatmajorversion:
+        SetIntResult(XML_MAJOR_VERSION);
+        break;
+    case o_expatminorversion:
+        SetIntResult(XML_MINOR_VERSION);
+        break;
+    case o_expatmicroversion:
+        SetIntResult(XML_MICRO_VERSION);
+        break;
+    case o_dtd:
+#ifdef XML_DTD
+        result = 1;
+#else
+        result = 0;
+#endif
+        SetBooleanResult(result);
+        break;
+    case o_ns:
+#ifdef XML_NS
+        result = 1;
+#else
+        result = 0;
+#endif
+        SetBooleanResult(result);
+        break;
+    case o_unknown:       
+#ifdef TDOM_NO_UNKNOWN_CMD
+        result = 0;
+#else
+        result = 1;
+#endif
+        SetBooleanResult(result);
+        break;
+    case o_tdomalloc:
+#ifdef USE_NORMAL_ALLOCATOR
+        result = 0;
+#else
+        result = 1;
+#endif
+        SetBooleanResult(result);
+        break;
+    case o_lessns:
+#ifdef TDOM_LESS_NS
+        result = 1;
+#else
+        result = 0;
+#endif
+        SetBooleanResult(result);
+        break;
+    }
+        return TCL_OK;
+        
+}
 
 /*----------------------------------------------------------------------------
 |   tcldom_DomObjCmd
@@ -5690,6 +5779,7 @@ int tcldom_DomObjCmd (
         "isQName",         "isComment",          "isCDATA",
         "isPIValue",       "isNCName",           "createDocumentNode",
         "setNameCheck",    "setTextCheck",       "setObjectCommands",
+        "featureinfo",
 #ifdef TCL_THREADS
         "attachDocument",  "detachDocument",
 #endif
@@ -5701,7 +5791,8 @@ int tcldom_DomObjCmd (
         m_isCharData,        m_isName,             m_isPIName,
         m_isQName,           m_isComment,          m_isCDATA,
         m_isPIValue,         m_isNCName,           m_createDocumentNode,
-        m_setNameCheck,      m_setTextCheck,       m_setObjectCommands
+        m_setNameCheck,      m_setTextCheck,       m_setObjectCommands,
+        m_featureinfo
 #ifdef TCL_THREADS
         ,m_attachDocument,   m_detachDocument
 #endif
@@ -5926,6 +6017,9 @@ int tcldom_DomObjCmd (
             SetBooleanResult(domIsNCNAME(Tcl_GetString(objv[2])));
             return TCL_OK;
 
+        case m_featureinfo:
+            CheckArgs(3,3,2,"feature")
+            return tcldom_featureinfo(clientData, interp, --objc, objv+1);
     }
     SetResult( dom_usage);
     return TCL_ERROR;
