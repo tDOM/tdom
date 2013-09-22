@@ -390,14 +390,66 @@ valid according to production 16 of the <ref href="http://www.w3.org/TR/2000/REC
 recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
-      </commandlist>
-  </section>
+        <commanddef>
+            <command><cmd>dom</cmd> <method>featureinfo</method>
+            <m>feature</m></command>
+            <desc>This method provides information about the used
+            build options and the expat version. The valid values for
+            the <m>feature</m> argument are:
+            <optlist>
+                <optdef>
+                    <optname>expatversion</optname>
+                    <desc>Returns the version of the underlyling expat
+                    version as string, something like
+                    "exapt_2.1.0". This is. what the expat API
+                    function XML_ExpatVersion() returns.</desc>
+                </optdef>
+                <optdef>
+                    <optname>expatmajorversion</optname>
+                    <desc>Returns the major version of the underlyling
+                    expat version as integer.</desc>
+                </optdef>
+                <optdef>
+                    <optname>expatminorversion</optname>
+                    <desc>Returns the minor version of the underlyling
+                    expat version as integer.</desc>
+                </optdef>
+                <optdef>
+                    <optname>expatmicroversion</optname>
+                    <desc>Returns the micro version of the underlyling
+                    expat version as integer.</desc>
+                </optdef>
+                <optdef>
+                    <optname>dtd</optname>
+                    <desc></desc>
+                </optdef>
+                <optdef>
+                    <optname>ns</optname>
+                    <desc></desc>
+                </optdef>
+                <optdef>
+                    <optname>unknown</optname>
+                    <desc></desc>
+                </optdef>
+                <optdef>
+                    <optname>tdomalloc</optname>
+                    <desc></desc>
+                </optdef>
+                <optdef>
+                    <optname>lessns</optname>
+                    <desc></desc>
+                </optdef>
+            </optlist>
+            </desc>   
+        </commanddef>
+    </commandlist>
+</section>
 
-  <keywords>
+<keywords>
     <keyword>XML</keyword>
     <keyword>DOM</keyword>
     <keyword>document</keyword>
     <keyword>node</keyword>
     <keyword>parsing</keyword>
-  </keywords>
+</keywords>
 </manpage>

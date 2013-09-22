@@ -498,7 +498,7 @@ mode.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>toXPath <m>?-legacy?</m></method></command>
+        <command><method>toXPath</method> <m>?-legacy?</m></command>
         <desc>Returns an XPath, which exactly addresses the given
 node in its document. This XPath is only valid as there are no changes to DOM
 tree made later one. With the -legacy option, other XPath expressions
@@ -512,7 +512,7 @@ are returnd, which doesn't work in all cases.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>baseURI <m>?URI?</m></method></command>
+        <command><method>baseURI</method>  <m>?URI?</m></command>
         <desc>Returns the present baseURI of the node. If the optional 
 argument URI is given, sets the base URI of the node and of all of its child
 nodes out of the same enitity as node to the given URI.</desc>
