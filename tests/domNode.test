@@ -3301,7 +3301,7 @@ test domNode0-38.8 {toXPath - pathological xml namespace} -setup {
     $doc delete
 } -result ""
 
-test domNode0-38.9 {toXPath - really long element name} -constraints {
+test domNode-38.9 {toXPath - really long element name} -constraints {
     knownBug
 } -setup {
     set doc [dom parse "<doc><[string repeat abc 100]/></doc>"]
