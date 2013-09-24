@@ -1,0 +1,48 @@
+<INDEX title="tDOM manual" package="tDOM">
+    <MAN id="dom" title="dom"/>
+    <DEF cat="manpage" name="dom" manpage="dom"/>
+    <DEF cat="cmd" name="dom" manpage="dom"/>
+    <DEF cat="cmd" name="dom" manpage="dom"/>
+    <KWD name="XML" manpage="dom"/>
+    <KWD name="DOM" manpage="dom"/>
+    <KWD name="document" manpage="dom"/>
+    <KWD name="node" manpage="dom"/>
+    <KWD name="parsing" manpage="dom"/>
+    <MAN id="domDoc" title="domDoc"/>
+    <DEF cat="manpage" name="domDoc" manpage="domDoc"/>
+    <DEF cat="cmd" name="domDoc" manpage="domDoc"/>
+    <DEF cat="cmd" name="domDocObjCmd" manpage="domDoc"/>
+    <KWD name="DOM node creation" manpage="domDoc"/>
+    <KWD name="document element" manpage="domDoc"/>
+    <MAN id="domNode" title="domNode"/>
+    <DEF cat="manpage" name="domNode" manpage="domNode"/>
+    <DEF cat="cmd" name="domNode" manpage="domNode"/>
+    <KWD name="XML" manpage="domNode"/>
+    <KWD name="DOM" manpage="domNode"/>
+    <KWD name="document" manpage="domNode"/>
+    <KWD name="node" manpage="domNode"/>
+    <KWD name="parsing" manpage="domNode"/>
+    <MAN id="expat" title="expat"/>
+    <DEF cat="manpage" name="expat" manpage="expat"/>
+    <DEF cat="cmd" name="expat" manpage="expat"/>
+    <DEF cat="cmd" name="package require tdom" manpage="expat"/>
+    <DEF cat="cmd" name="expat" manpage="expat"/>
+    <DEF cat="cmd" name="xml::parser" manpage="expat"/>
+    <KWD name="SAX" manpage="expat"/>
+    <MAN id="expatapi" title="expatapi"/>
+    <DEF cat="manpage" name="expatapi" manpage="expatapi"/>
+    <DEF cat="fun" name="CheckExpatParserObj, CHandlerSetInstall, CHandlerSetRemove,&#xA;         CHandlerSetCreate, CHandlerSetGetUserData, GetExpatInfo" manpage="expatapi"/>
+    <KWD name="C handler set" manpage="expatapi"/>
+    <MAN id="tdomcmd" title="tdom"/>
+    <DEF cat="manpage" name="tdomcmd" manpage="tdomcmd"/>
+    <DEF cat="cmd" name="tdom" manpage="tdomcmd"/>
+    <KWD name="DOM" manpage="tdomcmd"/>
+    <KWD name="SAX" manpage="tdomcmd"/>
+    <KWD name="C handler set" manpage="tdomcmd"/>
+    <MAN id="tnc" title="tnc"/>
+    <DEF cat="manpage" name="tnc" manpage="tnc"/>
+    <DEF cat="cmd" name="tnc" manpage="tnc"/>
+    <KWD name="Validation" manpage="tnc"/>
+    <KWD name="DTD" manpage="tnc"/>
+</INDEX>
+
