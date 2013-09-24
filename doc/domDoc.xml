@@ -172,7 +172,7 @@ value.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>internalSubset <m>?internalSubset?</m></method></command>
+        <command><method>internalSubset</method> <m>?internalSubset?</m></command>
         <desc>Returns the internal subset of the doctype declaration of the
 document, if there is one, otherwise the empty string. If there is a value
 given to the method, the internal subset of the document is set to this
@@ -463,7 +463,7 @@ set childNodes [$root selectNodes -namespaces {default http://www.defaultnamespa
       </commanddef>
 
       <commanddef>
-        <command><method>baseURI <m>?URI?</m></method></command>
+        <command><method>baseURI</method> <m>?URI?</m></command>
         <desc>Returns the present baseURI of the document. If the optional 
 argument URI is given, sets the base URI of the document to the given URI.</desc>
       </commanddef>
