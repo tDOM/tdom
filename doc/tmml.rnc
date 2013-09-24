@@ -1,0 +1,340 @@
+# $Id: tmml.dtd,v 1.8 2002/05/20 20:46:11 jenglish Exp $
+# 
+# Author:	Joe English, <jenglish@users.sourceforge.net>
+# Created:	8 Feb 1999
+# Revised:	24 Jul 1999
+# Usage:
+# 
+# <!DOCTYPE  (manpage | manual)  PUBLIC "-//jenglish//DTD TMML 0.6//EN" >
+# 
+# XML DTD for TMML, Tcl Manual Markup language.
+# 
+# See  <URL: http://tmml.sourceforge.net/ > for more information
+
+# ============================================================
+# 
+# Information pool parameter entities:
+# 
+# e.syntax 	Phrase-level elements that refer to Tcl syntactic entities.
+# e.phrase	Other phrase-level elements
+# e.block	Block-level elements
+# e.struct	Structural elements that can appear directly in a section
+# 
+# x.block
+# x.inline	Used for customization
+
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+
+e.syntax =
+  m
+  | l
+  | o
+  | i
+  | b
+  | br
+  | term
+  | cmd
+  | variable
+  | method
+  | option
+  | file
+  | syscmd
+  | fun
+  | widget
+  | package
+  | type
+  | class
+e.phrase = emph | ref | url | samp | command | new
+e.block =
+  p | ul | ol | dl | sl | xl | example | syntax | commandlist | optlist
+e.struct = arglist | optionlist
+x.inline = notAllowed
+x.block = notAllowed
+# ============================================================
+# Content models:
+# 
+# m.code	(computer) text
+# m.inline	inline text
+# m.mixed	mixed inline and block elements
+# m.top	top-level elements (inside sections)
+m.inline = (text | e.phrase | e.syntax | x.inline)*
+m.code = (text | new | e.syntax | x.inline)*
+m.mixed = (text | e.phrase | e.syntax | e.block | x.block | x.inline)*
+m.top = (e.block | e.struct | x.block)*
+# ============================================================
+# Common attributes:
+a.version = attribute version { text }?
+# ============================================================
+# Top-level element: manual
+m.division =
+  title,
+  (division* | (manpage | subdoc | extref)*)
+m.manual =
+  title,
+  head?,
+  (division* | (manpage | subdoc | extref)*)
+manual = element manual { attlist.manual, m.manual }
+division = element division { attlist.division, m.division }
+attlist.division &= empty
+subdoc = element subdoc { attlist.subdoc, empty }
+extref = element extref { attlist.extref, empty }
+attlist.manual &=
+  attribute package { text },
+  attribute version { text }?
+attlist.extref &=
+  attribute href { text },
+  attribute title { text },
+  attribute type { text }
+attlist.subdoc &= attribute href { text }
+# ============================================================
+# Top-level element: manpage
+manpage =
+  element manpage {
+    attlist.manpage,
+    head?,
+    namesection,
+    synopsis?,
+    section*,
+    seealso?,
+    keywords?
+  }
+attlist.manpage &=
+  attribute id { xsd:ID },
+  attribute cat { text },
+  attribute title { text },
+  attribute package { text }?,
+  a.version
+section = element section { attlist.section, title, m.top, subsection* }
+attlist.section &=
+  attribute id { xsd:ID }?,
+  a.version
+subsection = element subsection { attlist.subsection, title, m.top }
+attlist.subsection &=
+  attribute id { xsd:ID }?,
+  a.version
+# ============================================================
+# Standard sections:
+namesection =
+  element namesection {
+    attlist.namesection,
+    (name+ | (title, name*)),
+    desc
+  }
+attlist.namesection &= empty
+synopsis = element synopsis { attlist.synopsis, (syntax | example)+ }
+attlist.synopsis &= empty
+keywords = element keywords { attlist.keywords, keyword+ }
+attlist.keywords &= empty
+keyword = element keyword { attlist.keyword, text }
+attlist.keyword &= empty
+seealso = element seealso { attlist.seealso, (ref | url)+ }
+attlist.seealso &= empty
+# ============================================================
+# Common Constructs
+title = element title { attlist.title, text }
+attlist.title &= empty
+name = element name { attlist.name, text }
+desc = element desc { attlist.desc, m.mixed }
+attlist.desc &= empty
+# OR: desc: %m.inline;  description:  %m.mixed;
+attlist.name &=
+  attribute name { text }?,
+  attribute cat { text }?
+# ============================================================
+# Block-level elements:
+ul = element ul { attlist.ul, li+ }
+attlist.ul &= empty
+ol = element ol { attlist.ol, li+ }
+attlist.ol &= empty
+li = element li { attlist.li, m.mixed }
+attlist.li &= a.version
+sl = element sl { attlist.sl, li+ }
+attlist.sl &=
+  attribute cols { text }?,
+  attribute cat { text }?
+dl =
+  element dl {
+    attlist.dl,
+    (dle | (dt, dd))+
+  }
+dle = element dle { attlist.dle, dt+, dd }
+attlist.dle &= a.version
+dt = element dt { attlist.dt, m.inline }
+attlist.dt &= empty
+dd = element dd { attlist.dd, m.mixed }
+attlist.dd &= empty
+attlist.dl &=
+  [ a:defaultValue = "local" ] attribute scope { "local" | "global" }?,
+  attribute cat { text }?
+# Extended lists:  
+# Similar to DocBook SegmentedLists
+xl = element xl { attlist.xl, xlh?, xle+ }
+attlist.xl &= empty
+xlh = element xlh { attlist.xlh, xh+ }
+xh = element xh { attlist.xh, m.inline }
+attlist.xh &= empty
+xle = element xle { attlist.xle, xt+, desc? }
+attlist.xle &= empty
+xt = element xt { attlist.xt, m.inline }
+attlist.xt &= empty
+p = element p { attlist.p, m.inline }
+attlist.p &= a.version
+example = element example { attlist.example, m.code }
+attlist.example &= empty
+syntax = element syntax { attlist.syntax, m.code }
+attlist.syntax &=
+  attribute scope { "local" | "global" }?,
+  attribute cat { text }?,
+  attribute name { text }?
+# ============================================================
+# Inline elements:
+i = element i { attlist.i, m.inline }
+attlist.i &= attribute cat { text }?
+b = element b { attlist.b, m.inline }
+attlist.b &= attribute cat { text }?
+emph = element emph { attlist.emph, m.inline }
+attlist.emph &= empty
+samp = element samp { attlist.samp, m.code }
+attlist.samp &= empty
+o = element o { attlist.o, m.code }
+attlist.o &= empty
+url = element url { attlist.url, text }
+attlist.url &= empty
+ref = element ref { attlist.ref, m.inline }
+attlist.ref &=
+  attribute refid { text }?,
+  attribute href { text }?,
+  attribute cat { text }?
+# @@ ALSO:
+#	package	CDATA	#IMPLIED
+#	manpage	CDATA	#IMPLIED
+#	cat	CDATA	#IMPLIED
+#	name	CDATA	#IMPLIED
+# Legal combinations: (package? & ((manpage? & refid?) | (name? & cat?)))
+new = element new { attlist.new, m.inline }
+attlist.new &= attribute version { text }
+br = element br { attlist.br, empty }
+attlist.br &= empty
+# ============================================================
+# Syntax elements:
+m = element m { attlist.m, text }
+attlist.m &= empty
+l = element l { attlist.l, text }
+attlist.l &= empty
+term = element term { attlist.term, text }
+attlist.term &= attribute cat { text }?
+cmd = element cmd { attlist.cmd, text }
+attlist.cmd &= empty
+method = element method { attlist.method, text }
+attlist.method &= empty
+option = element option { attlist.option, text }
+attlist.option &= empty
+syscmd = element syscmd { attlist.syscmd, text }
+attlist.syscmd &= empty
+widget = element widget { attlist.widget, text }
+attlist.widget &= empty
+fun = element fun { attlist.fun, text }
+attlist.fun &= empty
+variable = element variable { attlist.variable, text }
+attlist.variable &= empty
+package = element package { attlist.package, text }
+attlist.package &= empty
+type = element type { attlist.type, text }
+attlist.type &= empty
+class = element class { attlist.class, text }
+attlist.class &= empty
+file = element file { attlist.file, text }
+attlist.file &= empty
+# ============================================================
+# Tcl entity definition elements:
+arglist = element arglist { attlist.arglist, argdef+ }
+attlist.arglist &= empty
+argdef =
+  element argdef { attlist.argdef, argtype, name, argmode?, desc }
+attlist.argdef &= a.version
+argtype = element argtype { attlist.argtype, text }
+attlist.argtype &= empty
+argmode = element argmode { attlist.argmode, text }
+attlist.argmode &= empty
+commandlist = element commandlist { attlist.commandlist, commanddef+ }
+attlist.commandlist &= empty
+commanddef = element commanddef { attlist.commanddef, command, desc }
+attlist.commanddef &= a.version
+command = element command { attlist.command, m.code }
+attlist.command &= empty
+optlist = element optlist { attlist.optlist, optdef+ }
+attlist.optlist &= empty
+optdef = element optdef { attlist.optdef, optname, optarg?, desc }
+attlist.optdef &= empty
+optname = element optname { attlist.optname, text }
+attlist.optname &= empty
+optarg = element optarg { attlist.optarg, text }
+attlist.optarg &= empty
+optionlist = element optionlist { attlist.optionlist, optiondef+ }
+optiondef =
+  element optiondef { attlist.optiondef, name, dbname, dbclass, desc }
+attlist.optiondef &= a.version
+dbname = element dbname { attlist.dbname, text }
+attlist.dbname &= empty
+dbclass = element dbclass { attlist.dbclass, text }
+attlist.dbclass &= empty
+attlist.optionlist &=
+  [ a:defaultValue = "local" ] attribute scope { "local" | "global" }?,
+  attribute cat { text }?
+# ============================================================
+# #FIXED attributes:
+# A DTD-aware processor may take advantage of these
+# if it simplifies processing.
+
+# ============================================================
+# Metainformation:
+# Note that these elements do not normally appear
+# inside TMML documents; they're for administrative
+# purposes only.
+head =
+  element head { attlist.head, (extensions | info | link | category)* }
+attlist.head &= empty
+extensions =
+  element extensions { attlist.extensions, (extension | xlh)* }
+attlist.extensions &= empty
+extension = element extension { attlist.extension, empty }
+attlist.extension &=
+  attribute gi { text },
+  attribute tmml { text }
+attlist.xlh &= attribute gi { text }?
+info = element info { attlist.info, empty }
+attlist.info &=
+  attribute key { text },
+  attribute value { text }
+link = element link { attlist.link, empty }
+attlist.link &=
+  attribute rel { text },
+  attribute href { text }
+categories = element categories { attlist.categories, category+ }
+attlist.categories &= empty
+category = element category { attlist.category, empty }
+attlist.category &=
+  attribute id { xsd:ID },
+  attribute title { text }?
+INDEX = element INDEX { attlist.INDEX, head?, (MAN | DEF | KWD)* }
+attlist.INDEX &=
+  attribute title { text },
+  attribute standalone { text }?,
+  attribute package { text }?
+DEF = element DEF { attlist.DEF, empty }
+attlist.DEF &=
+  attribute name { text },
+  attribute cat { text }?,
+  attribute package { text }?,
+  attribute manpage { text }?,
+  attribute subpart { text }?
+KWD = element KWD { attlist.KWD, empty }
+attlist.KWD &=
+  attribute name { text },
+  attribute manpage { text }?
+MAN = element MAN { attlist.MAN, empty }
+attlist.MAN &=
+  attribute id { text },
+  attribute title { text }
+start = INDEX | manual | manpage | categories
+# EOF
