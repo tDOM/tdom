@@ -1,20 +1,20 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: dom</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile: tmml-html.xsl,v $ $Revision: 1.11 $">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0x80b16e8">NAME</a> · <a href="#SECTid0x80b1760">SYNOPSIS</a> · <a href="#SECTid0x80b1828">DESCRIPTION </a> · <a href="#SECTid0x80b3f38">KEYWORDS</a>
+<a href="#SECTid0xc559e0">NAME</a> · <a href="#SECTid0xc0a3d0">SYNOPSIS</a> · <a href="#SECTid0xc5fe50">DESCRIPTION </a> · <a href="#SECTid0xbf8f80">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0x80b16e8">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0xc559e0">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid0x80b1760">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid0xc0a3d0">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid0x80b1828">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid0xc5fe50">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -418,18 +418,72 @@ valid according to production 16 of the <a href="http://www.w3.org/TR/2000/REC-x
 recommendation. Otherwise it returns 0.</dd>
         
 
-      </dl>
+        
+            <dt>
+<b class="cmd">dom</b> <b class="method">featureinfo</b>
+            <i class="m">feature</i>
+</dt>
+            <dd>This method provides information about the used
+            build options and the expat version. The valid values for
+            the <i class="m">feature</i> argument are:
+            <dl class="optlist">
+                
+                    <dt><b>expatversion</b></dt>
+                    <dd>Returns the version of the underlyling expat
+                    version as string, something like
+                    "exapt_2.1.0". This is. what the expat API
+                    function XML_ExpatVersion() returns.</dd>
+                
+                
+                    <dt><b>expatmajorversion</b></dt>
+                    <dd>Returns the major version of the underlyling
+                    expat version as integer.</dd>
+                
+                
+                    <dt><b>expatminorversion</b></dt>
+                    <dd>Returns the minor version of the underlyling
+                    expat version as integer.</dd>
+                
+                
+                    <dt><b>expatmicroversion</b></dt>
+                    <dd>Returns the micro version of the underlyling
+                    expat version as integer.</dd>
+                
+                
+                    <dt><b>dtd</b></dt>
+                    <dd>Returns as boolean, if build with
+                    <i class="m">--enable-dtd</i>.</dd>
+                
+                
+                    <dt><b>ns</b></dt>
+                    <dd>Returns as boolean, if build with
+                    <i class="m">--enable-ns</i>.</dd>
+                
+                
+                    <dt><b>unknown</b></dt>
+                    <dd>Returns as boolean, if build with
+                    <i class="m">--enable-unknown</i>.</dd>
+                
+                
+                    <dt><b>tdomalloc</b></dt>
+                    <dd>Returns as boolean, if build with
+                    <i class="m">--enable-tdomalloc</i>.</dd>
+                
+                
+                    <dt><b>lessns</b></dt>
+                    <dd>Returns as boolean, if build with
+                    <i class="m">--enable-lessns</i>.</dd>
+                
+            </dl>
+            </dd>   
+        
+    </dl>
 
-  <h2><a name="SECTid0x80b3f38">KEYWORDS</a></h2><p class="keywords">
+<h2><a name="SECTid0xbf8f80">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
-</div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-        <a class="navaid" href="index.html">tDOM Overview</a>
- ·	<a class="navaid" href="doc-index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+</div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

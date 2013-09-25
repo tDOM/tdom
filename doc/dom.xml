@@ -421,23 +421,28 @@ recommendation. Otherwise it returns 0.</desc>
                 </optdef>
                 <optdef>
                     <optname>dtd</optname>
-                    <desc></desc>
+                    <desc>Returns as boolean, if build with
+                    <m>--enable-dtd</m>.</desc>
                 </optdef>
                 <optdef>
                     <optname>ns</optname>
-                    <desc></desc>
+                    <desc>Returns as boolean, if build with
+                    <m>--enable-ns</m>.</desc>
                 </optdef>
                 <optdef>
                     <optname>unknown</optname>
-                    <desc></desc>
+                    <desc>Returns as boolean, if build with
+                    <m>--enable-unknown</m>.</desc>
                 </optdef>
                 <optdef>
                     <optname>tdomalloc</optname>
-                    <desc></desc>
+                    <desc>Returns as boolean, if build with
+                    <m>--enable-tdomalloc</m>.</desc>
                 </optdef>
                 <optdef>
                     <optname>lessns</optname>
-                    <desc></desc>
+                    <desc>Returns as boolean, if build with
+                    <m>--enable-lessns</m>.</desc>
                 </optdef>
             </optlist>
             </desc>   

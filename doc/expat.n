@@ -714,7 +714,7 @@ Sets configuration options for the parser. Every command
 option, except \fI-namespace\fR can be set or modified with this method.
 .RE
 .TP
-\&\fB\fBparser\fP \fBcget \fI?-handlerset name? option\fB\fP
+\&\fB\fBparser\fP \fBcget\fP \fI?-handlerset name? option\fB
 \&\fR
 .RS
 .PP

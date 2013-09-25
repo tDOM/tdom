@@ -1,25 +1,25 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: expat</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile: tmml-html.xsl,v $ $Revision: 1.11 $">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid80acb10">NAME</a> · <a href="#SECTid80acb88">SYNOPSIS</a> · <a href="#SECTid80acd40">DESCRIPTION</a> · <a href="#SECTid80ace80">COMMAND OPTIONS</a> · <a href="#SECTid80aeac8"> COMMAND METHODS </a> · <a href="#SECTid80af860">Callback Command Return Codes</a> · <a href="#SECTid80af950">SEE ALSO</a> · <a href="#SECTid80af9c8">KEYWORDS</a>
+<a href="#SECTid0xbd7740">NAME</a> · <a href="#SECTid0xc60700">SYNOPSIS</a> · <a href="#SECTid0xc4eae0">DESCRIPTION</a> · <a href="#SECTid0xc53830">COMMAND OPTIONS</a> · <a href="#SECTid0xc3a630"> COMMAND METHODS </a> · <a href="#SECTid0xc17880">Callback Command Return Codes</a> · <a href="#SECTid0xc18290">SEE ALSO</a> · <a href="#SECTid0xc18650">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTid80acb10">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTid0xbd7740">NAME</a></h2><p class="namesection">
 <b class="names">expat - </b><br>Creates an instance of an expat parser object</p>
 
 
 
-    <h2><a name="SECTid80acb88">SYNOPSIS</a></h2><pre class="syntax">
+    <h2><a name="SECTid0xc60700">SYNOPSIS</a></h2><pre class="syntax">
 <b class="cmd">package require tdom</b>
 
 <b class="cmd">expat</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 
 <b class="cmd">xml::parser</b> ?<i class="m">parsername</i>? ?<i class="m">-namespace</i>? ?<i class="m">arg arg ..</i>
 </pre>
-    <h2><a name="SECTid80acd40">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
+    <h2><a name="SECTid0xc4eae0">DESCRIPTION</a></h2><p>The parser created with <i class="m">expat</i> or <i class="m">xml::parser</i>
 (which is just another name for the same command in an own namespace) are able
 to parse any kind of well-formed XML. The parsers are stream oriented XML
 parser. This means that you register handler scripts with the parser prior to
@@ -36,7 +36,7 @@ in memory "tDOM" DOM tree, while the parser is parsing the input.</p><p>It is po
 and C level handlers for most of the events. If the event occurs, they are
 called in turn.</p>
 
-    <h2><a name="SECTid80ace80">COMMAND OPTIONS</a></h2><dl class="optlist">
+    <h2><a name="SECTid0xc53830">COMMAND OPTIONS</a></h2><dl class="optlist">
         
           <dt><b>-namespace</b></dt>
 
@@ -616,7 +616,7 @@ enddoctypedeclcommand scripts, if set, are not called.</dd>
         
 
       </dl>
-    <h2><a name="SECTid80aeac8"> COMMAND METHODS </a></h2><dl class="commandlist">
+    <h2><a name="SECTid0xc3a630"> COMMAND METHODS </a></h2><dl class="commandlist">
         
           <dt>
 <b class="cmd">parser</b> <b class="method">configure</b> <i class="m">option value ?option value?</i>
@@ -628,8 +628,7 @@ option, except <i class="m">-namespace</i> can be set or modified with this meth
 
         
           <dt>
-<b class="cmd">parser</b> <b class="method">cget <i class="m">?-handlerset name? option</i>
-</b>
+<b class="cmd">parser</b> <b class="method">cget</b> <i class="m">?-handlerset name? option</i>
 </dt>
 
           <dd>
@@ -756,7 +755,7 @@ cases.</p></dd>
         
       </dl>
 
-    <h2><a name="SECTid80af860">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
+    <h2><a name="SECTid0xc17880">Callback Command Return Codes</a></h2><p>A script invoked for any of the parser callback commands, such as
 -elementstartcommand, -elementendcommand, etc, may return an error code other
 than "ok" or "error". All callbacks may in addition return
 "break" or "continue".</p><p>If a callback script returns an "error" error code then
@@ -769,11 +768,11 @@ processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
-    <h2><a name="SECTid80af950">SEE ALSO</a></h2><p class="seealso">
+    <h2><a name="SECTid0xc18290">SEE ALSO</a></h2><p class="seealso">
 <a href="expatapi.html">expatapi</a>, <a href="tdomcmd.html">tdom</a>
 </p>
 
-    <h2><a name="SECTid80af9c8">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
+    <h2><a name="SECTid0xc18650">KEYWORDS</a></h2><p class="keywords"><a class="keyword" href="keyword-index.html#KW-SAX">SAX</a></p>
   </div><hr class="navsep"><div class="navbar" align="center">
 <a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>

@@ -490,5 +490,41 @@ recommendation. Otherwise it returns 0.
 \&\fRReturns 1, if \fIstring\fR is
 valid according to production 16 of the XML 1.0
 recommendation. Otherwise it returns 0.
+.TP
+\&\fB\fBdom\fP \fBfeatureinfo\fP             \fIfeature\fB
+\&\fRThis method provides information about the used
+build options and the expat version. The valid values for
+the \fIfeature\fR argument are:
+.RS
+.IP "\fBexpatversion\fR"
+Returns the version of the underlyling expat
+version as string, something like
+"exapt_2.1.0". This is. what the expat API
+function XML_ExpatVersion() returns.
+.IP "\fBexpatmajorversion\fR"
+Returns the major version of the underlyling
+expat version as integer.
+.IP "\fBexpatminorversion\fR"
+Returns the minor version of the underlyling
+expat version as integer.
+.IP "\fBexpatmicroversion\fR"
+Returns the micro version of the underlyling
+expat version as integer.
+.IP "\fBdtd\fR"
+Returns as boolean, if build with
+\&\fI--enable-dtd\fR.
+.IP "\fBns\fR"
+Returns as boolean, if build with
+\&\fI--enable-ns\fR.
+.IP "\fBunknown\fR"
+Returns as boolean, if build with
+\&\fI--enable-unknown\fR.
+.IP "\fBtdomalloc\fR"
+Returns as boolean, if build with
+\&\fI--enable-tdomalloc\fR.
+.IP "\fBlessns\fR"
+Returns as boolean, if build with
+\&\fI--enable-lessns\fR.
+.RE
 .SH KEYWORDS
 XML, DOM, document, node, parsing
