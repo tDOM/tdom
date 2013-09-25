@@ -1,4 +1,4 @@
-  <manpage id="expatapi" cat="fun" title="expatapi">
+<manpage id="expatapi" cat="fun" title="expatapi">
     <namesection>
       <name>CheckExpatParserObj, CHandlerSetInstall, CHandlerSetRemove,
          CHandlerSetCreate, CHandlerSetGetUserData, GetExpatInfo</name>

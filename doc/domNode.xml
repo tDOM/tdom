@@ -512,7 +512,7 @@ are returnd, which doesn't work in all cases.</desc>
       </commanddef>
 
       <commanddef>
-        <command><method>baseURI</method>  <m>?URI?</m></command>
+        <command><method>baseURI</method> <m>?URI?</m></command>
         <desc>Returns the present baseURI of the node. If the optional 
 argument URI is given, sets the base URI of the node and of all of its child
 nodes out of the same enitity as node to the given URI.</desc>

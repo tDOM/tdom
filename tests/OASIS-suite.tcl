@@ -17,13 +17,22 @@ if {[lsearch [namespace children] ::tDOM] == -1} {
 namespace import tDOM::*
 
 set catalogfile ""
+set loglevel 0
 set skip [list]
 set match [list]
 set matchgroup [list]
 set matchfile [list]
+set matchcatalog [list]
 
 proc putsUsage {{channel stderr}} {
     puts $channel "usage: $argv0 ?options? path/to/catalog.xml"
+    puts $channel "where options can be:"
+    puts $channel "-loglevel <int>"
+    puts $channel "-skip patternlist"
+    puts $channel "-match patternlist"
+    puts $channel "-matchgroup patternlist"
+    puts $channel "-matchfile patternlist"
+    puts $channel "-matchcatalog patternlist"
 }
 
 proc processArgs {argc argv} {
@@ -32,6 +41,8 @@ proc processArgs {argc argv} {
     global match
     global matchgroup
     global matchfile
+    global matchcatalog
+    global loglevel
 
     if {$argc == 0 || $argc % 2 == 0} {
         putsUsage
@@ -54,6 +65,17 @@ proc processArgs {argc argv} {
             }
             "-skip" {
                 set skip $value
+            }
+            "-matchcatalog" {
+                set matchcatalog $value
+            }
+            "-loglevel" {
+                if {![string is interger -strict $value]} {
+                    set loglevel $value
+                } else {
+                    putsUsage
+                    exit 1
+                }
             }
             default {
                 puts stderr "Unknown option \"$option\""
@@ -132,6 +154,43 @@ proc skip {purpose} {
     return [checkAgainstPattern $skip $purpose]
 }
 
+proc matchcatalog {testcatalog} {
+    global matchcatalog
+
+    if {![llength $matchcatalog]} {
+        return 1
+    }
+    return [checkAgainstPattern $matchcatalog $testcatalog]
+}
+
+proc log {level text {detail ""}} {
+    global loglevel
+
+    if {$level <= $loglevel} {
+        puts $text
+    }
+    if {$detail ne "" && $level < $loglevel} {
+        puts $detail
+    }
+}
+
+proc findFile {filename path} {
+    # The Microsoft testcatalog includes tests for which the physical
+    # file name differ in case from the file name given by the test
+    # definition. This proc tries to identify the correct file name in
+    # such a case.
+
+    log 3 "findFile called with $filename $path"
+    set filelist [glob -nocomplain -tails -directory $path *]
+    set nocasequal [lsearch -exact -nocase $filelist $filename]
+    if {[llength $nocasequal] == 1} {
+        if {$nocasequal >= 0} {
+            return [file join $path [lindex $filelist $nocasequal]]
+        }
+    }
+    return ""
+}
+
 proc runTest {testcase} {
     global catalogDir
     global majorpath
@@ -144,18 +203,48 @@ proc runTest {testcase} {
         return
     }
     set scenario [$testcase selectNodes scenario]
-    if {[llength $scenario] != 1 || [$scenario @operation] ne "standard"} {
-        puts "Non-standard scenario!"
-        puts [$testcase asXML]
+    if {[llength $scenario] != 1 } {
+        log 0 "Non-standard scenario!"
+        log 0 [$testcase asXML]
         return
+    }
+    set operation [$scenario @operation]
+    switch $operation {
+        "standard" -
+        "execution-error" {}
+        default {
+            log 0 "Non-standard scenario!"
+            log 0 [$testcase asXML]
+            return
+        }
     }
     set xmlfile [$scenario selectNodes \
                      {string(input-file[@role="principal-data"])}]
     set xmlfile [file join $catalogDir $majorpath $filepath $xmlfile]
+    if {![file readable $xmlfile]} {
+        set xmlfile [findFile $xmlfile \
+                         [file join $catalogDir $majorpath $filepath]]
+        if {$xmlfile eq ""} {
+            log 0 "Couldn't find xmlfile \
+                  [$scenario selectNodes \
+                     {string(input-file[@role="principal-data"])}]"
+            return
+        }
+    }
     set xslfile [$scenario selectNodes \
                      {string(input-file[@role="principal-stylesheet"])}]
     if {![runXslfile $xslfile]} {
         return
+    }
+    if {![file readable $xslfile]} {
+        set xslfile [findFile $xslfile \
+                         [file join $catalogDir $majorpath $filepath]]
+        if {$xslfile eq ""} {
+            log 0 "Couldn't find xslfile \
+                  [$scenario selectNodes \
+                     {string(input-file[@role="principal-stylesheet"])}]"
+            return
+        }
     }
     set xslfile [file join $catalogDir $majorpath $filepath $xslfile]
     set xmlout [$scenario selectNodes \
@@ -170,23 +259,40 @@ proc runTest {testcase} {
         return
     }
     if {[skip $purpose]} {
-        puts "Skipping $filepath: $purpose"
+        log 1 "Skipping $filepath: $purpose"
         return
     }
-    set xmldoc [dom parse -baseurl [baseURL $xmlfile] \
-                    -externalentitycommand extRefHandler \
-                    -keepEmpties \
-                    [xmlReadFile $xmlfile] ]
+    if {[catch {
+        set xmldoc [dom parse -baseurl [baseURL $xmlfile] \
+                        -externalentitycommand extRefHandler \
+                        -keepEmpties \
+                        [xmlReadFile $xmlfile] ]
+    } errMsg]} {
+        log 0 "Unable to parse xml file '$xmlfile'. Reason:\n$errMsg"
+        return
+    }
     dom setStoreLineColumn 1
-    set xsltdoc [dom parse -baseurl [baseURL $xslfile] \
-                       -externalentitycommand extRefHandler \
-                       -keepEmpties \
-                       [xmlReadFile $xslfile] ]
+    if {[catch {
+        set xsltdoc [dom parse -baseurl [baseURL $xslfile] \
+                         -externalentitycommand extRefHandler \
+                         -keepEmpties \
+                         [xmlReadFile $xslfile] ]
+    } errMsg]} {
+        dom setStoreLineColumn 0
+        log 0 "Unable to parse xsl file '$xslfile'. Reason:\n$errMsg"
+        return
+    }
     dom setStoreLineColumn 0
     set resultDoc ""
     if {[catch {$xmldoc xslt -xsltmessagecmd xsltmsgcmd $xsltdoc resultDoc} \
              errMsg]} {
-        puts stderr $errMsg
+        if {$operation ne "execution-error"} {
+            log 0 $errMsg
+        }
+    } else {
+        if {$operation eq "execution-error"} {
+            log 0 "$xslfile - test should have failed, but didn't."
+        }
     }
     if {$xmloutfile ne "" && [llength [info commands $resultDoc]]} {
         if {![catch {
@@ -194,20 +300,21 @@ proc runTest {testcase} {
         } errMsg]} {
             set refinfosetdoc [$infoset $refdoc]
             set resultinfosetdoc [$infoset $resultDoc]
-            if {[$refinfosetdoc asXML] ne [$resultinfosetdoc asXML]} {
+            if {[$refinfosetdoc asXML -indent none] 
+                ne [$resultinfosetdoc asXML -indent none]} {
                 incr compareDIFF
-                puts "Result and ref differ."
-                puts "Ref:"
-                puts [$refinfosetdoc asXML]
-                puts "Result:"
-                puts [$resultinfosetdoc asXML]
+                log 1 "Result and ref differ."
+                log 2 "Ref:"
+                log 2 [$refinfosetdoc asXML]
+                log 2 "Result:"
+                log 2 [$resultinfosetdoc asXML]
             } else {
                 incr compareOK
             }
             $refinfosetdoc delete
             $resultinfosetdoc delete
         } else {
-            puts "Unable to parse REF doc. Reason:\n$errMsg"
+            log 3 "Unable to parse REF doc. Reason:\n$errMsg"
         }
     }
     $xmldoc delete
@@ -221,17 +328,17 @@ proc runTests {catalogRoot} {
     global compareDIFF
 
     foreach testcatalog [$catalogRoot selectNodes test-catalog] {
-        if {[$testcatalog @submitter] ne "Lotus"} {
+        if {![matchcatalog [$testcatalog @submitter]]} {
             continue
         }
         set majorpath [$testcatalog selectNodes string(major-path)]
         foreach testcase [$testcatalog selectNodes test-case] {
             runTest $testcase
         }
-        puts "Finished."
-        puts "Compare OK: $compareOK"
-        puts "Compare FAIL: $compareDIFF"
     }
+    log 0 "Finished."
+    log 0 "Compare OK: $compareOK"
+    log 0 "Compare FAIL: $compareDIFF"
 }
 
 processArgs $argc $argv

@@ -1,4 +1,4 @@
-  <manpage id="expat" cat="cmd" title="expat">
+<manpage id="expat" cat="cmd" title="expat">
     <namesection>
       <name>expat</name>
       <desc>Creates an instance of an expat parser object</desc>
@@ -578,7 +578,7 @@ option, except <m>-namespace</m> can be set or modified with this method.</p></d
         </commanddef>
 
         <commanddef>
-          <command><cmd>parser</cmd> <method>cget <m>?-handlerset name? option</m></method></command>
+          <command><cmd>parser</cmd> <method>cget</method> <m>?-handlerset name? option</m></command>
 
           <desc><p>Return the current configuration value option for the
 parser.</p> 
