@@ -1,24 +1,24 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: tnc</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: tnc</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile: tmml-html.xsl,v $ $Revision: 1.11 $">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid883">NAME</a> · <a href="#SECTid892">SYNOPSIS</a> · <a href="#SECTid898">DESCRIPTION</a> · <a href="#SECTid1068">BUGS</a> · <a href="#SECTid1086">KEYWORDS</a>
+<a href="#SECTid0xc5fad0">NAME</a> · <a href="#SECTid0xc2c040">SYNOPSIS</a> · <a href="#SECTid0xab97c0">DESCRIPTION</a> · <a href="#SECTid0xc57df0">BUGS</a> · <a href="#SECTid0xc58760">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid883">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0xc5fad0">NAME</a></h2><p class="namesection">
 <b class="names">tnc - </b><br>tnc is an expat parser object extension, that validates the XML
 stream against the document DTD while parsing.</p>
   
-  <h2><a name="SECTid892">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid0xc2c040">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 package require tnc
 
 set parser [expat]
 
 tnc $parser enable</pre>
 
-  <h2><a name="SECTid898">DESCRIPTION</a></h2><p>
+  <h2><a name="SECTid0xab97c0">DESCRIPTION</a></h2><p>
 <i class="m">tnc</i> adds the C handler set "tnc" to a tcl expat parser
 obj. This handler set is a simple DTD validator. If the validator detects a
 validation error, it sets the interp result, signals error and stops
@@ -120,7 +120,7 @@ it. Returns the empty string.</dd>
       
     </dl>
 
-  <h2><a name="SECTid1068">BUGS</a></h2><p>The validation error reports could be much more informative and
+  <h2><a name="SECTid0xc57df0">BUGS</a></h2><p>The validation error reports could be much more informative and
 user-friendly.</p><p>The validator doesn't detect ambiguous content models (see XML
 recomendation Section 3.2.1 and Appendix E). Most Java validators also doesn't,
 but handle such content models right anyhow. Tnc does not; if your DTD has
@@ -129,12 +129,12 @@ such (not completely XML spec compliant) DTDs.</p><p>It isn't possible to valida
 XML Declaration</p><p>Violations of the validity constraints Proper Group/PE Nesting and
 Proper Conditional Section/PE Nesting are not detected. They could only happen
 inside a invalid DTD, not in the content of a document.</p>
-  <h2><a name="SECTid1086">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid0xc58760">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-Validation">Validation</a>, <a class="keyword" href="keyword-index.html#KW-DTD">DTD</a>
 </p>
   
 </div><hr class="navsep"><div class="navbar" align="center">
-<a class="navaid" href="index.html">Table of Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
+<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>

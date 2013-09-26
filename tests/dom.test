@@ -13,6 +13,7 @@
 #    dom-8.*:  createDocumentNode, documentNodes
 #    dom-9.*:  setObjectCommands
 #    dom-10.*: createNodeCmd
+#    dom-11.*: featureinfo
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
 
@@ -1297,6 +1298,22 @@ test dom-10.5 {node creating command called outside domNode context} {
 } {{<docRoot><e1>Some text</e1></docRoot>} 1 {called outside domNode context}}
 
 namespace delete nodeCmds
+
+test dom-11.1 {featureinfo - expatversion} -body {
+    dom featureinfo expatversion
+} -match regexp -result {expat_.*}
+
+test dom-11.2 {featureinfo - invalid arg} -body {
+    catch {dom featureinfo foo} errMsg
+} -result 1
+
+test dom-11.3 {featureinfo - expatmajorversion} -body {
+    dom featureinfo expatmajorversion
+} -match regexp -result {(1|2)}
+
+test dom-11.4 {featureinfo - dtd} -body {
+    dom featureinfo dtd
+} -match regexp -result {(0|1)}
 
 # cleanup
 ::tcltest::cleanupTests

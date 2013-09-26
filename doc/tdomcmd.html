@@ -1,28 +1,28 @@
 <html>
 <head>
-<link rel="stylesheet" href="manpage.css"><title>tDOM manual: tdom</title><meta name="xsl-processor" content="Jochen Loewer et. al. (loewerj@hotmail.com)"><meta name="generator" content="$RCSfile$ $Revision$">
+<link rel="stylesheet" href="manpage.css"><title>tDOM manual: tdom</title><meta name="xsl-processor" content="Jochen Loewer (loewerj@hotmail.com), Rolf Ade (rolf@pointsman.de) et. al."><meta name="generator" content="$RCSfile: tmml-html.xsl,v $ $Revision: 1.11 $">
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTnode13446">NAME</a> · <a href="#SECTnode13455">SYNOPSIS</a> · <a href="#SECTnode13461">DESCRIPTION</a> · <a href="#SECTnode13620">SEE ALSO</a> · <a href="#SECTnode13629">KEYWORDS</a>
+<a href="#SECTid0xc4d2c0">NAME</a> · <a href="#SECTid0xc2c530">SYNOPSIS</a> · <a href="#SECTid0xab96a0">DESCRIPTION</a> · <a href="#SECTid0xc571c0">SEE ALSO</a> · <a href="#SECTid0xc57580">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-    <h2><a name="SECTnode13446">NAME</a></h2><p class="namesection">
+    <h2><a name="SECTid0xc4d2c0">NAME</a></h2><p class="namesection">
 <b class="names">tdom - </b><br>tdom is an expat parser object extension to create an in-memory
 DOM tree from the input while parsing.</p>
 
 
-  <h2><a name="SECTnode13455">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid0xc2c530">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 set parser [expat]
 
 tdom $parser enable</pre>
 
-  <h2><a name="SECTnode13461">DESCRIPTION</a></h2><p>
-<i class="m">tdom</i> adds the C handler set &quot;tdom&quot; to an tcl expat
+  <h2><a name="SECTid0xab96a0">DESCRIPTION</a></h2><p>
+<i class="m">tdom</i> adds the C handler set "tdom" to an tcl expat
 parser obj. This handler set builds an in-memory DOM tree out of the input,
 parsed by the parser. A DOM tree created this way behave exactly like a DOM
-tree created by the &quot;dom&quot; command (see there). In fact, tdom is only
+tree created by the "dom" command (see there). In fact, tdom is only
 another interface to the same functionality; it uses the code behind the
 <tt class="samp">dom</tt> code for building the DOM tree.</p><dl class="commandlist">
       
@@ -49,7 +49,7 @@ DOM tree.</p></dd>
 </dt>
 
         <dd><p>See the method <tt class="samp">setResultEncoding</tt> of the
-<b class="cmd"><a href="dom.html">dom</a></b> command.</p></dd>
+<b class="cmd">dom</b> command.</p></dd>
       
 
       
@@ -57,7 +57,7 @@ DOM tree.</p></dd>
 <b class="cmd">tdom</b> <i class="m">parserObj</i> <b class="method">setStoreLineColumn</b> ?<i class="m">boolean</i>?</dt>
 
         <dd><p>See the method <tt class="samp">setStoreLineColumn</tt> of the
-<b class="cmd"><a href="dom.html">dom</a></b> command.</p></dd>
+<b class="cmd">dom</b> command.</p></dd>
       
 
       
@@ -74,7 +74,7 @@ object.</p></dd>
 <b class="cmd">tdom</b> <i class="m">parserObj</i> <b class="method">keepEmpties</b>
 </dt>
 
-        <dd><p>See the option <tt class="samp">-keepEmpties</tt> of the <b class="cmd"><a href="dom.html">dom</a></b> command.</p></dd>
+        <dd><p>See the option <tt class="samp">-keepEmpties</tt> of the <b class="cmd">dom</b> command.</p></dd>
       
 
       
@@ -86,20 +86,14 @@ object.</p></dd>
 
     </dl>
 
-  <h2><a name="SECTnode13620">SEE ALSO</a></h2><p class="seealso">
-<a href="dom.html">dom</a>, <a href="expat.html">expat</a>
-</p>
+  <h2><a name="SECTid0xc571c0">SEE ALSO</a></h2><p class="seealso">dom, expat</p>
 
-  <h2><a name="SECTnode13629">KEYWORDS</a></h2><p class="keywords">
+  <h2><a name="SECTid0xc57580">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-SAX">SAX</a>, <a class="keyword" href="keyword-index.html#KW-Chandlerset">C handler set</a>
 </p>
 
-</div><div class="footer">
-<hr class="navsep"><!-- footer.html: Standard navigational footer --><div class="navbar" align="center">
-	<a class="navaid" href="index.html">Table of Contents</a>
- ·	<a class="navaid" href="category-index.html">Index</a>
- ·	<a class="navaid" href="keyword-index.html">Keywords</a>
-</div>
+</div><hr class="navsep"><div class="navbar" align="center">
+<a class="navaid" href="index.html">Contents</a> · <a class="navaid" href="category-index.html">Index</a> · <a class="navaid" href="keyword-index.html">Keywords</a>
 </div>
 </body>
 </html>
