@@ -491,7 +491,7 @@ recommendation. Otherwise it returns 0.
 valid according to production 16 of the XML 1.0
 recommendation. Otherwise it returns 0.
 .TP
-\&\fB\fBdom\fP \fBfeatureinfo\fP             \fIfeature\fB
+\&\fB\fBdom\fP \fBfeatureinfo\fP \fIfeature\fB
 \&\fRThis method provides information about the used
 build options and the expat version. The valid values for
 the \fIfeature\fR argument are:

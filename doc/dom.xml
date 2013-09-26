@@ -391,8 +391,7 @@ recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
         <commanddef>
-            <command><cmd>dom</cmd> <method>featureinfo</method>
-            <m>feature</m></command>
+            <command><cmd>dom</cmd> <method>featureinfo</method> <m>feature</m></command>
             <desc>This method provides information about the used
             build options and the expat version. The valid values for
             the <m>feature</m> argument are:
