@@ -51,6 +51,8 @@
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
+testConstraint threaded [info exists tcl_platform(threaded)]
+
 test domNode-1.1 {to less arguments to domNode command} {
     set doc [dom createDocument "root"]
     set root [$doc documentElement]
@@ -1756,6 +1758,31 @@ test domNode-15.4 {delete - pi nodes} {
     $doc delete
     set result
 } {0}
+
+test domNode-15.5 {delete - threaded} -constraints {
+    threaded
+} -setup {
+    set xml {
+        <root>
+        <child>
+        <attr1>one</attr1>
+        <attr2>two</attr2>
+        <attr3>three</attr3>
+        </child>
+        </root>
+    }
+    set doc [dom parse $xml]
+    dom attachDocument $doc doc_
+    $doc documentElement root
+} -body {
+    foreach node [$root selectNodes {//attr1 | //attr2}] {
+        [$node firstChild] delete
+    }
+    set result ""
+} -cleanup {
+    dom detachDocument $doc
+    dom detachDocument $doc_
+} -result ""
 
 set doc [dom parse {<root attr1="bingbaz" attr2="ab &amp; zu" attr3=""/>}]
 set root [$doc documentElement]
