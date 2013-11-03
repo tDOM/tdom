@@ -2584,12 +2584,12 @@ domDeleteNode (
     TDomThreaded (    
         if (shared) {
             if (doc->deletedNodes) {
-                doc->deletedNodes->nextDeleted = node;
+                node->nextSibling = doc->deletedNodes;
             } else {
-                doc->deletedNodes = node;
+                node->nextSibling = NULL;
             }
+            doc->deletedNodes = node;
             node->nodeFlags |= IS_DELETED;
-            node->nextDeleted = NULL;
         }
     )
     MutationEvent3(DOMNodeRemoved, childToRemove, node);

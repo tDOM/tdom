@@ -603,9 +603,6 @@ typedef struct domNode {
 #endif
     struct domNode     *firstChild;
     struct domNode     *lastChild;
-#ifdef TCL_THREADS
-    struct domNode     *nextDeleted;
-#endif
     struct domAttrNode *firstAttr;
 
 } domNode;

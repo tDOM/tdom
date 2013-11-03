@@ -1761,7 +1761,6 @@ test domNode-15.4 {delete - pi nodes} {
 
 test domNode-15.5 {delete - threaded} -constraints {
     threaded
-    knownBug
 } -setup {
     set xml {
         <root>
@@ -1778,6 +1777,26 @@ test domNode-15.5 {delete - threaded} -constraints {
 } -body {
     foreach node [$root selectNodes {//attr1 | //attr2}] {
         [$node firstChild] delete
+    }
+    set result ""
+} -cleanup {
+    dom detachDocument $doc
+    dom detachDocument $doc_
+} -result ""
+
+test domNode-15.6 {delete - threaded} -constraints {
+    threaded
+} -setup {
+    set xml {
+        <root><a/><a/><a/><a/><a/><a/><a/>
+        <a/><a/><a/><a/><a/><a/><a/><a/></root>
+    }
+    set doc [dom parse $xml]
+    dom attachDocument $doc doc_
+    $doc documentElement root
+} -body {
+    foreach node [$root selectNodes a] {
+        $node delete
     }
     set result ""
 } -cleanup {
