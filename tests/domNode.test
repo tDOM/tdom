@@ -1761,6 +1761,7 @@ test domNode-15.4 {delete - pi nodes} {
 
 test domNode-15.5 {delete - threaded} -constraints {
     threaded
+    knownBug
 } -setup {
     set xml {
         <root>
@@ -3224,7 +3225,7 @@ test domNode-38.3 {toXPath - syntax} -setup {
     $doc delete
 } -match regexp -result {wrong # args: should be "domNode0x[[:xdigit:]]+ toXPath \?-legacy\?"}
 
-test domNode0-38.4 {toXPath - default xml namespace} -setup {
+test domNode-38.4 {toXPath - default xml namespace} -setup {
     set doc [dom parse {<root><foo xmlns="foo"/><foo/></root>}]
     $doc selectNodesNamespaces {foo foo}
     set root [$doc documentElement]
@@ -3236,7 +3237,7 @@ test domNode0-38.4 {toXPath - default xml namespace} -setup {
     $doc delete
 } -result 1
 
-test domNode0-38.5 {toXPath - default xml namespace} -setup {
+test domNode-38.5 {toXPath - default xml namespace} -setup {
     set doc [dom parse {
 <root xmlns="foo">
     <!-- comment -->
@@ -3255,7 +3256,7 @@ test domNode0-38.5 {toXPath - default xml namespace} -setup {
     $doc delete
 } -result 1
 
-test domNode0-38.6 {toXPath - xml namespace} -setup {
+test domNode-38.6 {toXPath - xml namespace} -setup {
     set doc [dom parse {
 <root xmlns:foo="foo">
     <!-- comment -->
@@ -3274,7 +3275,7 @@ test domNode0-38.6 {toXPath - xml namespace} -setup {
     $doc delete
 } -result 1
 
-test domNode0-38.7 {toXPath - pathological xml namespace} -setup {
+test domNode-38.7 {toXPath - pathological xml namespace} -setup {
     set doc [dom parse {
 <root>
     <!-- comment -->
@@ -3294,7 +3295,7 @@ test domNode0-38.7 {toXPath - pathological xml namespace} -setup {
     $doc delete
 } -result 1
 
-test domNode0-38.8 {toXPath - pathological xml namespace} -setup {
+test domNode-38.8 {toXPath - pathological xml namespace} -setup {
     set doc [dom parse {
 <root>
     <!-- comment -->
