@@ -596,6 +596,9 @@ typedef struct domNode {
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
     struct domNode     *nextSibling;
+#ifdef TCL_THREADS
+    struct domNode     *nextDeleted;
+#endif
 
     domString           nodeName;  /* now the element node specific fields */
 #ifndef TDOM_LESS_NS
@@ -640,6 +643,9 @@ typedef struct domTextNode {
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
     struct domNode     *nextSibling;
+#ifdef TCL_THREADS
+    struct domNode     *nextDeleted;
+#endif
 
     domString           nodeValue;   /* now the text node specific fields */
     int                 valueLength;
@@ -667,6 +673,9 @@ typedef struct domProcessingInstructionNode {
     struct domNode     *parentNode;
     struct domNode     *previousSibling;
     struct domNode     *nextSibling;
+#ifdef TCL_THREADS
+    struct domNode     *nextDeleted;
+#endif
 
     domString           targetValue;   /* now the pi specific fields */
     int                 targetLength;
@@ -700,6 +709,9 @@ typedef struct domAttrNode {
     int                 valueLength;
     struct domNode     *parentNode;
     struct domAttrNode *nextSibling;
+#ifdef TCL_THREADS
+    struct domNode     *nextDeleted;
+#endif
 
 } domAttrNode;
 
