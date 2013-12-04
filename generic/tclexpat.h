@@ -144,7 +144,7 @@ typedef struct TclGenExpatInfo {
 |
 \-------------------------------------------------------------------------*/
 
-#if defined(_MSC_VER) || defined(BUILD_tdom)
+#if defined(_MSC_VER) || defined(BUILD_tdom) || defined(__MINGW32__) 
 #  undef TCL_STORAGE_CLASS
 #  define TCL_STORAGE_CLASS DLLEXPORT
 #endif

@@ -2954,7 +2954,7 @@ TclTncObjCmd(dummy, interp, objc, objv)
  *----------------------------------------------------------------------------
  */
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__) 
 #  undef TCL_STORAGE_CLASS
 #  define TCL_STORAGE_CLASS DLLEXPORT
 #endif
