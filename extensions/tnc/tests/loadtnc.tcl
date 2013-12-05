@@ -1,5 +1,5 @@
-catch {load ../../unix/libtdom0.8.3.so}
-catch {load libtnc0.3.0.so}
+catch {load ../../../unix/libtdom0.8.3.so}
+catch {load ../libtnc0.3.0.so}
 catch {load ../../unix/libtdom0.8.3.so}
 catch {load libtnc0.3.0.so}
 # loadtnc.tcl --
