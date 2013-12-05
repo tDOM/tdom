@@ -575,12 +575,12 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
     const char *notationName;
 {
     TNC_Data *tncdata = (TNC_Data *) userData;
-    Tcl_HashEntry *entryPtr, *entryPtr1;
+    Tcl_HashEntry *entryPtr;
     int newPtr;
     TNC_EntityInfo *entityInfo;
 
 
-    /* expat collects entity definitions internaly by himself. So this is
+    /* expat collects entity definitions internaly by itself. So this is
        maybe superfluous, if it possible to access the expat internal
        represention. To study this is left to the reader. */
 
@@ -591,7 +591,7 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
     if (!newPtr) {
         /* Eventually, an attribute declaration with type ENTITY or ENTITIES
            has used this (up to the attribute declaration undeclared) ENTITY
-           within his default value. In this case, the hash value have to
+           within his default value. In this case, the hash value has to
            be NULL and the entity must be a unparsed entity. */
         if (!Tcl_GetHashValue (entryPtr)) {
             if (notationName == NULL) {
@@ -606,8 +606,8 @@ TncEntityDeclHandler (userData, entityName, is_parameter_entity, value,
         entityInfo = (TNC_EntityInfo *) MALLOC (sizeof (TNC_EntityInfo));
         if (notationName != NULL) {
             entityInfo->is_notation = 1;
-            entryPtr1 = Tcl_CreateHashEntry (tncdata->notationDecls,
-                                             notationName, &newPtr);
+            Tcl_CreateHashEntry (tncdata->notationDecls,
+                                 notationName, &newPtr);
             entityInfo->notationName = tdomstrdup (notationName);
         }
         else {
