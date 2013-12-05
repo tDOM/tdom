@@ -2819,7 +2819,7 @@ TclTncObjCmd(dummy, interp, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-    char          *method, *cmdName, s[20];
+    char          *cmdName, s[20];
     CHandlerSet   *handlerSet;
     int            methodIndex, result;
     TNC_Data      *tncdata;
@@ -2837,7 +2837,6 @@ TclTncObjCmd(dummy, interp, objc, objv)
         return TCL_ERROR;
     }
 
-    method = Tcl_GetStringFromObj (objv[2], NULL);
     if (Tcl_GetIndexFromObj (interp, objv[2], tncMethods, "method", 0,
                              &methodIndex) != TCL_OK)
     {

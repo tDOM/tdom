@@ -1,5 +1,7 @@
-load ../../../unix/libtdom0.8.3.so
-load ../libtnc0.3.0.so
+catch {load ../../unix/libtdom0.8.3.so}
+catch {load libtnc0.3.0.so}
+catch {load ../../unix/libtdom0.8.3.so}
+catch {load libtnc0.3.0.so}
 # loadtnc.tcl --
 #
 # This file is [source]d by all.tcl and all test files, to ensure, that
@@ -16,11 +18,11 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
     }
 }
 
-# if {[catch {package present tdom}]} {
-#     package require tdom 0.7.5
-# }
+if {[catch {package present tdom}]} {
+    package require tdom
+}
 
-# if {[catch {package require tnc 0.3}]} {
-#     load [file join [file dir [info script]] .. libtnc0.3.0.so]
-# }
+if {[catch {package require tnc}]} {
+    package require tnc
+}
 

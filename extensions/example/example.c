@@ -134,7 +134,6 @@ TclExampleObjCmd(dummy, interp, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-    char          *method;
     CHandlerSet   *handlerSet;
     int            methodIndex, result;
     simpleCounter *counter;
@@ -158,7 +157,6 @@ TclExampleObjCmd(dummy, interp, objc, objv)
         return TCL_ERROR;
     }
 
-    method = Tcl_GetStringFromObj (objv[2], NULL);
     if (Tcl_GetIndexFromObj (interp, objv[2], exampleMethods, "method", 0,
                              &methodIndex) != TCL_OK)
     {
