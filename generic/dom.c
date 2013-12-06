@@ -55,12 +55,16 @@
 #include <tclexpat.h>
 
 
-
-/*---------------------------------------------------------------------------
-|   Defines
+/* #define DEBUG */
+/*----------------------------------------------------------------------------
+|   Debug Macros
 |
-\--------------------------------------------------------------------------*/
-#define DBG(x)
+\---------------------------------------------------------------------------*/
+#ifdef DEBUG
+# define DBG(x) x
+#else
+# define DBG(x) 
+#endif
 #define TDOM_NS
 #define XSLT_NAMESPACE  "http://www.w3.org/1999/XSL/Transform"
 
@@ -486,7 +490,7 @@ domPrecedes (
     domNode *other
     )
 {
-    domNode *nodeAncestor, *otherAncestor, *otherToplevel;
+    domNode *nodeAncestor, *otherAncestor;
     domAttrNode *attrN, *attrO;
     
     if (node == other) {
@@ -556,7 +560,6 @@ domPrecedes (
             return 1;
         }
     }
-    otherToplevel = otherAncestor;
     
     nodeAncestor = node;
     while (nodeAncestor->parentNode) {
@@ -4960,12 +4963,11 @@ domXPointerAncestor (
 {
     domNode     *ancestor;
     domAttrNode *attr;
-    int          found=0, result;
+    int          result;
 
 
     ancestor = node->parentNode;
     if (ancestor) {
-        found = 0;
         if ((type == ALL_NODES) || (ancestor->nodeType == type)) {
             if ((element == NULL) ||
                 ((ancestor->nodeType == ELEMENT_NODE) && (strcmp(ancestor->nodeName,element)==0))
@@ -4977,7 +4979,6 @@ domXPointerAncestor (
                         if (result) {
                             return result;
                         }
-                        found = 1;
                     }
                 } else {
                     attr = ancestor->firstAttr;
@@ -4995,7 +4996,6 @@ domXPointerAncestor (
                                 if (result) {
                                     return result;
                                 }
-                                found = 1;
                             }
                         }
                         attr = attr->nextSibling;
@@ -5159,7 +5159,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-    char            *method, *encodingName;
+    char            *encodingName;
     CHandlerSet     *handlerSet;
     int              methodIndex, result, bool;
     tdomCmdReadInfo *info;
@@ -5191,7 +5191,6 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         return TCL_ERROR;
     }
 
-    method = Tcl_GetString(objv[2]);
     if (Tcl_GetIndexFromObj (interp, objv[2], tdomMethods, "method", 0,
                              &methodIndex) != TCL_OK)
     {

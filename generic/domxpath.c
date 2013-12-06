@@ -2853,7 +2853,7 @@ xpathEvalFunction (
     xpathResultSets *args;
     xpathResultSet  *arg;
     Tcl_HashEntry   *entryPtr;
-    int              left = 0, useFastAdd;
+    int              left = 0;
     double           dRight = 0.0;
     char            *leftStr = NULL, *rightStr = NULL;
     const char      *str;
@@ -2867,10 +2867,6 @@ xpathEvalFunction (
     Tcl_DString      tstr, tfrom, tto, tresult;
     Tcl_UniChar     *ufStr, *upfrom, unichar;
 #endif
-
-    if (result->type == EmptyResult) useFastAdd = 1;
-    else useFastAdd = 0;
-
 
     switch (step->intvalue) {
 

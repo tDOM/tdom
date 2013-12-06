@@ -6070,10 +6070,17 @@ int tcldom_RegisterDocShared (
 )
 {
     Tcl_HashEntry *entryPtr;
-    int refCount, newEntry;
+    int newEntry;
+#ifdef DEBUG    
+    int refCount;
+#endif
 
     Tcl_MutexLock(&tableMutex);
+#ifdef DEBUG    
     refCount = ++doc->refCount;
+#else
+    ++doc->refCount;
+#endif
     entryPtr = Tcl_CreateHashEntry(&sharedDocs, (char*)doc, &newEntry);
     if (newEntry) {
         Tcl_SetHashValue(entryPtr, (ClientData)doc);

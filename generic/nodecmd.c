@@ -620,6 +620,9 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
             type = PROCESSING_INSTRUCTION_NODE;
         }
         break;
+    default:
+        Tcl_SetResult (interp, "Invalid/unexpected node type", NULL);
+        return TCL_ERROR;
     }
     
     nodeInfo->type = type;

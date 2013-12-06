@@ -68,10 +68,16 @@
 #define INITIAL_SIZE_FOR_KEYSETS 10
 
 
+/* #define DEBUG */
 /*----------------------------------------------------------------------------
-|   Macros
+|   Debug Macros
 |
 \---------------------------------------------------------------------------*/
+#ifdef DEBUG
+# define DBG(x) x
+#else
+# define DBG(x) 
+#endif
 #define DBG(x)              
 #define TRACE(x)            DBG(fprintf(stderr,(x)))
 #define TRACE1(x,a)         DBG(fprintf(stderr,(x),(a)))
@@ -80,6 +86,10 @@
 #define TRACE4(x,a,b,c,d)   DBG(fprintf(stderr,(x),(a),(b),(c),(d)))
 #define TRACE5(x,a,b,c,d,e) DBG(fprintf(stderr,(x),(a),(b),(c),(d),(e)))
 
+/*----------------------------------------------------------------------------
+|   Macros
+|
+\---------------------------------------------------------------------------*/
 #define CHECK_RC            if (rc < 0) return rc
 #define CHECK_RC1(x)        if (rc < 0) {FREE((char*)(x)); return rc;}
 #define SET_TAG(t,n,s,v)    if (strcmp(n,s)==0) { t->info = v; return v; }
@@ -460,7 +470,7 @@ static domDocument * getExternalDocument (Tcl_Interp *interp, xsltState *xs,
                                           const char *href, int isStylesheet,
                                           int fixedXMLSource, char **errMsg);
 
-
+#ifdef DEBUG
 /*----------------------------------------------------------------------------
 |   printXML
 |
@@ -534,7 +544,8 @@ static void printXML (domNode *node, int level, int maxlevel) {
         if (n>8) { fprintf(stderr, "...\n"); return; }
     }
 }
-        
+#endif /* #ifdef DEBUG */
+
 /*----------------------------------------------------------------------------
 |   reportError
 |
@@ -3470,7 +3481,9 @@ static int doSortActions (
 )
 {
     domNode       *child;
-    char          *str, *evStr, *select, *lang;
+    char          *str, *evStr, *select;
+    /* todo */
+    /* char       *lang; */
     char         **vs = NULL;
     char           prefix[MAX_PREFIX_LEN];
     const char    *localName;
@@ -3550,7 +3563,11 @@ static int doSortActions (
                     FREE(evStr);
                 }
                 /* jcl: TODO */
-                lang = getAttr(child, "lang", a_lang);
+                /* lang = getAttr(child, "lang", a_lang); */
+                /* The getAttr call should be done, to set attr->info
+                   to the attribute type for faster checks in further
+                   runs */
+                getAttr(child, "lang", a_lang);
 
                 TRACE4("sorting with '%s' typeText %d ascending %d nodeSetLen=%d\n",
                        select, typeText, ascending, nodelist->nr_nodes);
@@ -5613,7 +5630,6 @@ getCdataSectionElements (
     char *pc, *start, save, prefix[MAX_PREFIX_LEN];
     const char *localName;
     int hnew;
-    Tcl_HashEntry *h;
 
     Tcl_DString dStr;
     domNS  *ns;
@@ -5662,7 +5678,7 @@ getCdataSectionElements (
             return 0;
         }
         Tcl_DStringAppend (&dStr, localName, -1);
-        h = Tcl_CreateHashEntry (HashTable, Tcl_DStringValue (&dStr), &hnew);
+        Tcl_CreateHashEntry (HashTable, Tcl_DStringValue (&dStr), &hnew);
         Tcl_DStringSetLength (&dStr, 0);
         *pc = save;
     }
