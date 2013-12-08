@@ -158,7 +158,7 @@ typedef struct _domReadInfo {
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
     int               feedbackAfter;
-    int               lastFeedbackPosition;
+    XML_Index         nextFeedbackPosition;
     Tcl_Interp       *interp;
     int               activeNSsize;
     int               activeNSpos;
@@ -1071,7 +1071,7 @@ startElement(
     domAttrNode   *attrnode, *lastAttr;
     const char   **atPtr, **idAttPtr;
     Tcl_HashEntry *h;
-    int            hnew, len, pos, idatt, newNS;
+    int            hnew, len, pos, idatt, newNS, result;
     const char    *xmlns, *localname;
     char           tagPrefix[MAX_PREFIX_LEN];
     char           prefix[MAX_PREFIX_LEN];
@@ -1080,20 +1080,25 @@ startElement(
 
     if (info->feedbackAfter) {
 
-        if (info->lastFeedbackPosition
-             < XML_GetCurrentByteIndex (info->parser)
+        if (info->nextFeedbackPosition
+             <= XML_GetCurrentByteIndex (info->parser)
         ) {
             sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
-            if (Tcl_Eval(info->interp, feedbackCmd) != TCL_OK) {
+            result = Tcl_Eval(info->interp, feedbackCmd);
+            if (result != TCL_OK) {
                 DBG(fprintf(stderr, "%s\n", 
-                            Tcl_GetStringResult (info->interp));)
-                /* FIXME: We simply ignore script errors in the
-                   feedbackCmd, for now. One fine day, expat may provide
-                   a way to cancel an already started parse run from
-                   inside a handler. Then we should revisit this. */
-                /* exit(1) */    
+                            Tcl_GetStringResult (info->interp)););
+                if (result == TCL_BREAK) {
+                    /* Application explicitely request abort of parsing */
+                    XML_StopParser(info->parser, 1);
+                } else {
+                    /* Either TCL_ERROR within the feedback cmd or a
+                     * return code we didn't handle. */
+                    XML_StopParser(info->parser, 0);
+                }
             }
-            info->lastFeedbackPosition += info->feedbackAfter;
+            info->nextFeedbackPosition = 
+                XML_GetCurrentByteIndex (info->parser) + info->feedbackAfter;
         }
     }
 
@@ -2038,7 +2043,7 @@ domReadDocument (
     info.encoding_8bit        = encoding_8bit;
     info.storeLineColumn      = storeLineColumn;
     info.feedbackAfter        = feedbackAfter;
-    info.lastFeedbackPosition = 0;
+    info.nextFeedbackPosition = feedbackAfter;
     info.interp               = interp;
     info.activeNSpos          = -1;
     info.activeNSsize         = 8;
@@ -5033,7 +5038,7 @@ typedef struct _tdomCmdReadInfo {
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
     int               feedbackAfter;
-    int               lastFeedbackPosition;
+    int               nextFeedbackPosition;
     Tcl_Interp       *interp;
     int               activeNSsize;
     int               activeNSpos;
@@ -5109,7 +5114,7 @@ tdom_resetProc (
     info->depth             = 0;
     info->feedbackAfter     = 0;
     Tcl_DStringSetLength (info->cdata, 0);
-    info->lastFeedbackPosition = 0;
+    info->nextFeedbackPosition = info->feedbackAfter;
     info->interp            = interp;
     info->activeNSpos       = -1;
     info->insideDTD         = 0;
@@ -5234,7 +5239,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->encoding_8bit     = 0;
         info->storeLineColumn   = 0;
         info->feedbackAfter     = 0;
-        info->lastFeedbackPosition = 0;
+        info->nextFeedbackPosition = 0;
         info->interp            = interp;
         info->activeNSpos       = -1;
         info->activeNSsize      = 8;
