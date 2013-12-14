@@ -14,6 +14,7 @@
 #    dom-9.*:  setObjectCommands
 #    dom-10.*: createNodeCmd
 #    dom-11.*: featureinfo
+#    dom-12.*: -feedbackAfter
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
 
@@ -1314,6 +1315,14 @@ test dom-11.3 {featureinfo - expatmajorversion} -body {
 test dom-11.4 {featureinfo - dtd} -body {
     dom featureinfo dtd
 } -match regexp -result {(0|1)}
+
+set counter 0
+proc ::dom::domParseFeedback {} {
+    return -code break
+}
+test dom-12.1 {-feedbackAfter} -body {
+    dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}
+} -result ""
 
 # cleanup
 ::tcltest::cleanupTests

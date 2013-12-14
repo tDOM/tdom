@@ -735,7 +735,8 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   char *extResolver,
                                   int   useForeignDTD,
                                   int   paramEntityParsing,
-                                  Tcl_Interp *interp);
+                                  Tcl_Interp *interp,
+                                  int  *status);
 
 void           domFreeDocument   (domDocument *doc, 
                                   domFreeCallback freeCB, 

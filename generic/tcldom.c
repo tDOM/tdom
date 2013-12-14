@@ -1078,6 +1078,7 @@ int tcldom_appendXML (
 {
     char        *xml_string, *extResolver = NULL;
     int          xml_string_len;
+    int          resultcode = 0;
     domDocument *doc;
     domNode     *nodeToAppend;
     XML_Parser   parser;
@@ -1108,7 +1109,8 @@ int tcldom_appendXML (
                           extResolver,
                           0,
                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS,
-                          interp);
+                          interp,
+                          &resultcode);
     if (doc == NULL) {
         char s[50];
         long byteIndex, i;
@@ -5362,6 +5364,7 @@ int tcldom_parse (
     int          feedbackAfter       = 0;
     int          useForeignDTD       = 0;
     int          paramEntityParsing  = (int)XML_PARAM_ENTITY_PARSING_ALWAYS;
+    int          status              = 0;
     domDocument *doc;
     Tcl_Obj     *newObjName = NULL;
     XML_Parser   parser;
@@ -5616,46 +5619,55 @@ int tcldom_parse (
                           extResolver,
                           useForeignDTD,
                           paramEntityParsing,
-                          interp);
+                          interp,
+                          &status);
     if (doc == NULL) {
         char s[50];
         long byteIndex, i;
-
-        interpResult = Tcl_GetStringResult(interp);
-        if (interpResult[0] == '\0') {
-            /* If the interp result isn't empty, then there was an error
-               in an enternal entity and the interp result has already the
-               error msg. If we don't got a document, but interp result is
-               empty, the error occured in the main document and we
-               build the error msg as follows. */
-            sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
-            Tcl_AppendResult(interp, "error \"", 
-                             XML_ErrorString(XML_GetErrorCode(parser)),
-                             "\" at line ", s, " character ", NULL);
-            sprintf(s, "%ld", XML_GetCurrentColumnNumber(parser));
-            Tcl_AppendResult(interp, s, NULL);
-            byteIndex = XML_GetCurrentByteIndex(parser);
-            if ((byteIndex != -1) && (chan == NULL)) {
-                Tcl_AppendResult(interp, "\n\"", NULL);
-                s[1] = '\0';
-                for (i=-20; i < 40; i++) {
-                    if ((byteIndex+i)>=0) {
-                        if (xml_string[byteIndex+i]) {
-                            s[0] = xml_string[byteIndex+i];
-                            Tcl_AppendResult(interp, s, NULL);
-                            if (i==0) {
-                                Tcl_AppendResult(interp, " <--Error-- ", NULL);
+        
+        switch (status) {
+        case TCL_BREAK:
+            /* Abort of parsing by the application */
+            Tcl_ResetResult(interp);
+            XML_ParserFree(parser);
+            return TCL_OK;
+        default:
+            interpResult = Tcl_GetStringResult(interp);
+            if (interpResult[0] == '\0') {
+                /* If the interp result isn't empty, then there was an error
+                   in an enternal entity and the interp result has already the
+                   error msg. If we don't got a document, but interp result is
+                   empty, the error occured in the main document and we
+                   build the error msg as follows. */
+                sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
+                Tcl_AppendResult(interp, "error \"", 
+                                 XML_ErrorString(XML_GetErrorCode(parser)),
+                                 "\" at line ", s, " character ", NULL);
+                sprintf(s, "%ld", XML_GetCurrentColumnNumber(parser));
+                Tcl_AppendResult(interp, s, NULL);
+                byteIndex = XML_GetCurrentByteIndex(parser);
+                if ((byteIndex != -1) && (chan == NULL)) {
+                    Tcl_AppendResult(interp, "\n\"", NULL);
+                    s[1] = '\0';
+                    for (i=-20; i < 40; i++) {
+                        if ((byteIndex+i)>=0) {
+                            if (xml_string[byteIndex+i]) {
+                                s[0] = xml_string[byteIndex+i];
+                                Tcl_AppendResult(interp, s, NULL);
+                                if (i==0) {
+                                    Tcl_AppendResult(interp, " <--Error-- ", NULL);
+                                }
+                            } else {
+                                break;
                             }
-                        } else {
-                            break;
                         }
                     }
+                    Tcl_AppendResult(interp, "\"",NULL);
                 }
-                Tcl_AppendResult(interp, "\"",NULL);
             }
+            XML_ParserFree(parser);
+            return TCL_ERROR;
         }
-        XML_ParserFree(parser);
-        return TCL_ERROR;
     }
     XML_ParserFree(parser);
 

@@ -5871,6 +5871,7 @@ getExternalDocument (
     Tcl_Obj      *cmdPtr, *resultObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj      *channelIdObj, *resultTypeObj;
     int           len, mode, result, storeLineColumn;
+    int           resultcode = 0;
     char         *resultType, *extbase, *xmlstring, *channelId, s[20];
     char         *extResolver = NULL;
     CONST84 char *str;
@@ -5981,8 +5982,8 @@ getExternalDocument (
        a good idea?) */
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
                            chan, extbase, extResolver, 0, 
-                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp);
-
+                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp,
+                           &resultcode);
     if (doc == NULL) {
         DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
                      strlen (xmlstring), xmlstring);)

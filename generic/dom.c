@@ -167,6 +167,7 @@ typedef struct _domReadInfo {
     int               baseURIstackPos;
     domActiveBaseURI *baseURIstack;
     int               insideDTD;
+    int               status;
 
 } domReadInfo;
 
@@ -1088,14 +1089,8 @@ startElement(
             if (result != TCL_OK) {
                 DBG(fprintf(stderr, "%s\n", 
                             Tcl_GetStringResult (info->interp)););
-                if (result == TCL_BREAK) {
-                    /* Application explicitely request abort of parsing */
-                    XML_StopParser(info->parser, 1);
-                } else {
-                    /* Either TCL_ERROR within the feedback cmd or a
-                     * return code we didn't handle. */
-                    XML_StopParser(info->parser, 0);
-                }
+                info->status = result;
+                XML_StopParser(info->parser, 1);
             }
             info->nextFeedbackPosition = 
                 XML_GetCurrentByteIndex (info->parser) + info->feedbackAfter;
@@ -1754,11 +1749,13 @@ externalEntityRefHandler (
     Tcl_Obj *cmdPtr, *resultObj, *resultTypeObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj *channelIdObj;
     int result, mode, done, byteIndex, i;
+    int keepresult = 0;
     size_t len;
     int tclLen;
     XML_Parser extparser, oldparser = NULL;
     char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
+    enum XML_Status status;
 
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
@@ -1877,8 +1874,11 @@ externalEntityRefHandler (
     info->parser = extparser;
     XML_SetBase (extparser, extbase);
 
+    result = 1;
     if (chan == NULL) {
-        if (!XML_Parse(extparser, xmlstring, strlen (xmlstring), 1)) {
+        status = XML_Parse(extparser, xmlstring, strlen (xmlstring), 1);
+        switch (status) {
+        case XML_STATUS_ERROR:
             Tcl_ResetResult (info->interp);
             sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
             Tcl_AppendResult(info->interp, "error \"",
@@ -1906,17 +1906,23 @@ externalEntityRefHandler (
                     }
                 }
                 Tcl_AppendResult(info->interp, "\"",NULL);
-            } 
-            Tcl_DecrRefCount (resultObj);
-            XML_ParserFree (extparser);
-            info->parser = oldparser;
-            return 0;
+            }
+            result = 0;
+            break;
+        case XML_STATUS_SUSPENDED:
+            XML_StopParser (oldparser, 1);
+            keepresult = 1;
+            break;
+        default:
+            break;
         }
     } else {
         do {
             len = Tcl_Read (chan, buf, sizeof(buf));
             done = len < sizeof(buf);
-            if (!XML_Parse (extparser, buf, len, done)) {
+            status = XML_Parse (extparser, buf, len, done);
+            switch (status) {
+            case XML_STATUS_ERROR:
                 Tcl_ResetResult (info->interp);
                 sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
                 Tcl_AppendResult(info->interp, "error \"",
@@ -1925,22 +1931,30 @@ externalEntityRefHandler (
                                  "\" at line ", s, " character ", NULL);
                 sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
                 Tcl_AppendResult(info->interp, s, NULL);
-                Tcl_DecrRefCount (resultObj);
-                XML_ParserFree (extparser);
-                info->parser = oldparser;
-                return 0;
+                result = 0;
+                done = 1;
+                break;
+            case XML_STATUS_SUSPENDED:
+                XML_StopParser (oldparser, 1);
+                keepresult = 1;
+                done = 1;
+                break;
+            default:
+                break;
             }
         } while (!done);
     }
 
-    DispatchPCDATA (info);
-
+    if (result) {
+        DispatchPCDATA (info);
+    }
+    if (!keepresult) {
+        Tcl_ResetResult (info->interp);
+    }
     XML_ParserFree (extparser);
     info->parser = oldparser;
-
     Tcl_DecrRefCount (resultObj);
-    Tcl_ResetResult (info->interp);
-    return 1;
+    return result;
 
  wrongScriptResult:
     Tcl_DecrRefCount (resultObj);
@@ -2016,20 +2030,22 @@ domReadDocument (
     char       *extResolver,
     int         useForeignDTD,
     int         paramEntityParsing,
-    Tcl_Interp *interp
+    Tcl_Interp *interp,
+    int        *resultcode
 )
 {
-    int            done, tclLen;
-    size_t         len;
-    domReadInfo    info;
-    char           buf[8192];
+    int             done, tclLen;
+    enum XML_Status status;
+    size_t          len;
+    domReadInfo     info;
+    char            buf[8192];
 #if !TclOnly8Bits
-    Tcl_Obj       *bufObj;
-    Tcl_DString    dStr;
-    int            useBinary;
-    char          *str;
+    Tcl_Obj        *bufObj;
+    Tcl_DString     dStr;
+    int             useBinary;
+    char           *str;
 #endif
-    domDocument   *doc = domCreateDoc(baseurl, storeLineColumn);
+    domDocument    *doc = domCreateDoc(baseurl, storeLineColumn);
 
     doc->extResolver = extResolver;
 
@@ -2054,6 +2070,7 @@ domReadDocument (
     info.baseURIstack         = (domActiveBaseURI*) 
         MALLOC (sizeof(domActiveBaseURI) * info.baseURIstackSize);
     info.insideDTD            = 0;
+    info.status               = 0;
 
     XML_SetUserData(parser, &info);
     XML_SetBase (parser, baseurl);
@@ -2076,13 +2093,25 @@ domReadDocument (
                                endDoctypeDeclHandler);
 
     if (channel == NULL) {
-        if (!XML_Parse(parser, xml, length, 1)) {
+        status = XML_Parse(parser, xml, length, 1);
+        switch (status) {
+        case XML_STATUS_SUSPENDED:
+            DBG(fprintf(stderr, "XML_STATUS_SUSPENDED\n");)
+            if (info.status == TCL_BREAK) {
+                Tcl_ResetResult(interp);
+            }
+            /* fall throu */
+        case XML_STATUS_ERROR:
+            DBG(fprintf(stderr, "XML_STATUS_ERROR\n");)
             FREE ( info.activeNS );
             FREE ( info.baseURIstack );
             Tcl_DStringFree (info.cdata);
             FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
+            *resultcode = info.status;
             return NULL;
+        case XML_STATUS_OK:
+            break;
         }
     } else {
 #if !TclOnly8Bits
@@ -2093,6 +2122,7 @@ domReadDocument (
             Tcl_DStringFree (info.cdata);
             FREE ( info.cdata);
             domFreeDocument (doc, NULL, NULL);
+            *resultcode = info.status;
             return NULL;
         }
         if (strcmp (Tcl_DStringValue (&dStr), "identity")==0 ) useBinary = 1;
@@ -2102,13 +2132,26 @@ domReadDocument (
             do {
                 len = Tcl_Read (channel, buf, sizeof(buf));
                 done = len < sizeof(buf);
-                if (!XML_Parse (parser, buf, len, done)) {
+                status = XML_Parse (parser, buf, len, done);
+                switch (status) {
+                case XML_STATUS_SUSPENDED:
+                    DBG(fprintf(stderr, "XML_STATUS_SUSPENDED\n"););
+                    if (info.status == TCL_BREAK) {
+                        Tcl_ResetResult(interp);
+                    }
+                    /* fall throu */
+                case XML_STATUS_ERROR:
+                    DBG(fprintf(stderr, "XML_STATUS_ERROR\n");)
+                        fprintf(stderr, "hier 3\n");
                     FREE ( info.activeNS );
                     FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
                     FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
+                    *resultcode = info.status;
                     return NULL;
+                case XML_STATUS_OK:
+                    break;
                 }
             } while (!done);
         } else {
@@ -2118,14 +2161,26 @@ domReadDocument (
                 len = Tcl_ReadChars (channel, bufObj, 1024, 0);
                 done = (len < 1024);
                 str = Tcl_GetStringFromObj(bufObj, &tclLen);
-                if (!XML_Parse (parser, str, tclLen, done)) {
+                status = XML_Parse (parser, str, len, done);
+                switch (status) {
+                case XML_STATUS_SUSPENDED:
+                    DBG(fprintf(stderr, "XML_STATUS_SUSPENDED\n"););
+                    if (info.status == TCL_BREAK) {
+                        Tcl_ResetResult(interp);
+                    }
+                    /* fall throu */
+                case XML_STATUS_ERROR:
+                    DBG(fprintf(stderr, "XML_STATUS_ERROR\n");)
                     FREE ( info.activeNS );
                     FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
                     FREE ( info.cdata);
                     domFreeDocument (doc, NULL, NULL);
                     Tcl_DecrRefCount (bufObj);
+                    *resultcode = info.status;
                     return NULL;
+                case XML_STATUS_OK:
+                    break;
                 }
             } while (!done);
             Tcl_DecrRefCount (bufObj);
@@ -2134,13 +2189,26 @@ domReadDocument (
         do {
             len = Tcl_Read (channel, buf, sizeof(buf));
             done = len < sizeof(buf);
-            if (!XML_Parse (parser, buf, len, done)) {
+            str = Tcl_GetStringFromObj(bufObj, &tclLen);
+            switch (status) {
+            case XML_STATUS_SUSPENDED:
+                DBG(fprintf(stderr, "XML_STATUS_SUSPENDED\n"););
+                if (info.status == TCL_BREAK) {
+                    Tcl_ResetResult(interp);
+                }
+                /* fall throu */
+            case XML_STATUS_ERROR:
+                DBG(fprintf(stderr, "XML_STATUS_ERROR\n");)
                 FREE ( info.activeNS );
                 FREE ( info.baseURIstack );
-                domFreeDocument (doc, NULL, NULL);
                 Tcl_DStringFree (info.cdata);
                 FREE ( info.cdata);
+                domFreeDocument (doc, NULL, NULL);
+                Tcl_DecrRefCount (bufObj);
+                *resultcode = info.status;
                 return NULL;
+            case XML_STATUS_OK:
+                break;
             }
         } while (!done);
 #endif
