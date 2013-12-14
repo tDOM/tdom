@@ -1408,6 +1408,22 @@ test dom-12.6 {-feedbackAfter and external entities, with cancel} -body {
                           ]>
             <doc>&a;&b;</doc>}
 } -result ""
+proc ::dom::domParseFeedback {} {
+    global cancel
+    if {$cancel} {
+        error "Error in feedback cmd."
+    }
+}
+test dom-12.7 {-feedbackAfter and external entities, with cancel} -body {
+    set result [catch {dom parse -externalentitycommand extRefResolver-12.6 \
+                           -feedbackAfter 1 {
+                               <!DOCTYPE doc [
+                                              <!ENTITY a PUBLIC "a" "a.xml">
+                                              <!ENTITY b PUBLIC "b" "b.xml">
+                                             ]>
+                               <doc>&a;&b;</doc>}} msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
 
 # cleanup
 ::tcltest::cleanupTests
