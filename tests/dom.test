@@ -1316,12 +1316,97 @@ test dom-11.4 {featureinfo - dtd} -body {
     dom featureinfo dtd
 } -match regexp -result {(0|1)}
 
-set counter 0
 proc ::dom::domParseFeedback {} {
     return -code break
 }
-test dom-12.1 {-feedbackAfter} -body {
+test dom-12.1 {-feedbackAfter -- cmd returns TCL_BREAK} -body {
     dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}
+} -result ""
+
+proc ::dom::domParseFeedback {} {
+    error "Error in feedback cmd."
+}
+test dom-12.2 {-feedbackAfter -- cmd returns TCL_ERROR} -body {
+    set result [catch {
+        dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
+proc ::dom::domParseFeedback {} {
+    # Update progess dialog, check for cancel etc.
+    return
+}
+test dom-12.3 {-feedbackAfter} -body {
+    set doc [dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+test dom-12.4 {-feedbackAfter and -channel} -setup {
+    set xmlFile [makeFile {<doc><e1/><e1/><e1/></doc>} dom.xml]
+} -body {
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}]
+    close $fd
+    $doc selectNodes count(//*)
+} -cleanup {
+    removeFile dom.xml
+} -result 4
+proc extRefResolver-12.5 {base systemId publicId} {
+    switch $publicId {
+        "a" {
+            set data "<e1/>"
+        }
+        "b" {
+            set data "<e1/><e1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-12.5 {-feedbackAfter and external entities} -body {
+    set doc [dom parse -externalentitycommand extRefResolver-12.5 \
+                 -feedbackAfter 1 {
+                     <!DOCTYPE doc [
+                                    <!ENTITY a PUBLIC "a" "a.xml">
+                                    <!ENTITY b PUBLIC "b" "b.xml">
+                                    ]>
+                     <doc>&a;&b;</doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+
+set cancel 0
+proc extRefResolver-12.6 {base systemId publicId} {
+    global cancel
+    switch $publicId {
+        "a" {
+            set cancel 1
+            set data "<e1/><e1/>"
+        }
+        "b" {
+            set data "<e1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+proc ::dom::domParseFeedback {} {
+    global cancel
+    if {$cancel} {
+        return -code break
+    }
+}
+test dom-12.6 {-feedbackAfter and external entities, with cancel} -body {
+    dom parse -externalentitycommand extRefResolver-12.6 \
+        -feedbackAfter 1 {
+            <!DOCTYPE doc [
+                           <!ENTITY a PUBLIC "a" "a.xml">
+                           <!ENTITY b PUBLIC "b" "b.xml">
+                          ]>
+            <doc>&a;&b;</doc>}
 } -result ""
 
 # cleanup

@@ -1756,6 +1756,7 @@ externalEntityRefHandler (
     char buf[4096], *resultType, *extbase, *xmlstring, *channelId, s[50];
     Tcl_Channel chan = (Tcl_Channel) NULL;
     enum XML_Status status;
+    XML_Index storedNextFeedbackPosition;
 
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
@@ -1873,6 +1874,8 @@ externalEntityRefHandler (
     oldparser = info->parser;
     info->parser = extparser;
     XML_SetBase (extparser, extbase);
+    storedNextFeedbackPosition = info->nextFeedbackPosition;
+    info->nextFeedbackPosition = info->feedbackAfter;
 
     result = 1;
     if (chan == NULL) {
@@ -1907,6 +1910,7 @@ externalEntityRefHandler (
                 }
                 Tcl_AppendResult(info->interp, "\"",NULL);
             }
+            keepresult = 1;
             result = 0;
             break;
         case XML_STATUS_SUSPENDED:
@@ -1932,6 +1936,7 @@ externalEntityRefHandler (
                 sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
                 Tcl_AppendResult(info->interp, s, NULL);
                 result = 0;
+                keepresult = 1;
                 done = 1;
                 break;
             case XML_STATUS_SUSPENDED:
@@ -1953,6 +1958,7 @@ externalEntityRefHandler (
     }
     XML_ParserFree (extparser);
     info->parser = oldparser;
+    info->nextFeedbackPosition = storedNextFeedbackPosition;
     Tcl_DecrRefCount (resultObj);
     return result;
 
@@ -2161,7 +2167,7 @@ domReadDocument (
                 len = Tcl_ReadChars (channel, bufObj, 1024, 0);
                 done = (len < 1024);
                 str = Tcl_GetStringFromObj(bufObj, &tclLen);
-                status = XML_Parse (parser, str, len, done);
+                status = XML_Parse (parser, str, tclLen, done);
                 switch (status) {
                 case XML_STATUS_SUSPENDED:
                     DBG(fprintf(stderr, "XML_STATUS_SUSPENDED\n"););
