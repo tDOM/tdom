@@ -2148,7 +2148,6 @@ domReadDocument (
                     /* fall throu */
                 case XML_STATUS_ERROR:
                     DBG(fprintf(stderr, "XML_STATUS_ERROR\n");)
-                        fprintf(stderr, "hier 3\n");
                     FREE ( info.activeNS );
                     FREE ( info.baseURIstack );
                     Tcl_DStringFree (info.cdata);
