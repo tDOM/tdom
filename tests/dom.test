@@ -1602,7 +1602,7 @@ proc ::dom::domParseFeedback {} {
         error "Error in feedback cmd."
     }
 }
-test dom-12.7 {-feedbackAfter and external entities, with cancel} -body {
+test dom-12.7 {-feedbackAfter and external entities, with error} -body {
     set result [catch {dom parse -externalentitycommand extRefResolver-12.6 \
                            -feedbackAfter 1 {
                                <!DOCTYPE doc [
