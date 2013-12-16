@@ -1757,6 +1757,7 @@ externalEntityRefHandler (
     Tcl_Channel chan = (Tcl_Channel) NULL;
     enum XML_Status status;
     XML_Index storedNextFeedbackPosition;
+    CONST84 char *interpResult;
 
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
@@ -1813,6 +1814,7 @@ externalEntityRefHandler (
     Tcl_DecrRefCount(cmdPtr);
 
     if (result != TCL_OK) {
+        info->status = result;
         return 0;
     }
 
@@ -1877,38 +1879,48 @@ externalEntityRefHandler (
     storedNextFeedbackPosition = info->nextFeedbackPosition;
     info->nextFeedbackPosition = info->feedbackAfter;
 
+    Tcl_ResetResult (info->interp);
     result = 1;
     if (chan == NULL) {
         status = XML_Parse(extparser, xmlstring, strlen (xmlstring), 1);
         switch (status) {
         case XML_STATUS_ERROR:
-            Tcl_ResetResult (info->interp);
+            interpResult = Tcl_GetStringResult(info->interp);
             sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
-            Tcl_AppendResult(info->interp, "error \"",
-                             XML_ErrorString(XML_GetErrorCode(extparser)),
-                             "\" in entity \"", systemId,
-                             "\" at line ", s, " character ", NULL);
-            sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
-            Tcl_AppendResult(info->interp, s, NULL);
-            byteIndex = XML_GetCurrentByteIndex(extparser);
-            if (byteIndex != -1) {
-                Tcl_AppendResult(info->interp, "\n\"", NULL);
-                s[1] = '\0';
-                for (i=-20; i < 40; i++) {
-                    if ((byteIndex+i)>=0) {
-                        if (xmlstring[byteIndex+i]) {
-                            s[0] = xmlstring[byteIndex+i];
-                            Tcl_AppendResult(info->interp, s, NULL);
-                            if (i==0) {
-                                Tcl_AppendResult(info->interp,
-                                                 " <--Error-- ", NULL);
+            if (interpResult[0] == '\0') {
+                Tcl_ResetResult (info->interp);
+                Tcl_AppendResult(info->interp, "error \"",
+                                 XML_ErrorString(XML_GetErrorCode(extparser)),
+                                 "\" in entity \"", systemId,
+                                 "\" at line ", s, " character ", NULL);
+                sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
+                Tcl_AppendResult(info->interp, s, NULL);
+                byteIndex = XML_GetCurrentByteIndex(extparser);
+                if (byteIndex != -1) {
+                    Tcl_AppendResult(info->interp, "\n\"", NULL);
+                    s[1] = '\0';
+                    for (i=-20; i < 40; i++) {
+                        if ((byteIndex+i)>=0) {
+                            if (xmlstring[byteIndex+i]) {
+                                s[0] = xmlstring[byteIndex+i];
+                                Tcl_AppendResult(info->interp, s, NULL);
+                                if (i==0) {
+                                    Tcl_AppendResult(info->interp,
+                                                     " <--Error-- ", NULL);
+                                }
+                            } else {
+                                break;
                             }
-                        } else {
-                            break;
                         }
                     }
+                    Tcl_AppendResult(info->interp, "\"",NULL);
                 }
-                Tcl_AppendResult(info->interp, "\"",NULL);
+            } else {
+                Tcl_AppendResult(info->interp, ", referenced in entity \"",
+                                 systemId, 
+                                 "\" at line ", s, " character ", NULL);
+                sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
+                Tcl_AppendResult(info->interp, s, NULL);
             }
             keepresult = 1;
             result = 0;
@@ -1927,14 +1939,23 @@ externalEntityRefHandler (
             status = XML_Parse (extparser, buf, len, done);
             switch (status) {
             case XML_STATUS_ERROR:
-                Tcl_ResetResult (info->interp);
+                interpResult = Tcl_GetStringResult(info->interp);
                 sprintf(s, "%ld", XML_GetCurrentLineNumber(extparser));
-                Tcl_AppendResult(info->interp, "error \"",
-                                 XML_ErrorString(XML_GetErrorCode(extparser)),
-                                 "\" in entity \"", systemId,
-                                 "\" at line ", s, " character ", NULL);
-                sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
-                Tcl_AppendResult(info->interp, s, NULL);
+                if (interpResult[0] == '\0') {
+                    Tcl_ResetResult (info->interp);
+                    Tcl_AppendResult(info->interp, "error \"",
+                                     XML_ErrorString(XML_GetErrorCode(extparser)),
+                                     "\" in entity \"", systemId,
+                                     "\" at line ", s, " character ", NULL);
+                    sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
+                    Tcl_AppendResult(info->interp, s, NULL);
+                } else {
+                    Tcl_AppendResult(info->interp, ", referenced in entity \"",
+                                     systemId, 
+                                     "\" at line ", s, " character ", NULL);
+                    sprintf(s, "%ld", XML_GetCurrentColumnNumber(extparser));
+                    Tcl_AppendResult(info->interp, s, NULL);
+                }
                 result = 0;
                 keepresult = 1;
                 done = 1;
@@ -1969,6 +1990,7 @@ externalEntityRefHandler (
     if (oldparser) {
         info->parser = oldparser;
     }
+    info->status = TCL_ERROR;
     Tcl_AppendResult (info->interp, "The -externalentitycommand script "
                       "has to return a Tcl list with 3 elements.\n"
                       "Syntax: {string|channel|filename <baseurl> <data>}\n",

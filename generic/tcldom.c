@@ -5633,13 +5633,13 @@ int tcldom_parse (
             return TCL_OK;
         default:
             interpResult = Tcl_GetStringResult(interp);
+            sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
             if (interpResult[0] == '\0') {
                 /* If the interp result isn't empty, then there was an error
                    in an enternal entity and the interp result has already the
                    error msg. If we don't got a document, but interp result is
                    empty, the error occured in the main document and we
                    build the error msg as follows. */
-                sprintf(s, "%ld", XML_GetCurrentLineNumber(parser));
                 Tcl_AppendResult(interp, "error \"", 
                                  XML_ErrorString(XML_GetErrorCode(parser)),
                                  "\" at line ", s, " character ", NULL);
@@ -5663,6 +5663,20 @@ int tcldom_parse (
                         }
                     }
                     Tcl_AppendResult(interp, "\"",NULL);
+                }
+            } else {
+                if (status == TCL_OK) {
+                    /* For tcl errors (in -externalentitycommand or
+                     * feedback callback) we leave the error msg in
+                     * the interpreter alone. If there wasn't a tcl
+                     * error, there was a parsing error. Because the
+                     * interp has already an error msg, that parsing
+                     * error was in an external entity. Therefore, we
+                     * just add the place of the referencing entity in
+                     * the mail document.*/
+                    Tcl_AppendResult(interp, ", referenced at line ", s, NULL);
+                    sprintf(s, "%ld", XML_GetCurrentColumnNumber(parser));
+                    Tcl_AppendResult(interp, " character ", s, NULL);
                 }
             }
             XML_ParserFree(parser);

@@ -333,7 +333,7 @@ test dom-2.17 {parse method: test reporting of error in external subset} {
     }]} errMsg]
     lappend result $errMsg
 } {1 {error "syntax error" in entity "dummysystemID" at line 1 character 20
-"<!ATTLIST root lang # <--Error-- FIXED "en">"}}
+"<!ATTLIST root lang # <--Error-- FIXED "en">", referenced at line 2 character 58}}
 
 test dom-2.18 {parse document with nodes before and after the documentElement} {
     set doc [dom parse {<!-- First comment -->
@@ -942,6 +942,194 @@ test dom-5.2 {-externalentitycommand} {
     $doc delete
     set ::dom-5_2
 } {thisDoc}
+
+proc dom-5.3 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            # Not well-formed
+            set data "<e,1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.3 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.3 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e1.xml" at line 1 character 2
+"<e, <--Error-- 1/>", referenced at line 4 character 21}]
+
+proc dom-5.4 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data "<e1>&e2;</e1>"
+        }
+        "e2" {
+            set data "<e,2/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.4 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.4 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e2.xml" at line 1 character 2
+"<e, <--Error-- 2/>", referenced in entity "e1.xml" at line 1 character 4, referenced at line 5 character 21}]
+
+proc dom-5.5 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data "<e1>&e2;</e1>"
+        }
+        "e2" {
+            set data "<e2>&e3;</e2>"
+        }
+        "e3" {
+            # Not well-formed
+            set data "<e,3/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.5 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.5 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            <!ENTITY e3 PUBLIC "e3" "e3.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e3.xml" at line 1 character 2
+"<e, <--Error-- 3/>", referenced in entity "e2.xml" at line 1 character 4, referenced in entity "e1.xml" at line 1 character 4, referenced at line 6 character 21}]
+
+proc dom-5.6 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.6 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e,1/>" e1.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.6 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e1.xml" at line 1 character 2, referenced at line 4 character 21}]
+
+proc dom-5.7 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        "e2" {
+            set data [open $::e2]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.7 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e1>&e2;</e1>" e1.xml]
+    set e2 [makeFile "<e,2/>" e2.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.7 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+    removeFile e2.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e2.xml" at line 1 character 2, referenced in entity "e1.xml" at line 1 character 4, referenced at line 5 character 21}]
+
+proc dom-5.8 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        "e2" {
+            set data [open $::e2]
+        }
+        "e3" {
+            set data [open $::e3]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.8 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e1>&e2;</e1>" e1.xml]
+    set e2 [makeFile "<e2>&e3;</e2>" e2.xml]
+    set e3 [makeFile "<e,3/>" e3.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.8 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            <!ENTITY e3 PUBLIC "e3" "e3.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+    removeFile e2.xml
+    removeFile e3.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e3.xml" at line 1 character 2, referenced in entity "e2.xml" at line 1 character 4, referenced in entity "e1.xml" at line 1 character 4, referenced at line 6 character 21}]
 
 test dom-6.1 {use in slave interpreter} {
     set slave [interp create]
