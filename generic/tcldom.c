@@ -195,6 +195,7 @@ static char dom_usage[] =
     "Usage dom <subCommand> <args>, where subCommand can be:    \n"
     "    parse ?-keepEmpties? ?-channel <channel> ?-baseurl <baseurl>?  \n"
     "        ?-feedbackAfter <#Bytes>?                    \n"
+    "        ?-feedbackcmd <cmd>?                         \n"
     "        ?-externalentitycommand <cmd>?               \n"
     "        ?-useForeignDTD <boolean>?                   \n"
     "        ?-paramentityparsing <none|always|standalone>\n"
@@ -1076,7 +1077,8 @@ int tcldom_appendXML (
     Tcl_Obj    *obj
 )
 {
-    char        *xml_string, *extResolver = NULL;
+    char        *xml_string;
+    Tcl_Obj     *extResolver = NULL;
     int          xml_string_len;
     int          resultcode = 0;
     domDocument *doc;
@@ -1094,7 +1096,7 @@ int tcldom_appendXML (
     parser = XML_ParserCreate_MM(NULL, MEM_SUITE, NULL);
 
     if (node->ownerDocument->extResolver) {
-        extResolver = tdomstrdup (node->ownerDocument->extResolver);
+        extResolver = Tcl_NewStringObj(node->ownerDocument->extResolver, -1);
     }
 
     doc = domReadDocument(parser,
@@ -1106,11 +1108,15 @@ int tcldom_appendXML (
                           0,
                           NULL,
                           NULL,
+                          NULL,
                           extResolver,
                           0,
                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS,
                           interp,
                           &resultcode);
+    if (extResolver) {
+        Tcl_DecrRefCount(extResolver);
+    }
     if (doc == NULL) {
         char s[50];
         long byteIndex, i;
@@ -5354,7 +5360,8 @@ int tcldom_parse (
     GetTcldomTSD()
 
     char        *xml_string, *option, *errStr, *channelId, *baseURI = NULL;
-    char        *extResolver = NULL;
+    Tcl_Obj     *extResolver = NULL;
+    Tcl_Obj     *feedbackCmd = NULL;
     CONST84 char *interpResult;
     int          optionIndex, value, xml_string_len, mode;
     int          ignoreWhiteSpaces   = 1;
@@ -5369,17 +5376,20 @@ int tcldom_parse (
     Tcl_Obj     *newObjName = NULL;
     XML_Parser   parser;
     Tcl_Channel  chan = (Tcl_Channel) NULL;
+    Tcl_CmdInfo  cmdInfo;
 
     static CONST84 char *parseOptions[] = {
         "-keepEmpties",           "-simple",        "-html",
         "-feedbackAfter",         "-channel",       "-baseurl",
         "-externalentitycommand", "-useForeignDTD", "-paramentityparsing",
+        "-feedbackcmd",
         NULL
     };
     enum parseOption {
         o_keepEmpties,            o_simple,         o_html,
         o_feedbackAfter,          o_channel,        o_baseurl,
-        o_externalentitycommand,  o_useForeignDTD,  o_paramentityparsing
+        o_externalentitycommand,  o_useForeignDTD,  o_paramentityparsing,
+        o_feedbackcmd
     };
 
     static CONST84 char *paramEntityParsingValues[] = {
@@ -5429,9 +5439,14 @@ int tcldom_parse (
                 }
             } else {
                 SetResult("The \"dom parse\" option \"-feedbackAfter\" requires"
-                          " an integer as argument.");
+                          " a positive integer as argument.");
                 return TCL_ERROR;
             }
+            if (feedbackAfter <= 0) {
+                SetResult("The \"dom parse\" option \"-feedbackAfter\" requires"
+                          " a positive integer as argument.");
+                return TCL_ERROR;
+            }                
             objv++; objc--;
             continue;
 
@@ -5472,7 +5487,7 @@ int tcldom_parse (
         case o_externalentitycommand:
             objv++; objc--;
             if (objc > 1) {
-                extResolver = tdomstrdup (Tcl_GetString (objv[1]));
+                extResolver = objv[1];
             } else {
                 SetResult("The \"dom parse\" option \"-externalentitycommand\" "
                           "requires a script as argument.");
@@ -5522,9 +5537,30 @@ int tcldom_parse (
             objv++; objc--;
             objv++; objc--;
             continue;
+
+        case o_feedbackcmd:
+            objv++; objc--;
+            if (objc > 1) {
+                feedbackCmd = objv[1];
+            } else {
+                SetResult("The \"dom parse\" option \"-feedbackcmd\" "
+                          "requires a script as argument.");
+                return TCL_ERROR;
+            }
+            objv++; objc--;
+            continue;
+
         }
     }
-    
+
+    if (feedbackAfter && !feedbackCmd) {
+        if (!Tcl_GetCommandInfo(interp, "::dom::domParseFeedback", 
+                                &cmdInfo)) {
+            SetResult("If -feedbackAfter is used, "
+                      "-feedbackcmd must also be used.");
+            return TCL_ERROR;
+        }
+    }
     if (chan == NULL) {
         if (objc < 2) {
             SetResult(dom_usage);
@@ -5614,6 +5650,7 @@ int tcldom_parse (
                           TSD(Encoding_to_8bit),
                           TSD(storeLineColumn),
                           feedbackAfter,
+                          feedbackCmd,
                           chan,
                           baseURI,
                           extResolver,

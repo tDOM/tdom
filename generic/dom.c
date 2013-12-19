@@ -158,6 +158,7 @@ typedef struct _domReadInfo {
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
     int               feedbackAfter;
+    Tcl_Obj          *feedbackCmd;
     XML_Index         nextFeedbackPosition;
     Tcl_Interp       *interp;
     int               activeNSsize;
@@ -1084,8 +1085,12 @@ startElement(
         if (info->nextFeedbackPosition
              <= XML_GetCurrentByteIndex (info->parser)
         ) {
-            sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
-            result = Tcl_Eval(info->interp, feedbackCmd);
+            if (info->feedbackCmd) {
+                result = Tcl_GlobalEvalObj(info->interp, info->feedbackCmd);
+            } else {
+                sprintf(feedbackCmd, "%s", "::dom::domParseFeedback");
+                result = Tcl_Eval(info->interp, feedbackCmd);
+            }
             if (result != TCL_OK) {
                 DBG(fprintf(stderr, "%s\n", 
                             Tcl_GetStringResult (info->interp)););
@@ -2053,9 +2058,10 @@ domReadDocument (
     TEncoding  *encoding_8bit,
     int         storeLineColumn,
     int         feedbackAfter,
+    Tcl_Obj    *feedbackCmd,
     Tcl_Channel channel,
     const char *baseurl,
-    char       *extResolver,
+    Tcl_Obj    *extResolver,
     int         useForeignDTD,
     int         paramEntityParsing,
     Tcl_Interp *interp,
@@ -2075,7 +2081,9 @@ domReadDocument (
 #endif
     domDocument    *doc = domCreateDoc(baseurl, storeLineColumn);
 
-    doc->extResolver = extResolver;
+    if (extResolver) {
+        doc->extResolver = tdomstrdup (Tcl_GetString (extResolver));
+    }
 
     info.parser               = parser;
     info.document             = doc;
@@ -2087,6 +2095,7 @@ domReadDocument (
     info.encoding_8bit        = encoding_8bit;
     info.storeLineColumn      = storeLineColumn;
     info.feedbackAfter        = feedbackAfter;
+    info.feedbackCmd          = feedbackCmd;
     info.nextFeedbackPosition = feedbackAfter;
     info.interp               = interp;
     info.activeNSpos          = -1;
@@ -5133,6 +5142,7 @@ typedef struct _tdomCmdReadInfo {
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
     int               feedbackAfter;
+    Tcl_Obj          *feedbackCmd;
     int               nextFeedbackPosition;
     Tcl_Interp       *interp;
     int               activeNSsize;
@@ -5334,6 +5344,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         info->encoding_8bit     = 0;
         info->storeLineColumn   = 0;
         info->feedbackAfter     = 0;
+        info->feedbackCmd       = NULL;
         info->nextFeedbackPosition = 0;
         info->interp            = interp;
         info->activeNSpos       = -1;

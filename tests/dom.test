@@ -209,10 +209,10 @@ test dom-2.7 {parse method: syntax check} -setup {
     removeFile dom.xml
 } -result 0
 
-test dom-2.8 {parse method: bogus option} {
+test dom-2.8 {parse method: bogus option} -body {
     set result [catch {set doc [dom parse -bogusOption foo <root/>]} errMsg]
     lappend result $errMsg
-} {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+} -match regexp -result {1 {bad option "-bogusOption": must be .*}}
 
 test dom-2.9 {parse method: bogus option} -setup {
     set xmlFile [makeFile {<root>    </root>} dom.xml]
@@ -224,7 +224,7 @@ test dom-2.9 {parse method: bogus option} -setup {
     lappend result $errMsg
 } -cleanup {
     removeFile dom.xml
-} -result {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+} -match regexp -result {1 {bad option "-bogusOption": must be .*}}
 
 set dom_dtd "
     <!ELEMENT root EMPTY>
@@ -1131,6 +1131,11 @@ test dom-5.8 {-externalentitycommand - nested external entities} -setup {
     removeFile e3.xml
 } -result [list 1 {error "not well-formed (invalid token)" in entity "e3.xml" at line 1 character 2, referenced in entity "e2.xml" at line 1 character 4, referenced in entity "e1.xml" at line 1 character 4, referenced at line 6 character 21}]
 
+test dom-5.9 {Wrong option after -externalentitycommand} -body {
+    set result [catch {dom parse -externalentitycommand ::tDOM::extRefHandler \
+                           -useForeignDTD foo}]
+} -result 1
+
 test dom-6.1 {use in slave interpreter} {
     set slave [interp create]
     load {} tdom $slave
@@ -1533,7 +1538,7 @@ test dom-12.4 {-feedbackAfter and -channel} -setup {
     set xmlFile [makeFile {<doc><e1/><e1/><e1/></doc>} dom.xml]
 } -body {
     set fd [open $xmlFile]
-    set doc [dom parse -channel $fd -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}]
+    set doc [dom parse -channel $fd -feedbackAfter 1]
     close $fd
     $doc selectNodes count(//*)
 } -cleanup {
@@ -1612,6 +1617,101 @@ test dom-12.7 {-feedbackAfter and external entities, with error} -body {
                                <doc>&a;&b;</doc>}} msg]
     list $result $msg
 } -result [list 1 "Error in feedback cmd."]
+
+test dom-12.8 {-feedbackAfter without -feedbackcmd} -setup {
+    catch {rename ::dom::domParseFeedback ""}
+} -body {
+    set result [catch {dom parse -feedbackAfter 100 <doc/>} msg]
+    list $result $msg
+} -result {1 {If -feedbackAfter is used, -feedbackcmd must also be used.}}
+
+proc feedbackcmd-12.9 {} {
+    return -code break
+}
+test dom-12.9 {-feedbackAfter with -feedbackcmd -- cmd returns TCL_BREAK} -body {
+    dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.9 \
+        {<doc><e1/><e1/><e1/></doc>}
+} -result ""
+
+proc feedbackcmd-12.10 {} {
+    error "Error in feedback cmd."
+}
+test dom-12.10 {-feedbackAfter with -feedbackcmd -- cmd returns TCL_ERROR} -body {
+    set result [catch {
+        dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.10 \
+            {<doc><e1/><e1/><e1/></doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
+proc feedbackcmd-12.11 {} {
+    # Update progess dialog, check for cancel etc.
+    return
+}
+test dom-12.11 {-feedbackAfter with -feedbackcmd} -body {
+    set doc [dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.11 \
+                 {<doc><e1/><e1/><e1/></doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+test dom-12.12 {-feedbackAfter with -feedbackcmd and -channel} -setup {
+    set xmlFile [makeFile {<doc><e1/><e1/><e1/></doc>} dom.xml]
+} -body {
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -feedbackAfter 1 \
+                 -feedbackcmd feedbackcmd-12.11]
+    close $fd
+    $doc selectNodes count(//*)
+} -cleanup {
+    removeFile dom.xml
+} -result 4
+test dom-12.13 {-feedbackAfter with -feedbackcmd and external entities} -body {
+    set doc [dom parse -externalentitycommand extRefResolver-12.5 \
+                 -feedbackcmd feedbackcmd-12.11 \
+                 -feedbackAfter 1 {
+                     <!DOCTYPE doc [
+                                    <!ENTITY a PUBLIC "a" "a.xml">
+                                    <!ENTITY b PUBLIC "b" "b.xml">
+                                    ]>
+                     <doc>&a;&b;</doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+
+set cancel 0
+proc feedbackcmd-12.14 {} {
+    global cancel
+    if {$cancel} {
+        return -code break
+    }
+}
+test dom-12.14 {-feedbackAfter with -feedbackcmd and external entities, with cancel} -body {
+    dom parse -externalentitycommand extRefResolver-12.6 \
+        -feedbackcmd feedbackcmd-12.14 \
+        -feedbackAfter 1 {
+            <!DOCTYPE doc [
+                           <!ENTITY a PUBLIC "a" "a.xml">
+                           <!ENTITY b PUBLIC "b" "b.xml">
+                          ]>
+            <doc>&a;&b;</doc>}
+} -result ""
+set cancel 0
+proc feedbackcmd-12.15 {} {
+    global cancel
+    if {$cancel} {
+        error "Error in feedback cmd."
+    }
+}
+test dom-12.15 {-feedbackAfter with -feedbackcmd and external entities, with error} -body {
+    set result [catch {dom parse -externalentitycommand extRefResolver-12.6 \
+                           -feedbackcmd feedbackcmd-12.15 \
+                           -feedbackAfter 1 {
+                               <!DOCTYPE doc [
+                                              <!ENTITY a PUBLIC "a" "a.xml">
+                                              <!ENTITY b PUBLIC "b" "b.xml">
+                                             ]>
+                               <doc>&a;&b;</doc>}} msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
 
 # cleanup
 ::tcltest::cleanupTests

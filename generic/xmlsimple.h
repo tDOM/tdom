@@ -1,4 +1,4 @@
 
 domDocument *  XML_SimpleParseDocument ( char *xml, int ignoreWhiteSpaces, 
-                                         char *baseURI, char *extResolver,
+                                         char *baseURI, Tcl_Obj *extResolver,
                                          int *pos, char **errStr );
