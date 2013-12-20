@@ -34,6 +34,36 @@ proc CDataHandler {data} {
     }
 }
 
+catch {unset started}
+proc Start {name atList} {
+    array set atts $atList
+
+    if {![info exists ::started($name)]} {
+	set ::started($name) 1
+    } else {
+	incr ::started($name)
+    }
+    if {[info exists atts(class)]} {
+	switch $atts(class) {
+	    continue {
+		return -code continue
+	    }
+	    break {
+		return -code break
+	    }
+	    error {
+		return -code error "error condition in callback"
+	    }
+            return {
+                return -code return
+            }
+	    default {
+		return -code $atts(class) 
+	    }
+	}
+    }
+}
+
 test stackedhdl-1.1 {two handlers for element start} {
     catch {unset ::count} 
     catch {unset ::charcount}
@@ -173,6 +203,58 @@ test stackedhdl-2.2 {tcl handler and C coded parser extension} {
     $doc delete
     set result
 } {3 2}
+
+test stackedhdl-2.3 {return -code return with tcl and C coded handler} -setup {
+    catch {unset started}
+} -body {
+    set p [expat -elementstartcommand Start]
+    tdom $p enable
+    set resultcode [catch {$p parse {<doc><e/><e class="return"/><e/></doc>}}]
+    set result [list $resultcode $::started(e) [[tdom $p getdoc] asXML -indent none]]
+    $p free
+    set result
+} -result {0 2 {<doc><e/><e class="return"/></doc>}}
+
+test stackedhdl-2.4 {return -code error with tcl and C coded handler} -setup {
+    catch {unset started}
+} -body {
+    set p [expat -elementstartcommand Start]
+    tdom $p enable
+    set resultcode [catch {$p parse {<doc><e/><e class="error"/><e/></doc>}} msg]
+    set result [list $resultcode $msg $::started(e) [[tdom $p getdoc] asXML -indent none]]
+    $p free
+    set result
+} -result {1 {error condition in callback} 2 {<doc><e/><e class="error"/></doc>}}
+
+test stackedhdl-2.5 {return -code return with tcl and C coded handler} -setup {
+    catch {unset started}
+} -body {
+    set p [expat -elementstartcommand Start]
+    tdom $p enable
+    set resultcode [catch {$p parse {<doc><e/><e class="return"/><e/></doc>}}]
+    set result [list $resultcode $::started(e) [[tdom $p getdoc] asXML -indent none]]
+    $p reset
+    catch {unset started}
+    set resultcode [catch {$p parse {<doc><e/><e/><e/></doc>}}]
+    lappend result $resultcode $::started(e) [[tdom $p getdoc] asXML -indent none]
+    $p free
+    set result
+} -result {0 2 {<doc><e/><e class="return"/></doc>} 0 3 <doc><e/><e/><e/></doc>}
+
+test stackedhdl-2.4 {return -code error with tcl and C coded handler} -setup {
+    catch {unset started}
+} -body {
+    set p [expat -elementstartcommand Start]
+    tdom $p enable
+    set resultcode [catch {$p parse {<doc><e/><e class="error"/><e/></doc>}} msg]
+    set result [list $resultcode $msg $::started(e) [[tdom $p getdoc] asXML -indent none]]
+    $p reset
+    catch {unset started}
+    set resultcode [catch {$p parse {<doc><e/><e/><e/></doc>}}]
+    lappend result $resultcode $::started(e) [[tdom $p getdoc] asXML -indent none]
+    $p free
+    set result
+} -result {1 {error condition in callback} 2 {<doc><e/><e class="error"/></doc>} 0 3 <doc><e/><e/><e/></doc>}
 
 test stackedhdl-3.1 {don't request the DOM tree from a tdom enabled parser} {
     set p [expat]

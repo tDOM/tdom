@@ -524,6 +524,29 @@ test parser-10.1 {return -code return in callback} {
     list $errcode $::started(Element)
 } {0 2}
 
+test parser-10.2 {return -code return in callback} {
+    catch {unset ::started}
+
+    catch {rename parser-10.2 {}}
+    set p [::xml::parser parser-10.2 -elementstartcommand Start]
+    set errcode [catch {$p parse {<?xml version="1.0"?>
+<Test>
+<Element>Should see this data</Element>
+<Element class="return"/>
+<Element>Should not see this data</Element>
+</Test>}} errMsg]
+    set result [list $errcode $::started(Element)]
+    $p reset
+    catch {unset ::started}
+    set errcode [catch {$p parse {<?xml version="1.0"?>
+<Test>
+<Element>Should see this data</Element>
+<Element class="ok"/>
+<Element>Should see this data</Element>
+</Test>}} errMsg]
+    lappend result $errcode $::started(Element)
+} {0 2 0 3}
+
 foreach parser [info commands xmlparser*] {
     $parser free
 }

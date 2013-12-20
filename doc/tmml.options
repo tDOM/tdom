@@ -2,4 +2,6 @@ array set Options {
     xsltProcessor       tdom
     masterDocument      "tDOM.xml"
     tomanOptions        -soelim
+    htmlDirectory       .
+    nroffDirectory      .
 }

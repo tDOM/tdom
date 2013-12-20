@@ -2057,7 +2057,7 @@ TclExpatHandlerResult(expat, handlerSet, result)
 
     case TCL_BREAK:
       /*
-       * Skip all further callbacks, but return OK.
+       * Skip all further callbacks of this handlerSet, but return OK.
        */
       handlerSet->status = TCL_BREAK;
       break;
@@ -2073,6 +2073,9 @@ TclExpatHandlerResult(expat, handlerSet, result)
       break;
 
     case TCL_RETURN:
+      /*
+       * Cancel parser and return OK.
+       */
       expat->status = TCL_RETURN;
       XML_StopParser (expat->parser, 1);
       expat->result = Tcl_NewObj ();
@@ -2081,7 +2084,7 @@ TclExpatHandlerResult(expat, handlerSet, result)
       
     default:
       /*
-       * Cancel parser and return OK.
+       * Cancel parser and return the error code.
        */
       expat->status = result;
       XML_StopParser (expat->parser, 1);
