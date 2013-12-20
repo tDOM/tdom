@@ -1,3 +1,24 @@
+2013-12-20 Rolf Ade  <rolf@pointsman.de>
+
+        Added option -feedbackcmd to the dom parse method. This option
+        allows to specify a script, which will be called as feedback
+        command. For backward compatibility, if no -feedbackcmd is
+        given, but there is a tcl proc named ::dom::domParseFeedback
+        then this proc is used as -feedbackcmd. If there isn't such a
+        proc and -feedbackAfter is used, it is an error to not also
+        use -feedbackcmd. A return -code break from the -feedbackcmd
+        causes the parser to almost immediatly abort parsing and let
+        the [dom parse] call return the empty string (instead of a
+        document) without raising error. 
+
+        For expat parser objects: If a handler script returns -code
+        return, then parsing is aborted, but no error is raised.
+
+2013-12-04 Rolf Ade <rolf@pointsman.de>
+
+        tDOM now cross-compiles on linux for windows (w32/w64) with
+        mingw-w64.
+        
 2013-09-26 Rolf Ade  <rolf@pointsman.de>
 
         Added dom method featureinfo.
