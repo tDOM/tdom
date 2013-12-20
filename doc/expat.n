@@ -846,6 +846,9 @@ If a callback script returns a "continue" error code then
 processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.
+.PP
+If a callback script returns a "return" error
+code then parsing is canceled altogether, but no error is raised.
 .SH "SEE ALSO"
 expatapi, tdom
 .SH KEYWORDS

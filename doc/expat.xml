@@ -714,6 +714,9 @@ processing of the current element, and its children, ceases for every handler
 script out of this Tcl handler set and processing continues with the next
 (sibling) element. This does not influence any other handler set.</p>
 
+      <p>If a callback script returns a &quot;return&quot; error
+code then parsing is canceled altogether, but no error is raised.</p>
+
     </section>
 
     <seealso>

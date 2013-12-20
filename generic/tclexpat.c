@@ -1013,6 +1013,7 @@ TclExpatParse (interp, expat, data, len, type)
     case TCL_OK:
     case TCL_BREAK:
     case TCL_CONTINUE:
+    case TCL_RETURN:
       Tcl_ResetResult(interp);
       return TCL_OK;
 
@@ -2056,25 +2057,37 @@ TclExpatHandlerResult(expat, handlerSet, result)
 
     case TCL_BREAK:
       /*
-       * Skip all further callbacks, but return OK.
+       * Skip all further callbacks of this handlerSet, but return OK.
        */
       handlerSet->status = TCL_BREAK;
       break;
 
     case TCL_ERROR:
       /*
-       * Skip all further callbacks, and return error.
+       * Cancel parsing and return error.
        */
       expat->status = TCL_ERROR;
+      XML_StopParser (expat->parser, 1);
       expat->result = Tcl_GetObjResult(expat->interp);
+      Tcl_IncrRefCount(expat->result);
+      break;
+
+    case TCL_RETURN:
+      /*
+       * Cancel parser and return OK.
+       */
+      expat->status = TCL_RETURN;
+      XML_StopParser (expat->parser, 1);
+      expat->result = Tcl_NewObj ();
       Tcl_IncrRefCount(expat->result);
       break;
       
     default:
       /*
-       * Skip all further callbacks, set return value and return error.
+       * Cancel parser and return the error code.
        */
       expat->status = result;
+      XML_StopParser (expat->parser, 1);
       expat->result = Tcl_GetObjResult(expat->interp);
       Tcl_IncrRefCount(expat->result);
       break;

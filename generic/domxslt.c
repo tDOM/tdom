@@ -5871,8 +5871,9 @@ getExternalDocument (
     Tcl_Obj      *cmdPtr, *resultObj, *extbaseObj, *xmlstringObj;
     Tcl_Obj      *channelIdObj, *resultTypeObj;
     int           len, mode, result, storeLineColumn;
+    int           resultcode = 0;
     char         *resultType, *extbase, *xmlstring, *channelId, s[20];
-    char         *extResolver = NULL;
+    Tcl_Obj      *extResolver = NULL;
     CONST84 char *str;
     domDocument  *doc;
     xsltSubDoc   *sdoc;
@@ -5975,14 +5976,18 @@ getExternalDocument (
 
     Tcl_ResetResult (interp);
     if (xsltDoc->extResolver) {
-        extResolver = tdomstrdup (xsltDoc->extResolver);
+        extResolver = Tcl_NewStringObj(xsltDoc->extResolver, -1);
+        Tcl_IncrRefCount (extResolver);
     }
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
     doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
-                           chan, extbase, extResolver, 0, 
-                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp);
-
+                           NULL, chan, extbase, extResolver, 0, 
+                           (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp,
+                           &resultcode);
+    if (xsltDoc->extResolver) {
+        Tcl_DecrRefCount (extResolver);
+    }
     if (doc == NULL) {
         DBG(fprintf (stderr, "parse error, str len %d, xmlstring: -->%s<--\n",
                      strlen (xmlstring), xmlstring);)

@@ -1043,14 +1043,14 @@ XML_SimpleParseDocument (
     char    *xml,              /* Complete text of the file being parsed  */
     int      ignoreWhiteSpaces,
     char    *baseURI,
-    char    *extResolver,
+    Tcl_Obj *extResolver,
     int     *pos,
     char   **errStr
 ) {
     domDocument   *doc = domCreateDoc(baseURI, 0);
 
     if (extResolver) {
-        doc->extResolver = extResolver;
+        doc->extResolver = tdomstrdup (Tcl_GetString (extResolver));
     }
     
     *pos = 0;

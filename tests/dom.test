@@ -14,6 +14,7 @@
 #    dom-9.*:  setObjectCommands
 #    dom-10.*: createNodeCmd
 #    dom-11.*: featureinfo
+#    dom-12.*: -feedbackAfter
 #
 # Copyright (c) 2002, 2003, 2004 Rolf Ade.
 
@@ -208,10 +209,10 @@ test dom-2.7 {parse method: syntax check} -setup {
     removeFile dom.xml
 } -result 0
 
-test dom-2.8 {parse method: bogus option} {
+test dom-2.8 {parse method: bogus option} -body {
     set result [catch {set doc [dom parse -bogusOption foo <root/>]} errMsg]
     lappend result $errMsg
-} {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+} -match regexp -result {1 {bad option "-bogusOption": must be .*}}
 
 test dom-2.9 {parse method: bogus option} -setup {
     set xmlFile [makeFile {<root>    </root>} dom.xml]
@@ -223,7 +224,7 @@ test dom-2.9 {parse method: bogus option} -setup {
     lappend result $errMsg
 } -cleanup {
     removeFile dom.xml
-} -result {1 {bad option "-bogusOption": must be -keepEmpties, -simple, -html, -feedbackAfter, -channel, -baseurl, -externalentitycommand, -useForeignDTD, or -paramentityparsing}}
+} -match regexp -result {1 {bad option "-bogusOption": must be .*}}
 
 set dom_dtd "
     <!ELEMENT root EMPTY>
@@ -332,7 +333,7 @@ test dom-2.17 {parse method: test reporting of error in external subset} {
     }]} errMsg]
     lappend result $errMsg
 } {1 {error "syntax error" in entity "dummysystemID" at line 1 character 20
-"<!ATTLIST root lang # <--Error-- FIXED "en">"}}
+"<!ATTLIST root lang # <--Error-- FIXED "en">", referenced at line 2 character 58}}
 
 test dom-2.18 {parse document with nodes before and after the documentElement} {
     set doc [dom parse {<!-- First comment -->
@@ -942,6 +943,199 @@ test dom-5.2 {-externalentitycommand} {
     set ::dom-5_2
 } {thisDoc}
 
+proc dom-5.3 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            # Not well-formed
+            set data "<e,1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.3 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.3 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e1.xml" at line 1 character 2
+"<e, <--Error-- 1/>", referenced at line 4 character 21}]
+
+proc dom-5.4 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data "<e1>&e2;</e1>"
+        }
+        "e2" {
+            set data "<e,2/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.4 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.4 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e2.xml" at line 1 character 2
+"<e, <--Error-- 2/>", referenced in entity "e1.xml" at line 1 character 4, referenced at line 5 character 21}]
+
+proc dom-5.5 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data "<e1>&e2;</e1>"
+        }
+        "e2" {
+            set data "<e2>&e3;</e2>"
+        }
+        "e3" {
+            # Not well-formed
+            set data "<e,3/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-5.5 {-externalentitycommand - nested external entities} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.5 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            <!ENTITY e3 PUBLIC "e3" "e3.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e3.xml" at line 1 character 2
+"<e, <--Error-- 3/>", referenced in entity "e2.xml" at line 1 character 4, referenced in entity "e1.xml" at line 1 character 4, referenced at line 6 character 21}]
+
+proc dom-5.6 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.6 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e,1/>" e1.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.6 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e1.xml" at line 1 character 2, referenced at line 4 character 21}]
+
+proc dom-5.7 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        "e2" {
+            set data [open $::e2]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.7 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e1>&e2;</e1>" e1.xml]
+    set e2 [makeFile "<e,2/>" e2.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.7 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+    removeFile e2.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e2.xml" at line 1 character 2, referenced in entity "e1.xml" at line 1 character 4, referenced at line 5 character 21}]
+
+proc dom-5.8 {base systemId publicId} {
+    switch $publicId {
+        "e1" {
+            set data [open $::e1]
+        }
+        "e2" {
+            set data [open $::e2]
+        }
+        "e3" {
+            set data [open $::e3]
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    lappend ::openChannels $data
+    return [list "channel" $base $data]
+}
+test dom-5.8 {-externalentitycommand - nested external entities} -setup {
+    set e1 [makeFile "<e1>&e2;</e1>" e1.xml]
+    set e2 [makeFile "<e2>&e3;</e2>" e2.xml]
+    set e3 [makeFile "<e,3/>" e3.xml]
+    set openChannels [list]
+} -body {
+    set result [catch {
+        dom parse -externalentitycommand dom-5.8 \
+            {<!DOCTYPE doc [
+                            <!ENTITY e1 PUBLIC "e1" "e1.xml">
+                            <!ENTITY e2 PUBLIC "e2" "e2.xml">
+                            <!ENTITY e3 PUBLIC "e3" "e3.xml">
+                            ]>
+                <doc>&e1;</doc>}
+    } msg]
+    list $result $msg
+} -cleanup {
+    foreach channel $openChannels {close $channel}
+    removeFile e1.xml
+    removeFile e2.xml
+    removeFile e3.xml
+} -result [list 1 {error "not well-formed (invalid token)" in entity "e3.xml" at line 1 character 2, referenced in entity "e2.xml" at line 1 character 4, referenced in entity "e1.xml" at line 1 character 4, referenced at line 6 character 21}]
+
+test dom-5.9 {Wrong option after -externalentitycommand} -body {
+    set result [catch {dom parse -externalentitycommand ::tDOM::extRefHandler \
+                           -useForeignDTD foo}]
+} -result 1
+
 test dom-6.1 {use in slave interpreter} {
     set slave [interp create]
     load {} tdom $slave
@@ -1314,6 +1508,210 @@ test dom-11.3 {featureinfo - expatmajorversion} -body {
 test dom-11.4 {featureinfo - dtd} -body {
     dom featureinfo dtd
 } -match regexp -result {(0|1)}
+
+proc ::dom::domParseFeedback {} {
+    return -code break
+}
+test dom-12.1 {-feedbackAfter -- cmd returns TCL_BREAK} -body {
+    dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}
+} -result ""
+
+proc ::dom::domParseFeedback {} {
+    error "Error in feedback cmd."
+}
+test dom-12.2 {-feedbackAfter -- cmd returns TCL_ERROR} -body {
+    set result [catch {
+        dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
+proc ::dom::domParseFeedback {} {
+    # Update progess dialog, check for cancel etc.
+    return
+}
+test dom-12.3 {-feedbackAfter} -body {
+    set doc [dom parse -feedbackAfter 1 {<doc><e1/><e1/><e1/></doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+test dom-12.4 {-feedbackAfter and -channel} -setup {
+    set xmlFile [makeFile {<doc><e1/><e1/><e1/></doc>} dom.xml]
+} -body {
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -feedbackAfter 1]
+    close $fd
+    $doc selectNodes count(//*)
+} -cleanup {
+    removeFile dom.xml
+} -result 4
+proc extRefResolver-12.5 {base systemId publicId} {
+    switch $publicId {
+        "a" {
+            set data "<e1/>"
+        }
+        "b" {
+            set data "<e1/><e1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+test dom-12.5 {-feedbackAfter and external entities} -body {
+    set doc [dom parse -externalentitycommand extRefResolver-12.5 \
+                 -feedbackAfter 1 {
+                     <!DOCTYPE doc [
+                                    <!ENTITY a PUBLIC "a" "a.xml">
+                                    <!ENTITY b PUBLIC "b" "b.xml">
+                                    ]>
+                     <doc>&a;&b;</doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+
+set cancel 0
+proc extRefResolver-12.6 {base systemId publicId} {
+    global cancel
+    switch $publicId {
+        "a" {
+            set cancel 1
+            set data "<e1/><e1/>"
+        }
+        "b" {
+            set data "<e1/>"
+        }
+        default {
+            error "unknown public ID"
+        }
+    }
+    return [list "string" $base $data]
+}
+proc ::dom::domParseFeedback {} {
+    global cancel
+    if {$cancel} {
+        return -code break
+    }
+}
+test dom-12.6 {-feedbackAfter and external entities, with cancel} -body {
+    dom parse -externalentitycommand extRefResolver-12.6 \
+        -feedbackAfter 1 {
+            <!DOCTYPE doc [
+                           <!ENTITY a PUBLIC "a" "a.xml">
+                           <!ENTITY b PUBLIC "b" "b.xml">
+                          ]>
+            <doc>&a;&b;</doc>}
+} -result ""
+proc ::dom::domParseFeedback {} {
+    global cancel
+    if {$cancel} {
+        error "Error in feedback cmd."
+    }
+}
+test dom-12.7 {-feedbackAfter and external entities, with error} -body {
+    set result [catch {dom parse -externalentitycommand extRefResolver-12.6 \
+                           -feedbackAfter 1 {
+                               <!DOCTYPE doc [
+                                              <!ENTITY a PUBLIC "a" "a.xml">
+                                              <!ENTITY b PUBLIC "b" "b.xml">
+                                             ]>
+                               <doc>&a;&b;</doc>}} msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
+test dom-12.8 {-feedbackAfter without -feedbackcmd} -setup {
+    catch {rename ::dom::domParseFeedback ""}
+} -body {
+    set result [catch {dom parse -feedbackAfter 100 <doc/>} msg]
+    list $result $msg
+} -result {1 {If -feedbackAfter is used, -feedbackcmd must also be used.}}
+
+proc feedbackcmd-12.9 {} {
+    return -code break
+}
+test dom-12.9 {-feedbackAfter with -feedbackcmd -- cmd returns TCL_BREAK} -body {
+    dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.9 \
+        {<doc><e1/><e1/><e1/></doc>}
+} -result ""
+
+proc feedbackcmd-12.10 {} {
+    error "Error in feedback cmd."
+}
+test dom-12.10 {-feedbackAfter with -feedbackcmd -- cmd returns TCL_ERROR} -body {
+    set result [catch {
+        dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.10 \
+            {<doc><e1/><e1/><e1/></doc>}
+    } msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
+proc feedbackcmd-12.11 {} {
+    # Update progess dialog, check for cancel etc.
+    return
+}
+test dom-12.11 {-feedbackAfter with -feedbackcmd} -body {
+    set doc [dom parse -feedbackAfter 1 -feedbackcmd feedbackcmd-12.11 \
+                 {<doc><e1/><e1/><e1/></doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+test dom-12.12 {-feedbackAfter with -feedbackcmd and -channel} -setup {
+    set xmlFile [makeFile {<doc><e1/><e1/><e1/></doc>} dom.xml]
+} -body {
+    set fd [open $xmlFile]
+    set doc [dom parse -channel $fd -feedbackAfter 1 \
+                 -feedbackcmd feedbackcmd-12.11]
+    close $fd
+    $doc selectNodes count(//*)
+} -cleanup {
+    removeFile dom.xml
+} -result 4
+test dom-12.13 {-feedbackAfter with -feedbackcmd and external entities} -body {
+    set doc [dom parse -externalentitycommand extRefResolver-12.5 \
+                 -feedbackcmd feedbackcmd-12.11 \
+                 -feedbackAfter 1 {
+                     <!DOCTYPE doc [
+                                    <!ENTITY a PUBLIC "a" "a.xml">
+                                    <!ENTITY b PUBLIC "b" "b.xml">
+                                    ]>
+                     <doc>&a;&b;</doc>}]
+    $doc selectNodes count(//*)
+} -result 4
+
+set cancel 0
+proc feedbackcmd-12.14 {} {
+    global cancel
+    if {$cancel} {
+        return -code break
+    }
+}
+test dom-12.14 {-feedbackAfter with -feedbackcmd and external entities, with cancel} -body {
+    dom parse -externalentitycommand extRefResolver-12.6 \
+        -feedbackcmd feedbackcmd-12.14 \
+        -feedbackAfter 1 {
+            <!DOCTYPE doc [
+                           <!ENTITY a PUBLIC "a" "a.xml">
+                           <!ENTITY b PUBLIC "b" "b.xml">
+                          ]>
+            <doc>&a;&b;</doc>}
+} -result ""
+set cancel 0
+proc feedbackcmd-12.15 {} {
+    global cancel
+    if {$cancel} {
+        error "Error in feedback cmd."
+    }
+}
+test dom-12.15 {-feedbackAfter with -feedbackcmd and external entities, with error} -body {
+    set result [catch {dom parse -externalentitycommand extRefResolver-12.6 \
+                           -feedbackcmd feedbackcmd-12.15 \
+                           -feedbackAfter 1 {
+                               <!DOCTYPE doc [
+                                              <!ENTITY a PUBLIC "a" "a.xml">
+                                              <!ENTITY b PUBLIC "b" "b.xml">
+                                             ]>
+                               <doc>&a;&b;</doc>}} msg]
+    list $result $msg
+} -result [list 1 "Error in feedback cmd."]
+
 
 # cleanup
 ::tcltest::cleanupTests

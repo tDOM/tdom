@@ -730,12 +730,14 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   TEncoding *encoding_8bit,
                                   int   storeLineColumn,
                                   int   feedbackAfter,
+                                  Tcl_Obj *feedbackCmd,
                                   Tcl_Channel channel,
                                   const char *baseurl,
-                                  char *extResolver,
+                                  Tcl_Obj *extResolver,
                                   int   useForeignDTD,
                                   int   paramEntityParsing,
-                                  Tcl_Interp *interp);
+                                  Tcl_Interp *interp,
+                                  int  *status);
 
 void           domFreeDocument   (domDocument *doc, 
                                   domFreeCallback freeCB, 

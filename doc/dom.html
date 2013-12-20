@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0xc559e0">NAME</a> · <a href="#SECTid0xc0a3d0">SYNOPSIS</a> · <a href="#SECTid0xc5fe50">DESCRIPTION </a> · <a href="#SECTid0xbf8f80">KEYWORDS</a>
+<a href="#SECTid0x260e9a0">NAME</a> · <a href="#SECTid0x260ebe0">SYNOPSIS</a> · <a href="#SECTid0x2633bb0">DESCRIPTION </a> · <a href="#SECTid0x264bac0">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0xc559e0">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0x260e9a0">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid0xc0a3d0">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid0x260ebe0">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid0xc5fe50">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid0x2633bb0">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -108,11 +108,37 @@ stored within the DOM tree.</dd>
 </dt>
                 
                 <dd>If <i class="m">-feedbackAfter &lt;#bytes&gt;</i> is specified, the
-tcl command ::dom::domParseFeedback is evaluated after parsing every #bytes. If
-you use this option, you have to create a tcl proc named
-::dom::domParseFeedback, otherwise you will get an error. Please notice, that
-the calls of ::dom::domParseFeedback are not done exactly every #bytes, but
-always at the first element start after every #bytes.</dd>
+tcl command given by <i class="m">-feedbackcmd</i> is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes.For backward compatibility, if no -feedbackcmd is given, but
+there is a tcl proc named ::dom::domParseFeedback then this proc is
+used as -feedbackcmd. If there isn't such a proc and -feedbackAfter is
+used, it is an error to not also use -feedbackcmd. If the called
+script raises error, then parsing will be aborted, the
+<i class="m">dom parse</i> call returns error, with the script
+error msg as error msg. If the called script <i class="m">return
+-code break</i>, the parsing will abort and the <i class="m">dom
+parse</i> call will return the empty string.</dd>
+              
+
+              
+                <dt>
+<b>-feedbackcmd</b> <i>&lt;script&gt;</i>
+</dt>
+                
+                <dd>If <i class="m">-feedbackcmd &lt;script&gt;</i> is specified, the
+script <i class="m">script</i> is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes value given by the <i class="m">-feedbackAfter</i> option. If
+<i class="m">-feedbackAfter</i> isn't given, using this option
+doesn't has any effect. If the called
+script raises error, then parsing will be aborted, the
+<i class="m">dom parse</i> call returns error, with the script
+error msg as error msg. If the called script <i class="m">return
+-code break</i>, the parsing will abort and the <i class="m">dom
+parse</i> call will return the empty string.</dd>
               
 
               
@@ -420,8 +446,7 @@ recommendation. Otherwise it returns 0.</dd>
 
         
             <dt>
-<b class="cmd">dom</b> <b class="method">featureinfo</b>
-            <i class="m">feature</i>
+<b class="cmd">dom</b> <b class="method">featureinfo</b> <i class="m">feature</i>
 </dt>
             <dd>This method provides information about the used
             build options and the expat version. The valid values for
@@ -479,7 +504,7 @@ recommendation. Otherwise it returns 0.</dd>
         
     </dl>
 
-<h2><a name="SECTid0xbf8f80">KEYWORDS</a></h2><p class="keywords">
+<h2><a name="SECTid0x264bac0">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">
