@@ -57,6 +57,9 @@ proc Start {name atList args} {
 	    error {
 		return -code error "error condition in callback"
 	    }
+            return {
+                return -code return
+            }
 	    default {
 		return -code $atts(class) 
 	    }
@@ -504,6 +507,22 @@ test parser-9.2 {try to use the parser form within one of its callbacks} {
     $parser free
     set result
 } {1 {Parser already in use.}}
+
+
+test parser-10.1 {return -code return in callback} {
+    catch {unset ::started}
+
+    catch {rename parser-10.1 {}}
+    set p [::xml::parser parser-10.1 -elementstartcommand Start]
+    set errcode [catch {$p parse {<?xml version="1.0"?>
+<Test>
+<Element>Should see this data</Element>
+<Element class="return"/>
+<Element>Should not see this data</Element>
+</Test>
+}} result]
+    list $errcode $::started(Element)
+} {0 2}
 
 foreach parser [info commands xmlparser*] {
     $parser free

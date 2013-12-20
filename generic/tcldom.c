@@ -1097,6 +1097,7 @@ int tcldom_appendXML (
 
     if (node->ownerDocument->extResolver) {
         extResolver = Tcl_NewStringObj(node->ownerDocument->extResolver, -1);
+        Tcl_IncrRefCount (extResolver);
     }
 
     doc = domReadDocument(parser,
