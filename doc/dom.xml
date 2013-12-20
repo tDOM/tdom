@@ -111,11 +111,35 @@ stored within the DOM tree.</desc>
                 <optname>-feedbackAfter</optname>
                 <optarg>&lt;#bytes&gt;</optarg>
                 <desc>If <m>-feedbackAfter &lt;#bytes&gt;</m> is specified, the
-tcl command ::dom::domParseFeedback is evaluated after parsing every #bytes. If
-you use this option, you have to create a tcl proc named
-::dom::domParseFeedback, otherwise you will get an error. Please notice, that
-the calls of ::dom::domParseFeedback are not done exactly every #bytes, but
-always at the first element start after every #bytes.</desc>
+tcl command given by <m>-feedbackcmd</m> is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes.For backward compatibility, if no -feedbackcmd is given, but
+there is a tcl proc named ::dom::domParseFeedback then this proc is
+used as -feedbackcmd. If there isn't such a proc and -feedbackAfter is
+used, it is an error to not also use -feedbackcmd. If the called
+script raises error, then parsing will be aborted, the
+<m>dom parse</m> call returns error, with the script
+error msg as error msg. If the called script <m>return
+-code break</m>, the parsing will abort and the <m>dom
+parse</m> call will return the empty string.</desc>
+              </optdef>
+
+              <optdef>
+                <optname>-feedbackcmd</optname>
+                <optarg>&lt;script&gt;</optarg>
+                <desc>If <m>-feedbackcmd &lt;script&gt;</m> is specified, the
+script <m>script</m> is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes value given by the <m>-feedbackAfter</m> option. If
+<m>-feedbackAfter</m> isn't given, using this option
+doesn't has any effect. If the called
+script raises error, then parsing will be aborted, the
+<m>dom parse</m> call returns error, with the script
+error msg as error msg. If the called script <m>return
+-code break</m>, the parsing will abort and the <m>dom
+parse</m> call will return the empty string.</desc>
               </optdef>
 
               <optdef>

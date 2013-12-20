@@ -255,11 +255,31 @@ in the document are resolved relative to this base URI. This base URI is also
 stored within the DOM tree.
 .IP "\fB-feedbackAfter  \fI<#bytes>\fP\fR"
 If \fI-feedbackAfter <#bytes>\fR is specified, the
-tcl command ::dom::domParseFeedback is evaluated after parsing every #bytes. If
-you use this option, you have to create a tcl proc named
-::dom::domParseFeedback, otherwise you will get an error. Please notice, that
-the calls of ::dom::domParseFeedback are not done exactly every #bytes, but
-always at the first element start after every #bytes.
+tcl command given by \fI-feedbackcmd\fR is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes.For backward compatibility, if no -feedbackcmd is given, but
+there is a tcl proc named ::dom::domParseFeedback then this proc is
+used as -feedbackcmd. If there isn't such a proc and -feedbackAfter is
+used, it is an error to not also use -feedbackcmd. If the called
+script raises error, then parsing will be aborted, the
+\&\fIdom parse\fR call returns error, with the script
+error msg as error msg. If the called script \fIreturn
+-code break\fR, the parsing will abort and the \fIdom
+parse\fR call will return the empty string.
+.IP "\fB-feedbackcmd  \fI<script>\fP\fR"
+If \fI-feedbackcmd <script>\fR is specified, the
+script \fIscript\fR is evaluated at the first
+element start within the document (or an external entity) after the
+start of the document or external entity or the last such call after
+#bytes value given by the \fI-feedbackAfter\fR option. If
+\&\fI-feedbackAfter\fR isn't given, using this option
+doesn't has any effect. If the called
+script raises error, then parsing will be aborted, the
+\&\fIdom parse\fR call returns error, with the script
+error msg as error msg. If the called script \fIreturn
+-code break\fR, the parsing will abort and the \fIdom
+parse\fR call will return the empty string.
 .IP "\fB-externalentitycommand  \fI<script>\fP\fR"
 If \fI-externalentitycommand <script>\fR is
 specified, the specified tcl script is called to resolve any external entities
