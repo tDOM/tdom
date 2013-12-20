@@ -5,6 +5,9 @@ of the leading fossil repository
 github repository at https://github.com/tDOM/tdom for detailed lists
 of code changes.
 
+User interface changes/enhancements and other important changes will
+still be documented in the CHANGES file.
+
 2012-05-17  Rolf Ade  <rolf@pointsman.de>
 
         * generic/dom.h
