@@ -2072,6 +2072,7 @@ void tcldom_AppendEscaped (
     int   charDone, i;
 #if !TclOnly8Bits
     int   clen = 0;
+    int   unicode;
     Tcl_UniChar uniChar;
 #endif
 
@@ -2386,12 +2387,19 @@ void tcldom_AppendEscaped (
                     clen = UTF8_CHAR_LEN(*pc);
                     if (!clen) {
                         domPanic("tcldom_AppendEscaped: can only handle "
-                                 "UTF-8 chars up to 3 bytes length");
-                    }
-                    if (escapeNonASCII) {
-                        Tcl_UtfToUniChar(pc, &uniChar);
+                                 "UTF-8 chars up to 4 bytes length");
+                    } else if (clen == 4 || escapeNonASCII) {
+                        if (clen == 4) {
+                            unicode = ((pc[0] & 0x07) << 18) 
+                                + ((pc[1] & 0x3F) << 12)
+                                + ((pc[2] & 0x3F) <<  6) 
+                                + (pc[3] & 0x3F);
+                        } else {
+                            unicode = 0;
+                            Tcl_UtfToUniChar(pc, (Tcl_UniChar*)&unicode);
+                        }
                         AP('&') AP('#')
-                            sprintf(charRef, "%d", uniChar);
+                        sprintf(charRef, "%d", unicode);
                         for (i = 0; i < (int)strlen(charRef); i++) {
                             AP(charRef[i]);
                         }

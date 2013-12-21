@@ -160,7 +160,8 @@
 #define UTF8_CHAR_LEN(c) \
   UTF8_1BYTE_CHAR((c)) ? 1 : \
    (UTF8_2BYTE_CHAR((c)) ? 2 : \
-     (UTF8_3BYTE_CHAR((c)) ? 3 : 0))
+     (UTF8_3BYTE_CHAR((c)) ? 3 : \
+       (UTF8_4BYTE_CHAR((c)) ? 4 : 0)))
 #endif
 
 /* The following 2 defines are out of the expat code */
