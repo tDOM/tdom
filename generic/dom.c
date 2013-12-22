@@ -363,6 +363,7 @@ domIsChar (
     p = str;
     while (*p) {
         clen = UTF8_CHAR_LEN(*p);
+        if (clen > 4) return 0;
         if (UTF8_XMLCHAR((unsigned const char *)p,clen))
             p += clen;
         else return 0;

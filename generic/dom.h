@@ -237,6 +237,12 @@ We need 8 bits to index into pages, 3 bits to add to that index and
          : 1) \
       : 1)) \
     
+/* This definition is lax in the sense, that it accepts every 4 byte
+ * utf-8 character beyond #xFFFF as valid, no matter, if Unicode has
+ * (so far) defined a character for that encoding point. Additionally,
+ * this define does not care about the discouraged characters beyond
+ * #xFFFF (but after all, they are only discouraged, not
+ * forbidden). */
 #  define UTF8_XMLCHAR(p, n) \
   ((n) == 1 \
   ? CharBit[(int)(*(p))] \
@@ -244,7 +250,8 @@ We need 8 bits to index into pages, 3 bits to add to that index and
     ? 1 \
     : ((n) == 3 \
       ? (UTF8_XMLCHAR3(p)) \
-      : 0)))
+      : ((n) == 4 \
+        ? 1 : 0))))
 #endif
 
 #include "../expat/nametab.h"
