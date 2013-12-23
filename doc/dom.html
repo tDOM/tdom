@@ -4,17 +4,17 @@
 </head><body>
 <div class="header">
 <div class="navbar" align="center">
-<a href="#SECTid0x260e9a0">NAME</a> · <a href="#SECTid0x260ebe0">SYNOPSIS</a> · <a href="#SECTid0x2633bb0">DESCRIPTION </a> · <a href="#SECTid0x264bac0">KEYWORDS</a>
+<a href="#SECTid0x1ed39a0">NAME</a> · <a href="#SECTid0x1ed3be0">SYNOPSIS</a> · <a href="#SECTid0x1ef8bb0">DESCRIPTION </a> · <a href="#SECTid0x1f11640">KEYWORDS</a>
 </div><hr class="navsep">
 </div><div class="body">
-  <h2><a name="SECTid0x260e9a0">NAME</a></h2><p class="namesection">
+  <h2><a name="SECTid0x1ed39a0">NAME</a></h2><p class="namesection">
 <b class="names">dom - </b><br>Create an in-memory DOM tree from XML</p>
   
-  <h2><a name="SECTid0x260ebe0">SYNOPSIS</a></h2><pre class="syntax">package require tdom
+  <h2><a name="SECTid0x1ed3be0">SYNOPSIS</a></h2><pre class="syntax">package require tdom
 
 <b class="cmd">dom</b> <i class="m">method</i> ?<i class="m">arg arg ...</i>?</pre>
 
-  <h2><a name="SECTid0x2633bb0">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
+  <h2><a name="SECTid0x1ef8bb0">DESCRIPTION </a></h2><p>This command provides the creation of complete DOM trees in memory. In
 the usual case a string containing a XML information is parsed and converted
 into a DOM tree. <i class="m">method</i> indicates a specific subcommand. </p><p>The valid methods are:</p><dl class="commandlist">
         
@@ -416,6 +416,17 @@ recommendation. Otherwise it returns 0.</dd>
 
         
           <dt>
+<b class="cmd">dom</b> <b class="method">isBMPCharData</b>
+<i class="m">string</i>
+</dt>
+          <dd>Returns 1, if every character in <i class="m">string</i> is
+a valid XML Char with a Unicode code point within the Basic
+Multilingual Plane (that means, that every character within the string
+is at most 3 bytes long). Otherwise it returns 0.</dd>
+        
+
+        
+          <dt>
 <b class="cmd">dom</b> <b class="method">isComment</b>
 <i class="m">string</i>
 </dt>
@@ -499,12 +510,17 @@ recommendation. Otherwise it returns 0.</dd>
                     <dd>Returns as boolean, if build with
                     <i class="m">--enable-lessns</i>.</dd>
                 
+                
+                    <dt><b>TCL_UTF_MAX</b></dt>
+                    <dd>Returns the TCL_UTF_MAX value of the tcl
+                    core, tDOM was build with as integer</dd>
+                
             </dl>
             </dd>   
         
     </dl>
 
-<h2><a name="SECTid0x264bac0">KEYWORDS</a></h2><p class="keywords">
+<h2><a name="SECTid0x1f11640">KEYWORDS</a></h2><p class="keywords">
 <a class="keyword" href="keyword-index.html#KW-XML">XML</a>, <a class="keyword" href="keyword-index.html#KW-DOM">DOM</a>, <a class="keyword" href="keyword-index.html#KW-document">document</a>, <a class="keyword" href="keyword-index.html#KW-node">node</a>, <a class="keyword" href="keyword-index.html#KW-parsing">parsing</a>
 </p>
 </div><hr class="navsep"><div class="navbar" align="center">

@@ -496,6 +496,12 @@ to production 6 of the of the Namespaces in XML recommendation. Otherwise it ret
 a valid XML Char according to production 2 of the XML 1.0
 recommendation. Otherwise it returns 0.
 .TP
+\&\fB\fBdom\fP \fBisBMPCharData\fP \fIstring\fB
+\&\fRReturns 1, if every character in \fIstring\fR is
+a valid XML Char with a Unicode code point within the Basic
+Multilingual Plane (that means, that every character within the string
+is at most 3 bytes long). Otherwise it returns 0.
+.TP
 \&\fB\fBdom\fP \fBisComment\fP \fIstring\fB
 \&\fRReturns 1, if \fIstring\fR is
 a valid comment according to production 15 of the XML 1.0
@@ -545,6 +551,9 @@ Returns as boolean, if build with
 .IP "\fBlessns\fR"
 Returns as boolean, if build with
 \&\fI--enable-lessns\fR.
+.IP "\fBTCL_UTF_MAX\fR"
+Returns the TCL_UTF_MAX value of the tcl
+core, tDOM was build with as integer
 .RE
 .SH KEYWORDS
 XML, DOM, document, node, parsing

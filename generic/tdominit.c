@@ -65,11 +65,25 @@ int
 Tdom_Init (interp)
      Tcl_Interp *interp; /* Interpreter to initialize. */
 {
-
+    int nrOfBytes;
+    Tcl_UniChar uniChar;
+        
 #ifdef USE_TCL_STUBS
     Tcl_InitStubs(interp, "8", 0);
 #endif
 
+    nrOfBytes =  Tcl_UtfToUniChar ("\xF4\xA2\xA2\xA2", &uniChar);
+#if TCL_UTF_MAX > 3
+    if (nrOfBytes != 4) {
+# else
+    if (nrOfBytes > 1) {
+#endif
+        Tcl_SetResult (interp, "This interpreter and tDOM are build with"
+                       " different TCL_UTF_MAX. This will not work"
+                       " reliable", NULL);
+        return TCL_ERROR;
+    }
+        
     domModuleInitialize();
 
 #ifdef TCL_THREADS

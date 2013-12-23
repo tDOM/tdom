@@ -391,6 +391,15 @@ recommendation. Otherwise it returns 0.</desc>
         </commanddef>
 
         <commanddef>
+          <command><cmd>dom</cmd> <method>isBMPCharData</method>
+<m>string</m></command>
+          <desc>Returns 1, if every character in <m>string</m> is
+a valid XML Char with a Unicode code point within the Basic
+Multilingual Plane (that means, that every character within the string
+is at most 3 bytes long). Otherwise it returns 0.</desc>
+        </commanddef>
+
+        <commanddef>
           <command><cmd>dom</cmd> <method>isComment</method>
 <m>string</m></command>
           <desc>Returns 1, if <m>string</m> is
@@ -466,6 +475,11 @@ recommendation. Otherwise it returns 0.</desc>
                     <optname>lessns</optname>
                     <desc>Returns as boolean, if build with
                     <m>--enable-lessns</m>.</desc>
+                </optdef>
+                <optdef>
+                    <optname>TCL_UTF_MAX</optname>
+                    <desc>Returns the TCL_UTF_MAX value of the tcl
+                    core, tDOM was build with as integer</desc>
                 </optdef>
             </optlist>
             </desc>   
