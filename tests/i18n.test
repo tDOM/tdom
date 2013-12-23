@@ -87,6 +87,18 @@ test i18n-1.9 {pcdata outside BMP} -constraints {
     set result
 } -result "<doc>\U1F46E\U1F47E\U1F494</doc>"
 
+test i18n-1.10 {pcdata outside unicode} -body {
+    set doc [dom parse "<doc>&#x10FFFF;</doc>"]
+    set result [$doc asXML -indent none -escapeNonASCII]
+    $doc delete
+    set result
+} -result "<doc>&#1114111;</doc>"
+
+test i18n-1.11 {pcdata outside unicode} -body {
+    set result [catch {dom parse "<doc>&#x110000;</doc>"} msg]
+    set msg
+} -match glob -result "*reference to invalid character number*"
+
 # cleanup
 ::tcltest::cleanupTests
 return
