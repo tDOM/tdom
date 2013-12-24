@@ -160,7 +160,8 @@
 #define UTF8_CHAR_LEN(c) \
   UTF8_1BYTE_CHAR((c)) ? 1 : \
    (UTF8_2BYTE_CHAR((c)) ? 2 : \
-     (UTF8_3BYTE_CHAR((c)) ? 3 : 0))
+     (UTF8_3BYTE_CHAR((c)) ? 3 : \
+       (UTF8_4BYTE_CHAR((c)) ? 4 : 0)))
 #endif
 
 /* The following 2 defines are out of the expat code */
@@ -236,6 +237,12 @@ We need 8 bits to index into pages, 3 bits to add to that index and
          : 1) \
       : 1)) \
     
+/* This definition is lax in the sense, that it accepts every 4 byte
+ * utf-8 character beyond #xFFFF as valid, no matter, if Unicode has
+ * (so far) defined a character for that encoding point. Additionally,
+ * this define does not care about the discouraged characters beyond
+ * #xFFFF (but after all, they are only discouraged, not
+ * forbidden). */
 #  define UTF8_XMLCHAR(p, n) \
   ((n) == 1 \
   ? CharBit[(int)(*(p))] \
@@ -243,7 +250,8 @@ We need 8 bits to index into pages, 3 bits to add to that index and
     ? 1 \
     : ((n) == 3 \
       ? (UTF8_XMLCHAR3(p)) \
-      : 0)))
+      : ((n) == 4 \
+        ? 1 : 0))))
 #endif
 
 #include "../expat/nametab.h"
@@ -841,6 +849,7 @@ int            domIsPINAME (const char *name);
 int            domIsQNAME (const char *name);
 int            domIsNCNAME (const char *name);
 int            domIsChar (const char *str);
+int            domIsBMPChar (const char *str);
 int            domIsComment (const char *str);
 int            domIsCDATA (const char *str);
 int            domIsPIValue (const char *str);

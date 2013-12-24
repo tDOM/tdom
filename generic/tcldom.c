@@ -2072,6 +2072,7 @@ void tcldom_AppendEscaped (
     int   charDone, i;
 #if !TclOnly8Bits
     int   clen = 0;
+    int   unicode;
     Tcl_UniChar uniChar;
 #endif
 
@@ -2386,17 +2387,37 @@ void tcldom_AppendEscaped (
                     clen = UTF8_CHAR_LEN(*pc);
                     if (!clen) {
                         domPanic("tcldom_AppendEscaped: can only handle "
-                                 "UTF-8 chars up to 3 bytes length");
+                                 "UTF-8 chars up to 4 bytes length");
                     }
+#if TCL_UTF_MAX > 3
                     if (escapeNonASCII) {
-                        Tcl_UtfToUniChar(pc, &uniChar);
+                        Tcl_UtfToUniChar(pc, (Tcl_UniChar*)&unicode);
                         AP('&') AP('#')
-                            sprintf(charRef, "%d", uniChar);
+                        sprintf(charRef, "%d", unicode);
                         for (i = 0; i < (int)strlen(charRef); i++) {
                             AP(charRef[i]);
                         }
                         AP(';')
                         pc += (clen - 1);
+#else 
+                    if (clen == 4 || escapeNonASCII) {
+                        if (clen == 4) {
+                            unicode = ((pc[0] & 0x07) << 18) 
+                                + ((pc[1] & 0x3F) << 12)
+                                + ((pc[2] & 0x3F) <<  6) 
+                                + (pc[3] & 0x3F);
+                        } else {
+                            unicode = 0;
+                            Tcl_UtfToUniChar(pc, (Tcl_UniChar*)&unicode);
+                        }
+                        AP('&') AP('#')
+                        sprintf(charRef, "%d", unicode);
+                        for (i = 0; i < (int)strlen(charRef); i++) {
+                            AP(charRef[i]);
+                        }
+                        AP(';')
+                        pc += (clen - 1);
+#endif 
                     } else {
                         for (i = 0; i < clen; i++) {
                             AP(*pc);
@@ -5747,12 +5768,13 @@ int tcldom_featureinfo (
         "expatversion",      "expatmajorversion",  "expatminorversion",
         "expatmicroversion", "dtd",                "ns",
         "unknown",           "tdomalloc",          "lessns",
-        NULL
+        "TCL_UTF_MAX",        NULL
     };
     enum feature {
         o_expatversion,      o_expatmajorversion,  o_expatminorversion,
         o_expatmicroversion, o_dtd,                o_ns,
-        o_unknown,           o_tdomalloc,          o_lessns   
+        o_unknown,           o_tdomalloc,          o_lessns,
+        o_TCL_UTF_MAX
     };
 
     if (Tcl_GetIndexFromObj(interp, objv[1], features, "feature", 0,
@@ -5813,9 +5835,11 @@ int tcldom_featureinfo (
 #endif
         SetBooleanResult(result);
         break;
+    case o_TCL_UTF_MAX:
+        SetIntResult(TCL_UTF_MAX);
+        break;
     }
-        return TCL_OK;
-        
+    return TCL_OK;
 }
 
 /*----------------------------------------------------------------------------
@@ -5843,7 +5867,7 @@ int tcldom_DomObjCmd (
         "isQName",         "isComment",          "isCDATA",
         "isPIValue",       "isNCName",           "createDocumentNode",
         "setNameCheck",    "setTextCheck",       "setObjectCommands",
-        "featureinfo",
+        "featureinfo",     "isBMPCharData",
 #ifdef TCL_THREADS
         "attachDocument",  "detachDocument",
 #endif
@@ -5856,7 +5880,7 @@ int tcldom_DomObjCmd (
         m_isQName,           m_isComment,          m_isCDATA,
         m_isPIValue,         m_isNCName,           m_createDocumentNode,
         m_setNameCheck,      m_setTextCheck,       m_setObjectCommands,
-        m_featureinfo
+        m_featureinfo,       m_isBMPCharData
 #ifdef TCL_THREADS
         ,m_attachDocument,   m_detachDocument
 #endif
@@ -6084,6 +6108,12 @@ int tcldom_DomObjCmd (
         case m_featureinfo:
             CheckArgs(3,3,2,"feature")
             return tcldom_featureinfo(clientData, interp, --objc, objv+1);
+
+        case m_isBMPCharData:
+            CheckArgs(3,3,2,"string");
+            SetBooleanResult(domIsBMPChar(Tcl_GetString(objv[2])));
+            return TCL_OK;
+                
     }
     SetResult( dom_usage);
     return TCL_ERROR;

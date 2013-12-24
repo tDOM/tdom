@@ -2994,7 +2994,7 @@ xpathEvalFunction (
                 if (!i) {
                     FREE (leftStr);
                     *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
-                                         "to 3 bytes length");
+                                         "to 4 bytes length");
                     return XPATH_I18N_ERR;
                 }
                 pto += i;
@@ -3432,7 +3432,7 @@ xpathEvalFunction (
             if (!i) {
                 FREE (leftStr);
                 *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
-                                     "to 3 bytes length");
+                                     "to 4 bytes length");
                 return XPATH_I18N_ERR;
             }
             pfrom += i;
@@ -3445,7 +3445,7 @@ xpathEvalFunction (
                 if (!i) {
                     FREE (leftStr);
                     *errMsg = tdomstrdup("Can only handle UTF-8 chars up "
-                                         "to 3 bytes length");
+                                         "to 4 bytes length");
                     return XPATH_I18N_ERR;
                 }
                 pto += i;

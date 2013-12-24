@@ -832,7 +832,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
         clen = UTF8_CHAR_LEN(*p);
         if (!clen) {
             reportError (xs->currentXSLTNode, "xsl:number: UTF-8 form of"
-                         " character longer than 3 Byte", errMsg);
+                         " character longer than 4 Byte", errMsg);
             return NULL;
         }
         if (clen > 1) {
@@ -860,7 +860,7 @@ static xsltNumberFormat* xsltNumberFormatTokenizer (
     while (*p) {                                 \
         clen = UTF8_CHAR_LEN(*p);                \
         if (!clen) {                             \
-            reportError (xs->currentXSLTNode, "xsl:number: UTF-8 form of character longer than 3 Byte", errMsg); \
+            reportError (xs->currentXSLTNode, "xsl:number: UTF-8 form of character longer than 4 Byte", errMsg); \
             return NULL;                         \
         }                                        \
         if (clen > 1) {                          \
@@ -2958,7 +2958,9 @@ static int xsltGetVar (
                in the list, shouldn't it? */
             varInProcess = xs->varsInProcess;
             if (varInProcess != &thisVarInProcess) {
-                domPanic ("error in top level vars processing");
+                reportError (topLevelVar->node, "Error in top level"
+                             " vars processing.", errMsg);
+                return XPATH_EVAL_ERR;
             }
             xs->varsInProcess = varInProcess->next;
             xs->currentXSLTNode = savedCurrentXSLTNode;
