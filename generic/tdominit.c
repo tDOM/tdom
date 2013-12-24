@@ -72,15 +72,24 @@ Tdom_Init (interp)
     Tcl_InitStubs(interp, "8", 0);
 #endif
 
+
     nrOfBytes =  Tcl_UtfToUniChar ("\xF4\xA2\xA2\xA2", &uniChar);
-#if TCL_UTF_MAX > 3
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 6)
+# if TCL_UTF_MAX > 4
     if (nrOfBytes != 4) {
 # else
     if (nrOfBytes > 1) {
+# endif
+#else
+# if TCL_UTF_MAX > 3
+    if (nrOfBytes != 4) {
+# else
+    if (nrOfBytes > 1) {
+# endif
 #endif
         Tcl_SetResult (interp, "This interpreter and tDOM are build with"
-                       " different TCL_UTF_MAX. This will not work"
-                       " reliable", NULL);
+                       " different Tcl_UniChar types and therefore not"
+                       " binary compatible.", NULL);
         return TCL_ERROR;
     }
         
