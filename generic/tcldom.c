@@ -2388,8 +2388,14 @@ void tcldom_AppendEscaped (
                     if (!clen) {
                         domPanic("tcldom_AppendEscaped: can only handle "
                                  "UTF-8 chars up to 4 bytes length");
+
                     }
-#if TCL_UTF_MAX > 3
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 6)
+#define SMALL_TCL_UNICHAR 4
+#else
+#define SMALL_TCL_UNICHAR 3
+#endif
+#if TCL_UTF_MAX > SMALL_TCL_UNICHAR
                     if (escapeNonASCII) {
                         Tcl_UtfToUniChar(pc, (Tcl_UniChar*)&unicode);
                         AP('&') AP('#')
