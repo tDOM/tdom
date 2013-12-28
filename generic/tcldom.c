@@ -359,16 +359,26 @@ typedef struct XsltMsgCBInfo {
     Tcl_Obj    * msgcmd;
 } XsltMsgCBInfo;
 
+
+static void UpdateStringOfTdomNode(Tcl_Obj *objPtr);
+static int  SetTdomNodeFromAny(Tcl_Interp *interp, Tcl_Obj *objPtr);
+
+const Tcl_ObjType tdomNodeType = {
+    "tdom-node",
+    NULL,
+    NULL,
+    UpdateStringOfTdomNode,
+    SetTdomNodeFromAny
+};
+
 /*----------------------------------------------------------------------------
 |   Prototypes for procedures defined later in this file:
 |
 \---------------------------------------------------------------------------*/
 
 static Tcl_VarTraceProc  tcldom_docTrace;
-static Tcl_VarTraceProc  tcldom_nodeTrace;
 
 static Tcl_CmdDeleteProc tcldom_docCmdDeleteProc;
-static Tcl_CmdDeleteProc tcldom_nodeCmdDeleteProc;
 
 #ifdef TCL_THREADS
 
@@ -485,35 +495,6 @@ void tcldom_docCmdDeleteProc(
     FREE((void*)dinfo);
 }
 
-
-/*----------------------------------------------------------------------------
-|   tcldom_nodeCmdDeleteProc
-|
-\---------------------------------------------------------------------------*/
-static
-void tcldom_nodeCmdDeleteProc (
-    ClientData  clientData
-)
-{
-    domDeleteInfo *dinfo = (domDeleteInfo *)clientData;
-    char          *var   = dinfo->traceVarName;
-
-    DBG(fprintf (stderr, "--> tcldom_nodeCmdDeleteProc node %p\n", 
-                 dinfo->node));
-
-    if (var) {
-         DBG(fprintf(stderr, "--> tcldom_nodeCmdDeleteProc calls "
-                    "Tcl_UntraceVar for \"%s\"\n", var));
-        Tcl_UntraceVar(dinfo->interp, var, 
-                       TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
-                       tcldom_nodeTrace, clientData);
-        FREE(var);
-        dinfo->traceVarName = NULL;
-    }
-    FREE((void*)dinfo);
-}
-
-
 /*----------------------------------------------------------------------------
 |   tcldom_docTrace
 |
@@ -548,44 +529,69 @@ char * tcldom_docTrace (
     return NULL;
 }
 
-
 /*----------------------------------------------------------------------------
-|   tcldom_nodeTrace
+|   UpdateStringOfTdomNode
 |
 \---------------------------------------------------------------------------*/
-static
-char * tcldom_nodeTrace (
-    ClientData    clientData,
-    Tcl_Interp   *interp,
-    CONST84 char *name1,
-    CONST84 char *name2,
-    int           flags
-)
+static void
+UpdateStringOfTdomNode(
+    Tcl_Obj *objPtr)
 {
-    domDeleteInfo *dinfo = (domDeleteInfo*)clientData;
-    domNode       *node = dinfo->node;
-    char           objCmdName[80];
+    char nodeName[80];
+    int  len;
+    
 
-    DBG(fprintf(stderr, "--> tcldom_nodeTrace %x %p\n", flags, node));
-
-    if (flags & TCL_INTERP_DESTROYED) {
-        return NULL;
-    }
-    if (flags & TCL_TRACE_WRITES) {
-        return "var is read-only";
-    }
-    if (flags & TCL_TRACE_UNSETS) {
-        NODE_CMD(objCmdName, node);
-        DBG(fprintf(stderr, "--> tcldom_nodeTrace delete node %p\n", node));
-        Tcl_UntraceVar(interp, name1, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-                       tcldom_nodeTrace, clientData);
-        Tcl_DeleteCommand(interp, objCmdName);
-        node->nodeFlags &= ~VISIBLE_IN_TCL;
-    }
-
-    return NULL;
+    NODE_CMD(nodeName, objPtr->internalRep.otherValuePtr);
+    len = strlen(nodeName);
+    objPtr->bytes = (ckalloc((unsigned char) len+1));
+    memcpy(objPtr->bytes, nodeName, len+1);
 }
 
+/*----------------------------------------------------------------------------
+|   SetTdomNodeFromAny
+|
+\---------------------------------------------------------------------------*/
+static int
+SetTdomNodeFromAny(
+    Tcl_Interp *interp,		/* Tcl interpreter or NULL */
+    Tcl_Obj *objPtr)		/* Pointer to the object to parse */
+{
+    Tcl_CmdInfo  cmdInfo;
+    domNode     *node = NULL;
+    char        *nodeName;
+    
+    if (objPtr->typePtr == &tdomNodeType) {
+        return TCL_OK;
+    }
+
+    nodeName = Tcl_GetString(objPtr);
+    if (strncmp(nodeName, "domNode", 7)) {
+        if (interp) {
+            SetResult("parameter not a domNode!");
+            return TCL_ERROR;
+        }
+    }
+    if (sscanf(&nodeName[7], "%p", &node) != 1) {
+        if (!Tcl_GetCommandInfo(interp, nodeName, &cmdInfo)) {
+            if (interp) {
+                SetResult("parameter not a domNode!");
+                return TCL_ERROR;
+            }
+        }
+        if (   (cmdInfo.isNativeObjectProc == 0)
+            || (cmdInfo.objProc != (Tcl_ObjCmdProc*)tcldom_NodeObjCmd)) {
+            if (interp) {
+                SetResult("parameter not a domNode object command");
+                return TCL_ERROR;
+            }
+        }
+        node = (domNode*)cmdInfo.objClientData;
+    }
+    objPtr->internalRep.otherValuePtr = node;
+    objPtr->typePtr = &tdomNodeType;
+    
+    return TCL_OK;
+}
 
 /*----------------------------------------------------------------------------
 |   tcldom_createNodeObj
@@ -625,8 +631,6 @@ int tcldom_returnNodeObj (
 )
 {
     char            objCmdName[80], *objVar;
-    domDeleteInfo * dinfo;
-    Tcl_CmdInfo     cmdInfo;
 
     GetTcldomTSD()
 
@@ -650,24 +654,6 @@ int tcldom_returnNodeObj (
             objVar = Tcl_GetString(var_name);
             Tcl_UnsetVar(interp, objVar, 0);
             Tcl_SetVar  (interp, objVar, objCmdName, 0);
-            Tcl_GetCommandInfo(interp, objCmdName, &cmdInfo);
-            if (0) {
-                dinfo = (domDeleteInfo*)MALLOC(sizeof(domDeleteInfo));
-                dinfo->interp       = interp;
-                dinfo->node         = node;
-                dinfo->traceVarName = NULL;
-                Tcl_TraceVar(interp, objVar, 
-                             TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-                             (Tcl_VarTraceProc*)tcldom_nodeTrace,
-                             (ClientData)dinfo);
-                dinfo->traceVarName = tdomstrdup(objVar);
-
-                /* Patch node object command to remove above trace 
-                   on teardown */
-                cmdInfo.deleteData = (ClientData)dinfo;
-                cmdInfo.deleteProc = tcldom_nodeCmdDeleteProc;
-                Tcl_SetCommandInfo(interp, objCmdName, &cmdInfo);
-            }
         }
     }
 
