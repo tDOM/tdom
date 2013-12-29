@@ -1419,9 +1419,20 @@ test dom-9.5 {setObjectCommands} {
     set docCmd [domNode $root ownerDocument]
     lappend result [expr {$nrOfCmds + 1 == [llength [info commands]]}]
     $docCmd delete
+    dom setObjectCommands automatic
     set result
 } {1 1}
 
+test dom-9.6 {node token with result var argument} {
+    dom setObjectCommands token
+    set doc [dom parse <root><child1/><child2/></root>]
+    domDoc $doc documentElement var
+    domNode $var firstChild var
+    domNode $var nextSibling var
+    domDoc $doc delete
+    dom setObjectCommands automatic
+} {automatic}
+    
 catch {namespace delete nodeCmds}
 
 namespace eval nodeCmds {
