@@ -622,11 +622,11 @@ void tcldom_createNodeObj (
 }
 
 /*----------------------------------------------------------------------------
-|   tcldom_returnNodeObj
+|   tcldom_setInterpAndReturnVar
 |
 \---------------------------------------------------------------------------*/
 static
-int tcldom_returnNodeObj (
+int tcldom_setInterpAndReturnVar (
     Tcl_Interp *interp,
     domNode    *node,
     int         setVariable,
@@ -667,6 +667,33 @@ int tcldom_returnNodeObj (
         }
     }
     return TCL_OK;
+}
+
+/*----------------------------------------------------------------------------
+|   tcldom_returnNodeObj
+|
+\---------------------------------------------------------------------------*/
+Tcl_Obj *tcldom_returnNodeObj (
+    Tcl_Interp *interp,
+    domNode    *node)
+{
+    char     objCmdName[80];
+    Tcl_Obj *resultObj;
+    
+    GetTcldomTSD()
+
+    resultObj = Tcl_NewObj();
+    if (node == NULL) {
+        return resultObj;
+    }
+    if (TSD(dontCreateObjCommands) == 0) {
+        tcldom_createNodeObj(interp, node, objCmdName);
+    }
+    resultObj->bytes = NULL;
+    resultObj->length = 0;
+    resultObj->internalRep.otherValuePtr = node;
+    resultObj->typePtr = &tdomNodeType;
+    return resultObj;
 }
 
 /*----------------------------------------------------------------------------
@@ -755,7 +782,7 @@ tcldom_getElementsByTagName (
 {
     int         result;
     domNode    *child;
-    char        prefix[MAX_PREFIX_LEN], objCmdName[80];
+    char        prefix[MAX_PREFIX_LEN];
     const char *localName;
     Tcl_Obj    *namePtr, *resultPtr;
 
@@ -790,8 +817,7 @@ tcldom_getElementsByTagName (
             }
             if (Tcl_StringMatch(localName, namePattern)) {
                 resultPtr = Tcl_GetObjResult(interp);
-                tcldom_createNodeObj(interp, node, objCmdName);
-                namePtr = Tcl_NewStringObj(objCmdName, -1);
+                namePtr = tcldom_returnNodeObj(interp, node);
                 result = Tcl_ListObjAppendElement(interp, resultPtr, namePtr);
                 if (result != TCL_OK) {
                     Tcl_DecrRefCount(namePtr);
@@ -867,12 +893,10 @@ int tcldom_xpointerAddCallback (
     Tcl_Interp * interp = (Tcl_Interp*)clientData;
     Tcl_Obj    * resultPtr = Tcl_GetObjResult(interp);
     Tcl_Obj    * namePtr;
-    char         objCmdName[80];
     int          result;
 
 
-    tcldom_createNodeObj(interp, node, objCmdName);
-    namePtr = Tcl_NewStringObj(objCmdName, -1);
+    namePtr = tcldom_returnNodeObj(interp, node);
     result  = Tcl_ListObjAppendElement(interp, resultPtr, namePtr);
     if (result != TCL_OK) {
         Tcl_DecrRefCount(namePtr);
@@ -1202,7 +1226,7 @@ int tcldom_appendXML (
     }
     domFreeDocument(doc, NULL, NULL);
 
-    return tcldom_returnNodeObj(interp, node, 0, NULL);
+    return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 #endif
 }
 
@@ -1221,7 +1245,6 @@ int tcldom_xpathResultSet (
 {
     int          rc, i;
     Tcl_Obj     *namePtr, *objv[2];
-    char         objCmdName[80];
     domAttrNode *attr;
     domNodeType  startType;
     int          mixedNodeSet;
@@ -1280,8 +1303,7 @@ int tcldom_xpathResultSet (
                                                 attr->valueLength);
                      namePtr = Tcl_NewListObj(2, objv);
                  } else {
-                     tcldom_createNodeObj(interp, rs->nodes[i], objCmdName);
-                     namePtr = Tcl_NewStringObj(objCmdName, -1);
+                     namePtr = tcldom_returnNodeObj(interp, rs->nodes[i]);
                  }
                  rc = Tcl_ListObjAppendElement(interp, value, namePtr);
                  if (rc != TCL_OK) {
@@ -1366,8 +1388,7 @@ int tcldom_xpathFuncCallBack (
             interp, tmpObj,
             Tcl_NewStringObj(((domAttrNode*)ctxNode)->nodeName, -1));
     } else {
-        tcldom_createNodeObj(interp, ctxNode, objCmdName);
-        tmpObj = Tcl_NewStringObj(objCmdName, -1);
+        tmpObj = tcldom_returnNodeObj(interp, ctxNode);
     }
     objv[objc] = tmpObj;
     Tcl_IncrRefCount(objv[objc++]);
@@ -2003,7 +2024,7 @@ int tcldom_appendFromTclList (
             return rc;
         }
     }
-    return tcldom_returnNodeObj(interp, node, 0, NULL);
+    return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 }
 
 
@@ -3701,8 +3722,8 @@ int tcldom_NodeObjCmd (
     domNS       *ns;
     domAttrNode *attrs;
     domException exception;
-    char         tmp[200], objCmdName[80], prefix[MAX_PREFIX_LEN],
-                 *method, *nodeName, *str, *attr_name, *attr_val, *filter;
+    char         tmp[200], prefix[MAX_PREFIX_LEN], *method, *nodeName,
+                 *str, *attr_name, *attr_val, *filter;
     const char  *localName, *uri, *nsStr;
     int          result, length, methodIndex, i, line, column;
     int          nsIndex, bool, hnew, legacy;
@@ -3905,7 +3926,7 @@ int tcldom_NodeObjCmd (
             CheckArgs(4,5,2,"attrName attrVal ?nodeObjVar?");
             attr_name = Tcl_GetStringFromObj(objv[2], NULL);
             attr_val  = Tcl_GetStringFromObj(objv[3], &length);
-            return tcldom_returnNodeObj
+            return tcldom_setInterpAndReturnVar
                 (interp, tcldom_find(node, attr_name, attr_val, length),
                  (objc == 5), (objc == 5) ? objv[4] : NULL);
 
@@ -3934,7 +3955,7 @@ int tcldom_NodeObjCmd (
             while (node->parentNode) {
                 node = node->parentNode;
             }
-            return tcldom_returnNodeObj(interp, node, (objc == 3),
+            return tcldom_setInterpAndReturnVar(interp, node, (objc == 3),
                                         (objc == 3) ? objv[2] : NULL);
 
         case m_text:
@@ -4077,7 +4098,7 @@ int tcldom_NodeObjCmd (
                 CheckText (interp, attr_val, "attribute");
                 domSetAttribute(node, attr_name, attr_val);
             }
-            return tcldom_returnNodeObj(interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 
         case m_setAttributeNS:
             if (node->nodeType != ELEMENT_NODE) {
@@ -4107,7 +4128,7 @@ int tcldom_NodeObjCmd (
                     return TCL_ERROR;
                 }
             }
-            return tcldom_returnNodeObj(interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 
         case m_hasAttribute:
             CheckArgs(3,3,2,"attrName");
@@ -4165,7 +4186,7 @@ int tcldom_NodeObjCmd (
                 AppendResult("'");
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 
         case m_removeAttributeNS:
             CheckArgs(4,4,2,"uri attrName");
@@ -4182,39 +4203,39 @@ int tcldom_NodeObjCmd (
                 AppendResult("'");
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 
         case m_nextSibling:
             CheckArgs(2,3,2,"?nodeObjVar?");
-            return tcldom_returnNodeObj(interp, node->nextSibling,
+            return tcldom_setInterpAndReturnVar(interp, node->nextSibling,
                                         (objc == 3), 
                                         (objc == 3) ? objv[2] : NULL);
         case m_previousSibling:
             CheckArgs(2,3,2,"?nodeObjVar?");
-            return tcldom_returnNodeObj(interp, node->previousSibling,
+            return tcldom_setInterpAndReturnVar(interp, node->previousSibling,
                                         (objc == 3),
                                         (objc == 3) ? objv[2] : NULL);
         case m_firstChild:
             CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
-                return tcldom_returnNodeObj(interp, node->firstChild,
+                return tcldom_setInterpAndReturnVar(interp, node->firstChild,
                                             (objc == 3),
                                             (objc == 3) ? objv[2] : NULL);
             }
-            return tcldom_returnNodeObj(interp, NULL, (objc == 3),
+            return tcldom_setInterpAndReturnVar(interp, NULL, (objc == 3),
                                         (objc == 3) ? objv[2] : NULL);
         case m_lastChild:
             CheckArgs(2,3,2,"?nodeObjVar?");
             if (node->nodeType == ELEMENT_NODE) {
-                return tcldom_returnNodeObj(interp, node->lastChild,
+                return tcldom_setInterpAndReturnVar(interp, node->lastChild,
                                             (objc == 3),
                                             (objc == 3) ? objv[2] : NULL);
             }
-            return tcldom_returnNodeObj(interp, NULL, (objc == 3),
+            return tcldom_setInterpAndReturnVar(interp, NULL, (objc == 3),
                                         (objc == 3) ? objv[2] : NULL);
         case m_parentNode:
             CheckArgs(2,3,2,"?nodeObjVar?");
-            return tcldom_returnNodeObj(interp, node->parentNode, (objc == 3),
+            return tcldom_setInterpAndReturnVar(interp, node->parentNode, (objc == 3),
                                         (objc == 3) ? objv[2] : NULL);
         case m_appendFromList:
             CheckArgs(3,3,2,"list");
@@ -4225,7 +4246,7 @@ int tcldom_NodeObjCmd (
             if (nodecmd_appendFromScript(interp, node, objv[2]) != TCL_OK) {
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
 
         case m_insertBeforeFromScript:
             CheckArgs(4,4,2, "script refChild");
@@ -4246,7 +4267,7 @@ int tcldom_NodeObjCmd (
                 != TCL_OK) {
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj (interp, node, 0, NULL);
+            return tcldom_setInterpAndReturnVar (interp, node, 0, NULL);
             
         case m_appendXML:
             CheckArgs(3,3,2,"xmlString");
@@ -4263,19 +4284,19 @@ int tcldom_NodeObjCmd (
                 SetResult(domException2String(exception));
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, child, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, child, 0, NULL);
 
         case m_cloneNode:
             CheckArgs(2,3,2,"?-deep?");
             if (objc == 3) {
                 if (!strcmp(Tcl_GetString(objv[2]), "-deep")) {
-                    return tcldom_returnNodeObj(interp, domCloneNode(node, 1),
+                    return tcldom_setInterpAndReturnVar(interp, domCloneNode(node, 1),
                                                 0, NULL);
                 }
                 SetResult("unknown option! Options: ?-deep? ");
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, domCloneNode(node, 0), 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, domCloneNode(node, 0), 0, NULL);
 
         case m_removeChild:
             CheckArgs(3,3,2,"childToRemove");
@@ -4288,7 +4309,7 @@ int tcldom_NodeObjCmd (
                 SetResult (domException2String (exception));
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, child, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, child, 0, NULL);
 
         case m_insertBefore:
             CheckArgs(4,4,2,"childToInsert refChild");
@@ -4315,7 +4336,7 @@ int tcldom_NodeObjCmd (
                 SetResult(domException2String(exception));
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, child, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, child, 0, NULL);
 
         case m_replaceChild:
             CheckArgs(4,4,2,"new old");
@@ -4332,7 +4353,7 @@ int tcldom_NodeObjCmd (
                 SetResult(domException2String(exception));
                 return TCL_ERROR;
             }
-            return tcldom_returnNodeObj(interp, oldChild, 0, NULL);
+            return tcldom_setInterpAndReturnVar(interp, oldChild, 0, NULL);
 
         case m_hasChildNodes:
             CheckArgs(2,2,2,"");
@@ -4349,8 +4370,7 @@ int tcldom_NodeObjCmd (
             if (node->nodeType == ELEMENT_NODE) {
                 child = node->firstChild;
                 while (child != NULL) {
-                    tcldom_createNodeObj(interp, child, objCmdName);
-                    namePtr = Tcl_NewStringObj(objCmdName, -1);
+                    namePtr = tcldom_returnNodeObj(interp, child);
                     result  = Tcl_ListObjAppendElement(interp, resultPtr,
                                                        namePtr);
                     if (result != TCL_OK) {
@@ -4418,7 +4438,7 @@ int tcldom_NodeObjCmd (
                 h = Tcl_FindHashEntry(node->ownerDocument->ids, str);
                 if (h) {
                     domNode *node = Tcl_GetHashValue(h);
-                    return tcldom_returnNodeObj(interp, node, 0, NULL);
+                    return tcldom_setInterpAndReturnVar(interp, node, 0, NULL);
                 }
             }
             SetResult("");
@@ -4706,8 +4726,8 @@ int tcldom_NodeObjCmd (
                                      node->ownerDocument, LOCK_READ);
         )
     }
-    return TCL_OK;
-}
+    return TCL_OK;}
+
 
 
 /*----------------------------------------------------------------------------
@@ -4854,7 +4874,7 @@ int tcldom_DocObjCmd (
 
         case m_documentElement:
             CheckArgs(2,3,2,"");
-            return tcldom_returnNodeObj(interp, doc->documentElement,
+            return tcldom_setInterpAndReturnVar(interp, doc->documentElement,
                                         (objc == 3), 
                                         (objc == 3) ? objv[2] : NULL);
         case m_getElementsByTagName:
@@ -4899,7 +4919,7 @@ int tcldom_DocObjCmd (
             tag = Tcl_GetString(objv[2]);
             CheckName (interp, tag, "tag", 0);
             n = domNewElementNode(doc, tag, ELEMENT_NODE);
-            return tcldom_returnNodeObj(interp, n, (objc == 4),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 4),
                                         (objc == 4) ? objv[3] : NULL);
 
         case m_createElementNS:
@@ -4908,7 +4928,7 @@ int tcldom_DocObjCmd (
             tag = Tcl_GetString(objv[3]);
             CheckName (interp, tag, "full qualified tag", 1);
             n = domNewElementNodeNS(doc, tag, uri, ELEMENT_NODE);
-            return tcldom_returnNodeObj(interp, n, (objc == 5),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 5),
                                         (objc == 5) ? objv[4] : NULL);
 
         case m_createTextNode:
@@ -4916,7 +4936,7 @@ int tcldom_DocObjCmd (
             data = Tcl_GetStringFromObj(objv[2], &data_length);
             CheckText (interp, data, "text");
             n = (domNode*)domNewTextNode(doc, data, data_length, TEXT_NODE);
-            return tcldom_returnNodeObj(interp, n, (objc == 4),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 4),
                                         (objc == 4) ? objv[3] : NULL);
 
         case m_createCDATASection:
@@ -4925,7 +4945,7 @@ int tcldom_DocObjCmd (
             CheckCDATA (interp, data);
             n = (domNode*)domNewTextNode(doc, data, data_length, 
                                          CDATA_SECTION_NODE);
-            return tcldom_returnNodeObj(interp, n, (objc == 4),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 4),
                                         (objc == 4) ? objv[3] : NULL);
 
         case m_createComment:
@@ -4933,7 +4953,7 @@ int tcldom_DocObjCmd (
             data = Tcl_GetStringFromObj(objv[2], &data_length);
             CheckComment(interp, data);
             n = (domNode*)domNewTextNode(doc, data, data_length, COMMENT_NODE);
-            return tcldom_returnNodeObj(interp, n, (objc == 4),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 4),
                                         (objc == 4) ? objv[3] : NULL);
 
         case m_createProcessingInstruction:
@@ -4945,7 +4965,7 @@ int tcldom_DocObjCmd (
             n = (domNode*)domNewProcessingInstructionNode(doc, target, 
                                                           target_length, data, 
                                                           data_length);
-            return tcldom_returnNodeObj(interp, n, (objc == 5),
+            return tcldom_setInterpAndReturnVar(interp, n, (objc == 5),
                                         (objc == 5) ? objv[4] : NULL);
 
         case m_delete:
