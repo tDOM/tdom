@@ -54,3 +54,152 @@ foreach nrOf {1 10 100 1000} {
     }
 
 }
+
+proc cloneImitated {source target} {
+    foreach att [$source attributes] {
+        $target setAttribute $att [$source @$att]
+    }
+    set targetDoc [$target ownerDocument]
+    foreach child [$source childNodes] {
+        switch [$child nodeType] {
+            "ELEMENT_NODE" {
+                set targetChild [$targetDoc createElement [$child nodeName]]
+            }
+            "TEXT_NODE" {
+                set targetChild [$targetDoc createTextNode [$child nodeValue]]
+            }
+            "CDATA_SECTION_NODE" {
+                set targetChild [$targetDoc createCDATASection \
+                                     [$child nodeValue]]
+            }
+            "PROCESSING_INSTRUCTION_NODE" {
+                set targetChild [$targetDoc createProcessingInstruction \
+                                     [$child nodeName] [$child nodeValue]]
+            }
+            "COMMENT_NODE" {
+                set targetChild [$targetDoc createComment [$child nodeValue]]
+            }
+            default {
+                error "Unexpected node type [$child nodeType]"
+            }
+        }
+        $target appendChild $targetChild
+        cloneImitated $child $targetChild
+    }
+}
+
+proc cloneImitated2 {source target} {
+    foreach att [$source attributes] {
+        $target setAttribute $att [$source @$att]
+    }
+    set targetDoc [$target ownerDocument]
+    foreach child [$source childNodes] {
+        switch [$child nodeType] {
+            "ELEMENT_NODE" {
+                $targetDoc createElement [$child nodeName] targetChild
+            }
+            "TEXT_NODE" {
+                $targetDoc createTextNode [$child nodeValue] targetChild
+            }
+            "CDATA_SECTION_NODE" {
+                $targetDoc createCDATASection [$child nodeValue] targetChild
+            }
+            "PROCESSING_INSTRUCTION_NODE" {
+                $targetDoc createProcessingInstruction [$child nodeName] \
+                    targetChild
+            }
+            "COMMENT_NODE" {
+                $targetDoc createComment [$child nodeValue] targetChild
+            }
+            default {
+                error "Unexpected node type [$child nodeType]"
+            }
+        }
+        $target appendChild $targetChild
+        cloneImitated2 $child $targetChild
+    }
+}
+
+proc cloneImitatedToken {source target} {
+    foreach att [domNode $source attributes] {
+        domNode $target setAttribute $att [domNode $source @$att]
+    }
+    set targetDoc [domNode $target ownerDocument]
+    foreach child [domNode $source childNodes] {
+        switch [domNode $child nodeType] {
+            "ELEMENT_NODE" {
+                set targetChild [$targetDoc createElement \
+                                     [domNode $child nodeName]]
+            }
+            "TEXT_NODE" {
+                set targetChild [$targetDoc createTextNode \
+                                     [domNode $child nodeValue]]
+            }
+            "CDATA_SECTION_NODE" {
+                set targetChild [$targetDoc createCDATASection \
+                                     [domNode $child nodeValue]]
+            }
+            "PROCESSING_INSTRUCTION_NODE" {
+                set targetChild [$targetDoc createProcessingInstruction \
+                                     [domNode $child nodeName] \
+                                     [domNode $child nodeValue]]
+            }
+            "COMMENT_NODE" {
+                set targetChild [$targetDoc createComment \
+                                     [domNode $child nodeValue]]
+            }
+            default {
+                error "Unexpected node type [domNode $child nodeType]"
+            }
+        }
+        domNode $target appendChild $targetChild
+        cloneImitatedToken $child $targetChild
+    }
+}
+
+bench -desc "clone dom tree without clone method - cmds" -pre {
+    set fd [open [file join [file dir [info script]] ../tests/data/mondial-europe.xml]]
+    fconfigure $fd -encoding utf-8
+    set doc [dom parse -channel $fd]
+    close $fd
+    set root [$doc documentElement]
+    set clone [dom createDocument [$root nodeName]]
+    set cloneRoot [$clone documentElement]
+} -iters 5 -body {
+    cloneImitated $root $cloneRoot
+} -post {
+    $doc delete
+    $clone delete
+}
+
+bench -desc "clone dom tree without clone method - cmds 2" -pre {
+    set fd [open [file join [file dir [info script]] ../tests/data/mondial-europe.xml]]
+    fconfigure $fd -encoding utf-8
+    set doc [dom parse -channel $fd]
+    close $fd
+    set root [$doc documentElement]
+    set clone [dom createDocument [$root nodeName]]
+    set cloneRoot [$clone documentElement]
+} -iters 5 -body {
+    cloneImitated2 $root $cloneRoot
+} -post {
+    $doc delete
+    $clone delete
+}
+
+bench -desc "clone dom tree without clone method - token" -pre {
+    set fd [open [file join [file dir [info script]] ../tests/data/mondial-europe.xml]]
+    fconfigure $fd -encoding utf-8
+    set doc [dom parse -channel $fd]
+    close $fd
+    set root [$doc documentElement]
+    set clone [dom createDocument [$root nodeName]]
+    set cloneRoot [$clone documentElement]
+    dom setObjectCommands token
+} -iters 5 -body {
+    cloneImitatedToken $root $cloneRoot
+} -post {
+    $doc delete
+    $clone delete
+    dom setObjectCommands automatic
+}
