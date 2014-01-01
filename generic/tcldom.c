@@ -673,6 +673,7 @@ int tcldom_setInterpAndReturnVar (
 |   tcldom_returnNodeObj
 |
 \---------------------------------------------------------------------------*/
+static
 Tcl_Obj *tcldom_returnNodeObj (
     Tcl_Interp *interp,
     domNode    *node)
