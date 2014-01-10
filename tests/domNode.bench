@@ -207,6 +207,76 @@ foreach nrOf {1 10 100 1000} {
 
 }
 
+foreach nrOf {1 10 100 1000} {
+
+    bench -desc "getElementsByTagName: $nrOf returned nodes" -pre {
+        dom createDocument root doc
+        $doc documentElement root
+        $root appendFromScript {
+            for {set x 0} {$x < $nrOf} {incr x} {
+                e1
+            }
+        }
+    } -body {
+        $doc getElementsByTagName e1
+    } -post {
+        $doc delete
+    }
+
+}
+
+foreach nrOf {1 10 100 1000} {
+
+    bench -desc "getElementsByTagName: $nrOf returned node tokens" -pre {
+        dom createDocument root doc
+        $doc documentElement root
+        $root appendFromScript {
+            for {set x 0} {$x < $nrOf} {incr x} {
+                e1
+            }
+        }
+        dom setObjectCommands token
+    } -body {
+        $doc getElementsByTagName e1
+    } -post {
+        dom setObjectCommands automatic
+        $doc delete
+    }
+
+}
+
+
+bench -desc "firstChild node cmd" -pre {
+    dom parse <root><e/></root> doc
+    $doc documentElement root
+} -body {
+    $root firstChild
+} -post {
+    $doc delete
+}
+
+bench -desc "firstChild node token" -pre {
+    dom parse <root><e/></root> doc
+    $doc documentElement root
+    dom setObjectCommands token
+} -body {
+    $root firstChild
+} -post {
+    $doc delete
+    dom setObjectCommands automatic
+}
+
+bench -desc "firstChild node token from node token" -pre {
+    dom parse <root><e/></root> doc
+    dom setObjectCommands token
+    $doc documentElement root
+} -body {
+    domNode $root firstChild
+} -post {
+    $doc delete
+    dom setObjectCommands automatic
+}
+
 dom parse <root/> doc
 $doc documentElement root
 
