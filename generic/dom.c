@@ -66,7 +66,6 @@
 # define DBG(x) 
 #endif
 #define TDOM_NS
-#define XSLT_NAMESPACE  "http://www.w3.org/1999/XSL/Transform"
 
 #define MutationEvent()
 #define MutationEvent2(type,node)
