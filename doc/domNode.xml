@@ -427,7 +427,7 @@ nested Tcl list.</desc>
 
       <commanddef>
         <command><method>asXML</method> <option>?-indent none/1..8?</option>
-<option>?-channel channelId?</option> <option>?-escapeNonASCII?</option><option>?-escapeAllQuot?</option></command>
+<option>?-channel channelId?</option> <option>?-escapeNonASCII?</option><option>?-escapeAllQuot?</option> <option>?-indentAttr?</option></command>
 
         <desc>Returns the DOM substree starting from the current node
 as the root node of the result as an (optional indented) XML string or
@@ -436,7 +436,9 @@ sends the output directly to the given channelId. If the option
 attribute values or element PCDATA content will be escaped as
 character reference in decimal representation. If the option
 <m>-escapeAllQuot</m> is given, quotation marks will be escaped with
-&amp;quot; even in text content of elements.</desc>
+&amp;quot; even in text content of elements.  If the option
+<m>-indentAttr</m> is given, then attributes will each be separated 
+with newlines and indented to the same level as the parent node.</desc>
       </commanddef>
 
       <commanddef>
