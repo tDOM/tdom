@@ -5983,7 +5983,7 @@ getExternalDocument (
     }
     /* keep white space, no fiddling with the encoding (is this
        a good idea?) */
-    doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0,
+    doc = domReadDocument (parser, xmlstring, len, 0, 0, storeLineColumn, 0, 0,
                            NULL, chan, extbase, extResolver, 0, 
                            (int) XML_PARAM_ENTITY_PARSING_ALWAYS, interp,
                            &resultcode);

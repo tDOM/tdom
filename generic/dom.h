@@ -439,6 +439,7 @@ typedef unsigned int domDocFlags;
 #define OUTPUT_DEFAULT_INDENT     1
 #define NEEDS_RENUMBERING         2
 #define DONT_FREE                 4
+#define IGNORE_XMLNS              8
 
 /*--------------------------------------------------------------------------
 |   a index to the namespace records
@@ -737,6 +738,7 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   int   ignoreWhiteSpaces,
                                   TEncoding *encoding_8bit,
                                   int   storeLineColumn,
+                                  int   ignoreXMLNS,
                                   int   feedbackAfter,
                                   Tcl_Obj *feedbackCmd,
                                   Tcl_Channel channel,

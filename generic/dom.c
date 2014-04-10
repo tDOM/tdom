@@ -65,7 +65,6 @@
 #else
 # define DBG(x) 
 #endif
-#define TDOM_NS
 
 #define MutationEvent()
 #define MutationEvent2(type,node)
@@ -156,6 +155,7 @@ typedef struct _domReadInfo {
     Tcl_DString      *cdata;
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
+    int               ignorexmlns;
     int               feedbackAfter;
     Tcl_Obj          *feedbackCmd;
     XML_Index         nextFeedbackPosition;
@@ -1194,100 +1194,103 @@ startElement(
     |   process namespace declarations
     |
     \-------------------------------------------------------------*/
-#ifdef TDOM_NS
-    for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
+    if (!info->ignorexmlns) {
+        for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
 
-        if (strncmp(atPtr[0], "xmlns", 5) == 0) {
-            xmlns = atPtr[0];
-            newNS = 1;
-            if (xmlns[5] == ':') {
-                if (domIsNamespaceInScope (info->activeNS, info->activeNSpos,
-                                           &(xmlns[6]), atPtr[1])) {
-                    ns = domLookupPrefix (info->currentNode, &(xmlns[6]));
-                    newNS = 0;
+            if (strncmp(atPtr[0], "xmlns", 5) == 0) {
+                xmlns = atPtr[0];
+                newNS = 1;
+                if (xmlns[5] == ':') {
+                    if (domIsNamespaceInScope (info->activeNS, info->activeNSpos,
+                                               &(xmlns[6]), atPtr[1])) {
+                        ns = domLookupPrefix (info->currentNode, &(xmlns[6]));
+                        newNS = 0;
+                    }
+                    else {
+                        ns = domNewNamespace(info->document, &xmlns[6], atPtr[1]);
+                    }
+                } else {
+                    ns = domNewNamespace(info->document, "", atPtr[1]);
                 }
-                else {
-                    ns = domNewNamespace(info->document, &xmlns[6], atPtr[1]);
+                if (newNS) {
+                    /* push active namespace */
+                    info->activeNSpos++;
+                    if (info->activeNSpos >= info->activeNSsize) {
+                        info->activeNS = (domActiveNS*) REALLOC(
+                            (char*)info->activeNS,
+                            sizeof(domActiveNS) * 2 * info->activeNSsize);
+                        info->activeNSsize = 2 * info->activeNSsize;
+                    }
+                    info->activeNS[info->activeNSpos].depth     = info->depth;
+                    info->activeNS[info->activeNSpos].namespace = ns;
                 }
+
+                h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
+                                        atPtr[0], &hnew);
+                attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
+                memset(attrnode, 0, sizeof(domAttrNode));
+                attrnode->nodeType    = ATTRIBUTE_NODE;
+                attrnode->nodeFlags   = IS_NS_NODE;
+                attrnode->namespace   = ns->index;
+                attrnode->nodeName    = (char *)&(h->key);
+                attrnode->parentNode  = node;
+                len = strlen(atPtr[1]);
+                if (TclOnly8Bits && info->encoding_8bit) {
+                    tdom_Utf8to8Bit(info->encoding_8bit, atPtr[1], &len);
+                }
+                attrnode->valueLength = len;
+                attrnode->nodeValue   = (char*)MALLOC(len+1);
+                strcpy(attrnode->nodeValue, atPtr[1]);
+                if (node->firstAttr) {
+                    lastAttr->nextSibling = attrnode;
+                } else {
+                    node->firstAttr = attrnode;
+                }
+                lastAttr = attrnode;
+            }
+
+        }
+
+        /*----------------------------------------------------------
+          |   look for namespace of element
+          \---------------------------------------------------------*/
+        domSplitQName (name, tagPrefix, &localname);
+        for (pos = info->activeNSpos; pos >= 0; pos--) {
+            if (  ((tagPrefix[0] == '\0')
+                   && (info->activeNS[pos].namespace->prefix[0] == '\0'))
+                  || ((tagPrefix[0] != '\0') 
+                      && (info->activeNS[pos].namespace->prefix[0] != '\0')
+                      && (strcmp(tagPrefix, 
+                                 info->activeNS[pos].namespace->prefix) == 0))
+                ) {
+                if (info->activeNS[pos].namespace->prefix[0] == '\0'
+                    && info->activeNS[pos].namespace->uri[0] == '\0'
+                    && tagPrefix[0] == '\0') {
+                    /* xml-names rec. 5.2: "The default namespace can be
+                       set to the empty string. This has the same effect,
+                       within the scope of the declaration, of there being
+                       no default namespace." */
+                    goto elemNSfound;
+                }
+                node->namespace = info->activeNS[pos].namespace->index;
+                DBG(fprintf(stderr, "tag='%s' uri='%s' \n",
+                            node->nodeName,
+                            info->activeNS[pos].namespace->uri);
+                    )
+                    goto elemNSfound;
+            }
+        }
+        if (tagPrefix[0] != '\0') {
+            if (strcmp (tagPrefix, "xml")==0) {
+                node->namespace = info->document->rootNode->firstAttr->namespace;
             } else {
-                ns = domNewNamespace(info->document, "", atPtr[1]);
+                /* Since where here, this means, the element has a
+                   up to now not declared namespace prefix. We probably
+                   should return this as an error, shouldn't we?*/
             }
-            if (newNS) {
-                /* push active namespace */
-                info->activeNSpos++;
-                if (info->activeNSpos >= info->activeNSsize) {
-                    info->activeNS = (domActiveNS*) REALLOC(
-                        (char*)info->activeNS,
-                        sizeof(domActiveNS) * 2 * info->activeNSsize);
-                    info->activeNSsize = 2 * info->activeNSsize;
-                }
-                info->activeNS[info->activeNSpos].depth     = info->depth;
-                info->activeNS[info->activeNSpos].namespace = ns;
-            }
-
-            h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
-                                    atPtr[0], &hnew);
-            attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
-            memset(attrnode, 0, sizeof(domAttrNode));
-            attrnode->nodeType    = ATTRIBUTE_NODE;
-            attrnode->nodeFlags   = IS_NS_NODE;
-            attrnode->namespace   = ns->index;
-            attrnode->nodeName    = (char *)&(h->key);
-            attrnode->parentNode  = node;
-            len = strlen(atPtr[1]);
-            if (TclOnly8Bits && info->encoding_8bit) {
-                tdom_Utf8to8Bit(info->encoding_8bit, atPtr[1], &len);
-            }
-            attrnode->valueLength = len;
-            attrnode->nodeValue   = (char*)MALLOC(len+1);
-            strcpy(attrnode->nodeValue, atPtr[1]);
-            if (node->firstAttr) {
-                lastAttr->nextSibling = attrnode;
-            } else {
-                node->firstAttr = attrnode;
-            }
-            lastAttr = attrnode;
-        }
-
-    }
-
-    /*----------------------------------------------------------
-    |   look for namespace of element
-    \---------------------------------------------------------*/
-    domSplitQName (name, tagPrefix, &localname);
-    for (pos = info->activeNSpos; pos >= 0; pos--) {
-        if (  ((tagPrefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0'))
-           || ((tagPrefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
-               && (strcmp(tagPrefix, info->activeNS[pos].namespace->prefix) == 0))
-        ) {
-            if (info->activeNS[pos].namespace->prefix[0] == '\0'
-                && info->activeNS[pos].namespace->uri[0] == '\0'
-                && tagPrefix[0] == '\0') {
-                /* xml-names rec. 5.2: "The default namespace can be
-                   set to the empty string. This has the same effect,
-                   within the scope of the declaration, of there being
-                   no default namespace." */
-                goto elemNSfound;
-            }
-            node->namespace = info->activeNS[pos].namespace->index;
-            DBG(fprintf(stderr, "tag='%s' uri='%s' \n",
-                        node->nodeName,
-                        info->activeNS[pos].namespace->uri);
-            )
-            goto elemNSfound;
         }
     }
-    if (tagPrefix[0] != '\0') {
-        if (strcmp (tagPrefix, "xml")==0) {
-            node->namespace = info->document->rootNode->firstAttr->namespace;
-        } else {
-            /* Since where here, this means, the element has a
-               up to now not declared namespace prefix. We probably
-               should return this as an error, shouldn't we?*/
-        }
-    }
- elemNSfound:
-#endif
+elemNSfound:
 
     /*--------------------------------------------------------------
     |   add the attribute nodes
@@ -1318,12 +1321,11 @@ startElement(
     /* lastAttr already set right, either to NULL above, or to the last
        NS attribute */
     for (atPtr = atts; atPtr[0] && atPtr[1]; atPtr += 2) {
-
-#ifdef TDOM_NS
-        if (strncmp(atPtr[0], "xmlns", 5) == 0) {
-            continue;
+        if (!info->ignorexmlns) {
+            if (strncmp(atPtr[0], "xmlns", 5) == 0) {
+                continue;
+            }
         }
-#endif
         h = Tcl_CreateHashEntry(&HASHTAB(info->document, tdom_attrNames),
                                 atPtr[0], &hnew);
         attrnode = (domAttrNode*) domAlloc(sizeof(domAttrNode));
@@ -1352,37 +1354,39 @@ startElement(
         }
         lastAttr = attrnode;
 
-#ifdef TDOM_NS
-        /*----------------------------------------------------------
-        |   look for attribute namespace
-        \---------------------------------------------------------*/
-        domSplitQName (attrnode->nodeName, prefix, &localname);
-        if (prefix[0] != '\0') {
-            for (pos = info->activeNSpos; pos >= 0; pos--) {
-                if (  ((prefix[0] == '\0') && (info->activeNS[pos].namespace->prefix[0] == '\0'))
-                      || ((prefix[0] != '\0') && (info->activeNS[pos].namespace->prefix[0] != '\0')
-                          && (strcmp(prefix, info->activeNS[pos].namespace->prefix) == 0))
-                    ) {
-                    attrnode->namespace = info->activeNS[pos].namespace->index;
-                    DBG(fprintf(stderr, "attr='%s' uri='%s' \n",
-                                attrnode->nodeName,
-                                info->activeNS[pos].namespace->uri);
-                        )
-                    goto attrNSfound;
+        if (!info->ignorexmlns) {
+            /*----------------------------------------------------------
+              |   look for attribute namespace
+              \---------------------------------------------------------*/
+            domSplitQName (attrnode->nodeName, prefix, &localname);
+            if (prefix[0] != '\0') {
+                for (pos = info->activeNSpos; pos >= 0; pos--) {
+                    if (  ((prefix[0] == '\0') 
+                           && (info->activeNS[pos].namespace->prefix[0] == '\0'))
+                          || ((prefix[0] != '\0') 
+                              && (info->activeNS[pos].namespace->prefix[0] != '\0')
+                              && (strcmp(prefix, info->activeNS[pos].namespace->prefix) == 0))
+                        ) {
+                        attrnode->namespace = info->activeNS[pos].namespace->index;
+                        DBG(fprintf(stderr, "attr='%s' uri='%s' \n",
+                                    attrnode->nodeName,
+                                    info->activeNS[pos].namespace->uri);
+                            )
+                            goto attrNSfound;
+                    }
                 }
+                if (strcmp (prefix, "xml")==0) {
+                    attrnode->namespace = 
+                        info->document->rootNode->firstAttr->namespace;
+                } else {
+                    /* Since where here, this means, the attribute has a
+                       up to now not declared namespace prefix. We probably
+                       should return this as an error, shouldn't we?*/
+                }
+            attrNSfound:
+                ;
             }
-            if (strcmp (prefix, "xml")==0) {
-                attrnode->namespace = 
-                    info->document->rootNode->firstAttr->namespace;
-            } else {
-                /* Since where here, this means, the attribute has a
-                   up to now not declared namespace prefix. We probably
-                   should return this as an error, shouldn't we?*/
-            }
-        attrNSfound:
-            ;
         }
-#endif
     }
 
     info->depth++;
@@ -1403,14 +1407,14 @@ endElement (
     DispatchPCDATA (info);
     
     info->depth--;
-#ifdef TDOM_NS
-    /* pop active namespaces */
-    while ( (info->activeNSpos >= 0) &&
-            (info->activeNS[info->activeNSpos].depth == info->depth) )
-    {
-        info->activeNSpos--;
+    if (!info->ignorexmlns) {
+        /* pop active namespaces */
+        while ( (info->activeNSpos >= 0) &&
+                (info->activeNS[info->activeNSpos].depth == info->depth) )
+        {
+            info->activeNSpos--;
+        }
     }
-#endif
 
     if (info->depth != -1) {
         info->currentNode = info->currentNode->parentNode;
@@ -2078,6 +2082,7 @@ domReadDocument (
     int         ignoreWhiteSpaces,
     TEncoding  *encoding_8bit,
     int         storeLineColumn,
+    int         ignorexmlns,
     int         feedbackAfter,
     Tcl_Obj    *feedbackCmd,
     Tcl_Channel channel,
@@ -2105,6 +2110,9 @@ domReadDocument (
     if (extResolver) {
         doc->extResolver = tdomstrdup (Tcl_GetString (extResolver));
     }
+    if (ignorexmlns) {
+        doc->nodeFlags |= IGNORE_XMLNS;
+    }
 
     info.parser               = parser;
     info.document             = doc;
@@ -2115,6 +2123,7 @@ domReadDocument (
     Tcl_DStringInit (info.cdata);
     info.encoding_8bit        = encoding_8bit;
     info.storeLineColumn      = storeLineColumn;
+    info.ignorexmlns          = ignorexmlns;
     info.feedbackAfter        = feedbackAfter;
     info.feedbackCmd          = feedbackCmd;
     info.nextFeedbackPosition = feedbackAfter;
@@ -2344,7 +2353,6 @@ domGetLineColumn (
     }
 }
 
-#ifdef TDOM_NS
 domAttrNode *
 domCreateXMLNamespaceNode (
     domNode  *parent
@@ -2369,7 +2377,6 @@ domCreateXMLNamespaceNode (
     attr->nodeValue     = tdomstrdup (XML_NAMESPACE);
     return attr;
 }
-#endif /* TDOM_NS */
 
 
 /*
@@ -2394,7 +2401,7 @@ domDocument *
 domCreateDoc (
     const char * baseURI,
     int          storeLineColumn
-    )
+)
 {
     Tcl_HashEntry *h;
     int            hnew;
@@ -2442,9 +2449,7 @@ domCreateDoc (
     rootNode->ownerDocument = doc;
     rootNode->parentNode    = NULL;
     rootNode->firstChild    = rootNode->lastChild = NULL;
-#ifdef TDOM_NS
     rootNode->firstAttr     = domCreateXMLNamespaceNode (rootNode);
-#endif
     if (storeLineColumn) {
         lc = (domLineColumn*) ( ((char*)rootNode) + sizeof(domNode));
         rootNode->nodeFlags |= HAS_LINE_COLUMN;
@@ -5162,6 +5167,7 @@ typedef struct _tdomCmdReadInfo {
     Tcl_DString      *cdata;
     TEncoding        *encoding_8bit;
     int               storeLineColumn;
+    int               ignorexmlns;
     int               feedbackAfter;
     Tcl_Obj          *feedbackCmd;
     int               nextFeedbackPosition;
@@ -5239,6 +5245,7 @@ tdom_resetProc (
     info->currentNode       = NULL;
     info->depth             = 0;
     info->feedbackAfter     = 0;
+    info->ignorexmlns       = 0;
     Tcl_DStringSetLength (info->cdata, 0);
     info->nextFeedbackPosition = info->feedbackAfter;
     info->interp            = interp;
@@ -5302,14 +5309,14 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         "enable", "getdoc",
         "setResultEncoding", "setStoreLineColumn",
         "setExternalEntityResolver", "keepEmpties",
-        "remove",
+        "remove", "ignorexmlns",
         NULL
     };
     enum tdomMethod {
         m_enable, m_getdoc,
         m_setResultEncoding, m_setStoreLineColumn,
         m_setExternalEntityResolver, m_keepEmpties,
-        m_remove
+        m_remove, m_ignorexmlns
     };
 
     if (objc < 3 || objc > 4) {
@@ -5499,6 +5506,22 @@ TclTdomObjCmd (dummy, interp, objc, objv)
         handlerSet->ignoreWhiteCDATAs = !bool;
         info->tdomStatus = 1;
         break;
+
+    case m_ignorexmlns:
+        info = CHandlerSetGetUserData (interp, objv[1], "tdom");
+        if (!info) {
+            Tcl_SetResult (interp, "parser object isn't tdom enabled.", NULL);
+            return TCL_ERROR;
+        }
+        Tcl_SetIntObj (Tcl_GetObjResult (interp), info->ignorexmlns);
+        if (objc == 4) {
+            Tcl_GetBooleanFromObj (interp, objv[3], &bool);
+            info->storeLineColumn = bool;
+        }
+        info->tdomStatus = 1;
+        break;
+        
+
     }
 
     return TCL_OK;

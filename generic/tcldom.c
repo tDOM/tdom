@@ -1147,6 +1147,7 @@ int tcldom_appendXML (
     Tcl_Obj     *extResolver = NULL;
     int          xml_string_len;
     int          resultcode = 0;
+    int          ignorexmlns = 0;
     domDocument *doc;
     domNode     *nodeToAppend;
     XML_Parser   parser;
@@ -1165,6 +1166,9 @@ int tcldom_appendXML (
         extResolver = Tcl_NewStringObj(node->ownerDocument->extResolver, -1);
         Tcl_IncrRefCount (extResolver);
     }
+    if (node->ownerDocument->nodeFlags & IGNORE_XMLNS) {
+        ignorexmlns = 1;
+    }
 
     doc = domReadDocument(parser,
                           xml_string,
@@ -1172,6 +1176,7 @@ int tcldom_appendXML (
                           1,
                           TSD(Encoding_to_8bit),
                           TSD(storeLineColumn),
+                          ignorexmlns,
                           0,
                           NULL,
                           NULL,
@@ -5443,6 +5448,7 @@ int tcldom_parse (
     int          takeSimpleParser    = 0;
     int          takeHTMLParser      = 0;
     int          setVariable         = 0;
+    int          ignorexmlns         = 0;
     int          feedbackAfter       = 0;
     int          useForeignDTD       = 0;
     int          paramEntityParsing  = (int)XML_PARAM_ENTITY_PARSING_ALWAYS;
@@ -5457,14 +5463,14 @@ int tcldom_parse (
         "-keepEmpties",           "-simple",        "-html",
         "-feedbackAfter",         "-channel",       "-baseurl",
         "-externalentitycommand", "-useForeignDTD", "-paramentityparsing",
-        "-feedbackcmd",
+        "-feedbackcmd",           "-ignorexmlns",
         NULL
     };
     enum parseOption {
         o_keepEmpties,            o_simple,         o_html,
         o_feedbackAfter,          o_channel,        o_baseurl,
         o_externalentitycommand,  o_useForeignDTD,  o_paramentityparsing,
-        o_feedbackcmd
+        o_feedbackcmd,            o_ignorexmlns
     };
 
     static CONST84 char *paramEntityParsingValues[] = {
@@ -5624,6 +5630,10 @@ int tcldom_parse (
             }
             objv++; objc--;
             continue;
+            
+        case o_ignorexmlns:
+            ignorexmlns = 1;
+            objv++;  objc--; continue;
 
         }
     }
@@ -5724,6 +5734,7 @@ int tcldom_parse (
                           ignoreWhiteSpaces,
                           TSD(Encoding_to_8bit),
                           TSD(storeLineColumn),
+                          ignorexmlns,
                           feedbackAfter,
                           feedbackCmd,
                           chan,
