@@ -1178,6 +1178,19 @@ test xslt-8.6 {Almost minimal xslt 1.0 stylesheet} {
     set result
 } {}
 
+test xslt-8.7 {Minimal xslt 1.0 stylesheet} {
+    set xmlDoc {<doc><child>text</child></doc>}
+    set xsltDoc {<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"/>}
+    dom parse -keepEmpties $xmlDoc xmldoc
+    dom parse -keepEmpties $xsltDoc xsltdoc
+    $xmldoc xslt $xsltdoc resultDoc
+    set result [$resultDoc asXML -indent none]
+    $xmldoc delete
+    $xsltdoc delete
+    $resultDoc delete
+    set result
+} {}
+
 proc ::dom::xpathFunc::xslt-9.1 {ctxNode pos nodeListType nodeList args} {
     if {[llength $ctxNode] != 2} {
         error "::dom::xpathFunc::xslt-9.1: expected parent node / attribute \
