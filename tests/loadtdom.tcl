@@ -6,23 +6,11 @@
 # RCS: @(#) $Id$
 #
 
-if {[lsearch [namespace children] ::tcltest] == -1} {
-    if {$tcl_version < 8.2} {
-        puts stderr "sourcing def.tcl"
-        source [file join [file dir [info script]] defs.tcl]
-        set auto_path [pwd]
-    } else {
-        package require tcltest
-        namespace import ::tcltest::*
-    }
-}
-
-if {[catch {package present -exact tdom 0.8.3}]} {
-    package require -exact tdom 0.8.3
-} else {
-    if {[lsearch [namespace children] ::tDOM] == -1} {
-        # tcldomsh without the script library. Source the lib.
-        source [file join [file dir [info script]] ../lib tdom.tcl]
-    }
+package require tcltest
+namespace import ::tcltest::*
+package require -exact tdom 0.8.3
+if {[lsearch [namespace children] ::tDOM] == -1} {
+    # tcldomsh without the script library. Source the lib.
+    source [file join [file dir [info script]] ../lib tdom.tcl]
 }
 
