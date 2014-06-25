@@ -459,6 +459,29 @@ test dom-2.26 {Not well-formed input} {
                    <http://www.w3.org/1999/XSL/Transform> "/>}}
 } 1
 
+test dom-2.27 {parse -ignorexmlns} {
+    set result [list]
+    set doc [dom parse {<doc xmlns="foo.bar"><child/></doc>}]
+    set root [$doc documentElement]
+    lappend result [$root localName]
+    lappend result [$root namespaceURI]
+    set child [$root firstChild]
+    lappend result [$child localName]
+    lappend result [$child namespaceURI]
+    lappend result [$doc selectNodes count(/doc/child)]
+    $doc delete
+    set doc [dom parse -ignorexmlns {<doc xmlns="foo.bar"><child/></doc>}]
+    set root [$doc documentElement]
+    lappend result [$root nodeName]
+    lappend result [$root namespaceURI]
+    set child [$root firstChild]
+    lappend result [$child nodeName]
+    lappend result [$child namespaceURI]
+    lappend result [$doc selectNodes count(/doc/child)]
+    $doc delete
+    set result
+} {doc foo.bar child foo.bar 0 doc {} child {} 1}
+
 test dom-3.1 {isName} {
     dom isName ":foo"
 } {1}
