@@ -4561,8 +4561,7 @@ CHandlerSetInstall (interp, expatObj, handlerSet)
             }
             if (activeCHandlerSet->nextHandlerSet == NULL) {
                 break;
-            }
-            else {
+            } else {
                 activeCHandlerSet = activeCHandlerSet->nextHandlerSet;
             }
         }
