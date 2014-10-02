@@ -727,6 +727,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
 
     case EXPAT_GET:
 
+        CheckArgs (3,3,2,"<option>");
         /* ericm@scriptics.com, 1999.6.28 */
         result = TclExpatGet(interp, expat, objc - 2, objv + 2);
         break;
@@ -1971,12 +1972,6 @@ TclExpatGet (interp, expat, objc, objv)
   };
   int switchIndex;
   Tcl_Obj *resultPtr;
-
-  if (objc > 1) {
-    Tcl_SetResult(interp, "Only one value may be requested at a time",
-		  TCL_STATIC);
-    return TCL_ERROR;
-  }
 
   if (Tcl_GetIndexFromObj(interp, objv[0], getSwitches,
 			  "switch", 0, &switchIndex) != TCL_OK) {

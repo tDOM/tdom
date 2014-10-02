@@ -179,6 +179,28 @@ test parser-1.13 {parser configure} {
     list $::esh_1_13_1 $::esh_1_13_2
 } {0 3}
 
+test parser-1.14 {parser get} {
+    catch {rename parser-1.14 {}}
+    set parser [expat parser-1.14]
+    set result [catch {$parser get}]
+    $parser free
+    set result
+} {1}
+test parser-1.15 {parser get} {
+    catch {rename parser-1.15 {}}
+    set parser [expat parser-1.15]
+    set result [catch {$parser get foo bar}]
+    $parser free
+    set result
+} {1}
+test parser-1.16 {parser get} {
+    catch {rename parser-1.16 {}}
+    set parser [expat parser-1.16]
+    set result [$parser get -currentbytecount]
+    $parser free
+    set result
+} {0}
+
 # Test break return code from callback
 
 test parser-2.1 {break in callback} {
