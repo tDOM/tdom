@@ -673,11 +673,11 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
   int len = 0, optionIndex, result = TCL_OK;
 
   static CONST84 char *options[] = {
-      "configure", "cget", "free", "get",
+      "configure", "cget", "defaultcurrent", "free", "get",
       "parse", "parsechannel", "parsefile", "reset", NULL
   };
   enum options {
-      EXPAT_CONFIGURE, EXPAT_CGET, EXPAT_FREE, EXPAT_GET,
+      EXPAT_CONFIGURE, EXPAT_CGET, EXPAT_DEFAULTCURRENT, EXPAT_FREE, EXPAT_GET,
       EXPAT_PARSE, EXPAT_PARSECHANNEL, EXPAT_PARSEFILE, EXPAT_RESET
   };
 
@@ -709,6 +709,13 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
 
         CheckArgs (3,5,2, "?-handlerset handlersetname? switch");
         result = TclExpatCget(interp, expat, objc - 2, objv + 2);
+        break;
+
+    case EXPAT_DEFAULTCURRENT:
+
+        CheckArgs (2,2,1, "");
+        XML_DefaultCurrent(expat->parser);
+        result = TCL_OK;
         break;
 
     case EXPAT_FREE:
