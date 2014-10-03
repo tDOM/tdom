@@ -11,6 +11,8 @@
 #    parser-7.*: parser reset
 #    parser-8.*: parser free
 #    parser-9.*: parser parse
+#    parser-10.*: return code 'error' from callback
+#    parser-11.*: parser defaultcurrent
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
 # Copyright (c) 2002-2005 Rolf Ade
@@ -504,7 +506,7 @@ proc elementstart {args} {
     $parser parse {<root>foo bar</root>}
 }
 
-test parser-9.1 {try to use the parser form within one of its callbacks} {
+test parser-9.1 {try to use the parser from within one of its callbacks} {
     set parser [expat -elementstartcommand elementstart]
     set result [catch {$parser parse <root>foo</root>} errMsg]
     lappend result $errMsg
@@ -522,7 +524,7 @@ proc elementstart {args} {
     calledFromElementstart
 }
 
-test parser-9.2 {try to use the parser form within one of its callbacks} {
+test parser-9.2 {try to use the parser from within one of its callbacks} {
     set parser [expat -elementstartcommand elementstart]
     set result [catch {$parser parse <root>foo</root>} errMsg]
     lappend result $errMsg
@@ -568,6 +570,35 @@ test parser-10.2 {return -code return in callback} {
 </Test>}} errMsg]
     lappend result $errcode $::started(Element)
 } {0 2 0 3}
+
+proc defaultcommand-11.1 {str} {
+    global result
+    append result $str
+}
+
+proc elementstart-11.1 {parser args} {
+    $parser defaultcurrent
+}
+
+proc elementend-11.1 {parser args} {
+    $parser defaultcurrent
+}
+
+test parser-11.1 {defaultcurrent method} {
+    catch {unset result}
+    set p [expat parser-11.1]
+    $p configure \
+        -elementstartcommand [list elementstart-11.1 $p] \
+        -elementendcommand [list elementend-11.1 $p] \
+        -defaultcommand defaultcommand-11.1
+    $p parse {<root rootatt="rootatt">text<a
+        a_att1="a_att1"
+        a_att2 = "a_att2"/><b>more text</b></root>}
+    $p free
+    set result
+} {<root rootatt="rootatt"><a
+        a_att1="a_att1"
+        a_att2 = "a_att2"/><b></b></root>}
 
 foreach parser [info commands xmlparser*] {
     $parser free
