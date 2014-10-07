@@ -134,7 +134,9 @@ typedef struct TclGenExpatInfo {
     int paramentityparsing;     
     int noexpand;
     int useForeignDTD;
-
+    CONST char *defaultcurrent; /* Used to transfere data for method */
+    int defaultcurrentlen;      /* defaultcurrent */
+ 
     TclHandlerSet *firstTclHandlerSet;
     CHandlerSet *firstCHandlerSet;
 } TclGenExpatInfo;

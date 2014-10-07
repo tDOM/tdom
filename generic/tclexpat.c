@@ -553,54 +553,43 @@ TclExpatInitializeParser(interp, expat, resetOptions)
      */
 
     XML_SetElementHandler(expat->parser,
-                          (XML_StartElementHandler) TclGenExpatElementStartHandler,
-                          (XML_EndElementHandler) TclGenExpatElementEndHandler);
+                          TclGenExpatElementStartHandler,
+                          TclGenExpatElementEndHandler);
     XML_SetNamespaceDeclHandler(expat->parser,
-                                (XML_StartNamespaceDeclHandler) TclGenExpatStartNamespaceDeclHandler,
-                                (XML_EndNamespaceDeclHandler) TclGenExpatEndNamespaceDeclHandler);
+                                TclGenExpatStartNamespaceDeclHandler,
+                                TclGenExpatEndNamespaceDeclHandler);
     XML_SetCharacterDataHandler(expat->parser,
-                                (XML_CharacterDataHandler) TclGenExpatCharacterDataHandler);
+                                TclGenExpatCharacterDataHandler);
     XML_SetProcessingInstructionHandler(expat->parser,
-                                        (XML_ProcessingInstructionHandler) TclGenExpatProcessingInstructionHandler);
-    XML_SetDefaultHandlerExpand(expat->parser,
-                                (XML_DefaultHandler) TclGenExpatDefaultHandler);
-    
+                                        TclGenExpatProcessingInstructionHandler);
+    XML_SetDefaultHandlerExpand(expat->parser, TclGenExpatDefaultHandler);
     XML_SetNotationDeclHandler(expat->parser,
-                               (XML_NotationDeclHandler) TclGenExpatNotationDeclHandler);
+                               TclGenExpatNotationDeclHandler);
     XML_SetExternalEntityRefHandler(expat->parser,
-                                    (XML_ExternalEntityRefHandler) TclGenExpatExternalEntityRefHandler);
+                                    TclGenExpatExternalEntityRefHandler);
     XML_SetUnknownEncodingHandler(expat->parser,
-                                  (XML_UnknownEncodingHandler) TclGenExpatUnknownEncodingHandler,
+                                  TclGenExpatUnknownEncodingHandler,
                                   (void *) expat);
-    
-    
     XML_SetCommentHandler(expat->parser, TclGenExpatCommentHandler);
-    
-    XML_SetNotStandaloneHandler(expat->parser, TclGenExpatNotStandaloneHandler);
-    
-    XML_SetCdataSectionHandler(expat->parser, TclGenExpatStartCdataSectionHandler,
+    XML_SetNotStandaloneHandler(expat->parser, 
+                                TclGenExpatNotStandaloneHandler);
+    XML_SetCdataSectionHandler(expat->parser, 
+                               TclGenExpatStartCdataSectionHandler,
                                TclGenExpatEndCdataSectionHandler);
-    
     XML_SetElementDeclHandler(expat->parser, TclGenExpatElementDeclHandler);
-    
     XML_SetAttlistDeclHandler(expat->parser, TclGenExpatAttlistDeclHandler);
-    
     XML_SetDoctypeDeclHandler(expat->parser,
                               TclGenExpatStartDoctypeDeclHandler,
                               TclGenExpatEndDoctypeDeclHandler);
-    
     XML_SetXmlDeclHandler (expat->parser, TclGenExpatXmlDeclHandler);
-    
     XML_SetEntityDeclHandler (expat->parser,
                               TclGenExpatEntityDeclHandler);
     if (expat->noexpand) {
-        XML_SetDefaultHandlerExpand(expat->parser, NULL);
         XML_SetDefaultHandler(expat->parser,
-                              (XML_DefaultHandler) TclGenExpatDefaultHandler);
+                              TclGenExpatDefaultHandler);
     } else {
-        XML_SetDefaultHandler(expat->parser, NULL);
         XML_SetDefaultHandlerExpand(expat->parser,
-                              (XML_DefaultHandler) TclGenExpatDefaultHandler);
+                                    TclGenExpatDefaultHandler);
     }
     
     XML_SetUserData(expat->parser, (void *) expat);
@@ -644,6 +633,40 @@ TclExpatFreeParser(expat)
   XML_ParserFree(expat->parser);
   expat->parser = NULL;
 }
+
+/*
+ *----------------------------------------------------------------------------
+ *
+ * DefaultCurrentCommand --
+ *
+ *	Set as defaultHandler prior to XML_DefaultCurrent() call.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stores the markup context in expapt->defaultcurrent.
+ *
+ *----------------------------------------------------------------------------
+ */
+static void
+DefaultCurrentCommand(userData, s, len)
+     void *userData;
+     CONST char *s;
+     int len;
+{
+    TclGenExpatInfo *expat = (TclGenExpatInfo *) userData;
+
+    if (expat->status != TCL_OK) {
+        return;
+    }
+  
+    expat->defaultcurrent = s;
+    expat->defaultcurrentlen = len;
+    return;
+}
+
+
 
 /*
  *----------------------------------------------------------------------------
@@ -714,7 +737,19 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_DEFAULTCURRENT:
 
         CheckArgs (2,2,1, "");
+        XML_SetDefaultHandlerExpand(expat->parser,
+                                    DefaultCurrentCommand);
         XML_DefaultCurrent(expat->parser);
+        Tcl_SetObjResult(expat->interp, 
+                         Tcl_NewStringObj(expat->defaultcurrent,
+                                          expat->defaultcurrentlen));
+        if (expat->noexpand) {
+            XML_SetDefaultHandler(expat->parser,
+                                  TclGenExpatDefaultHandler);
+        } else {
+            XML_SetDefaultHandlerExpand(expat->parser,
+                                        TclGenExpatDefaultHandler);
+        }
         result = TCL_OK;
         break;
 
@@ -1515,14 +1550,11 @@ TclExpatConfigure (interp, expat, objc, objv)
             return TCL_ERROR;
         }
         if (bool) {
-            XML_SetDefaultHandlerExpand(expat->parser, NULL);
-            XML_SetDefaultHandler(expat->parser,
-                        (XML_DefaultHandler) TclGenExpatDefaultHandler);
-        }
-        else {
-            XML_SetDefaultHandler(expat->parser, NULL);
-            XML_SetDefaultHandlerExpand(expat->parser,
-                        (XML_DefaultHandler) TclGenExpatDefaultHandler);
+            XML_SetDefaultHandler( expat->parser,
+                                   TclGenExpatDefaultHandler);
+        } else {
+            XML_SetDefaultHandlerExpand( expat->parser,
+                                         TclGenExpatDefaultHandler);
         }
         expat->noexpand = bool;
         break;

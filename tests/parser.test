@@ -571,26 +571,23 @@ test parser-10.2 {return -code return in callback} {
     lappend result $errcode $::started(Element)
 } {0 2 0 3}
 
-proc defaultcommand-11.1 {str} {
-    global result
-    append result $str
-}
-
 proc elementstart-11.1 {parser args} {
-    $parser defaultcurrent
+    global result
+    append result [$parser defaultcurrent]
 }
 
 proc elementend-11.1 {parser args} {
-    $parser defaultcurrent
+    global result
+    append result [$parser defaultcurrent]
 }
 
 test parser-11.1 {defaultcurrent method} {
     catch {unset result}
-    set p [expat parser-11.1]
+    set result ""
+    set p [expat parser-11.1 -noexpand]
     $p configure \
         -elementstartcommand [list elementstart-11.1 $p] \
-        -elementendcommand [list elementend-11.1 $p] \
-        -defaultcommand defaultcommand-11.1
+        -elementendcommand [list elementend-11.1 $p]
     $p parse {<root rootatt="rootatt">text<a
         a_att1="a_att1"
         a_att2 = "a_att2"/><b>more text</b></root>}
@@ -599,6 +596,24 @@ test parser-11.1 {defaultcurrent method} {
 } {<root rootatt="rootatt"><a
         a_att1="a_att1"
         a_att2 = "a_att2"/><b></b></root>}
+
+proc characterdata-11.2 {parser data} {
+    $parser defaultcurrent
+}
+test parser-11.2 {defaultcurrent method} {
+    catch {unset result}
+    set result ""
+    set p [expat parser-11.2]
+    $p configure \
+        -characterdatacommand [list characterdata-11.2 $p] \
+        -defaultcommand defaultcommand-11.1
+    $p parse {<root rootatt="rootatt">text<a
+        a_att1="a_att1"
+        a_att2 = "a_att2"/><b>more text</b></root>}
+    $p free
+    set result
+} {}
+
 
 foreach parser [info commands xmlparser*] {
     $parser free
