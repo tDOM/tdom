@@ -588,6 +588,15 @@ named handler set is returned.</p>
         </commanddef>
 
         <commanddef>
+          <command><cmd>parser</cmd> <method>defaultcurrent</method></command>
+
+          <desc><p>Returns the current markup as found in the XML, if
+          called from within one of its markup event handler
+          script. Otherwise it return the empty string.
+          </p></desc>
+        </commanddef>
+
+        <commanddef>
           <command><cmd>parser</cmd> <method>free</method></command>
 
           <desc><p>Deletes the parser and the parser command. A parser cannot
