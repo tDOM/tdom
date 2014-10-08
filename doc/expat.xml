@@ -588,7 +588,7 @@ named handler set is returned.</p>
         </commanddef>
 
         <commanddef>
-          <command><cmd>parser</cmd> <method>defaultcurrent</method></command>
+          <command><cmd>parser</cmd> <method>currentmarkup</method></command>
 
           <desc><p>Returns the current markup as found in the XML, if
           called from within one of its markup event handler

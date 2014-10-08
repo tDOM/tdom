@@ -637,20 +637,20 @@ TclExpatFreeParser(expat)
 /*
  *----------------------------------------------------------------------------
  *
- * DefaultCurrentCommand --
+ * CurrentmarkupCommand --
  *
- *	Set as defaultHandler prior to XML_DefaultCurrent() call.
+ *	Set as defaultHandler prior to XML_Currentmarkup() call.
  *
  * Results:
  *	None.
  *
  * Side effects:
- *	Stores the markup context in expapt->defaultcurrent.
+ *	Stores the markup context in expapt->currentmarkup.
  *
  *----------------------------------------------------------------------------
  */
 static void
-DefaultCurrentCommand(userData, s, len)
+CurrentmarkupCommand(userData, s, len)
      void *userData;
      CONST char *s;
      int len;
@@ -661,8 +661,8 @@ DefaultCurrentCommand(userData, s, len)
         return;
     }
   
-    expat->defaultcurrent = s;
-    expat->defaultcurrentlen = len;
+    expat->currentmarkup = s;
+    expat->currentmarkuplen = len;
     return;
 }
 
@@ -696,11 +696,11 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
   int len = 0, optionIndex, result = TCL_OK;
 
   static CONST84 char *options[] = {
-      "configure", "cget", "defaultcurrent", "free", "get",
+      "configure", "cget", "currentmarkup", "free", "get",
       "parse", "parsechannel", "parsefile", "reset", NULL
   };
   enum options {
-      EXPAT_CONFIGURE, EXPAT_CGET, EXPAT_DEFAULTCURRENT, EXPAT_FREE, EXPAT_GET,
+      EXPAT_CONFIGURE, EXPAT_CGET, EXPAT_CURRENTMARKUP, EXPAT_FREE, EXPAT_GET,
       EXPAT_PARSE, EXPAT_PARSECHANNEL, EXPAT_PARSEFILE, EXPAT_RESET
   };
 
@@ -734,15 +734,15 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
         result = TclExpatCget(interp, expat, objc - 2, objv + 2);
         break;
 
-    case EXPAT_DEFAULTCURRENT:
+    case EXPAT_CURRENTMARKUP:
 
         CheckArgs (2,2,1, "");
         XML_SetDefaultHandlerExpand(expat->parser,
-                                    DefaultCurrentCommand);
+                                    CurrentmarkupCommand);
         XML_DefaultCurrent(expat->parser);
         Tcl_SetObjResult(expat->interp, 
-                         Tcl_NewStringObj(expat->defaultcurrent,
-                                          expat->defaultcurrentlen));
+                         Tcl_NewStringObj(expat->currentmarkup,
+                                          expat->currentmarkuplen));
         if (expat->noexpand) {
             XML_SetDefaultHandler(expat->parser,
                                   TclGenExpatDefaultHandler);
