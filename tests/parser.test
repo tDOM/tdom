@@ -614,6 +614,11 @@ test parser-11.2 {defaultcurrent method} {
     set result
 } {}
 
+test parse1-11.3 {defaultcurrent method} {
+    set p [expat parser-11.3]
+    set result [$p defaultcurrent]
+    $p free
+}
 
 foreach parser [info commands xmlparser*] {
     $parser free
