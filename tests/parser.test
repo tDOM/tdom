@@ -12,7 +12,7 @@
 #    parser-8.*: parser free
 #    parser-9.*: parser parse
 #    parser-10.*: return code 'error' from callback
-#    parser-11.*: parser defaultcurrent
+#    parser-11.*: parser currentmarkup
 #
 # Copyright (c) 1999-2000 Zveno Pty Ltd.
 # Copyright (c) 2002-2005 Rolf Ade
@@ -573,15 +573,15 @@ test parser-10.2 {return -code return in callback} {
 
 proc elementstart-11.1 {parser args} {
     global result
-    append result [$parser defaultcurrent]
+    append result [$parser currentmarkup]
 }
 
 proc elementend-11.1 {parser args} {
     global result
-    append result [$parser defaultcurrent]
+    append result [$parser currentmarkup]
 }
 
-test parser-11.1 {defaultcurrent method} {
+test parser-11.1 {currentmarkup method} {
     catch {unset result}
     set result ""
     set p [expat parser-11.1 -noexpand]
@@ -598,9 +598,9 @@ test parser-11.1 {defaultcurrent method} {
         a_att2 = "a_att2"/><b></b></root>}
 
 proc characterdata-11.2 {parser data} {
-    $parser defaultcurrent
+    $parser currentmarkup
 }
-test parser-11.2 {defaultcurrent method} {
+test parser-11.2 {currentmarkup method} {
     catch {unset result}
     set result ""
     set p [expat parser-11.2]
@@ -614,9 +614,9 @@ test parser-11.2 {defaultcurrent method} {
     set result
 } {}
 
-test parse1-11.3 {defaultcurrent method} {
+test parse1-11.3 {currentmarkup method} {
     set p [expat parser-11.3]
-    set result [$p defaultcurrent]
+    set result [$p currentmarkup]
     $p free
 }
 
