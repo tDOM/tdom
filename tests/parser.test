@@ -598,15 +598,15 @@ test parser-11.1 {currentmarkup method} {
         a_att2 = "a_att2"/><b></b></root>}
 
 proc characterdata-11.2 {parser data} {
-    $parser currentmarkup
+    global result
+    append result [$parser currentmarkup]
 }
 test parser-11.2 {currentmarkup method} {
     catch {unset result}
     set result ""
     set p [expat parser-11.2]
     $p configure \
-        -characterdatacommand [list characterdata-11.2 $p] \
-        -defaultcommand defaultcommand-11.1
+        -characterdatacommand [list characterdata-11.2 $p] 
     $p parse {<root rootatt="rootatt">text<a
         a_att1="a_att1"
         a_att2 = "a_att2"/><b>more text</b></root>}
@@ -614,12 +614,38 @@ test parser-11.2 {currentmarkup method} {
     set result
 } {}
 
-test parse1-11.3 {currentmarkup method} {
+test parser-11.3 {currentmarkup method} {
     set p [expat parser-11.3]
     set result [$p currentmarkup]
     $p free
-}
+    set result
+} {}
 
+proc elementstart-11.4 {parser handlerset args} {
+    global result
+    append result "$handlerset: [$parser currentmarkup]\n"
+}
+proc elementend-11.4 {parser handlerset args} {
+    global result
+    append result "$handlerset: [$parser currentmarkup]\n"
+}
+test parser-11.4 {currentmarkup method - multiple handler set} {
+    catch {unset result}
+    set result ""
+    set p [expat parser-11.4]
+    $p configure \
+        -elementstartcommand [list elementstart-11.4 $p default] \
+        -elementendcommand [list elementend-11.4 $p default] \
+        -handlerset "additional" \
+        -elementstartcommand [list elementstart-11.4 $p "additional"] \
+        -elementendcommand [list elementend-11.4 $p "additional"]
+    $p parse {<root rootatt="rootatt">text<a
+        a_att1="a_att1"
+        a_att2 = "a_att2"/><b>more text</b></root>}
+    $p free
+    set result
+} {}
+    
 foreach parser [info commands xmlparser*] {
     $parser free
 }

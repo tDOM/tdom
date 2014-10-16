@@ -737,12 +737,23 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
     case EXPAT_CURRENTMARKUP:
 
         CheckArgs (2,2,1, "");
+        if (expat->parsingState < 2) {
+            Tcl_ResetResult(expat->interp);
+            break;
+        }
+        
         XML_SetDefaultHandlerExpand(expat->parser,
                                     CurrentmarkupCommand);
         XML_DefaultCurrent(expat->parser);
-        Tcl_SetObjResult(expat->interp, 
-                         Tcl_NewStringObj(expat->currentmarkup,
-                                          expat->currentmarkuplen));
+        if (expat->currentmarkuplen) {
+            Tcl_SetObjResult(expat->interp, 
+                             Tcl_NewStringObj(expat->currentmarkup,
+                                              expat->currentmarkuplen));
+        } else {
+            Tcl_ResetResult(expat->interp);
+        }
+        expat->currentmarkup = NULL;
+        expat->currentmarkuplen = 0;
         if (expat->noexpand) {
             XML_SetDefaultHandler(expat->parser,
                                   TclGenExpatDefaultHandler);
