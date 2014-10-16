@@ -259,6 +259,64 @@ AC_DEFUN(TDOM_PATH_AOLSERVER, [
 ])
 
 #------------------------------------------------------------------------
+# TDOM_PATH_EXPAT
+#
+#   Allows the building against a shared, system-wide expat library In
+#   doubt, it falls back to the bundled expat copy
+#
+# Arguments:
+#   none
+#
+# Results:
+#
+#   Adds the following arguments to configure:
+#       --with-expat=...
+#
+#   Defines the following vars:
+#
+#   Sets the following vars:
+#
+#------------------------------------------------------------------------
+
+AC_DEFUN(TDOM_PATH_EXPAT, [
+    AC_MSG_CHECKING([for expat])
+    AC_ARG_WITH(expat,
+        AC_HELP_STRING([--with-expat],
+            [directory with expat installation]), , [with_expat=no])
+
+    AC_CACHE_VAL(ac_cv_c_expat,[
+        case $with_expat in
+            no) ;;
+            yes)
+                for f in /usr/local /usr; do
+                    if test -f "$f/include/expat.h" ; then
+                        ac_cv_c_expat=`(cd $f; pwd)`
+                        break
+                    fi
+                done
+                ;;
+            *)                
+                if test -f "$with_expat/include/expat.h"; then
+                    ac_cv_c_expat=`(cd $with_expat; pwd)`
+                else                  
+                     AC_MSG_ERROR([${with_expat} directory doesn't contain expat.h])
+                fi
+        esac             
+    ])
+    if test x"${ac_cv_c_expat}" = x ; then
+        AC_MSG_RESULT([Using bundled expat distribution])
+        TEA_ADD_SOURCES([expat/xmlrole.c \
+                         expat/xmltok.c \
+                         expat/xmlparse.c])
+        TEA_ADD_INCLUDES([-I${srcdir}/expat])
+    else
+        AC_MSG_RESULT([Using shared expat found in ${ac_cv_c_expat}])
+        TEA_ADD_INCLUDES(${ac_cv_c_expat}/include)
+        TEA_ADD_LIBS([-lexpat])
+    fi
+])
+
+#------------------------------------------------------------------------
 # TDOM_PATH_CONFIG --
 #
 #	Locate the tdomConfig.sh file

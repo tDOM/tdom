@@ -73,6 +73,12 @@ AC_CHECK_FUNCS(memmove bcopy)
 
 TDOM_PATH_AOLSERVER
 
+#--------------------------------------------------------------------
+# Add shared expat includes
+#--------------------------------------------------------------------
+
+TDOM_PATH_EXPAT
+
 #-----------------------------------------------------------------------
 # __CHANGE__
 # Specify the C source files to compile in TEA_ADD_SOURCES,
@@ -83,10 +89,7 @@ TDOM_PATH_AOLSERVER
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-TEA_ADD_SOURCES([expat/xmlrole.c     \
-                 expat/xmltok.c      \
-                 expat/xmlparse.c    \
-                 generic/xmlsimple.c \
+TEA_ADD_SOURCES([generic/xmlsimple.c \
                  generic/utf8conv.c  \
                  generic/dom.c       \
                  generic/domhtml.c   \
@@ -99,7 +102,7 @@ TEA_ADD_SOURCES([expat/xmlrole.c     \
                  generic/tclexpat.c  \
                  generic/tdomStubInit.c])
 TEA_ADD_HEADERS([generic/tdom.h])
-TEA_ADD_INCLUDES([-I${srcdir}/generic -I${srcdir}/expat ${AOL_INCLUDES}])
+TEA_ADD_INCLUDES([-I${srcdir}/generic ${AOL_INCLUDES}])
 TEA_ADD_LIBS([${AOL_LIBS}])
 TEA_ADD_CFLAGS([])
 TEA_ADD_STUB_SOURCES([generic/tdomStubLib.c])

@@ -735,6 +735,7 @@ ac_user_opts='
 enable_option_checking
 with_tcl
 with_aol
+with_expat
 with_tclinclude
 enable_threads
 enable_shared
@@ -1388,6 +1389,7 @@ Optional Packages:
   --with-tcl              directory containing tcl configuration
                           (tclConfig.sh)
   --with-aolserver        directory with AOLserver distribution
+  --with-expat            directory with expat installation
   --with-tclinclude       directory containing the public Tcl header files
   --with-celib=DIR        use Windows/CE support library from DIR
 
@@ -5339,6 +5341,117 @@ $as_echo "found AOLserver in $AOL_DIR" >&6; }
     fi
 
 
+#--------------------------------------------------------------------
+# Add shared expat includes
+#--------------------------------------------------------------------
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for expat" >&5
+$as_echo_n "checking for expat... " >&6; }
+
+# Check whether --with-expat was given.
+if test "${with_expat+set}" = set; then :
+  withval=$with_expat;
+else
+  with_expat=no
+fi
+
+
+    if ${ac_cv_c_expat+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        case $with_expat in
+            no) ;;
+            yes)
+                for f in /usr/local /usr; do
+                    if test -f "$f/include/expat.h" ; then
+                        ac_cv_c_expat=`(cd $f; pwd)`
+                        break
+                    fi
+                done
+                ;;
+            *)
+                if test -f "$with_expat/include/expat.h"; then
+                    ac_cv_c_expat=`(cd $with_expat; pwd)`
+                else
+                     as_fn_error $? "${with_expat} directory doesn't contain expat.h" "$LINENO" 5
+                fi
+        esac
+
+fi
+
+    if test x"${ac_cv_c_expat}" = x ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using bundled expat distribution" >&5
+$as_echo "Using bundled expat distribution" >&6; }
+
+    vars="expat/xmlrole.c \
+                         expat/xmltok.c \
+                         expat/xmlparse.c"
+    for i in $vars; do
+	case $i in
+	    \$*)
+		# allow $-var names
+		PKG_SOURCES="$PKG_SOURCES $i"
+		PKG_OBJECTS="$PKG_OBJECTS $i"
+		;;
+	    *)
+		# check for existence - allows for generic/win/unix VPATH
+		# To add more dirs here (like 'src'), you have to update VPATH
+		# in Makefile.in as well
+		if test ! -f "${srcdir}/$i" -a ! -f "${srcdir}/generic/$i" \
+		    -a ! -f "${srcdir}/win/$i" -a ! -f "${srcdir}/unix/$i" \
+		    -a ! -f "${srcdir}/macosx/$i" \
+		    ; then
+		    as_fn_error $? "could not find source file '$i'" "$LINENO" 5
+		fi
+		PKG_SOURCES="$PKG_SOURCES $i"
+		# this assumes it is in a VPATH dir
+		i=`basename $i`
+		# handle user calling this before or after TEA_SETUP_COMPILER
+		if test x"${OBJEXT}" != x ; then
+		    j="`echo $i | sed -e 's/\.[^.]*$//'`.${OBJEXT}"
+		else
+		    j="`echo $i | sed -e 's/\.[^.]*$//'`.\${OBJEXT}"
+		fi
+		PKG_OBJECTS="$PKG_OBJECTS $j"
+		;;
+	esac
+    done
+
+
+
+
+    vars="-I${srcdir}/expat"
+    for i in $vars; do
+	PKG_INCLUDES="$PKG_INCLUDES $i"
+    done
+
+
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using shared expat found in ${ac_cv_c_expat}" >&5
+$as_echo "Using shared expat found in ${ac_cv_c_expat}" >&6; }
+
+    vars="${ac_cv_c_expat}/include"
+    for i in $vars; do
+	PKG_INCLUDES="$PKG_INCLUDES $i"
+    done
+
+
+
+    vars="-lexpat"
+    for i in $vars; do
+	if test "${TEA_PLATFORM}" = "windows" -a "$GCC" = "yes" ; then
+	    # Convert foo.lib to -lfoo for GCC.  No-op if not *.lib
+	    i=`echo "$i" | sed -e 's/^\([^-].*\)\.lib$/-l\1/i'`
+	fi
+	PKG_LIBS="$PKG_LIBS $i"
+    done
+
+
+    fi
+
+
 #-----------------------------------------------------------------------
 # __CHANGE__
 # Specify the C source files to compile in TEA_ADD_SOURCES,
@@ -5350,10 +5463,7 @@ $as_echo "found AOLserver in $AOL_DIR" >&6; }
 #-----------------------------------------------------------------------
 
 
-    vars="expat/xmlrole.c     \
-                 expat/xmltok.c      \
-                 expat/xmlparse.c    \
-                 generic/xmlsimple.c \
+    vars="generic/xmlsimple.c \
                  generic/utf8conv.c  \
                  generic/dom.c       \
                  generic/domhtml.c   \
@@ -5410,7 +5520,7 @@ $as_echo "found AOLserver in $AOL_DIR" >&6; }
 
 
 
-    vars="-I${srcdir}/generic -I${srcdir}/expat ${AOL_INCLUDES}"
+    vars="-I${srcdir}/generic ${AOL_INCLUDES}"
     for i in $vars; do
 	PKG_INCLUDES="$PKG_INCLUDES $i"
     done
