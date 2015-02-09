@@ -185,6 +185,16 @@ line 10 column 17 - Warning: <script> lacks "type" attribute
 test html-3.2 {Bad data} {
      catch {set doc [dom parse -html {<a>}]}
 } 1
+
+test html-3.3 {Allow missing </li> in <ul>} {
+    set doc [dom parse -html {<html><ul><li>first<li>second</ul></html>}]
+    string map {"\n" ""} [$doc asHTML]
+} {<html><ul><li>first</li><li>second</li></ul></html>}
+
+test html-3.4 {Allow missing </li> in <ol>} {
+    set doc [dom parse -html {<html><ol><li>first<li>second</ol></html>}]
+    string map {"\n" ""} [$doc asHTML]
+} {<html><ol><li>first</li><li>second</li></ol></html>}
         
 test html-4.1 {Tag name case normalization} {
     set doc [dom parse -html {<HtmL><boDY></BODy></HTml>}]
