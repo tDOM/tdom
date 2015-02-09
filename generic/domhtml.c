@@ -870,7 +870,8 @@ HTML_SimpleParse (
                             case 'i': if (!strcmp(pn,"i"))        autoclose = 1; break;
                             case 'l': if (!strcmp(pn,"li"))       autoclose = 1; break;
                             case 'n': if (!strcmp(pn,"noscript")) autoclose = 1; break;
-                            case 'o': if (!strcmp(pn,"option"))   autoclose = 1; break;
+                            case 'o': if (!strcmp(pn,"option") ||
+                                          !strcmp(pn,"ol"))       autoclose = 1; break;
                             case 'p': if (!strcmp(pn,"p"))        autoclose = 1; break;
                             case 's': if (!strcmp(pn,"span"))     autoclose = 1; break;
                             case 't': if (!strcmp(pn,"tbody") ||
@@ -1436,7 +1437,8 @@ HTML_SimpleParse (
             case 'h': if (!strcmp(pn,"head") ||
                           !strcmp(pn,"html"))     autoclose = 1; break;
             case 'l': if (!strcmp(pn,"li"))       autoclose = 1; break;
-            case 'o': if (!strcmp(pn,"option"))   autoclose = 1; break;
+            case 'o': if (!strcmp(pn,"option") ||
+                          !strcmp(pn,"ol"))       autoclose = 1; break;
             case 'p': if (!strcmp(pn,"p"))        autoclose = 1; break;
             case 't': if (!strcmp(pn,"tbody") ||
                           !strcmp(pn,"td")    ||
