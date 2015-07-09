@@ -598,6 +598,7 @@ static void TranslateEntityRefs (
                             value += c-'a' + 10;
                         } else {
                             /* error */
+                            break;
                         }
                         i++;
                     }
@@ -608,28 +609,36 @@ static void TranslateEntityRefs (
                             value += c-'0';
                         } else {
                             /* error */
+                            break;
                         }
                         i++;
                     }
                 }
-                if (z[i]!=';') {
-                    /* error */
-                }
-                from = i+1;
+                if (z[i] == ';') {
+                    from = i+1;
 #if TclOnly8Bits
-                z[to++] = value;
-#else 
-                if (value < 0x80) {
                     z[to++] = value;
-                } else if (value <= 0x7FF) {
-                    z[to++] = (char) ((value >> 6) | 0xC0);
-                    z[to++] = (char) ((value | 0x80) & 0xBF);
-                } else if (value <= 0xFFFF) {
-                    z[to++] = (char) ((value >> 12) | 0xE0);
-                    z[to++] = (char) (((value >> 6) | 0x80) & 0xBF);
-                    z[to++] = (char) ((value | 0x80) & 0xBF);
+#else 
+                    if (value < 0x80) {
+                        z[to++] = value;
+                    } else if (value <= 0x7FF) {
+                        z[to++] = (char) ((value >> 6) | 0xC0);
+                        z[to++] = (char) ((value | 0x80) & 0xBF);
+                    } else if (value <= 0xFFFF) {
+                        z[to++] = (char) ((value >> 12) | 0xE0);
+                        z[to++] = (char) (((value >> 6) | 0x80) & 0xBF);
+                        z[to++] = (char) ((value | 0x80) & 0xBF);
+                    } else {
+                        /* error */
+                        while (from < i-1) {
+                            z[to++] = z[from++];
+                        }
+                    }
                 } else {
                     /* error */
+                    while (from < i-1) {
+                        z[to++] = z[from++];
+                    }
                 }
 #endif
             } else {
