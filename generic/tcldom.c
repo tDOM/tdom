@@ -503,8 +503,8 @@ static
 char * tcldom_docTrace (
     ClientData    clientData,
     Tcl_Interp   *interp,
-    CONST84 char *name1,
-    CONST84 char *name2,
+    const char *name1,
+    const char *name2,
     int           flags
 )
 {
@@ -1606,7 +1606,7 @@ int tcldom_selectNodes (
     xpathCBs       cbs;
     xpathParseVarCB parseVarCB;
 
-    static CONST84 char *selectNodesOptions[] = {
+    static const char *selectNodesOptions[] = {
         "-namespaces", "-cache", NULL
     };
     enum selectNodesOption {
@@ -3016,7 +3016,7 @@ static int serializeAsXML (
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
 
-    static CONST84 char *asXMLOptions[] = {
+    static const char *asXMLOptions[] = {
         "-indent", "-channel", "-escapeNonASCII", "-doctypeDeclaration",
         "-escapeAllQuot", 
         NULL
@@ -3163,7 +3163,7 @@ static int serializeAsHTML (
     Tcl_Obj    *resultPtr;
     Tcl_Channel chan = (Tcl_Channel) NULL;
 
-    static CONST84 char *asHTMLOptions[] = {
+    static const char *asHTMLOptions[] = {
         "-channel", "-escapeNonASCII", "-htmlEntities", "-doctypeDeclaration",
         "-onlyContents", "-breakLines", NULL
     };
@@ -3507,7 +3507,7 @@ static int applyXSLT (
         "?-ignoreUndeclaredParameters? ?-xsltmessagecmd cmd? <xmlDocObj> "
         "?objVar?\"";
 
-    static CONST84 char *xsltOptions[] = {
+    static const char *xsltOptions[] = {
         "-parameters", "-ignoreUndeclaredParameters", "-xsltmessagecmd", NULL
     };
 
@@ -3645,7 +3645,7 @@ static int tcldom_XSLTObjCmd (
     int          index;
     char        *errMsg = NULL;
     
-    static CONST84 char *options[] = {
+    static const char *options[] = {
         "transform", "delete", NULL
     };
     enum option {
@@ -3760,7 +3760,7 @@ int tcldom_NodeObjCmd (
     Tcl_CmdInfo  cmdInfo;
     Tcl_HashEntry *h;
 
-    static CONST84 char *nodeMethods[] = {
+    static const char *nodeMethods[] = {
         "firstChild",      "nextSibling",    "getAttribute",    "nodeName",
         "nodeValue",       "nodeType",       "attributes",      "asList",
         "find",            "setAttribute",   "removeAttribute", "parentNode",
@@ -4782,7 +4782,7 @@ int tcldom_DocObjCmd (
     Tcl_CmdInfo           cmdInfo;
     Tcl_Obj             * mobjv[MAX_REWRITE_ARGS];
 
-    static CONST84 char *docMethods[] = {
+    static const char *docMethods[] = {
         "documentElement", "getElementsByTagName",       "delete",
         "createElement",   "createCDATASection",         "createTextNode",
         "createComment",   "createProcessingInstruction",
@@ -5464,7 +5464,7 @@ int tcldom_parse (
     char        *xml_string, *option, *errStr, *channelId, *baseURI = NULL;
     Tcl_Obj     *extResolver = NULL;
     Tcl_Obj     *feedbackCmd = NULL;
-    CONST84 char *interpResult;
+    const char *interpResult;
     int          optionIndex, value, xml_string_len, mode;
     int          ignoreWhiteSpaces   = 1;
     int          takeSimpleParser    = 0;
@@ -5480,7 +5480,7 @@ int tcldom_parse (
     Tcl_Channel  chan = (Tcl_Channel) NULL;
     Tcl_CmdInfo  cmdInfo;
 
-    static CONST84 char *parseOptions[] = {
+    static const char *parseOptions[] = {
         "-keepEmpties",           "-simple",        "-html",
         "-feedbackAfter",         "-channel",       "-baseurl",
         "-externalentitycommand", "-useForeignDTD", "-paramentityparsing",
@@ -5494,7 +5494,7 @@ int tcldom_parse (
         o_feedbackcmd
     };
 
-    static CONST84 char *paramEntityParsingValues[] = {
+    static const char *paramEntityParsingValues[] = {
         "always",
         "never",
         "notstandalone",
@@ -5844,7 +5844,7 @@ int tcldom_featureinfo (
 {
     int featureIndex, result;
     
-    static CONST84 char *features[] = {
+    static const char *features[] = {
         "expatversion",      "expatmajorversion",  "expatminorversion",
         "expatmicroversion", "dtd",                "ns",
         "unknown",           "tdomalloc",          "lessns",
@@ -5940,7 +5940,7 @@ int tcldom_DomObjCmd (
     Tcl_CmdInfo   cmdInfo;
     Tcl_Obj     * mobjv[MAX_REWRITE_ARGS];
 
-    static CONST84 char *domMethods[] = {
+    static const char *domMethods[] = {
         "createDocument",  "createDocumentNS",   "createNodeCmd",
         "parse",           "setResultEncoding",  "setStoreLineColumn",
         "isCharData",      "isName",             "isPIName",
@@ -5966,7 +5966,7 @@ int tcldom_DomObjCmd (
 #endif
     };
 
-    static CONST84 char *nodeModeValues[] = {
+    static const char *nodeModeValues[] = {
         "automatic", "command", "token", NULL
     };
     enum nodeModeValue {

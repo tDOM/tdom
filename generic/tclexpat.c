@@ -672,7 +672,7 @@ TclExpatInstanceCmd (clientData, interp, objc, objv)
   char *data;
   int len = 0, optionIndex, result = TCL_OK;
 
-  static CONST84 char *options[] = {
+  static const char *options[] = {
       "configure", "cget", "free", "get",
       "parse", "parsechannel", "parsefile", "reset", NULL
   };
@@ -1055,7 +1055,7 @@ TclExpatConfigure (interp, expat, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-  static CONST84 char *switches[] = {
+  static const char *switches[] = {
     "-final",
     "-baseurl",
     "-elementstartcommand",
@@ -1110,7 +1110,7 @@ TclExpatConfigure (interp, expat, objc, objv)
     EXPAT_HANDLERSET,
     EXPAT_NOEXPAND
   };
-  static CONST84 char *paramEntityParsingValues[] = {
+  static const char *paramEntityParsingValues[] = {
       "always",
       "never",
       "notstandalone",
@@ -1553,7 +1553,7 @@ TclExpatCget (interp, expat, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-    static CONST84 char *switches[] = {
+    static const char *switches[] = {
         "-final",
         "-baseurl",
         "-elementstartcommand",
@@ -1955,7 +1955,7 @@ TclExpatGet (interp, expat, objc, objv)
      int objc;
      Tcl_Obj *CONST objv[];
 {
-  static CONST84 char *getSwitches[] = {
+  static const char *getSwitches[] = {
     "-specifiedattributecount",
     "-currentbytecount",
     "-currentlinenumber",

@@ -554,7 +554,7 @@ nodecmd_createNodeCmd (interp, objc, objv, checkName, checkCharData)
         ELM_NODE, TXT_NODE, CDS_NODE, CMT_NODE, PIC_NODE, PRS_NODE
     };
 
-    static CONST84 char *subcmds[] = {
+    static const char *subcmds[] = {
         "elementNode", "textNode", "cdataNode", "commentNode", "piNode",
         "parserNode", NULL
     };

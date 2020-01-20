@@ -6,7 +6,7 @@
  * Beginning with 8.4, Tcl API is CONST'ified
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
-# define CONST84
+# define const
 #endif
 
 extern char *Tdom_InitStubs (Tcl_Interp *interp, char *version, int exact);
@@ -139,7 +139,7 @@ TclExampleObjCmd(dummy, interp, objc, objv)
     simpleCounter *counter;
     
 
-    static CONST84 char *exampleMethods[] = {
+    static const char *exampleMethods[] = {
         "enable", "getresult", "remove",
         NULL
     };
