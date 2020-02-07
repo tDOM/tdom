@@ -5876,7 +5876,7 @@ getExternalDocument (
     int           resultcode = 0;
     char         *resultType, *extbase, *xmlstring, *channelId, s[20];
     Tcl_Obj      *extResolver = NULL;
-    CONST84 char *str;
+    const char *str;
     domDocument  *doc;
     xsltSubDoc   *sdoc;
     XML_Parser    parser;

@@ -13,7 +13,7 @@
  * Beginning with 8.4, Tcl API is CONST'ified
  */
 #if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION <= 3)
-# define CONST84
+# define const
 #endif
 
 #ifndef TCL_THREADS
@@ -2363,7 +2363,7 @@ tnc_ValidateObjCmd (
     Tcl_HashEntry   *entryPtr;
     TNC_Content     *model;
     
-    static CONST84 char *validateMethods[] = {
+    static const char *validateMethods[] = {
         "validateTree",   "validateDocument", "validateAttributes",
         "delete",
         NULL
@@ -2824,7 +2824,7 @@ TclTncObjCmd(dummy, interp, objc, objv)
     int            methodIndex, result;
     TNC_Data      *tncdata;
 
-    static CONST84 char *tncMethods[] = {
+    static const char *tncMethods[] = {
         "enable",  "remove", "getValidateCmd",
         NULL
     };

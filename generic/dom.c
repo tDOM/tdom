@@ -1783,7 +1783,7 @@ externalEntityRefHandler (
     Tcl_Channel chan = (Tcl_Channel) NULL;
     enum XML_Status status;
     XML_Index storedNextFeedbackPosition;
-    CONST84 char *interpResult;
+    const char *interpResult;
 
     if (info->document->extResolver == NULL) {
         Tcl_AppendResult (info->interp, "Can't read external entity \"",
@@ -5298,7 +5298,7 @@ TclTdomObjCmd (dummy, interp, objc, objv)
     Tcl_Obj         *newObjName = NULL;
     TEncoding       *encoding;
 
-    static CONST84 char *tdomMethods[] = {
+    static const char *tdomMethods[] = {
         "enable", "getdoc",
         "setResultEncoding", "setStoreLineColumn",
         "setExternalEntityResolver", "keepEmpties",

@@ -598,6 +598,7 @@ static void TranslateEntityRefs (
                             value += c-'a' + 10;
                         } else {
                             /* error */
+                            break;
                         }
                         i++;
                     }
@@ -608,28 +609,36 @@ static void TranslateEntityRefs (
                             value += c-'0';
                         } else {
                             /* error */
+                            break;
                         }
                         i++;
                     }
                 }
-                if (z[i]!=';') {
-                    /* error */
-                }
-                from = i+1;
+                if (z[i] == ';') {
+                    from = i+1;
 #if TclOnly8Bits
-                z[to++] = value;
-#else 
-                if (value < 0x80) {
                     z[to++] = value;
-                } else if (value <= 0x7FF) {
-                    z[to++] = (char) ((value >> 6) | 0xC0);
-                    z[to++] = (char) ((value | 0x80) & 0xBF);
-                } else if (value <= 0xFFFF) {
-                    z[to++] = (char) ((value >> 12) | 0xE0);
-                    z[to++] = (char) (((value >> 6) | 0x80) & 0xBF);
-                    z[to++] = (char) ((value | 0x80) & 0xBF);
+#else 
+                    if (value < 0x80) {
+                        z[to++] = value;
+                    } else if (value <= 0x7FF) {
+                        z[to++] = (char) ((value >> 6) | 0xC0);
+                        z[to++] = (char) ((value | 0x80) & 0xBF);
+                    } else if (value <= 0xFFFF) {
+                        z[to++] = (char) ((value >> 12) | 0xE0);
+                        z[to++] = (char) (((value >> 6) | 0x80) & 0xBF);
+                        z[to++] = (char) ((value | 0x80) & 0xBF);
+                    } else {
+                        /* error */
+                        while (from < i-1) {
+                            z[to++] = z[from++];
+                        }
+                    }
                 } else {
                     /* error */
+                    while (from < i-1) {
+                        z[to++] = z[from++];
+                    }
                 }
 #endif
             } else {
@@ -870,7 +879,8 @@ HTML_SimpleParse (
                             case 'i': if (!strcmp(pn,"i"))        autoclose = 1; break;
                             case 'l': if (!strcmp(pn,"li"))       autoclose = 1; break;
                             case 'n': if (!strcmp(pn,"noscript")) autoclose = 1; break;
-                            case 'o': if (!strcmp(pn,"option"))   autoclose = 1; break;
+                            case 'o': if (!strcmp(pn,"option") ||
+                                          !strcmp(pn,"ol"))       autoclose = 1; break;
                             case 'p': if (!strcmp(pn,"p"))        autoclose = 1; break;
                             case 's': if (!strcmp(pn,"span"))     autoclose = 1; break;
                             case 't': if (!strcmp(pn,"tbody") ||
@@ -1436,7 +1446,8 @@ HTML_SimpleParse (
             case 'h': if (!strcmp(pn,"head") ||
                           !strcmp(pn,"html"))     autoclose = 1; break;
             case 'l': if (!strcmp(pn,"li"))       autoclose = 1; break;
-            case 'o': if (!strcmp(pn,"option"))   autoclose = 1; break;
+            case 'o': if (!strcmp(pn,"option") ||
+                          !strcmp(pn,"ol"))       autoclose = 1; break;
             case 'p': if (!strcmp(pn,"p"))        autoclose = 1; break;
             case 't': if (!strcmp(pn,"tbody") ||
                           !strcmp(pn,"td")    ||

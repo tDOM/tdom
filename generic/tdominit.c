@@ -74,7 +74,7 @@ Tdom_Init (interp)
 
 
     nrOfBytes =  Tcl_UtfToUniChar ("\xF4\xA2\xA2\xA2", &uniChar);
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 6)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION == 6 || TCL_MINOR_VERSION == 7)
 # if TCL_UTF_MAX > 4
     if (nrOfBytes != 4) {
 # else
